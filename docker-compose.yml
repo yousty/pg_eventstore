@@ -1,0 +1,9 @@
+version: "3.5"
+
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - 5532:5432
+    environment:
+      - POSTGRES_PASSWORD=postgres
