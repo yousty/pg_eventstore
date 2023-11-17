@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
-require "pg_eventstore"
+require 'pg_eventstore'
+require 'pg_eventstore/rspec/has_option_matcher'
+
+Dir[File.join(File.expand_path('.', __dir__), 'support/**/*.rb')].each { |f| require f }
 
 RSpec.configure do |config|
   config.expect_with :rspec do |c|

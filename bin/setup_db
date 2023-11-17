@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "pg_eventstore"
+
+PgEventstore.configure do |config|
+  config.pg_uri = 'postgresql://postgres:postgres@localhost:5532/postgres'
+end
+
+PgEventstore.connection.with do |conn|
+  next if conn.exec_params('SELECT 1 as exists FROM pg_database WHERE datname = $1', ["eventstore"]).to_a.dig(0, 'exists')
+
+  conn.exec('CREATE DATABASE eventstore WITH OWNER postgres')
+end
+
+PgEventstore.connection.with do |conn|
+  next if conn.exec_params('SELECT 1 as exists FROM pg_database WHERE datname = $1', ["eventstore_test"]).to_a.dig(0, 'exists')
+
+  conn.exec('CREATE DATABASE eventstore_test WITH OWNER postgres')
+end
+
+`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:drop_table`
+`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:create_table`
+`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:drop_table`
+`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:create_table`
