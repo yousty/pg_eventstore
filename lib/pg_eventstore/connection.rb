@@ -45,11 +45,20 @@ module PgEventstore
     def init_pool
       @pool ||= ConnectionPool.new(size: pool_size, timeout: pool_timeout) do
         PG::Connection.new(uri).tap do |conn|
-          conn.type_map_for_results = PG::BasicTypeMapForResults.new(conn)
+          conn.type_map_for_results = PG::BasicTypeMapForResults.new(conn, registry: pg_type_registry)
           conn.type_map_for_queries = PG::BasicTypeMapForQueries.new(conn)
           # conn.trace($stdout) # logs
         end
       end
+    end
+
+    private
+
+    def pg_type_registry
+      registry = PG::BasicTypeRegistry.new.register_default_types
+      # 0 means that the pg value format is a text(1 for binary)
+      registry.alias_type(0, 'uuid', 'text')
+      registry
     end
   end
 end
