@@ -10,5 +10,6 @@ CREATE TABLE public.events
     data            jsonb,
     metadata        jsonb,
     link_id         bigint,
-    created_at      timestamp without time zone NOT NULL DEFAULT now()
+    created_at      timestamp without time zone NOT NULL DEFAULT now(),
+    CONSTRAINT must_have_either_type_or_be_a_link CHECK (NOT (type IS NULL AND link_id IS NULL))
 );

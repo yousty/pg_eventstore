@@ -2,4 +2,5 @@
 
 require_relative 'abstract_command'
 require_relative 'commands/append'
+require_relative 'commands/read'
 require_relative 'commands/multiple'

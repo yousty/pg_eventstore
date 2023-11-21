@@ -83,6 +83,7 @@ module PgEventstore
           res[option] = public_send(option)
         end
       end
+      alias attributes_hash options_hash
     end
   end
 end

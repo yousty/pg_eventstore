@@ -27,7 +27,10 @@ module PgEventstore
       # @param revision [Integer]
       # @return [PgEventstore::Event]
       def prepared_event(stream, event, revision)
-        Event.new(data: event.data, metadata: event.metadata, type: event.type, stream_revision: revision, **stream)
+        Event.new(
+          id: event.id, data: event.data, metadata: event.metadata, type: event.type, stream_revision: revision,
+          **stream
+        )
       end
 
       # @param revision [Integer]

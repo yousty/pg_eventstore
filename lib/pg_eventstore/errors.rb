@@ -22,12 +22,12 @@ module PgEventstore
   end
 
   class StreamNotFoundError < Error
-    attr_reader :stream_name
+    attr_reader :stream
 
-    # @param stream_name [String]
-    def initialize(stream_name)
-      @stream_name = stream_name
-      super("Stream #{stream_name.inspect} does not exist.")
+    # @param stream [PgEventstore::Stream]
+    def initialize(stream)
+      @stream = stream
+      super("Stream #{stream.inspect} does not exist.")
     end
   end
 

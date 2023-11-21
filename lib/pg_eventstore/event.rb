@@ -4,43 +4,59 @@ module PgEventstore
   class Event
     include Extensions::OptionsExtension
 
-    UUID_REGEXP = /\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\z/i.freeze
-
-    attr_reader :id, :type, :global_position, :context, :stream_name, :stream_id, :stream_revision, :data, :metadata,
-                :link_id, :created_at
-
-    def initialize(**attributes)
-      structured_attributes(attributes).each do |attr, value|
-        instance_variable_set(:"@#{attr}", value)
-      end
-    end
+    # @!attribute id
+    #   @return [String] UUIDv4 string
+    attribute(:id)
+    # @!attribute type
+    #   @return [String] event type
+    attribute(:type)
+    # @!attribute global_position
+    #   @return [Integer] event's position in "all" stream
+    attribute(:global_position)
+    # @!attribute context
+    #   @return [String] context of event's stream
+    attribute(:context)
+    # @!attribute stream_name
+    #   @return [String] event's stream name
+    attribute(:stream_name)
+    # @!attribute stream_id
+    #   @return [String] event's stream id
+    attribute(:stream_id)
+    # @!attribute stream_revision
+    #   @return [Integer] a revision of an event inside event's stream
+    attribute(:stream_revision)
+    # @!attribute data
+    #   @return [Hash, nil] event's data
+    attribute(:data)
+    # @!attribute metadata
+    #   @return [Hash, nil] event's metadata
+    attribute(:metadata)
+    # @!attribute link_id
+    #   @return [Integer, nil] a global id of an event the current event points to. If it is not nil, then the current
+    #     event is a link
+    attribute(:link_id)
+    # @!attribute created_at
+    #   @return [Time, nil] a timestamp an event was created at
+    attribute(:created_at)
 
     # @return [PgEventstore::Stream]
     def stream
       Stream.new(context: context, stream_name: stream_name, stream_id: stream_id)
     end
 
-    private
+    # Implements comparison of `PgEventstore::Event`-s. Two events matches if all of their attributes matches
+    # @param other [Object, EventStoreClient::DeserializedEvent]
+    # @return [Boolean]
+    def ==(other)
+      return false unless other.is_a?(PgEventstore::Event)
 
-    # @param options [Hash]
-    # @return [Hash]
-    def structured_attributes(options)
-      options in { id: UUID_REGEXP => id }
-      options in { type: String => type }
-      options in { global_position: String => global_position }
-      options in { context: String => context }
-      options in { stream_name: String => stream_name }
-      options in { stream_id: String => stream_id }
-      options in { stream_revision: Integer => stream_revision }
-      options in { data: Hash => data }
-      options in { metadata: Hash => metadata }
-      options in { link_id: Integer => link_id }
-      options in { created_at: Time => created_at }
+      attributes_hash == other.attributes_hash
+    end
 
-      attrs = %i[id type global_position context stream_name stream_id stream_revision data metadata link_id created_at]
-      attrs.each_with_object({}) do |var, res|
-        res[var] = binding.local_variable_get(var)
-      end
+    # Detect whether an event is a link event
+    # @return [Boolean]
+    def link?
+      !link_id.nil?
     end
   end
 end
