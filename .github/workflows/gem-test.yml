@@ -26,4 +26,5 @@ jobs:
       - name: Run tests
         run: |
           sleep 10
+          ./bin/setup_db
           TEST_COVERAGE=true bundle exec rspec

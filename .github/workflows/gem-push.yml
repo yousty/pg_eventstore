@@ -24,6 +24,7 @@ jobs:
     - name: Run tests
       run: |
         sleep 10
+        ./bin/setup_db
         bundle exec rspec
   push:
     needs: build
