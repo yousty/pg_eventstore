@@ -47,7 +47,7 @@ RSpec::Matchers.define :has_option do |option_name|
   match do |obj|
     option_presence = obj.class.respond_to?(:options) && obj.class.options.include?(option_name)
     if @default_value
-      option_presence && obj.class.allocate.public_send(option_name) == @default_value
+      option_presence && RSpec::Matchers::BuiltIn::Match.new(@default_value).matches?(obj.class.allocate.public_send(option_name))
     else
       option_presence
     end
@@ -86,3 +86,5 @@ RSpec::Matchers.define :has_option do |option_name|
 end
 
 RSpec::Matchers.alias_matcher :have_option, :has_option
+RSpec::Matchers.alias_matcher :has_attribute, :has_option
+RSpec::Matchers.alias_matcher :have_attribute, :has_option

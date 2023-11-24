@@ -2,8 +2,12 @@
 
 require 'pg_eventstore'
 require 'pg_eventstore/rspec/has_option_matcher'
+require 'securerandom'
+require 'redis'
 
 Dir[File.join(File.expand_path('.', __dir__), 'support/**/*.rb')].each { |f| require f }
+
+REDIS = Redis.new(host: 'localhost', port: '6579')
 
 RSpec.configure do |config|
   config.expect_with :rspec do |c|
@@ -46,4 +50,17 @@ RSpec.configure do |config|
   # test failures related to randomization by passing the same `--seed` value
   # as the one that triggered the failure.
   Kernel.srand config.seed
+
+  config.before do
+    REDIS.flushdb
+    # Some tests reset default config, connection, etc. Thus. reconfigure a client before each test
+    PgEventstore.configure do |config|
+      config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore_test' }
+      config.connection_pool_size = 20
+    end
+    # Clean up db
+    PgEventstore.connection.with { |c| c.exec('TRUNCATE events') }
+  end
+
+  config.include EventHelpers
 end

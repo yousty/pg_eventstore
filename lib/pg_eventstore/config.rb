@@ -22,6 +22,7 @@ module PgEventstore
       @name = name
     end
 
+    # Computes a value for usage in PgEventstore::Connection
     # @return [Hash]
     def connection_options
       { uri: pg_uri, pool_size: connection_pool_size, pool_timeout: connection_pool_timeout }

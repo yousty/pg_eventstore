@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'queries/events_filtering_query'
+require_relative 'query_builders/events_filtering_query'
 
 module PgEventstore
   class Queries
@@ -63,7 +63,7 @@ module PgEventstore
     # @param options [Hash]
     # @return [Array<PgEventstore::Event>]
     def stream_events(stream, options)
-      exec_params = events_filtering_query(stream, options).to_exec_params
+      exec_params = events_filtering_builder(stream, options).to_exec_params
       pgresult = connection.with do |conn|
         conn.exec_params(*exec_params)
       end
@@ -89,12 +89,14 @@ module PgEventstore
 
     # @param stream [PgEventstore::Stream]
     # @param options [Hash]
+    # @param offset [Integer]
     # @return [PgEventstore::EventsFilteringQuery]
-    def events_filtering_query(stream, options)
-      event_filter = EventsFilteringQuery.new
+    def events_filtering_builder(stream, options, offset: 0)
+      event_filter = QueryBuilders::EventsFiltering.new
       options in { filter: { event_types: Array => event_types } }
       event_types&.each { |event_type| event_filter.add_event_type(event_type) }
       event_filter.add_limit(options[:max_count])
+      event_filter.add_offset(offset)
       event_filter.resolve_links(options[:resolve_link_tos])
 
       if stream.all_stream?

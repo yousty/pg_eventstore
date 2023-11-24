@@ -15,14 +15,24 @@ module PgEventstore
     attr_reader :mutex
     private :mutex
 
-    # @param name [Symbol]
+    # Creates a Config if not exists and yields it to the given block.
+    # @param name [Symbol] a name to assign to a config
+    # @return [Object] a result of the given block
     def configure(name: :default)
-      @config[name] ||= Config.new(name:)
+      mutex.synchronize do
+        @config[name] ||= Config.new(name: name)
+        connection_config_was = @config[name].connection_options
 
-      yield(@config[name]) if block_given?
+        yield(@config[name]).tap do
+          next if connection_config_was == @config[name].connection_options
+
+          # Reset the connection if user decided to reconfigure connection's options
+          @connection.delete(name)
+        end
+      end
     end
 
-    # @param name [Symbol, String]
+    # @param name [Symbol]
     # @return [PgEventstore::Config]
     def config(name = :default)
       return @config[name] if @config[name]
@@ -36,7 +46,9 @@ module PgEventstore
       raise error_message
     end
 
-    # @param name [Symbol, String]
+    # Look ups and returns a Connection, based on the given config. If not exists - it creates one. This operation is a
+    # thread-safe
+    # @param name [Symbol]
     # @return [PgEventstore::Connection]
     def connection(name = :default)
       mutex.synchronize do
@@ -44,7 +56,7 @@ module PgEventstore
       end
     end
 
-    # @param name [Symbol, String]
+    # @param name [Symbol]
     # @return [PgEventstore::Client]
     def client(name = :default)
       Client.new(config(name))
@@ -61,11 +73,11 @@ module PgEventstore
     private
 
     # @return [void]
-    def init_default_values
+    def init_variables
       @config = { default: Config.new(name: :default) }
       @connection = {}
       @mutex = Thread::Mutex.new
     end
   end
-  init_default_values
+  init_variables
 end

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'set'
+
 module PgEventstore
   module Extensions
     # A very simple extension that implements a DLS for adding attr_accessors with default values,
