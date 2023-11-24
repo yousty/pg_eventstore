@@ -38,7 +38,7 @@ module PgEventstore
       return @config[name] if @config[name]
 
       error_message = <<~TEXT
-        Could not find #{name.inspect} config. You can define it in next way:
+        Could not find #{name.inspect} config. You can define it like this:
         PgEventstore.configure(name: #{name.inspect}) do |config|
           # your config goes here
         end
