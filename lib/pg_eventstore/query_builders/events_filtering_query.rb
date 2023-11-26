@@ -17,14 +17,7 @@ module PgEventstore
       end.freeze
 
       def initialize
-        @streams = []
-        @event_types = []
-        @revision = nil
-        @global_position = nil
-        @direction = nil
-        @limit = nil
-        @offset = nil
-        @resolve_links = false
+        @sql_builder = SQLBuilder.new.from('events').limit(DEFAULT_LIMIT).offset(DEFAULT_OFFSET)
       end
 
       # @param context [String, nil]
@@ -35,7 +28,10 @@ module PgEventstore
         stream_attrs = { context: context, stream_name: stream_name, stream_id: stream_id }.compact
         return if stream_attrs.empty?
 
-        @streams.push(stream_attrs)
+        sql = stream_attrs.map do |attr, _|
+          "#{attr} = ?"
+        end.join(" AND ")
+        @sql_builder.where_or(sql, *stream_attrs.values)
       end
 
       # @param event_type [String, nil]
@@ -43,21 +39,19 @@ module PgEventstore
       def add_event_type(event_type)
         return if event_type.nil?
 
-        @event_types.push(event_type)
+        @sql_builder.where_or("type = ?", event_type)
       end
 
       # @param revision [Integer, nil]
       # @return [void]
       def add_revision(revision)
-        @global_position = nil
-        @revision = revision
+        @sql_builder.where("stream_revision >= ?", revision.to_i)
       end
 
       # @param position [Integer, nil]
       # @return [void]
       def add_global_position(position)
-        @revision = nil
-        @global_position = position
+        @sql_builder.where("global_position >= ?", position.to_i)
       end
 
       # @param direction [String, Symbol, nil]
@@ -69,97 +63,33 @@ module PgEventstore
       # @param limit [Integer, nil]
       # @return [void]
       def add_limit(limit)
-        @limit = limit
+        return unless limit
+
+        @sql_builder.limit(limit)
       end
 
       # @param offset [Integer, nil]
       # @return [void]
       def add_offset(offset)
-        @offset = offset
+        return unless offset
+
+        @sql_builder.offset(offset)
       end
 
       # @param should_resolve [Boolean]
       # @return [void]
       def resolve_links(should_resolve)
-        @resolve_links = should_resolve
+        return unless should_resolve
+
+        @sql_builder.
+          select("(COALESCE(original_events.*, events.*)).*").
+          join("LEFT JOIN events original_events ON original_events.global_position = events.link_id")
       end
 
       # @return [Array]
       def to_exec_params
-        sql =
-          if @resolve_links
-            <<~SQL
-              SELECT (COALESCE(original_events.*, events.*)).* 
-              FROM events
-              LEFT JOIN events original_events ON original_events.global_position = events.link_id
-            SQL
-          else
-            'SELECT * FROM events'
-          end
-
-        positional_values = []
-        where_sql = [
-          streams_sql(positional_values),
-          event_types_sql(positional_values),
-          stream_revision_sql(positional_values),
-          global_position_sql(positional_values)
-        ].reject(&:empty?).join(" AND ")
-        sql += " WHERE #{where_sql}" unless where_sql.empty?
-
-        sql += " ORDER BY events.global_position #{SQL_DIRECTIONS[@direction]}"
-
-        positional_values.push(@limit || DEFAULT_LIMIT)
-        sql += " LIMIT $#{positional_values.size}"
-        positional_values.push(@offset || DEFAULT_OFFSET)
-        sql += " OFFSET $#{positional_values.size}"
-
-        [sql, positional_values]
-      end
-
-      private
-
-      # @param positional_values [Array] a list of positional values for sql query
-      # @return [String]
-      def streams_sql(positional_values)
-        sql = @streams.map do |stream_attrs|
-          stream_parts = []
-          stream_attrs.each do |column, value|
-            positional_values.push(value)
-            stream_parts.push "#{column} = $#{positional_values.size}"
-          end
-          "(#{stream_parts.join(" AND ")})"
-        end.join(" OR ")
-        sql = "(#{sql})" unless sql.empty?
-        sql
-      end
-
-      # @param positional_values [Array] a list of positional values for sql query
-      # @return [String]
-      def event_types_sql(positional_values)
-        sql = @event_types.map do |event_type|
-          positional_values.push(event_type)
-          "type = $#{positional_values.size}"
-        end.join(" OR ")
-        sql = "(#{sql})" unless sql.empty?
-        sql
-      end
-
-      # @param positional_values [Array] a list of positional values for sql query
-      # @return [String]
-      def stream_revision_sql(positional_values)
-        return '' unless @revision
-
-        positional_values.push(@revision)
-        "stream_revision >= $#{positional_values.size}"
-      end
-
-      # @param positional_values [Array] a list of positional values for sql query
-      # @return [String]
-      def global_position_sql(positional_values)
-        return '' unless @global_position
-
-        positional_values.push(@global_position)
-        "global_position >= $#{positional_values.size}"
+        @sql_builder.order("events.global_position #{SQL_DIRECTIONS[@direction]}")
+        @sql_builder.to_exec_params
       end
     end
   end

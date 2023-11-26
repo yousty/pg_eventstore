@@ -107,7 +107,7 @@ module PgEventstore
         event_filter.add_stream(**stream)
         event_filter.add_revision(options[:from_revision])
       end
-
+      #binding.irb
       event_filter
     end
   end
