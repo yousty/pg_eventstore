@@ -13,8 +13,8 @@ RSpec.describe PgEventstore::Event do
     it { is_expected.to have_attribute(:stream_name) }
     it { is_expected.to have_attribute(:stream_id) }
     it { is_expected.to have_attribute(:stream_revision) }
-    it { is_expected.to have_attribute(:data) }
-    it { is_expected.to have_attribute(:metadata) }
+    it { is_expected.to have_attribute(:data).with_default_value({}) }
+    it { is_expected.to have_attribute(:metadata).with_default_value({}) }
     it { is_expected.to have_attribute(:link_id) }
     it { is_expected.to have_attribute(:created_at) }
   end

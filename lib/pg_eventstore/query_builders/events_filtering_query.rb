@@ -29,7 +29,7 @@ module PgEventstore
         return if stream_attrs.empty?
 
         sql = stream_attrs.map do |attr, _|
-          "#{attr} = ?"
+          "events.#{attr} = ?"
         end.join(" AND ")
         @sql_builder.where_or(sql, *stream_attrs.values)
       end
@@ -39,19 +39,23 @@ module PgEventstore
       def add_event_type(event_type)
         return if event_type.nil?
 
-        @sql_builder.where_or("type = ?", event_type)
+        @sql_builder.where_or("events.type = ?", event_type)
       end
 
       # @param revision [Integer, nil]
       # @return [void]
       def add_revision(revision)
-        @sql_builder.where("stream_revision >= ?", revision.to_i)
+        return unless revision
+
+        @sql_builder.where("events.stream_revision >= ?", revision)
       end
 
       # @param position [Integer, nil]
       # @return [void]
       def add_global_position(position)
-        @sql_builder.where("global_position >= ?", position.to_i)
+        return unless position
+
+        @sql_builder.where("events.global_position >= ?", position)
       end
 
       # @param direction [String, Symbol, nil]

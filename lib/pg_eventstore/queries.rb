@@ -73,12 +73,13 @@ module PgEventstore
     # @param event [PgEventstore::Event]
     # @return [PgEventstore::Event]
     def insert(event)
-      insert_map = %w[type data metadata context stream_name stream_id stream_revision]
+      insert_map = %w[type data metadata context stream_name stream_id stream_revision link_id]
       insert_map.push('id') if event.id
       sql = <<~SQL
         INSERT INTO events (#{insert_map.join(', ')}) 
           VALUES (#{(1..insert_map.size).map { |n| "$#{n}" }.join(', ')}) RETURNING *
       SQL
+      serializer.serialize(event)
       pgresult = connection.with do |conn|
         conn.exec_params(sql, insert_map.map { |attr| event.public_send(attr) })
       end
@@ -98,6 +99,7 @@ module PgEventstore
       event_filter.add_limit(options[:max_count])
       event_filter.add_offset(offset)
       event_filter.resolve_links(options[:resolve_link_tos])
+      event_filter.add_direction(options[:direction])
 
       if stream.all_stream?
         options in { filter: { streams: Array => streams } }
@@ -107,7 +109,6 @@ module PgEventstore
         event_filter.add_stream(**stream)
         event_filter.add_revision(options[:from_revision])
       end
-      #binding.irb
       event_filter
     end
   end

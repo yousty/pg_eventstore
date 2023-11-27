@@ -10,7 +10,6 @@ module PgEventstore
     option(:pg_uri) { 'postgresql://postgres:postgres@localhost:5432/eventstore' }
     option(:per_page) { 1000 }
     option(:middlewares) { [] }
-    # option(:logger)
     # Object that responds to #call. Should accept a string and return a class
     option(:event_class_resolver) { EventClassResolver.new }
     option(:connection_pool_size) { 5 }

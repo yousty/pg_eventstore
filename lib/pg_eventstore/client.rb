@@ -46,12 +46,10 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @param options [Hash] request options
     # @option options [String] :direction read direction - 'Forwards' or 'Backwards'
-    # @option options [Integer, Symbol] :from_revision. If number is provided - it is threaded
-    #   as starting revision number. Alternatively you can provide :start or :end value to
-    #   define a stream revision. **Use this option when stream name is a normal stream name**
-    # @option options [Integer, Symbol] :from_position. If number is provided - it is threaded as starting global
-    #   position number. Alternatively you can provide :start or :end value to define a global position. **Use this
-    #   option when reading from "all" stream**
+    # @option options [Integer] :from_revision a starting revision number. **Use this option when stream name is a
+    #   normal stream name**
+    # @option options [Integer, Symbol] :from_position a starting global position number. **Use this option when reading
+    #   from "all" stream**
     # @option options [Integer] :max_count max number of events to return in one response. Defaults to config.per_page
     # @option options [Boolean] :resolve_link_tos When using projections to create new events you
     #   can set whether the generated events are pointers to existing events. Setting this value

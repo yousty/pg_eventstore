@@ -26,11 +26,11 @@ module PgEventstore
     #   @return [Integer] a revision of an event inside event's stream
     attribute(:stream_revision)
     # @!attribute data
-    #   @return [Hash, nil] event's data
-    attribute(:data)
+    #   @return [Hash] event's data
+    attribute(:data) { {} }
     # @!attribute metadata
-    #   @return [Hash, nil] event's metadata
-    attribute(:metadata)
+    #   @return [Hash] event's metadata
+    attribute(:metadata) { {} }
     # @!attribute link_id
     #   @return [Integer, nil] a global id of an event the current event points to. If it is not nil, then the current
     #     event is a link
