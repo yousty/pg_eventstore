@@ -95,7 +95,7 @@ module PgEventstore
     def events_filtering_builder(stream, options, offset: 0)
       event_filter = QueryBuilders::EventsFiltering.new
       options in { filter: { event_types: Array => event_types } }
-      event_types&.each { |event_type| event_filter.add_event_type(event_type) }
+      event_filter.add_event_types(event_types)
       event_filter.add_limit(options[:max_count])
       event_filter.add_offset(offset)
       event_filter.resolve_links(options[:resolve_link_tos])

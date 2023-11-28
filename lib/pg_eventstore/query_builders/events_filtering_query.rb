@@ -34,12 +34,16 @@ module PgEventstore
         @sql_builder.where_or(sql, *stream_attrs.values)
       end
 
-      # @param event_type [String, nil]
+      # @param event_types [Array, nil]
       # @return [void]
-      def add_event_type(event_type)
-        return if event_type.nil?
+      def add_event_types(event_types)
+        return if event_types.nil?
+        return if event_types.empty?
 
-        @sql_builder.where_or("events.type = ?", event_type)
+        sql = event_types.size.times.map do
+          "events.type = ?"
+        end.join(" OR ")
+        @sql_builder.where(sql, *event_types)
       end
 
       # @param revision [Integer, nil]

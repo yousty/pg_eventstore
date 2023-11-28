@@ -6,7 +6,7 @@ module PgEventstore
     def initialize
       @select_values = []
       @from_value = nil
-      @where_values = []
+      @where_values = { 'AND' => [], 'OR' => [] }
       @join_values = []
       @order_values = []
       @limit_value = nil
@@ -73,9 +73,10 @@ module PgEventstore
     end
 
     def to_exec_params
+      where_sql = [where_sql('OR'), where_sql('AND')].reject(&:empty?).map { |sql| "(#{sql})" }.join(' AND ')
       sql = "SELECT #{select_sql} FROM #{@from_value}"
       sql += " #{join_sql}" unless @join_values.empty?
-      sql += " WHERE #{where_sql}" unless @where_values.empty?
+      sql += " WHERE #{where_sql}" unless where_sql.empty?
       sql += " ORDER BY #{order_sql}" unless @order_values.empty?
       sql += " LIMIT #{@limit_value}" if @limit_value
       sql += " OFFSET #{@offset_value}" if @offset_value
@@ -93,8 +94,7 @@ module PgEventstore
         @positional_values.push(arguments[index])
         "$#{@positional_values.size}"
       end
-
-      @where_values.push([join_pattern, "(#{sql})"])
+      @where_values[join_pattern].push("(#{sql})")
     end
 
     # @return [String]
@@ -102,15 +102,10 @@ module PgEventstore
       @select_values.empty? ? '*' : @select_values.join(',')
     end
 
+    # @param join_pattern [String] "OR"/"AND"
     # @return [String]
-    def where_sql
-      where_value = ""
-      position = 0
-      @where_values.each do |join_as, sql|
-        position == 0 ? where_value += "#{sql}" : where_value += " #{join_as} #{sql}"
-        position += 1
-      end
-      where_value
+    def where_sql(join_pattern)
+      @where_values[join_pattern].join(" #{join_pattern} ")
     end
 
     # @return [String]

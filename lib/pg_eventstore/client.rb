@@ -52,8 +52,8 @@ module PgEventstore
     #   from "all" stream**
     # @option options [Integer] :max_count max number of events to return in one response. Defaults to config.per_page
     # @option options [Boolean] :resolve_link_tos When using projections to create new events you
-    #   can set whether the generated events are pointers to existing events. Setting this value
-    #   to true tells EventStoreDB to return the event as well as the event linking to it.
+    #   can set whether the generated events are pointers to existing events. Setting this option to true tells
+    #   PgEventstore to return the original event instead a link event.
     # @option options [Hash] :filter provide it to filter events. You can filter by: stream and by event type. Filtering
     #   by stream is only available when reading from "all" stream.
     #   Examples:
