@@ -4,7 +4,9 @@ require_relative 'query_builders/events_filtering_query'
 
 module PgEventstore
   class Queries
-    TRANSACTION_ISOLATION = { read_commited: 'READ COMMITTED', repeatable_read: 'REPEATABLE READ', serializable: 'SERIALIZABLE' }.freeze
+    TRANSACTION_ISOLATION = {
+      read_commited: 'READ COMMITTED', repeatable_read: 'REPEATABLE READ', serializable: 'SERIALIZABLE'
+    }.freeze
     attr_reader :connection, :serializer, :deserializer
     private :connection, :serializer, :deserializer
 
@@ -18,6 +20,7 @@ module PgEventstore
     end
 
     # @param stream_to_lock [PgEventstore::Stream, nil]
+    # @param isolation_level [Symbol]
     # @return [void]
     def transaction(stream_to_lock: nil, isolation_level: nil)
       connection.with do |conn|
@@ -38,6 +41,7 @@ module PgEventstore
       raise
     end
 
+    # Fetches last event of the given stream. Middlewares are not applied.
     # @param stream [PgEventstore::Stream]
     # @return [PgEventstore::Event, nil]
     def last_stream_event(stream)
@@ -49,21 +53,10 @@ module PgEventstore
       pgresult = connection.with do |conn|
         conn.exec_params(sql, stream.to_a)
       end
-      deserializer.deserialize_one(pgresult)
+      deserializer.without_middlewares.deserialize_one(pgresult)
     end
 
-    # @return [PgEventstore::Event, nil]
-    def last_all_stream_event
-      sql = <<~SQL
-        SELECT * FROM events ORDER BY global_position DESC LIMIT 1
-      SQL
-      pgresult = connection.with do |conn|
-        conn.exec_params(sql)
-      end
-      deserializer.deserialize_one(pgresult)
-    end
-
-
+    # @see PgEventstore::Client#read for more info
     # @param stream [PgEventstore::Stream]
     # @param options [Hash]
     # @return [Array<PgEventstore::Event>]

@@ -37,7 +37,7 @@ module PgEventstore
     # @return [PgEventstore::Event]
     def _deserialize(attrs)
       event = event_class_resolver.call(attrs['type']).new(**attrs.transform_keys(&:to_sym))
-      @middlewares.each do |middleware|
+      middlewares.each do |middleware|
         middleware.deserialize(event)
       end
       event
