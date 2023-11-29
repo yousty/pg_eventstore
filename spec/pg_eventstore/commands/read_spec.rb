@@ -153,6 +153,23 @@ RSpec.describe PgEventstore::Commands::Read do
     end
   end
 
+  describe 'event class resolving' do
+    subject { instance.call(stream, options: {}) }
+
+    let(:event_class) { Class.new(PgEventstore::Event) }
+    let(:event) { event_class.new }
+    let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
+
+    before do
+      stub_const('DummyClass', event_class)
+      PgEventstore.client.append_to_stream(stream, event)
+    end
+
+    it "recognizes event's class" do
+      expect(subject.first).to be_a(DummyClass)
+    end
+  end
+
   describe 'reading using filter by stream parts' do
     subject { instance.call(stream, options: options) }
 

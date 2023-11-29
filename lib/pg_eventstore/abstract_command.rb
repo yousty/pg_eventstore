@@ -6,8 +6,8 @@ require_relative 'queries'
 
 module PgEventstore
   class AbstractCommand
-    attr_reader :config, :queries
-    private :config, :queries
+    attr_reader :queries
+    private :queries
 
     # @param connection [PgEventstore::Connection]
     # @param middlewares [Array<Object<#serialize, #deserialize>>]

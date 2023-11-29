@@ -160,6 +160,19 @@ RSpec.describe PgEventstore::Commands::Append do
           expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::ENCR_SECRET)
         end
       end
+
+      context "when event's class is defined" do
+        let(:event_class) { Class.new(PgEventstore::Event) }
+        let(:event) { event_class.new }
+
+        before do
+          stub_const('DummyClass', event_class)
+        end
+
+        it 'recognizes it' do
+          expect(subject.first).to be_a(DummyClass)
+        end
+      end
     end
 
     describe 'appending multiple events' do

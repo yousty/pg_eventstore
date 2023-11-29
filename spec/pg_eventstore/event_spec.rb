@@ -7,7 +7,7 @@ RSpec.describe PgEventstore::Event do
 
   describe 'attributes' do
     it { is_expected.to have_attribute(:id) }
-    it { is_expected.to have_attribute(:type) }
+    it { is_expected.to have_attribute(:type).with_default_value('PgEventstore::Event') }
     it { is_expected.to have_attribute(:global_position) }
     it { is_expected.to have_attribute(:context) }
     it { is_expected.to have_attribute(:stream_name) }

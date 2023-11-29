@@ -9,7 +9,7 @@ module PgEventstore
     attribute(:id)
     # @!attribute type
     #   @return [String] event type
-    attribute(:type)
+    attribute(:type) { self.class.name }
     # @!attribute global_position
     #   @return [Integer] event's position in "all" stream
     attribute(:global_position)
