@@ -215,9 +215,10 @@ RSpec.describe PgEventstore::Commands::Append do
     let(:event3) { PgEventstore::Event.new(data: { baz: :bar }, type: 'some-event3') }
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-stream', stream_id: '123') }
     let(:events_count_mapping) { { 'some-event' => 5, 'some-event2' => 3, 'some-event3' => 2 } }
+    let(:iterations_number) { 5 }
 
     it 'checks it' do
-      5.times.flat_map do |i|
+      iterations_number.times.flat_map do |i|
         t1 = Thread.new do
           sleep 0.1 + i / 10.0
           instance.call(stream, *([event1] * events_count_mapping['some-event']))
@@ -237,7 +238,10 @@ RSpec.describe PgEventstore::Commands::Append do
         arr.last&.last == type ? arr.last.push(type) : arr.push([type])
       end
 
-      expect(events.map(&:stream_revision)).to eq((0..(events.size - 1)).to_a)
+      total_count = events_count_mapping.values.sum * iterations_number
+      expect(events.map(&:stream_revision)).to(
+        eq((0...total_count).to_a), "Stream #{stream.inspect} has incorrect revisions sequence!"
+      )
 
       sequences.each do |seq|
         count_mapping = events_count_mapping[seq.first]

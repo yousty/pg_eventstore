@@ -11,7 +11,7 @@ module PgEventstore
       # @return [Array<PgEventstore::Event>] persisted events
       # @raise [PgEventstore::WrongExpectedVersionError]
       def call(stream, *events, options: {})
-        queries.transaction(stream) do
+        queries.transaction(stream_to_lock: stream) do
           revision = queries.last_stream_event(stream)&.stream_revision || -1
           assert_expected_revision!(revision, options[:expected_revision]) if options[:expected_revision]
           events.map.with_index do |event, index|

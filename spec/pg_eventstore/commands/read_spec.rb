@@ -143,6 +143,14 @@ RSpec.describe PgEventstore::Commands::Read do
         expect(subject.map(&:id)).to eq([event4.id])
       end
     end
+
+    context 'when middleware is present' do
+      let(:middlewares) { [DummyMiddleware.new] }
+
+      it 'modifies the event using it' do
+        expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET)
+      end
+    end
   end
 
   describe 'reading using filter by stream parts' do

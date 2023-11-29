@@ -4,6 +4,7 @@ require_relative 'query_builders/events_filtering_query'
 
 module PgEventstore
   class Queries
+    TRANSACTION_ISOLATION = { read_commited: 'READ COMMITTED', repeatable_read: 'REPEATABLE READ', serializable: 'SERIALIZABLE' }.freeze
     attr_reader :connection, :serializer, :deserializer
     private :connection, :serializer, :deserializer
 
@@ -18,19 +19,23 @@ module PgEventstore
 
     # @param stream_to_lock [PgEventstore::Stream, nil]
     # @return [void]
-    def transaction(stream_to_lock = nil)
+    def transaction(stream_to_lock: nil, isolation_level: nil)
       connection.with do |conn|
         # We are inside a transaction already - no need to start another one
         if [PG::PQTRANS_ACTIVE, PG::PQTRANS_INTRANS].include?(conn.transaction_status)
-          conn.exec_params("SELECT pg_advisory_xact_lock($1)", [stream_to_lock.lock_id]) if stream_to_lock
+          lock_stream(conn, stream_to_lock) if use_lock?(conn)
           next yield
         end
 
         conn.transaction do
-          conn.exec_params("SELECT pg_advisory_xact_lock($1)", [stream_to_lock.lock_id]) if stream_to_lock
+          conn.exec("SET TRANSACTION ISOLATION LEVEL #{TRANSACTION_ISOLATION[isolation_level]}") if isolation_level
+          lock_stream(conn, stream_to_lock) if use_lock?(conn)
           yield
         end
       end
+    rescue PG::TRSerializationFailure => e
+      retry if e.connection.transaction_status == PG::PQTRANS_IDLE
+      raise
     end
 
     # @param stream [PgEventstore::Stream]
@@ -110,6 +115,24 @@ module PgEventstore
         event_filter.add_revision(options[:from_revision])
       end
       event_filter
+    end
+
+    # Checks whether a connection needs advisory lock. We need the lock only if transaction isolation level other than
+    # SERIALIZABLE
+    # @param conn [PG::Connection]
+    # @return [Boolean]
+    def use_lock?(conn)
+      current_level = conn.exec('SHOW TRANSACTION ISOLATION LEVEL').to_a.dig(0, 'transaction_isolation')&.upcase
+      current_level != TRANSACTION_ISOLATION[:serializable]
+    end
+
+    # @param conn [PG::Connection]
+    # @param stream_to_lock [PgEventstore::Stream, nil]
+    # @return [void]
+    def lock_stream(conn, stream_to_lock)
+      return unless stream_to_lock
+
+      conn.exec_params("SELECT pg_advisory_xact_lock($1)", [stream_to_lock.lock_id])
     end
   end
 end

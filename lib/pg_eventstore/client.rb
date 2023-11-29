@@ -30,9 +30,12 @@ module PgEventstore
       events_or_event.is_a?(Array) ? result : result.first
     end
 
-    # Allows you to make several different commands atomic by wrapping then into a block.
+    # Allows you to make several different commands atomic by wrapping then into a block. Order of events, produced by
+    # multiple commands, belonging to different streams - is unbreakable. So, if you append event1 to stream1 and
+    # event2 to stream2 using this method, then thet appear in the same order in the "all" stream.
     # Example:
     #   PgEventstore.client.multiple do
+    #     PgEventstore.client.read(...)
     #     PgEventstore.client.append_to_stream(...)
     #     PgEventstore.client.append_to_stream(...)
     #   end
