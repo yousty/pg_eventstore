@@ -21,7 +21,7 @@ module PgEventstore
     # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
     # @param skip_middlewares [Boolean] whether to skip middlewares. Defaults to false
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
-    # @raise [PgEventstore::WrongExpectedVersionError]
+    # @raise [PgEventstore::WrongExpectedRevisionError]
     def append_to_stream(stream, events_or_event, options: {}, skip_middlewares: false)
       result =
         Commands::Append.

@@ -69,7 +69,7 @@ RSpec.describe PgEventstore::Commands::Append do
           it 'raises error' do
             expect { subject }.to(
               raise_error(
-                PgEventstore::WrongExpectedVersionError,
+                PgEventstore::WrongExpectedRevisionError,
                 "Expected stream to be absent, but it actually exists."
               )
             )
@@ -101,7 +101,7 @@ RSpec.describe PgEventstore::Commands::Append do
         context 'when stream does not exist' do
           it 'raises error' do
             expect { subject }.to(
-              raise_error(PgEventstore::WrongExpectedVersionError, "Expected stream to exist, but it doesn't.")
+              raise_error(PgEventstore::WrongExpectedRevisionError, "Expected stream to exist, but it doesn't.")
             )
           end
         end
@@ -134,7 +134,7 @@ RSpec.describe PgEventstore::Commands::Append do
           it 'raises error' do
             expect { subject }.to(
               raise_error(
-                PgEventstore::WrongExpectedVersionError,
+                PgEventstore::WrongExpectedRevisionError,
                 "Stream revision #{expected_revision} is expected, but actual stream revision is 0."
               )
             )
@@ -145,7 +145,7 @@ RSpec.describe PgEventstore::Commands::Append do
           it 'raises error' do
             expect { subject }.to(
               raise_error(
-                PgEventstore::WrongExpectedVersionError,
+                PgEventstore::WrongExpectedRevisionError,
                 "Stream revision #{expected_revision} is expected, but stream does not exist."
               )
             )

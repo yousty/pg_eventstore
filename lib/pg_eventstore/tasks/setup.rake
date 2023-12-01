@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 namespace :pg_eventstore do
-  desc "Creates messages table, indexes."
-  task :create_table do
+  desc "Creates events table, indexes, etc."
+  task :create do
     PgEventstore.configure do |config|
       config.pg_uri = ENV['PG_EVENTSTORE_URI']
     end
@@ -19,8 +19,8 @@ namespace :pg_eventstore do
     end
   end
 
-  desc "Drops messages table."
-  task :drop_table do
+  desc "Drops events table and related pg_eventstore objects."
+  task :drop do
     PgEventstore.configure do |config|
       config.pg_uri = ENV['PG_EVENTSTORE_URI']
     end

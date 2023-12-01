@@ -31,7 +31,7 @@ module PgEventstore
     end
   end
 
-  class WrongExpectedVersionError < Error
+  class WrongExpectedRevisionError < Error
     attr_reader :revision, :expected_revision
 
     # @param revision [Integer]
