@@ -11,7 +11,7 @@ RSpec.describe PgEventstore::Config do
     it do
       is_expected.to have_option(:pg_uri).with_default_value('postgresql://postgres:postgres@localhost:5432/eventstore')
     end
-    it { is_expected.to have_option(:per_page).with_default_value(1000) }
+    it { is_expected.to have_option(:max_count).with_default_value(1000) }
     it { is_expected.to have_option(:middlewares).with_default_value([]) }
     it do
       is_expected.to(

@@ -53,7 +53,7 @@ module PgEventstore
     #   normal stream name**
     # @option options [Integer, Symbol] :from_position a starting global position number. **Use this option when reading
     #   from "all" stream**
-    # @option options [Integer] :max_count max number of events to return in one response. Defaults to config.per_page
+    # @option options [Integer] :max_count max number of events to return in one response. Defaults to config.max_count
     # @option options [Boolean] :resolve_link_tos When using projections to create new events you
     #   can set whether the generated events are pointers to existing events. Setting this option to true tells
     #   PgEventstore to return the original event instead a link event.
@@ -101,7 +101,7 @@ module PgEventstore
     def read(stream, options: {}, skip_middlewares: false)
       Commands::Read.
         new(connection, middlewares(skip_middlewares), config.event_class_resolver).
-        call(stream, options: options)
+        call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
     private
