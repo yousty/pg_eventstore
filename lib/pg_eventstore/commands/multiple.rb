@@ -4,7 +4,7 @@ module PgEventstore
   module Commands
     class Multiple < AbstractCommand
       def call(&blk)
-        queries.transaction(isolation_level: :serializable) do
+        queries.transaction do
           yield
         end
       end

@@ -6,19 +6,6 @@ RSpec.describe PgEventstore::Queries do
   let(:deserializer) { PgEventstore::PgresultDeserializer.new(middlewares, PgEventstore::EventClassResolver.new) }
   let(:middlewares) { [] }
 
-  describe 'constants' do
-    describe 'TRANSACTION_ISOLATION' do
-      subject { described_class::TRANSACTION_ISOLATION }
-
-      it { is_expected.to be_frozen }
-      it 'describes all PostgreSQL transaction isolation levels' do
-        is_expected.to(
-          eq(read_commited: 'READ COMMITTED', repeatable_read: 'REPEATABLE READ', serializable: 'SERIALIZABLE')
-        )
-      end
-    end
-  end
-
   describe '#transaction' do
     it 'yields the given block' do
       expect { |blk| instance.transaction(&blk) }.to yield_with_no_args
@@ -39,32 +26,6 @@ RSpec.describe PgEventstore::Queries do
             end
           end
         end.not_to output.to_stderr_from_any_process
-      end
-    end
-
-    context 'when stream to lock is specified' do
-      let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
-
-      it 'performs advisory lock of it' do
-        result = instance.transaction(stream_to_lock: stream) do
-          conn_pid = PgEventstore.connection.with { |c| c.exec('select pg_backend_pid()') }.to_a.dig(0, 'pg_backend_pid')
-          PgEventstore.connection.with do |conn|
-            conn.exec("select 1 as exists from pg_locks where locktype = 'advisory' and pid = #{conn_pid}")
-          end
-        end
-        expect(result.to_a).to eq([{ 'exists' => 1 }]), 'No advisory locks detected'
-      end
-
-      context 'when transaction isolation level is serializable' do
-        it 'does not perform advisory lock' do
-          result = instance.transaction(stream_to_lock: stream, isolation_level: :serializable) do
-            conn_pid = PgEventstore.connection.with { |c| c.exec('select pg_backend_pid()') }.to_a.dig(0, 'pg_backend_pid')
-            PgEventstore.connection.with do |conn|
-              conn.exec("select * from pg_locks where locktype = 'advisory' and pid = #{conn_pid}")
-            end
-          end
-          expect(result.to_a).to eq([]), 'Unexpected advisory lock is detected'
-        end
       end
     end
   end
