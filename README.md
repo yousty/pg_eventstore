@@ -1,8 +1,11 @@
 # PgEventstore
 
-TODO: Delete this and the text below, and describe your gem
+Implements database and API to manipulate it to store events as a part of Event Sourcing concept.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/pg_eventstore`. To experiment with that code, run `bin/console` for an interactive prompt.
+## Requirements
+
+`pg_eventstore` requires PostgreSQL database with jsonb data type support(which means you need to have v9.2+). However it is recommended to use non [EOL](https://www.postgresql.org/support/versioning/) PostgreSQL version, because the development of this gem is targeted on work with actual PostgreSQL versions.
+`pg_eventstore` requires ruby v3+. The development of this gem is targeted on work with [actual](https://endoflife.date/ruby) ruby versions.
 
 ## Installation
 
@@ -16,11 +19,46 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
 ## Usage
 
-TODO: Write usage instructions here
+Before you start, make sure you created a database where events will be stored. A PostgreSQL user must be a superuser to be able to create tables, indexes, primary/foreign keys, etc. Please don't use existing database/user for this purpose. Example of creating such database and user:
+
+```bash
+sudo -u postgres createuser pg_eventstore --superuser
+sudo -u postgres psql --command="CREATE DATABASE eventstore OWNER pg_eventstore"
+sudo -u postgres psql --command="CREATE DATABASE eventstore OWNER pg_eventstore"
+```
+
+If necessary - adjust your `pg_hba.conf` to allow `pg_eventstore` user to connect to your PostgreSQL server. 
+
+Next step will be configuring db connection of the gem to the created db. Please check the **Configuration** chapter bellow to find out how to do it.
+
+After db connection is configured - it is time to create necessary database objects. Please include this line into your `Rakefile`:
+
+```ruby
+load "pg_eventstore/tasks/setup.rake"
+```
+
+This will include necessary rake tasks. You can now run 
+```bash
+bundle exec rake pg_eventstore:create
+```
+to create necessary database objects. After this step your `pg_eventstore` is ready to use.
+
+Documentation chapters:
+
+- [Configuration](docs/configuration.md)
+- [Events and streams definitions](docs/events_and_streams.md)
+- [Appending events](docs/appending_events.md)
+- [Reading events](docs/reading_events.md)
+- [Writing middlewares](docs/writing_middleware.md)
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+After checking out the repo, run:
+- `bundle` to install dependencies
+- `docker-compose up` to start dev/test services
+- `bin/setup_db` to create/re-create development and test databases, tables and related objects 
+
+Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`.
 
@@ -32,7 +70,7 @@ To install this gem onto your local machine, run `bundle exec rake install`.
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/yousty/pg_eventstore. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/pg_eventstore/blob/master/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome on GitHub at https://github.com/yousty/pg_eventstore. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/yousty/pg_eventstore/blob/master/CODE_OF_CONDUCT.md).
 
 ## License
 
@@ -40,4 +78,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the PgEventstore project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/pg_eventstore/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the PgEventstore project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/yousty/pg_eventstore/blob/master/CODE_OF_CONDUCT.md).
