@@ -30,8 +30,8 @@ RSpec.describe PgEventstore::Queries do
     end
   end
 
-  describe '#last_stream_event' do
-    subject { instance.last_stream_event(stream1) }
+  describe '#last_event' do
+    subject { instance.last_event(instance.find_stream(stream1)) }
 
     let(:stream1) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
     let(:stream2) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '2') }
@@ -62,7 +62,7 @@ RSpec.describe PgEventstore::Queries do
 
   describe '#stream_events' do
     # Tests of different options(second argument) are written as a part of Read command testing
-    subject { instance.stream_events(stream1, {}) }
+    subject { instance.stream_events(instance.find_stream(stream1), {}) }
 
     let(:stream1) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
     let(:stream2) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '2') }
@@ -85,10 +85,10 @@ RSpec.describe PgEventstore::Queries do
   end
 
   describe '#insert' do
-    subject { instance.insert(event) }
+    subject { instance.insert(instance.create_stream(stream), event) }
 
     let(:event) do
-      PgEventstore::Event.new(type: :foo, data: { foo: :bar }, metadata: { baz: :bar }, stream_revision: 123, **stream)
+      PgEventstore::Event.new(type: :foo, data: { foo: :bar }, metadata: { baz: :bar }, stream_revision: 123)
     end
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-str', stream_id: '1') }
     let(:middlewares) { [DummyMiddleware.new] }
@@ -104,10 +104,97 @@ RSpec.describe PgEventstore::Queries do
         expect(subject.metadata).to include('baz' => 'bar')
         expect(subject.stream_revision).to eq(123)
         expect(subject.stream).to eq(stream)
+        expect(subject.created_at).to be_a(Time)
       end
     end
     it 'does not apply middlewares on deserialization' do
       expect(subject.metadata).to include('dummy_secret' => DummyMiddleware::ENCR_SECRET)
+    end
+  end
+
+  describe '#find_stream' do
+    subject { instance.find_stream(stream) }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-str', stream_id: '1') }
+
+    context 'when stream exists' do
+      before do
+        instance.create_stream(stream)
+      end
+
+      it 'returns it' do
+        aggregate_failures do
+          is_expected.to eq(stream)
+          expect(subject.id).to be_an(Integer)
+        end
+      end
+    end
+
+    context 'when stream does not exist' do
+      it { is_expected.to eq(nil) }
+    end
+  end
+
+  describe '#create_stream' do
+    subject { instance.create_stream(stream) }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-str', stream_id: '1') }
+
+    context 'when stream does not exist' do
+      it 'creates it' do
+        expect { subject }.to change { instance.find_stream(stream) }.from(nil).to(kind_of(PgEventstore::Stream))
+      end
+      it 'has correct attributes' do
+        aggregate_failures do
+          expect(subject.id).to be_a(Integer)
+          expect(subject.context).to eq(stream.context)
+          expect(subject.stream_name).to eq(stream.stream_name)
+          expect(subject.stream_id).to eq(stream.stream_id)
+        end
+      end
+    end
+
+    context 'when stream already exists' do
+      before do
+        instance.create_stream(stream)
+      end
+
+      it 'raises error' do
+        expect { subject }.to raise_error(PG::UniqueViolation)
+      end
+    end
+  end
+
+  describe '#find_or_create_stream' do
+    subject { instance.find_or_create_stream(stream) }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-str', stream_id: '1') }
+
+    context 'when stream does not exist' do
+      it 'creates it' do
+        expect { subject }.to change { instance.find_stream(stream) }.from(nil).to(kind_of(PgEventstore::Stream))
+      end
+      it 'has correct attributes' do
+        aggregate_failures do
+          expect(subject.id).to be_a(Integer)
+          expect(subject.context).to eq(stream.context)
+          expect(subject.stream_name).to eq(stream.stream_name)
+          expect(subject.stream_id).to eq(stream.stream_id)
+        end
+      end
+    end
+
+    context 'when stream exists' do
+      before do
+        instance.create_stream(stream)
+      end
+
+      it 'returns it' do
+        aggregate_failures do
+          is_expected.to eq(stream)
+          expect(subject.id).to be_an(Integer)
+        end
+      end
     end
   end
 end

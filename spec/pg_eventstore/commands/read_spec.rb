@@ -107,7 +107,7 @@ RSpec.describe PgEventstore::Commands::Read do
       let!(:link) do
         # TODO: use LinkTo command here when it will be implemented instead manual query
         instance.send(:queries).insert(
-          PgEventstore::Event.new(link_id: existing_event.global_position, stream_revision: 1, **existing_event.stream)
+          existing_event.stream, PgEventstore::Event.new(link_id: existing_event.id, stream_revision: 1)
         )
       end
       let(:stream) { events_stream2 }

@@ -12,24 +12,23 @@ module PgEventstore
       # @raise [PgEventstore::WrongExpectedRevisionError]
       def call(stream, *events, options: {})
         queries.transaction do
-          revision = queries.last_stream_event(stream)&.stream_revision || -1
+          stream = queries.find_or_create_stream(stream)
+          revision = queries.last_event(stream)&.stream_revision || -1
           assert_expected_revision!(revision, options[:expected_revision]) if options[:expected_revision]
           events.map.with_index do |event, index|
-            queries.insert(prepared_event(stream, event, revision + index + 1))
+            queries.insert(stream, prepared_event(event, revision + index + 1))
           end
         end
       end
 
       private
 
-      # @param stream [PgEventstore::Stream]
       # @param event [PgEventstore::Event]
       # @param revision [Integer]
       # @return [PgEventstore::Event]
-      def prepared_event(stream, event, revision)
+      def prepared_event(event, revision)
         event.class.new(
-          id: event.id, data: event.data, metadata: event.metadata, type: event.type, stream_revision: revision,
-          **stream
+          id: event.id, data: event.data, metadata: event.metadata, type: event.type, stream_revision: revision
         )
       end
 

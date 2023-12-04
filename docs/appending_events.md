@@ -5,6 +5,8 @@
 The simplest way to append an event is to create an event object, a stream object and call client's `#append_to_stream` method.
 
 ```ruby
+require 'securerandom'
+
 class SomethingHappened < PgEventstore::Event
 end
 

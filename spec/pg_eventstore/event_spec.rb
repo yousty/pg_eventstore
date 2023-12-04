@@ -9,29 +9,12 @@ RSpec.describe PgEventstore::Event do
     it { is_expected.to have_attribute(:id) }
     it { is_expected.to have_attribute(:type).with_default_value('PgEventstore::Event') }
     it { is_expected.to have_attribute(:global_position) }
-    it { is_expected.to have_attribute(:context) }
-    it { is_expected.to have_attribute(:stream_name) }
-    it { is_expected.to have_attribute(:stream_id) }
+    it { is_expected.to have_attribute(:stream) }
     it { is_expected.to have_attribute(:stream_revision) }
     it { is_expected.to have_attribute(:data).with_default_value({}) }
     it { is_expected.to have_attribute(:metadata).with_default_value({}) }
     it { is_expected.to have_attribute(:link_id) }
     it { is_expected.to have_attribute(:created_at) }
-  end
-
-  describe "#stream" do
-    subject { instance.stream }
-
-    let(:instance) { described_class.new(context: 'SomeContext', stream_name: 'SomeStream', stream_id: '123') }
-
-    it { is_expected.to be_a(PgEventstore::Stream) }
-    it 'has correct attributes' do
-      aggregate_failures do
-        expect(subject.context).to eq(instance.context)
-        expect(subject.stream_name).to eq(instance.stream_name)
-        expect(subject.stream_id).to eq(instance.stream_id)
-      end
-    end
   end
 
   describe '#==' do

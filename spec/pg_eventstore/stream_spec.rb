@@ -3,19 +3,6 @@
 RSpec.describe PgEventstore::Stream do
   let(:instance) { described_class.new(context: 'SomeContext', stream_name: 'SomeStreamName', stream_id: '123') }
 
-  describe 'constants' do
-    describe 'BIGINT' do
-      subject { described_class::BIGINT }
-
-      it 'has correct range' do
-        is_expected.to eq(-9223372036854775808..9223372036854775807)
-      end
-      it 'does not exceed 8 bytes limit' do
-        expect((-subject.begin + subject.end).to_s(16)).to eq('ffffffffffffffff')
-      end
-    end
-  end
-
   describe '.all_stream' do
     subject { described_class.all_stream }
 
@@ -106,14 +93,6 @@ RSpec.describe PgEventstore::Stream do
       let(:another_instance) { Object.new }
 
       it { is_expected.to eq(false) }
-    end
-  end
-
-  describe '#lock_id' do
-    subject { instance.lock_id }
-
-    it 'calculates bigint representation of the stream, based on its attributes' do
-      is_expected.to eq(-4582894943774205551)
     end
   end
 end

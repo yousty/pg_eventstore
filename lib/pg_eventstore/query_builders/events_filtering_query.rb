@@ -17,21 +17,34 @@ module PgEventstore
       end.freeze
 
       def initialize
-        @sql_builder = SQLBuilder.new.from('events').limit(DEFAULT_LIMIT).offset(DEFAULT_OFFSET)
+        @sql_builder =
+          SQLBuilder.new.
+            select('events.*').
+            select('row_to_json(streams.*) as stream').
+            from('events').
+            join('JOIN streams ON streams.id = events.stream_id').
+            limit(DEFAULT_LIMIT).
+            offset(DEFAULT_OFFSET)
       end
 
       # @param context [String, nil]
       # @param stream_name [String, nil]
       # @param stream_id [String, nil]
       # @return [void]
-      def add_stream(context: nil, stream_name: nil, stream_id: nil)
+      def add_stream_attrs(context: nil, stream_name: nil, stream_id: nil)
         stream_attrs = { context: context, stream_name: stream_name, stream_id: stream_id }.compact
         return if stream_attrs.empty?
 
         sql = stream_attrs.map do |attr, _|
-          "events.#{attr} = ?"
+          "streams.#{attr} = ?"
         end.join(" AND ")
         @sql_builder.where_or(sql, *stream_attrs.values)
+      end
+
+      # @param stream [PgEventstore::Stream]
+      # @return [void]
+      def add_stream(stream)
+        @sql_builder.where("streams.id = ?", stream.id)
       end
 
       # @param event_types [Array, nil]
@@ -64,8 +77,14 @@ module PgEventstore
 
       # @param direction [String, Symbol, nil]
       # @return [void]
-      def add_direction(direction)
-        @direction = direction
+      def add_stream_direction(direction)
+        @sql_builder.order("events.stream_revision #{SQL_DIRECTIONS[direction]}")
+      end
+
+      # @param direction [String, Symbol, nil]
+      # @return [void]
+      def add_all_stream_direction(direction)
+        @sql_builder.order("events.global_position #{SQL_DIRECTIONS[direction]}")
       end
 
       # @param limit [Integer, nil]
@@ -90,13 +109,14 @@ module PgEventstore
         return unless should_resolve
 
         @sql_builder.
+          unselect.
           select("(COALESCE(original_events.*, events.*)).*").
-          join("LEFT JOIN events original_events ON original_events.global_position = events.link_id")
+          select('row_to_json(streams.*) as stream').
+          join("LEFT JOIN events original_events ON original_events.id = events.link_id")
       end
 
       # @return [Array]
       def to_exec_params
-        @sql_builder.order("events.global_position #{SQL_DIRECTIONS[@direction]}")
         @sql_builder.to_exec_params
       end
     end

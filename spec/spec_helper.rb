@@ -59,7 +59,7 @@ RSpec.configure do |config|
       config.connection_pool_size = 20
     end
     # Clean up db
-    PgEventstore.connection.with { |c| c.exec('TRUNCATE events') }
+    PgEventstore.connection.with { |c| c.exec('TRUNCATE streams, events CASCADE') }
   end
 
   config.include EventHelpers

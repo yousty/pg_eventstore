@@ -4,8 +4,6 @@ require 'digest/md5'
 
 module PgEventstore
   class Stream
-    BIGINT = -9223372036854775808..9223372036854775807
-
     class << self
       # Produces "all" stream instance. "all" stream does not represent any specific stream. Instead, it indicates that
       # a specific command should be performed over any kind of streams if possible
@@ -17,15 +15,17 @@ module PgEventstore
       end
     end
 
-    attr_reader :context, :stream_name, :stream_id
+    attr_reader :context, :stream_name, :stream_id, :id
 
     # @param context [String]
     # @param stream_name [String]
     # @param stream_id [String]
-    def initialize(context:, stream_name:, stream_id:)
+    # @param id [Integer, nil] internal stream's id, read only
+    def initialize(context:, stream_name:, stream_id:, id: nil)
       @context = context
       @stream_name = stream_name
       @stream_id = stream_id
+      @id = id
     end
 
     # @return [Boolean]
@@ -56,15 +56,6 @@ module PgEventstore
       return false unless other_stream.is_a?(Stream)
 
       to_hash == other_stream.to_hash
-    end
-
-    # Calculate pg's bigint value to be used in the pg lock function.
-    # @return [Integer]
-    def lock_id
-      ubigint = Digest::MD5.hexdigest("#{context}::#{stream_name}$#{stream_id}")[0..15].to_i(16)
-      return ubigint if ubigint <= BIGINT.end
-
-      BIGINT.end - ubigint
     end
   end
 end

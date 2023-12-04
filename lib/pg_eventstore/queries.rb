@@ -29,24 +29,55 @@ module PgEventstore
           yield
         end
       end
-    rescue PG::TRSerializationFailure => e
+    rescue PG::TRSerializationFailure, PG::TRDeadlockDetected => e
       retry if e.connection.transaction_status == PG::PQTRANS_IDLE
       raise
     end
 
-    # Fetches last event of the given stream. Middlewares are not applied.
+    # Finds a stream in the database by the given Stream object
     # @param stream [PgEventstore::Stream]
-    # @return [PgEventstore::Event, nil]
-    def last_stream_event(stream)
-      sql = <<~SQL
-        SELECT * FROM events WHERE context = $1 AND stream_name = $2 AND stream_id = $3 
-          ORDER BY global_position DESC
+    # @return [PgEventstore::Stream, nil] persisted stream
+    def find_stream(stream)
+      find_sql = <<~SQL
+        SELECT * FROM streams WHERE streams.context = $1 AND streams.stream_name = $2 AND streams.stream_id = $3
           LIMIT 1
       SQL
       pgresult = connection.with do |conn|
-        conn.exec_params(sql, stream.to_a)
+        conn.exec_params(find_sql, stream.to_a)
       end
-      deserializer.without_middlewares.deserialize_one(pgresult)
+      PgEventstore::Stream.new(**pgresult.to_a.first.transform_keys(&:to_sym)) if pgresult.ntuples == 1
+    end
+
+    # @param stream [PgEventstore::Stream]
+    # @return [PgEventstore::RawStream] persisted stream
+    def create_stream(stream)
+      create_sql = <<~SQL
+        INSERT INTO streams (context, stream_name, stream_id) VALUES ($1, $2, $3) RETURNING *
+      SQL
+      pgresult = connection.with do |conn|
+        conn.exec_params(create_sql, stream.to_a)
+      end
+      PgEventstore::Stream.new(**pgresult.to_a.first.transform_keys(&:to_sym))
+    end
+
+    # @return [PgEventstore::Stream] persisted stream
+    def find_or_create_stream(stream)
+      find_stream(stream) || create_stream(stream)
+    end
+
+    # Fetches last event of the given stream id. Middlewares are not applied.
+    # @param stream [PgEventstore::Stream] persisted stream
+    # @return [PgEventstore::Event, nil]
+    def last_event(stream)
+      sql = <<~SQL
+        SELECT * FROM events WHERE events.stream_id = $1 ORDER BY events.stream_revision DESC LIMIT 1
+      SQL
+      pgresult = connection.with do |conn|
+        conn.exec_params(sql, [stream.id])
+      end
+      deserializer.without_middlewares.deserialize_one(pgresult)&.tap do |event|
+        event.stream = stream
+      end
     end
 
     # @see PgEventstore::Client#read for more info
@@ -61,20 +92,27 @@ module PgEventstore
       deserializer.deserialize_many(pgresult)
     end
 
+    # @param stream [PgEventstore::Stream] persisted stream
     # @param event [PgEventstore::Event]
     # @return [PgEventstore::Event]
-    def insert(event)
-      insert_map = %w[type data metadata context stream_name stream_id stream_revision link_id]
-      insert_map.push('id') if event.id
-      sql = <<~SQL
-        INSERT INTO events (#{insert_map.join(', ')}) 
-          VALUES (#{(1..insert_map.size).map { |n| "$#{n}" }.join(', ')}) RETURNING *
-      SQL
+    def insert(stream, event)
       serializer.serialize(event)
+
+      attributes = event.options_hash.slice(:id, :type, :data, :metadata, :stream_revision, :link_id).compact
+      attributes[:stream_id] = stream.id
+
+      sql = <<~SQL
+        INSERT INTO events (#{attributes.keys.join(', ')}) 
+          VALUES (#{(1..attributes.values.size).map { |n| "$#{n}" }.join(', ')}) 
+          RETURNING *
+      SQL
+
       pgresult = connection.with do |conn|
-        conn.exec_params(sql, insert_map.map { |attr| event.public_send(attr) })
+        conn.exec_params(sql, attributes.values)
       end
-      deserializer.without_middlewares.deserialize_one(pgresult)
+      deserializer.without_middlewares.deserialize_one(pgresult).tap do |persisted_event|
+        persisted_event.stream = stream
+      end
     end
 
     private
@@ -90,15 +128,16 @@ module PgEventstore
       event_filter.add_limit(options[:max_count])
       event_filter.add_offset(offset)
       event_filter.resolve_links(options[:resolve_link_tos])
-      event_filter.add_direction(options[:direction])
 
       if stream.all_stream?
         options in { filter: { streams: Array => streams } }
-        streams&.each { |attrs| event_filter.add_stream(**attrs) }
+        streams&.each { |attrs| event_filter.add_stream_attrs(**attrs) }
         event_filter.add_global_position(options[:from_position])
+        event_filter.add_all_stream_direction(options[:direction])
       else
-        event_filter.add_stream(**stream)
+        event_filter.add_stream(stream)
         event_filter.add_revision(options[:from_revision])
+        event_filter.add_stream_direction(options[:direction])
       end
       event_filter
     end

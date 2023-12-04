@@ -9,8 +9,12 @@ RSpec.describe PgEventstore::PgresultDeserializer do
     subject { instance.deserialize(pgresult) }
 
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
-    let(:event) { PgEventstore::Event.new(id: SecureRandom.uuid) }
-    let(:pgresult) { PgEventstore.connection.with { |c| c.exec('SELECT * FROM events LIMIT 1') } }
+    let(:event) do
+      PgEventstore::Event.new(id: SecureRandom.uuid, type: 'some-event', data: { foo: :bar }, metadata: { bar: :baz })
+    end
+    let(:pgresult) do
+      PgEventstore.connection.with { |c| c.exec('SELECT * FROM events LIMIT 1') }
+    end
 
     before do
       PgEventstore.client.append_to_stream(stream, event)
@@ -35,7 +39,37 @@ RSpec.describe PgEventstore::PgresultDeserializer do
       end
 
       it 'transforms events using those middlewares' do
-        expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET, 'foo' => 'bar')
+        expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET, 'foo' => 'bar', 'bar' => 'baz')
+      end
+    end
+
+    describe 'deserialized event' do
+      subject { super().first }
+
+      it 'has correct attributes' do
+        aggregate_failures do
+          expect(subject.stream).to be_nil
+          expect(subject.id).to eq(event.id)
+          expect(subject.type).to eq('some-event')
+          expect(subject.data).to eq('foo' => 'bar')
+          expect(subject.metadata).to eq('bar' => 'baz')
+          expect(subject.stream_revision).to eq(0)
+        end
+      end
+
+      context 'when result contains info about stream' do
+        let(:pgresult) do
+          PgEventstore.connection.with do |c|
+            c.exec('SELECT events.*, row_to_json(streams.*) as stream FROM events JOIN streams on streams.id = events.stream_id LIMIT 1')
+          end
+        end
+
+        it 'includes stream attributes' do
+          aggregate_failures do
+            expect(subject.stream).to eq(stream)
+            expect(subject.stream.id).to be_an(Integer)
+          end
+        end
       end
     end
   end
@@ -72,7 +106,7 @@ RSpec.describe PgEventstore::PgresultDeserializer do
       end
     end
 
-    context 'when pfresult contains no results' do
+    context 'when pgresult contains no results' do
       let(:pgresult) { PgEventstore.connection.with { |c| c.exec('SELECT * FROM events LIMIT 0') } }
 
       it { is_expected.to eq(nil) }

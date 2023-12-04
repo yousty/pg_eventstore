@@ -21,6 +21,11 @@ module PgEventstore
       self
     end
 
+    def unselect
+      @select_values.clear
+      self
+    end
+
     # @param sql [String]
     # @param arguments [Array] positional values
     # @return self
