@@ -9,14 +9,12 @@ PgEventstore.configure do |config|
 end
 
 PgEventstore.connection.with do |conn|
-  next if conn.exec_params('SELECT 1 as exists FROM pg_database WHERE datname = $1', ["eventstore"]).to_a.dig(0, 'exists')
-
+  conn.exec('DROP DATABASE IF EXISTS eventstore')
   conn.exec('CREATE DATABASE eventstore WITH OWNER postgres')
 end
 
 PgEventstore.connection.with do |conn|
-  next if conn.exec_params('SELECT 1 as exists FROM pg_database WHERE datname = $1', ["eventstore_test"]).to_a.dig(0, 'exists')
-
+  conn.exec('DROP DATABASE IF EXISTS eventstore_test')
   conn.exec('CREATE DATABASE eventstore_test WITH OWNER postgres')
 end
 
