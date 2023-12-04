@@ -13,10 +13,12 @@ module PgEventstore
       def call(stream, *events, options: {})
         queries.transaction do
           stream = queries.find_or_create_stream(stream)
-          revision = queries.last_event(stream)&.stream_revision || -1
+          revision = stream.stream_revision
           assert_expected_revision!(revision, options[:expected_revision]) if options[:expected_revision]
           events.map.with_index do |event, index|
             queries.insert(stream, prepared_event(event, revision + index + 1))
+          end.tap do
+            queries.update_stream_revision(stream, revision + events.size)
           end
         end
       end

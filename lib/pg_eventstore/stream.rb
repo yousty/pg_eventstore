@@ -15,17 +15,19 @@ module PgEventstore
       end
     end
 
-    attr_reader :context, :stream_name, :stream_id, :id
+    attr_reader :context, :stream_name, :stream_id, :id, :stream_revision
 
     # @param context [String]
     # @param stream_name [String]
     # @param stream_id [String]
     # @param id [Integer, nil] internal stream's id, read only
-    def initialize(context:, stream_name:, stream_id:, id: nil)
+    # @param stream_revision [Integer, nil] current stream revision, read only
+    def initialize(context:, stream_name:, stream_id:, id: nil, stream_revision: nil)
       @context = context
       @stream_name = stream_name
       @stream_id = stream_id
       @id = id
+      @stream_revision = stream_revision
     end
 
     # @return [Boolean]

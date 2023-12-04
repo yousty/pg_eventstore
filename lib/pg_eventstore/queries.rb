@@ -65,21 +65,6 @@ module PgEventstore
       find_stream(stream) || create_stream(stream)
     end
 
-    # Fetches last event of the given stream id. Middlewares are not applied.
-    # @param stream [PgEventstore::Stream] persisted stream
-    # @return [PgEventstore::Event, nil]
-    def last_event(stream)
-      sql = <<~SQL
-        SELECT * FROM events WHERE events.stream_id = $1 ORDER BY events.stream_revision DESC LIMIT 1
-      SQL
-      pgresult = connection.with do |conn|
-        conn.exec_params(sql, [stream.id])
-      end
-      deserializer.without_middlewares.deserialize_one(pgresult)&.tap do |event|
-        event.stream = stream
-      end
-    end
-
     # @see PgEventstore::Client#read for more info
     # @param stream [PgEventstore::Stream]
     # @param options [Hash]
@@ -112,6 +97,16 @@ module PgEventstore
       end
       deserializer.without_middlewares.deserialize_one(pgresult).tap do |persisted_event|
         persisted_event.stream = stream
+      end
+    end
+
+    # @param stream [PgEventstore::Stream] persisted stream
+    # @return [void]
+    def update_stream_revision(stream, revision)
+      connection.with do |conn|
+        conn.exec_params(<<~SQL, [revision, stream.id])
+          UPDATE streams SET stream_revision = $1 WHERE id = $2
+        SQL
       end
     end
 

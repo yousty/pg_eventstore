@@ -30,36 +30,6 @@ RSpec.describe PgEventstore::Queries do
     end
   end
 
-  describe '#last_event' do
-    subject { instance.last_event(instance.find_stream(stream1)) }
-
-    let(:stream1) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
-    let(:stream2) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '2') }
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid) }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid) }
-
-    before do
-      PgEventstore.client.append_to_stream(stream1, [event1, event2])
-      PgEventstore.client.append_to_stream(stream2, event3)
-    end
-
-    it 'returns last event of the given stream' do
-      aggregate_failures do
-        is_expected.to be_a(PgEventstore::Event)
-        expect(subject.id).to eq(event2.id)
-      end
-    end
-
-    context 'when middlewares are given' do
-      let(:middlewares) { [DummyMiddleware.new] }
-
-      it 'ignores it' do
-        expect(subject.metadata).to eq({})
-      end
-    end
-  end
-
   describe '#stream_events' do
     # Tests of different options(second argument) are written as a part of Read command testing
     subject { instance.stream_events(instance.find_stream(stream1), {}) }
@@ -195,6 +165,19 @@ RSpec.describe PgEventstore::Queries do
           expect(subject.id).to be_an(Integer)
         end
       end
+    end
+  end
+
+  describe '#update_stream_revision' do
+    subject { instance.update_stream_revision(stream, revision) }
+
+    let(:stream) do
+      instance.create_stream(PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-str', stream_id: '1'))
+    end
+    let(:revision) { 3 }
+
+    it 'updates #stream_revision' do
+      expect { subject }.to change { instance.find_stream(stream).stream_revision }.to(3)
     end
   end
 end

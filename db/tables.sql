@@ -1,9 +1,10 @@
 CREATE TABLE public.streams
 (
-    id          bigserial         NOT NULL,
-    context     character varying NOT NULL,
-    stream_name character varying NOT NULL,
-    stream_id   character varying NOT NULL
+    id              bigserial         NOT NULL,
+    context         character varying NOT NULL,
+    stream_name     character varying NOT NULL,
+    stream_id       character varying NOT NULL,
+    stream_revision int DEFAULT -1    NOT NULL
 );
 
 CREATE TABLE public.events
