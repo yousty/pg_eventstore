@@ -21,6 +21,7 @@ module PgEventstore
       self
     end
 
+    # @return self
     def unselect
       @select_values.clear
       self
@@ -30,7 +31,8 @@ module PgEventstore
     # @param arguments [Array] positional values
     # @return self
     def where(sql, *arguments)
-      _where(sql, 'AND', *arguments)
+      sql = extract_positional_args(sql, *arguments)
+      @where_values['AND'].push("(#{sql})")
       self
     end
 
@@ -38,7 +40,8 @@ module PgEventstore
     # @param arguments [Object] positional values
     # @return self
     def where_or(sql, *arguments)
-      _where(sql, 'OR', *arguments)
+      sql = extract_positional_args(sql, *arguments)
+      @where_values['OR'].push("(#{sql})")
       self
     end
 
@@ -50,9 +53,10 @@ module PgEventstore
     end
 
     # @param sql [String]
+    # @param arguments [Object]
     # @return self
-    def join(sql)
-      @join_values.push(sql)
+    def join(sql, *arguments)
+      @join_values.push(extract_positional_args(sql, *arguments))
       self
     end
 
@@ -90,21 +94,9 @@ module PgEventstore
 
     private
 
-    # @param sql [String]
-    # @param join_pattern [String] determines how to join where value - either using AND or using OR
-    # @param arguments [Array] positional values
-    # @return [void]
-    def _where(sql, join_pattern, *arguments)
-      sql = sql.gsub("?").each_with_index do |_, index|
-        @positional_values.push(arguments[index])
-        "$#{@positional_values.size}"
-      end
-      @where_values[join_pattern].push("(#{sql})")
-    end
-
     # @return [String]
     def select_sql
-      @select_values.empty? ? '*' : @select_values.join(',')
+      @select_values.empty? ? '*' : @select_values.join(', ')
     end
 
     # @param join_pattern [String] "OR"/"AND"
@@ -121,6 +113,13 @@ module PgEventstore
     # @return [String]
     def order_sql
       @order_values.join(', ')
+    end
+
+    def extract_positional_args(sql, *arguments)
+      sql.gsub("?").each_with_index do |_, index|
+        @positional_values.push(arguments[index])
+        "$#{@positional_values.size}"
+      end
     end
   end
 end
