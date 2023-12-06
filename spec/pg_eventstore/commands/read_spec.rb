@@ -222,7 +222,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
     end
 
-    describe 'filtering by the stream name' do
+    describe 'filtering by the stream name only' do
       let(:options) { { filter: { streams: [{ stream_name: 'some-stream1' }] } } }
 
       context 'when reading from regular stream' do
@@ -234,8 +234,8 @@ RSpec.describe PgEventstore::Commands::Read do
       context 'when reading from "all" stream' do
         let(:stream) { PgEventstore::Stream.all_stream }
 
-        it 'returns all events within the given stream name' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event5.id])
+        it 'ignores it' do
+          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
         end
       end
     end
@@ -258,24 +258,6 @@ RSpec.describe PgEventstore::Commands::Read do
       end
     end
 
-    describe 'filtering by two different stream names' do
-      let(:options) { { filter: { streams: [{ stream_name: 'some-stream1' }, { stream_name: 'some-stream3' }] } } }
-
-      context 'when reading from regular stream' do
-        it 'ignores it' do
-          expect(subject.map(&:id)).to eq([event1.id])
-        end
-      end
-
-      context 'when reading from "all" stream' do
-        let(:stream) { PgEventstore::Stream.all_stream }
-
-        it 'returns all events within the given stream names' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event4.id, event5.id])
-        end
-      end
-    end
-
     describe 'filtering by stream name and context as a part of the same stream' do
       let(:options) { { filter: { streams: [{ context: 'SomeAnotherContext', stream_name: 'some-stream1' }] } } }
 
@@ -294,6 +276,33 @@ RSpec.describe PgEventstore::Commands::Read do
       end
     end
 
+    describe 'filtering by several stream names and contexts' do
+      let(:options) do
+        {
+          filter: {
+            streams: [
+              { context: 'SomeAnotherContext', stream_name: 'some-stream1' },
+              { context: 'SomeContext', stream_name: 'some-stream1' }
+            ]
+          }
+        }
+      end
+
+      context 'when reading from regular stream' do
+        it 'ignores it' do
+          expect(subject.map(&:id)).to eq([event1.id])
+        end
+      end
+
+      context 'when reading from "all" stream' do
+        let(:stream) { PgEventstore::Stream.all_stream }
+
+        it 'returns all events within the given stream names and contexts' do
+          expect(subject.map(&:id)).to eq([event1.id, event2.id, event5.id])
+        end
+      end
+    end
+
     describe 'filtering by stream name and context as a part of different streams' do
       let(:options) { { filter: { streams: [{ context: 'SomeAnotherContext' }, { stream_name: 'some-stream1' }] } } }
 
@@ -306,8 +315,8 @@ RSpec.describe PgEventstore::Commands::Read do
       context 'when reading from "all" stream' do
         let(:stream) { PgEventstore::Stream.all_stream }
 
-        it 'returns all events that match either stream name or context' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event5.id])
+        it 'returns all events that match context only, ignoring stream_name' do
+          expect(subject.map(&:id)).to eq([event2.id, event5.id])
         end
       end
     end
@@ -330,7 +339,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
     end
 
-    describe 'filtering by the stream id' do
+    describe 'filtering by the stream id only' do
       let(:options) { { filter: { streams: [{ stream_id: '1234' }] } } }
 
       context 'when reading from regular stream' do
@@ -342,26 +351,8 @@ RSpec.describe PgEventstore::Commands::Read do
       context 'when reading from "all" stream' do
         let(:stream) { PgEventstore::Stream.all_stream }
 
-        it 'returns all events by the given stream id' do
-          expect(subject.map(&:id)).to eq([event3.id, event4.id])
-        end
-      end
-    end
-
-    describe 'filtering by several different stream ids' do
-      let(:options) { { filter: { streams: [{ stream_id: '1234' }, { stream_id: '123' }] } } }
-
-      context 'when reading from regular stream' do
         it 'ignores it' do
-          expect(subject.map(&:id)).to eq([event1.id])
-        end
-      end
-
-      context 'when reading from "all" stream' do
-        let(:stream) { PgEventstore::Stream.all_stream }
-
-        it 'returns all events by the given stream ids' do
-          expect(subject.map(&:id)).to eq([event1.id, event3.id, event4.id])
+          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
         end
       end
     end
@@ -378,8 +369,8 @@ RSpec.describe PgEventstore::Commands::Read do
       context 'when reading from "all" stream' do
         let(:stream) { PgEventstore::Stream.all_stream }
 
-        it 'returns all events that match either the given context or the given stream id' do
-          expect(subject.map(&:id)).to eq([event1.id, event4.id])
+        it 'returns all events that match the given context only, ignoring stream id' do
+          expect(subject.map(&:id)).to eq([event4.id])
         end
       end
     end
@@ -396,8 +387,8 @@ RSpec.describe PgEventstore::Commands::Read do
       context 'when reading from "all" stream' do
         let(:stream) { PgEventstore::Stream.all_stream }
 
-        it 'returns all events that match either the given stream name or the given stream id' do
-          expect(subject.map(&:id)).to eq([event3.id, event4.id])
+        it 'ignores it' do
+          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
         end
       end
     end
@@ -443,7 +434,9 @@ RSpec.describe PgEventstore::Commands::Read do
   describe 'reading using filter by event type and by stream parts' do
     subject { instance.call(stream, options: options) }
 
-    let(:options) { { filter: { event_types: %w[foo baz], streams: [{ stream_name: 'some-stream2' }] } } }
+    let(:options) do
+      { filter: { event_types: %w[foo baz], streams: [{ context: 'SomeContext', stream_name: 'some-stream1' }] } }
+    end
     let(:events_stream1) do
       PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: '123')
     end
@@ -451,7 +444,7 @@ RSpec.describe PgEventstore::Commands::Read do
       PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '123')
     end
     let(:events_stream3) do
-      PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream2', stream_id: '123')
+      PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: '124')
     end
     let(:stream) { events_stream1 }
     let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
@@ -476,7 +469,7 @@ RSpec.describe PgEventstore::Commands::Read do
       let(:stream) { PgEventstore::Stream.all_stream }
 
       it 'filters events by the given event types and by the given stream parts' do
-        expect(subject.map(&:id)).to eq([event3.id, event5.id])
+        expect(subject.map(&:id)).to eq([event1.id, event5.id])
       end
     end
   end

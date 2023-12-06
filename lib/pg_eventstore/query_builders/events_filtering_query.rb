@@ -32,9 +32,10 @@ module PgEventstore
       # @param stream_id [String, nil]
       # @return [void]
       def add_stream_attrs(context: nil, stream_name: nil, stream_id: nil)
-        stream_attrs = { context: context, stream_name: stream_name, stream_id: stream_id }.compact
-        return if stream_attrs.empty?
+        stream_attrs = { context: context, stream_name: stream_name, stream_id: stream_id }
+        return unless correct_stream_filter?(stream_attrs)
 
+        stream_attrs.compact!
         sql = stream_attrs.map do |attr, _|
           "streams.#{attr} = ?"
         end.join(" AND ")
@@ -118,6 +119,23 @@ module PgEventstore
       # @return [Array]
       def to_exec_params
         @sql_builder.to_exec_params
+      end
+
+      private
+
+      # @param stream_attrs [Hash]
+      # @return [Boolean]
+      def correct_stream_filter?(stream_attrs)
+        result = (stream_attrs in { context: String, stream_name: String, stream_id: String } |
+          { context: String, stream_name: String, stream_id: nil } |
+          { context: String, stream_name: nil, stream_id: nil })
+        return true if result
+
+        PgEventstore&.logger&.debug(<<~TEXT)
+          Ignoring unsupported stream filter format for searching #{stream_attrs.compact.inspect}. \
+          See docs/reading_events.md docs for supported formats.
+        TEXT
+        false
       end
     end
   end
