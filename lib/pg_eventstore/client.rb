@@ -94,7 +94,7 @@ module PgEventstore
     #     )
     #
     #     # Filtering by specific event when reading from the specific stream
-    #     PgEventstore.client.read(stream, { options: { filter: { event_types: ['MyAwesomeEvent'] } } })
+    #     PgEventstore.client.read(stream, options: { filter: { event_types: ['MyAwesomeEvent'] } })
     # @param skip_middlewares [Boolean] whether to skip middlewares. Defaults to false
     # @return [Array<PgEventstore::Event>]
     # @raise [PgEventstore::StreamNotFoundError]
