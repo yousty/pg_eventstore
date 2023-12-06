@@ -31,6 +31,16 @@ module PgEventstore
     end
   end
 
+  class SystemStreamError < Error
+    attr_reader :stream
+
+    # @param stream [PgEventstore::Stream]
+    def initialize(stream)
+      @stream = stream
+      super("Stream #{stream.inspect} is a system stream and can't be used to append events.")
+    end
+  end
+
   class WrongExpectedRevisionError < Error
     attr_reader :revision, :expected_revision
 

@@ -29,12 +29,16 @@ PgEventstore::Event.new(data: { 'foo' => 'bar' })
 
 To be able to manipulate a stream - you have to compute a stream's object first. It can be achieved by using `PgEventstore::Stream` class. Here is a description of its attributes:
 
-- `context` - String(required). A Bounded Context, read more [here](https://martinfowler.com/bliki/BoundedContext.html).
+- `context` - String(required). A Bounded Context, read more [here](https://martinfowler.com/bliki/BoundedContext.html). Values which start from `$` sign are reserved by `pg_eventstore`. Such contexts can't be used to append events.
 - `stream_name` - String(required). A stream name
 - `stream_id` - String(required). A stream id
+- `id` - Integer(optional, read only). Internal id. It is set when a stream is returned from database as a part of deserialization process. Manually assigning this attribute will affect on nothing.
+- `stream_revision` - Integer(optional, read only). Current stream's revision. You can rely on this value when setting `:expected_revision` option when appending events to a stream. It is set when a stream is returned from database as a part of deserialization process. Manually assigning this attribute will affect on nothing.
 
 Example:
 
 ```ruby
 PgEventstore::Stream.new(context: 'Sales', stream_name: 'Customer', stream_id: '1')
 ```
+
+There is a special case, called "all" stream. You can get this object by calling `PgEventstore::Stream.all_stream` method. Read more about "all" stream in `Reading from the "all" stream` section of [Reading events](reading_events.md) chapter.

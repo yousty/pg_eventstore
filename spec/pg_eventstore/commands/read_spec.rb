@@ -32,68 +32,6 @@ RSpec.describe PgEventstore::Commands::Read do
       end
     end
 
-    context 'when :direction option is given' do
-      context 'when value of it is "Backwards"' do
-        let(:options) { { direction: 'Backwards' } }
-
-        it 'returns events in descending order' do
-          expect(subject.map(&:id)).to eq([event3.id, event2.id, event1.id])
-        end
-      end
-
-      context 'when value of it is "Forwards"' do
-        let(:options) { { direction: 'Forwards' } }
-
-        it 'returns events in ascending order' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id])
-        end
-      end
-
-      context 'when value of it is something else' do
-        let(:options) { { direction: 'some unhandled direction value' } }
-
-        it 'returns events in ascending order' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id])
-        end
-      end
-    end
-
-    context 'when :from_revision option is given' do
-      let(:options) { { from_revision: 1 } }
-
-      context 'when reading from regular stream' do
-        it 'returns events, starting from the given stream revision' do
-          expect(subject.map(&:id)).to eq([event2.id, event3.id])
-        end
-      end
-
-      context 'when reading from "all" stream' do
-        let(:stream) { PgEventstore::Stream.all_stream }
-
-        it 'ignores it' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id])
-        end
-      end
-    end
-
-    context 'when :from_position option is given' do
-      let(:options) { { from_position: PgEventstore.client.read(events_stream1).last(2).first.global_position } }
-
-      context 'when reading from regular stream' do
-        it 'ignores it' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id])
-        end
-      end
-
-      context 'when reading from "all" stream' do
-        let(:stream) { PgEventstore::Stream.all_stream }
-
-        it 'returns events, starting from the given global position' do
-          expect(subject.map(&:id)).to eq([event2.id, event3.id, event4.id])
-        end
-      end
-    end
-
     context 'when :max_count option is given' do
       let(:options) { { max_count: 2 } }
 
@@ -470,6 +408,171 @@ RSpec.describe PgEventstore::Commands::Read do
 
       it 'filters events by the given event types and by the given stream parts' do
         expect(subject.map(&:id)).to eq([event1.id, event5.id])
+      end
+    end
+  end
+
+  describe 'direction of reading from a position/revision' do
+    subject { instance.call(stream, options: options) }
+
+    let(:options) { {} }
+    let(:events_stream1) do
+      PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: '123')
+    end
+    let(:events_stream2) do
+      PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream2', stream_id: '123')
+    end
+    let(:stream) { events_stream2 }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
+    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
+    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
+
+    before do
+      PgEventstore.client.append_to_stream(events_stream1, [event1, event2])
+      PgEventstore.client.append_to_stream(events_stream2, [event3, event4, event5])
+    end
+
+    context 'when reading from a specific stream' do
+      shared_examples 'historical events order' do
+        it 'reads events in historical order' do
+          expect(subject.map(&:id)).to eq([event3.id, event4.id, event5.id])
+        end
+
+        context 'when :from_revision option is provided' do
+          let(:options) { super().merge(from_revision: 1) }
+
+          it 'reads events in historical order from the specific revision' do
+            expect(subject.map(&:id)).to eq([event4.id, event5.id])
+          end
+        end
+      end
+
+      shared_examples 'reversed events order' do
+        it 'reads events from old to new ordering' do
+          expect(subject.map(&:id)).to eq([event5.id, event4.id, event3.id])
+        end
+
+        context 'when :from_revision option is provided' do
+          let(:options) { super().merge(from_revision: 1) }
+
+          it 'reads events from old to new ordering from the specific revision' do
+            expect(subject.map(&:id)).to eq([event4.id, event3.id])
+          end
+        end
+      end
+
+      context 'when no direction is given' do
+        it_behaves_like 'historical events order'
+      end
+
+      context 'when direction is "Forwards"' do
+        let(:options) { { direction: 'Forwards' } }
+
+        it_behaves_like 'historical events order'
+      end
+
+      context 'when direction is "asc"' do
+        let(:options) { { direction: 'asc' } }
+
+        it_behaves_like 'historical events order'
+      end
+
+      context 'when direction is :asc' do
+        let(:options) { { direction: :asc } }
+
+        it_behaves_like 'historical events order'
+      end
+
+      context 'when direction is "Backwards"' do
+        let(:options) { { direction: 'Backwards' } }
+
+        it_behaves_like 'reversed events order'
+      end
+
+      context 'when direction is "desc"' do
+        let(:options) { { direction: 'desc' } }
+
+        it_behaves_like 'reversed events order'
+      end
+
+      context 'when direction is :desc' do
+        let(:options) { { direction: :desc } }
+
+        it_behaves_like 'reversed events order'
+      end
+    end
+
+    context 'when reading from "all" stream' do
+      let(:stream) { PgEventstore::Stream.all_stream }
+
+      shared_examples 'historical events order' do
+        it 'reads events in historical order' do
+          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
+        end
+
+        context 'when :from_position option is provided' do
+          let(:options) { super().merge(from_position: PgEventstore.client.read(stream)[2].global_position) }
+
+          it 'reads events in historical order from the specific position' do
+            expect(subject.map(&:id)).to eq([event3.id, event4.id, event5.id])
+          end
+        end
+      end
+
+      shared_examples 'reversed events order' do
+        it 'reads events from old to new ordering' do
+          expect(subject.map(&:id)).to eq([event5.id, event4.id, event3.id, event2.id, event1.id])
+        end
+
+        context 'when :from_position option is provided' do
+          let(:options) { super().merge(from_position: PgEventstore.client.read(stream)[2].global_position) }
+
+          it 'reads events from old to new ordering from the specific position' do
+            expect(subject.map(&:id)).to eq([event3.id, event2.id, event1.id])
+          end
+        end
+      end
+
+      context 'when no direction is given' do
+        it_behaves_like 'historical events order'
+      end
+
+      context 'when direction is "Forwards"' do
+        let(:options) { { direction: 'Forwards' } }
+
+        it_behaves_like 'historical events order'
+      end
+
+      context 'when direction is "asc"' do
+        let(:options) { { direction: 'asc' } }
+
+        it_behaves_like 'historical events order'
+      end
+
+      context 'when direction is :asc' do
+        let(:options) { { direction: :asc } }
+
+        it_behaves_like 'historical events order'
+      end
+
+      context 'when direction is "Backwards"' do
+        let(:options) { { direction: 'Backwards' } }
+
+        it_behaves_like 'reversed events order'
+      end
+
+      context 'when direction is "desc"' do
+        let(:options) { { direction: 'desc' } }
+
+        it_behaves_like 'reversed events order'
+      end
+
+      context 'when direction is :desc' do
+        let(:options) { { direction: :desc } }
+
+        it_behaves_like 'reversed events order'
       end
     end
   end

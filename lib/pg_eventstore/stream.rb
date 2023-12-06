@@ -4,6 +4,8 @@ require 'digest/md5'
 
 module PgEventstore
   class Stream
+    SYSTEM_STREAM_PREFIX = '$'
+
     class << self
       # Produces "all" stream instance. "all" stream does not represent any specific stream. Instead, it indicates that
       # a specific command should be performed over any kind of streams if possible
@@ -33,6 +35,12 @@ module PgEventstore
     # @return [Boolean]
     def all_stream?
       !!@all_stream
+    end
+
+    # Determine whether a stream is reserved by `pg_eventstore`. You can't append events to such streams.
+    # @return [Boolean]
+    def system?
+      all_stream? || context.start_with?(SYSTEM_STREAM_PREFIX)
     end
 
     # @return [Array]

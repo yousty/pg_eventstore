@@ -11,6 +11,8 @@ module PgEventstore
       # @return [Array<PgEventstore::Event>] persisted events
       # @raise [PgEventstore::WrongExpectedRevisionError]
       def call(stream, *events, options: {})
+        raise SystemStreamError, stream if stream.system?
+
         queries.transaction do
           stream = queries.find_or_create_stream(stream)
           revision = stream.stream_revision

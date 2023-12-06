@@ -174,6 +174,32 @@ RSpec.describe PgEventstore::Commands::Append do
           expect(subject.first).to be_a(DummyClass)
         end
       end
+
+      context 'when "all" stream is given as a stream to append events' do
+        let(:stream) { PgEventstore::Stream.all_stream }
+
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::SystemStreamError,
+              "Stream #{stream.inspect} is a system stream and can't be used to append events."
+            )
+          )
+        end
+      end
+
+      context 'when system stream is given as a stream to append events' do
+        let(:stream) { PgEventstore::Stream.new(context: '$et', stream_name: 'SomeEvent', stream_id: '') }
+
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::SystemStreamError,
+              "Stream #{stream.inspect} is a system stream and can't be used to append events."
+            )
+          )
+        end
+      end
     end
 
     describe 'appending multiple events' do

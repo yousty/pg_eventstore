@@ -138,3 +138,15 @@ event = UserAboutMeChanged.new(data: { user_id: '123', about_me: 'hi there!' })
 
 publish_event(stream, event)
 ```
+
+## Middlewares
+
+If you would like to prevent your registered middlewares from processing events before they get appended to a stream - you should use the `:skip_middlewares` argument:
+
+```ruby
+event = PgEventstore::Event.new
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: '1')
+PgEventstore.client.append_to_stream(stream, event, skip_middlewares: true)
+```
+
+See [Writing middleware](writing_middleware.md) chapter for info about what is middleware and how to implement it.

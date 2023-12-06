@@ -61,19 +61,21 @@ module PgEventstore
       end
 
       # @param revision [Integer, nil]
+      # @param direction [String, Symbol, nil]
       # @return [void]
-      def add_revision(revision)
+      def add_revision(revision, direction)
         return unless revision
 
-        @sql_builder.where("events.stream_revision >= ?", revision)
+        @sql_builder.where("events.stream_revision #{direction_operator(direction)} ?", revision)
       end
 
       # @param position [Integer, nil]
+      # @param direction [String, Symbol, nil]
       # @return [void]
-      def add_global_position(position)
+      def add_global_position(position, direction)
         return unless position
 
-        @sql_builder.where("events.global_position >= ?", position)
+        @sql_builder.where("events.global_position #{direction_operator(direction)} ?", position)
       end
 
       # @param direction [String, Symbol, nil]
@@ -136,6 +138,12 @@ module PgEventstore
           See docs/reading_events.md docs for supported formats.
         TEXT
         false
+      end
+
+      # @param direction [String, Symbol, nil]
+      # @return [String]
+      def direction_operator(direction)
+        SQL_DIRECTIONS[direction] == 'ASC' ? '>=' : '<='
       end
     end
   end

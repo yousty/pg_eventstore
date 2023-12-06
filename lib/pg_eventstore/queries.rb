@@ -127,11 +127,11 @@ module PgEventstore
       if stream.all_stream?
         options in { filter: { streams: Array => streams } }
         streams&.each { |attrs| event_filter.add_stream_attrs(**attrs) }
-        event_filter.add_global_position(options[:from_position])
+        event_filter.add_global_position(options[:from_position], options[:direction])
         event_filter.add_all_stream_direction(options[:direction])
       else
         event_filter.add_stream(stream)
-        event_filter.add_revision(options[:from_revision])
+        event_filter.add_revision(options[:from_revision], options[:direction])
         event_filter.add_stream_direction(options[:direction])
       end
       event_filter
