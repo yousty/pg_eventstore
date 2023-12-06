@@ -50,6 +50,7 @@ Documentation chapters:
 - [Appending events](docs/appending_events.md)
 - [Reading events](docs/reading_events.md)
 - [Writing middlewares](docs/writing_middleware.md)
+- [How to make multiple commands atomic](docs/multiple_commands.md)
 
 ## Development
 
