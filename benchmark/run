@@ -1,0 +1,90 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+`bin/setup_db` # re-create dbs
+
+require "bundler/setup"
+require_relative 'benchmarks'
+require_relative 'live_monitor'
+require 'rainbow'
+
+# Number of processes/threads for the benchmark
+CONCURRENCY = 5
+# A constant that maps concurrency number to expected performance(events per second)
+CONCURRENCY_TO_PERFORMANCE_MAPPING = { 5 => 1500 }
+
+def colorize_write_result(result, result_key)
+  current = result[result_key][:avg]
+  min = CONCURRENCY_TO_PERFORMANCE_MAPPING[CONCURRENCY]
+  current = (1 / current).to_i
+
+  if current + 50 < min
+    Rainbow(current).red
+  elsif current < min
+    Rainbow(current).yellow
+  else
+    Rainbow(current).green
+  end
+end
+
+def colorize_read_result(time_seconds)
+  time_ms = time_seconds * 1_000
+  case time_ms
+  when 0...1
+    Rainbow(time_ms).green
+  when 1..3
+    Rainbow(time_ms).yellow
+  else
+    Rainbow(time_ms).red
+  end
+end
+
+PgEventstore.configure do |config|
+  config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore' }
+end
+
+Benchmarks.warm_up
+Stats.redis.with(&:flushdb)
+
+monitor = LiveMonitor.new
+
+%i[frequent_streams_writes frequent_events_writes].each do |method|
+  monitor.start
+  puts "Taking a break for 5 second between runs..."
+  bms = Benchmarks.new(CONCURRENCY)
+  bms.in_processes(method)
+  puts "Taking a break for 5 second between runs..."
+  sleep 5
+  bms.in_threads(method)
+  monitor.stop
+end
+
+result = Stats.stats
+
+puts "Average events per second (5 processes, streams are created frequently): #{colorize_write_result(result, :frequent_streams_writes_processes)}."
+puts "Average events per second (5 threads, streams are created frequently): #{colorize_write_result(result, :frequent_streams_writes_threads)}."
+puts "Average events per second (5 processes, streams are created rarely): #{colorize_write_result(result, :frequent_events_writes_processes)}."
+puts "Average events per second (5 threads, streams are created rarely): #{colorize_write_result(result, :frequent_events_writes_threads)}."
+
+puts "Read tests."
+
+read_tests = {
+  'Reading from "all" stream' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10 }) },
+  'Reading from "all" stream with filter by existing events' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { event_types: %w[Sit Amet] } }) },
+  'Reading from "all" stream with filter by non existing events' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { event_types: %w[NonExisting NonExisting2] } }) },
+  'Reading from "all" stream with filter by existing events and existing contexts' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { streams: [{ context: 'FooCtx' }, { context: 'BazBarCtx' }], event_types: %w[Sit Amet] } }) },
+  'Reading from "all" stream with filter by non existing events and existing contexts' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { streams: [{ context: 'FooCtx' }, { context: 'BazBarCtx' }], event_types: %w[NonExisting NonExisting2] } }) },
+  'Reading from "all" stream with filter by existing events and non existing contexts' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { streams: [{ context: 'FooCtx1' }, { context: 'BazBarCtx1' }], event_types: %w[Sit Amet] } }) },
+  'Reading from "all" stream with filter by non existing events and non existing contexts' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { streams: [{ context: 'NonExistingCtx' }, { context: 'NonExistingCtx2' }], event_types: %w[NonExisting NonExisting2] } })}
+}
+
+puts "Warming up..."
+
+2.times do
+  read_tests.values.each(&:call)
+end
+
+read_tests.each do |explanation, test|
+  time = Benchmark.realtime(&test)
+  puts "#{explanation}. Took: #{colorize_read_result(time)} ms."
+end

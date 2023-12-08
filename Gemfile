@@ -14,3 +14,5 @@ gem 'yard', '~> 0.9.34'
 gem 'webrick'
 
 gem 'redis', '~> 5'
+
+gem 'rainbow', '~> 3.1', '>= 3.1.1'
