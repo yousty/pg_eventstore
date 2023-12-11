@@ -4,7 +4,7 @@ require 'set'
 
 module PgEventstore
   module Extensions
-    # A very simple extension that implements a DLS for adding attr_accessors with default values,
+    # A very simple extension that implements a DSL for adding attr_accessors with default values,
     # and assigning their values during object initialization.
     # Example. Let's say you frequently do something like this:
     # ```ruby
