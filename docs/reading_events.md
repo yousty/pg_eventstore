@@ -2,29 +2,29 @@
 
 ## Reading from a specific stream
 
-The simplest way to read a stream forwards is to supply a `PgEventstore::Stream` object.
+The easiest way to read a stream forwards is to supply a `PgEventstore::Stream` object.
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MYAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
 PgEventstore.client.read(stream)
 # => [#<PgEventstore::Event 0x1>, #<PgEventstore::Event 0x1>, ...]
 ```
 
 ### max_count
 
-You can provide the `:max_count` option. This option determines how much records to return in a response. Default is `1000` and it can be changed via `:max_count` configuration setting(see [**"Configuration"**](configuration.md) chapter):
+You can provide the `:max_count` option. This option determines how many records to return in a response. Default is `1000` and it can be changed with the `:max_count` configuration setting (see [**"Configuration"**](configuration.md) chapter):
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MYAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
 PgEventstore.client.read(stream, options: { max_count: 100 })
 ```
 
 ### resolve_link_tos
 
-When using projections(Event Sourcing Projections are meant here) to create new events you can set whether the generated events are pointers to existing events. Setting this value to `true` tells `pg_eventstore` to return the original event instead "link" event.
+When reading streams with projected events (links to other events) you can chose to resolve those links by setting `resolve_link_tos` to `true`, returning the original event instead of the "link" event.
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MYAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
 PgEventstore.client.read(stream, options: { resolve_link_tos: true })
 ```
 
@@ -33,7 +33,7 @@ PgEventstore.client.read(stream, options: { resolve_link_tos: true })
 You can define from which revision number you would like to start to read events:
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MYAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
 PgEventstore.client.read(stream, options: { from_revision: 2 })
 ```
 
@@ -42,13 +42,13 @@ PgEventstore.client.read(stream, options: { from_revision: 2 })
 As well as being able to read a stream forwards you can also go backwards. This can be achieved by providing the `:direction` option:
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MYAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
 PgEventstore.client.read(stream, options: { direction: 'Backwards' })
 ```
 
 ## Checking if stream exists
 
-In case a stream with given name does not exist - `PgEventstore::StreamNotFoundError` error will be raised:
+In case a stream with given name does not exist, a `PgEventstore::StreamNotFoundError` error will be raised:
 
 ```ruby
 begin
@@ -62,19 +62,19 @@ end
 
 ## Reading from the "all" stream
 
-"all" stream definition means that you don't scope your events when reading them from the database. To get "all" `PgEventstore::Stream` instance you have to call special method: 
+"all" stream definition means that you don't scope your events when reading them from the database. To get the "all" `PgEventstore::Stream` instance you have to call the `all_stream` method: 
 
 ```ruby
 PgEventstore::Stream.all_stream
 ```
 
-Now you can use it to read from "all" stream:
+Now you can use it to read from the "all" stream:
 
 ```ruby
 PgEventstore.client.read(PgEventstore::Stream.all_stream)
 ```
 
-You can read from a specific position of "all" stream. This is very similar to reading from a specific revision of a specific stream, but instead `:from_revision` option you have to provide `:from_position` option:
+You can read from a specific position of the "all" stream. This is very similar to reading from a specific revision of a specific stream, but instead of the `:from_revision` option you have to provide the `:from_position` option:
 
 ```ruby
 PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { from_position: 9023, direction: 'Backwards' })
@@ -92,7 +92,7 @@ See [Writing middleware](writing_middleware.md) chapter for info about what is m
 
 ## Filtering
 
-When reading events, you can additionally filter the result. Available attributes for filtering are determined depending from which stream you are reading from. Reading from "all" stream supports filters by stream attributes and event types. Reading from a specific stream supports filters by event types only.  
+When reading events, you can additionally filter the result. Available attributes for filtering depend on the type of stream you are reading from. Reading from the "all" stream supports filters by stream attributes and event types. Reading from a specific stream supports filters by event types only.  
 
 ### Specific stream filtering
 
@@ -105,7 +105,7 @@ PgEventstore.client.read(stream, options: { filter: { event_types: %w[Foo Bar] }
 
 ### "all" stream filtering
 
-**Warning** There is a restriction on a set of stream's attributes that can be used when filtering "all" stream result. Available combinations:
+**Warning** There is a restriction on a set of stream attributes that can be used when filtering an "all" stream result. Available combinations:
 
 - `:context`
 - `:context` and `:stream_name`
@@ -114,19 +114,19 @@ PgEventstore.client.read(stream, options: { filter: { event_types: %w[Foo Bar] }
 All other combinations, like providing only `:stream_name` or providing `:context` with `:stream_id` will be ignored.
 
 
-Filtering events by their types:
+Filtering events by type:
 
 ```ruby
 PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { event_types: %w[Foo Bar] } })
 ```
 
-Filtering events by stream's context:
+Filtering events by context:
 
 ```ruby
-PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MYAwesomeContext' }] } })
+PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MyAwesomeContext' }] } })
 ```
 
-Filtering events by stream's context and stream's name:
+Filtering events by context and name:
 
 ```ruby
 PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MYAwesomeContext', stream_name: 'User' }] } })
@@ -138,14 +138,14 @@ Filtering events by stream's context, stream's name and stream's id:
 PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MYAwesomeContext', stream_name: 'User', stream_id: '1' }] } })
 ```
 
-You can provide several sets of stream's attributes. The result will be a union of events that match those criteria. For example, next query will return all events that belong to streams with `AnotherContext` context and all events that belong to streams with `MYAwesomeContext` context and `User` stream name:
+You can provide several sets of stream's attributes. The result will be a union of events that match those criteria. For example, next query will return all events that belong to streams with `AnotherContext` context and all events that belong to streams with `MyAwesomeContext` context and `User` stream name:
 
 ```ruby
-PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'AnotherContext' }, { context: 'MYAwesomeContext', stream_name: 'User' }] } })
+PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'AnotherContext' }, { context: 'MyAwesomeContext', stream_name: 'User' }] } })
 ```
 
-You can also mix filtering by stream's attributes and event types. The result will be intersection of events matching stream's attributes and event's types. For example, next query will return events which type is either `Foo` or `Bar` and which belong to a stream with `MYAwesomeContext` context:
+You can also mix filtering by stream's attributes and event types. The result will be intersection of events matching stream's attributes and event's types. For example, next query will return events which type is either `Foo` or `Bar` and which belong to a stream with `MyAwesomeContext` context:
 
 ```ruby
-PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MYAwesomeContext' }], event_types: %w[Foo Bar] } })
+PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MyAwesomeContext' }], event_types: %w[Foo Bar] } })
 ```
