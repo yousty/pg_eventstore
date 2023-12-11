@@ -5,6 +5,7 @@ require 'digest/md5'
 module PgEventstore
   class Stream
     SYSTEM_STREAM_PREFIX = '$'
+    INITIAL_STREAM_REVISION = -1
 
     class << self
       # Produces "all" stream instance. "all" stream does not represent any specific stream. Instead, it indicates that

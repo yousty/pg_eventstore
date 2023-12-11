@@ -17,8 +17,8 @@ module PgEventstore
           stream = queries.find_or_create_stream(stream)
           revision = stream.stream_revision
           assert_expected_revision!(revision, options[:expected_revision]) if options[:expected_revision]
-          events.map.with_index do |event, index|
-            queries.insert(stream, prepared_event(event, revision + index + 1))
+          events.map.with_index(1) do |event, index|
+            queries.insert(stream, prepared_event(event, revision + index))
           end.tap do
             queries.update_stream_revision(stream, revision + events.size)
           end
@@ -47,10 +47,10 @@ module PgEventstore
         in [Integer, Integer]
           raise WrongExpectedRevisionError.new(revision, expected_revision) unless revision == expected_revision
         in [Integer, Symbol]
-          if revision == -1 && expected_revision == :stream_exists
+          if revision == Stream::INITIAL_STREAM_REVISION && expected_revision == :stream_exists
             raise WrongExpectedRevisionError.new(revision, expected_revision)
           end
-          if revision > -1 && expected_revision == :no_stream
+          if revision > Stream::INITIAL_STREAM_REVISION && expected_revision == :no_stream
             raise WrongExpectedRevisionError.new(revision, expected_revision)
           end
         end
