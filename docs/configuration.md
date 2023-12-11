@@ -7,7 +7,7 @@ Configuration options:
 | pg_uri                  | String   | `'postgresql://postgres:postgres@localhost:5432/eventstore'` | PostgreSQL connection string. See PostgreSQL [docs](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS) for more information.                                                                                                          |
 | max_count               | Integer  | `1000`                                                       | Number of events to return in one response when reading from a stream.                                                                                                                                                                                               |
 | middlewares             | Array    | `[]`                                                         | Array of objects that respond to `#serialize` and `#deserialize` methods. See [**Writing middleware**](writing_middleware.md) chapter.                                                                                                                               |
-| event_class_resolver    | `#call`  | `PgEventstore::EventClassResolver.new`                       | A `#call`-able object that accepts a string and returns event's class. See **Resolving events classes** chapter bellow for more info.                                                                                                                                |
+| event_class_resolver    | `#call`  | `PgEventstore::EventClassResolver.new`                       | A `#call`-able object that accepts a string and returns an event's class. See **Resolving events classes** chapter bellow for more info.                                                                                                                                |
 | logger                  | `Logger` | `nil`                                                        | A logger that logs messages from `pg_eventstore` gem.                                                                                                                                                                                                                |
 | connection_pool_size    | Integer  | `5`                                                          | Max number of connections per ruby process. It must equal to the number of threads of your application.                                                                                                                                                              |
 | connection_pool_timeout | Integer  | `5`                                                          | A time in seconds to wait for the connection in pool to release. If no connections are available during this time - `ConnectionPool::TimeoutError` will be raised. See `connection_pool` gem [docs](https://github.com/mperham/connection_pool#usage) for more info. |
@@ -62,11 +62,11 @@ Use it:
 EventStoreClient.client.read(PgEventstore::Stream.all_stream)
 ```
 
-## Resolving events classes
+## Resolving event classes
 
 During the deserialization process `pg_eventstore` tries to pick the correct class for an event. By default it does it
-using `PgEventstore::EventClassResolver` class. All it does is `Object.const_get(event_type)`. And, by default, if you
-don't provide `type` attribute for an event explicitly - it will grab event's class name. Thus, by default:
+using the `PgEventstore::EventClassResolver` class. All it does is `Object.const_get(event_type)`. By default, if you
+don't provide the `type` attribute for an event explicitly, it will grab the event's class name, meaning by default:
 
 - event's type is event's class name
 - when instantiating an event - `pg_eventstore` tries to lookup an event class based on the value of event's `type`

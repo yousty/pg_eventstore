@@ -2,7 +2,7 @@
 
 ## Append your first event
 
-The simplest way to append an event is to create an event object, a stream object and call client's `#append_to_stream` method.
+The easiest way to append an event is to create an event object and a stream object and call the client's `#append_to_stream` method.
 
 ```ruby
 require 'securerandom'
@@ -18,7 +18,7 @@ PgEventstore.client.append_to_stream(stream, event)
 
 ## Appending multiple events
 
-You can pass an array of events to the `#append_to_stream` method. This way events will be appended one-by-one. **This operation is atomic and it guarantees that events will go inside the stream in the same order they go in the given array.**
+You can pass an array of events to the `#append_to_stream` method. This way events will be appended one-by-one. **This operation is atomic and it guarantees that events are added to the stream in the given order.**
 
 ```ruby
 class SomethingHappened < PgEventstore::Event
@@ -35,7 +35,7 @@ PgEventstore.client.append_to_stream(stream, event3)
 
 ### Duplicated event id
 
-If two events with the same id are appended to any stream - `pg_eventstore` will only append one event, and second command will raise error.
+If two events with the same id are appended to any stream - `pg_eventstore` will only append one event, and the second command will raise an error.
 
 ```ruby
 class SomethingHappened < PgEventstore::Event
@@ -100,7 +100,7 @@ PgEventstore.client.append_to_stream(stream, event2, options: { expected_revisio
 PgEventstore.client.append_to_stream(stream, event2, options: { expected_revision: revision })
 ```
 
-### What to do when PgEventstore::WrongExpectedRevisionError error raises?
+### What to do when a PgEventstore::WrongExpectedRevisionError error is risen?
 
 What to do when an event has failed to be appended to a stream due to `WrongExpectedRevisionError` error? It depends on you business logic. For example, if you have a business rule that no events should be appended to a stream if it contains `Removed` event, you should provide `:expected_revision` option to ensure your stream is in the expected state and re-run your logic each time `WrongExpectedRevisionError` error raises:
 

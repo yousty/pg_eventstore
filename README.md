@@ -1,11 +1,11 @@
 # PgEventstore
 
-Implements database and API to manipulate it to store events as a part of Event Sourcing concept.
+Implements database and API to store and read events in event sourced systems.
 
 ## Requirements
 
-`pg_eventstore` requires PostgreSQL database with jsonb data type support(which means you need to have v9.2+). However it is recommended to use non [EOL](https://www.postgresql.org/support/versioning/) PostgreSQL version, because the development of this gem is targeted on work with actual PostgreSQL versions.
-`pg_eventstore` requires ruby v3+. The development of this gem is targeted on work with [actual](https://endoflife.date/ruby) ruby versions.
+`pg_eventstore` requires a PostgreSQL database with jsonb data type support (which means you need to have v9.2+). However it is recommended to use a non [EOL](https://www.postgresql.org/support/versioning/) PostgreSQL version, because the development of this gem is targeted at current PostgreSQL versions.
+`pg_eventstore` requires ruby v3+. The development of this gem is targeted at [current](https://endoflife.date/ruby) ruby versions.
 
 ## Installation
 
@@ -19,7 +19,7 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
 ## Usage
 
-Before you start, make sure you created a database where events will be stored. A PostgreSQL user must be a superuser to be able to create tables, indexes, primary/foreign keys, etc. Please don't use existing database/user for this purpose. Example of creating such database and user:
+Before you start, make sure you created a database where events will be stored. A PostgreSQL user must be a superuser to be able to create tables, indexes, primary/foreign keys, etc. Please don't use an existing database/user for this purpose. Example of creating such database and user:
 
 ```bash
 sudo -u postgres createuser pg_eventstore --superuser
@@ -29,7 +29,7 @@ sudo -u postgres psql --command="CREATE DATABASE eventstore OWNER pg_eventstore"
 
 If necessary - adjust your `pg_hba.conf` to allow `pg_eventstore` user to connect to your PostgreSQL server. 
 
-Next step will be configuring db connection of the gem to the created db. Please check the **Configuration** chapter bellow to find out how to do it.
+Next step will be configuring a db connection. Please check the **Configuration** chapter bellow to find out how to do it.
 
 After db connection is configured - it is time to create necessary database objects. Please include this line into your `Rakefile`:
 
