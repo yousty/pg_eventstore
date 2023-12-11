@@ -1,11 +1,11 @@
 # Writing middleware
 
-Middlewares are objects that modify events before they are going to be appended to a stream, or right after they being read from a stream. `#serialize` method is called each time an event is going to be appended. `#deserialize` method is called each time an event is read from a stream. Example of middleware:
+Middlewares are objects that modify events before they are appended to a stream, or right after they are read from a stream. The `#serialize` method is called each time an event is going to be appended. The `#deserialize` method is called each time an event is read from a stream. Example of middleware:
 
 ```ruby
 require 'securerandom'
 
-# Provide some basic functional of large payload implementation. Every event in your app will be inherited from this class
+# Provide some basic functionality for large payload extraction implementations. Every event in your app will be inherited from this class.
 class MyAppAbstractEvent < PgEventstore::Event
   def self.payload_fields
     []
@@ -83,7 +83,7 @@ PgEventstore.client.read(stream).last
 
 ## Remarks
 
-It is important to know that `pg_eventstore` may retry commands, thus `#serialize` and `#deserialize` methods may also be retried. You have to make sure that the implementation of `#serialize` and `#deserialize` always returns the same result for the same input, and it does not create duplications. Let's look at the `#serialize` implementation from the example above:
+It is important to know that `pg_eventstore` may retry commands. In that case `#serialize` and `#deserialize` methods may also be retried. You have to make sure that the implementation of `#serialize` and `#deserialize` always returns the same result for the same input, and it does not create duplications. Let's look at the `#serialize` implementation from the example above:
 
 ```ruby
 def serialize(event)

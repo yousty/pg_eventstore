@@ -129,13 +129,13 @@ PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { s
 Filtering events by context and name:
 
 ```ruby
-PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MYAwesomeContext', stream_name: 'User' }] } })
+PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MyAwesomeContext', stream_name: 'User' }] } })
 ```
 
-Filtering events by stream's context, stream's name and stream's id:
+Filtering events by stream context, stream name and stream id:
 
 ```ruby
-PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MYAwesomeContext', stream_name: 'User', stream_id: '1' }] } })
+PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1' }] } })
 ```
 
 You can provide several sets of stream's attributes. The result will be a union of events that match those criteria. For example, next query will return all events that belong to streams with `AnotherContext` context and all events that belong to streams with `MyAwesomeContext` context and `User` stream name:
