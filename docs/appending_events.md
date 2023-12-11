@@ -70,11 +70,12 @@ PgEventstore.client.append_to_stream(stream, event1, options: { expected_revisio
 PgEventstore.client.append_to_stream(stream, event2, options: { expected_revision: :no_stream })
 ```
 
-There are three available stream states:
+Here are possible values of `:expected_revision` option:
 
-- `:any`. Default behavior. 
+- `:any`. Doesn't perform any checks. This is the default.
 - `:no_stream`. Expects a stream to be absent when appending an event
-- `:stream_exists`. Expectes a stream to be present when appending an event
+- `:stream_exists`. Expects a stream to be present when appending an event
+- a revision number(Integer). Expects a stream to be in the given revision.
 
 This check can be used to implement optimistic concurrency. When you retrieve a stream, you take note of the current version number, then when you save it back you can determine if somebody else has modified the record in the meantime.
 
