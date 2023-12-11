@@ -38,12 +38,13 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @return [PgEventstore::Stream, nil] persisted stream
     def find_stream(stream)
-      find_sql = <<~SQL
-        SELECT * FROM streams WHERE streams.context = $1 AND streams.stream_name = $2 AND streams.stream_id = $3
-          LIMIT 1
-      SQL
+      builder =
+        SQLBuilder.new.
+          from('streams').
+          where('streams.context = ? AND streams.stream_name = ? AND streams.stream_id = ?', *stream.to_a).
+          limit(1)
       pg_result = connection.with do |conn|
-        conn.exec_params(find_sql, stream.to_a)
+        conn.exec_params(*builder.to_exec_params)
       end
       PgEventstore::Stream.new(**pg_result.to_a.first.transform_keys(&:to_sym)) if pg_result.ntuples == 1
     end
