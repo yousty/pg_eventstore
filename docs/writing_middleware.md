@@ -7,17 +7,17 @@ require 'securerandom'
 
 # Provide some basic functionality for large payload extraction implementations. Every event in your app will be inherited from this class.
 class MyAppAbstractEvent < PgEventstore::Event
-  def self.payload_fields
+  def self.payload_store_fields
     []
   end
 
   def fields_with_large_payloads
-    data.slice(*self.class.payload_fields)
+    data.slice(*self.class.payload_store_fields)
   end
 end
 
 class DescriptionChangedEvent < MyAppAbstractEvent
-  def self.payload_fields
+  def self.payload_store_fields
     %w[description]
   end
 end
@@ -33,7 +33,7 @@ class ExtractLargePayload
   end
 
   def deserialize(event)
-    # Load real values for large payload fields. You can use self.class.payload_fields here, but then you would require
+    # Load real values for large payload fields. You can use self.class.payload_store_fields here, but then you would require
     # the event definition in each mircoservice you load this event
     event.data.select { |k, v| v.start_with?('large-payload:') }.each do |field, value|
       event.data[field] = resolve_large_payload(value.delete('large-payload:'))
