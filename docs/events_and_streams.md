@@ -1,6 +1,6 @@
 # The description of Event and Stream definitions
 
-`pg_eventstore` provides classes to manipulate the data in the database. The most important are:
+`pg_eventstore` provides classes to prepare the events to be inserted into the eventstore. The most important are:
 
 - `PgEventstore::Event` class which represents an event object
 - `PgEventstore::Stream` class which represents a stream object

@@ -102,7 +102,15 @@ PgEventstore.client.append_to_stream(stream, event2, options: { expected_revisio
 
 ### What to do when a PgEventstore::WrongExpectedRevisionError error is risen?
 
-What to do when an event has failed to be appended to a stream due to `WrongExpectedRevisionError` error? It depends on you business logic. For example, if you have a business rule that no events should be appended to a stream if it contains `Removed` event, you should provide `:expected_revision` option to ensure your stream is in the expected state and re-run your logic each time `WrongExpectedRevisionError` error raises:
+Imagine the following scenario:
+1. You load events of a stream to build the state of your business object represented by the stream.
+2. You check your business rules to see if you can change that object's state the way you want to change it.
+3. If no business rules have been violated, you have the go to publish the event representing the state change.
+4. To make sure the new event will follow the last event you used to build your object state, you retrieve that last event's revision and increase it by one. You now have the expected revision for the event to be published.
+5. You publish the event but retrieve a `WrongExpectedRevisionError`. This means another process has appended an event to the same stream, after you were loading your business object, while you were checking your business rules.
+6. Now you need to repeat the process: load your business objects from the updated events stream, apply your business rules and if there is still no violation, try to append the event with the updated stream revision. You can do this procedure until the event is published or a maximum number of retries has been reached.
+
+The following example shows the described retry procedure, with a simple business rule that does not allow adding an event after a `UserRemoved` event:
 
 ```ruby
 require 'securerandom'
