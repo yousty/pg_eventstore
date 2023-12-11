@@ -1,7 +1,13 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::Commands::Multiple do
-  let(:instance) { described_class.new(PgEventstore.connection, middlewares, event_class_resolver) }
+  let(:instance) { described_class.new(queries) }
+  let(:queries) do
+    PgEventstore::Queries.new(
+      PgEventstore.connection, PgEventstore::EventSerializer.new(middlewares),
+      PgEventstore::PgresultDeserializer.new(middlewares, event_class_resolver)
+    )
+  end
   let(:middlewares) { [] }
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
 

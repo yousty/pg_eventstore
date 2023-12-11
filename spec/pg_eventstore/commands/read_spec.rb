@@ -1,7 +1,13 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::Commands::Read do
-  let(:instance) { described_class.new(PgEventstore.connection, middlewares, event_class_resolver) }
+  let(:instance) { described_class.new(queries) }
+  let(:queries) do
+    PgEventstore::Queries.new(
+      PgEventstore.connection, PgEventstore::EventSerializer.new(middlewares),
+      PgEventstore::PgresultDeserializer.new(middlewares, event_class_resolver)
+    )
+  end
   let(:middlewares) { [] }
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
 
@@ -44,7 +50,7 @@ RSpec.describe PgEventstore::Commands::Read do
       let(:existing_event) { PgEventstore.client.read(events_stream2).first }
       let!(:link) do
         # TODO: use LinkTo command here when it will be implemented instead manual query
-        instance.send(:queries).insert(
+        queries.insert(
           existing_event.stream,
           PgEventstore::Event.new(link_id: existing_event.id, stream_revision: 1, type: PgEventstore::Event::LINK_TYPE)
         )

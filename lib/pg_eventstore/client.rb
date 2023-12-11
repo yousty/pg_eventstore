@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require_relative 'commands'
+require_relative 'event_serializer'
+require_relative 'pgresult_deserializer'
+require_relative 'queries'
 
 module PgEventstore
   class Client
@@ -24,9 +27,7 @@ module PgEventstore
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def append_to_stream(stream, events_or_event, options: {}, skip_middlewares: false)
       result =
-        Commands::Append.
-          new(connection, middlewares(skip_middlewares), config.event_class_resolver).
-          call(stream, *events_or_event, options: options)
+        Commands::Append.new(queries(middlewares(skip_middlewares))).call(stream, *events_or_event, options: options)
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -42,7 +43,7 @@ module PgEventstore
     #
     # @return the result of the given block
     def multiple(&blk)
-      Commands::Multiple.new(connection, middlewares, config.event_class_resolver).call(&blk)
+      Commands::Multiple.new(queries(middlewares)).call(&blk)
     end
 
     # Read events from the specific stream or from "all" stream.
@@ -100,7 +101,7 @@ module PgEventstore
     # @raise [PgEventstore::StreamNotFoundError]
     def read(stream, options: {}, skip_middlewares: false)
       Commands::Read.
-        new(connection, middlewares(skip_middlewares), config.event_class_resolver).
+        new(queries(middlewares(skip_middlewares))).
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
@@ -117,6 +118,16 @@ module PgEventstore
     # @return [PgEventstore::Connection]
     def connection
       PgEventstore.connection(config.name)
+    end
+
+    # @param middlewares [Array<Object<#serialize, #deserialize>>]
+    # @return [PgEventstore::Queries]
+    def queries(middlewares)
+      Queries.new(
+        connection,
+        EventSerializer.new(middlewares),
+        PgresultDeserializer.new(middlewares, config.event_class_resolver)
+      )
     end
   end
 end
