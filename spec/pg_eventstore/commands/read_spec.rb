@@ -5,7 +5,7 @@ RSpec.describe PgEventstore::Commands::Read do
   let(:queries) do
     PgEventstore::Queries.new(
       PgEventstore.connection, PgEventstore::EventSerializer.new(middlewares),
-      PgEventstore::PgresultDeserializer.new(middlewares, event_class_resolver)
+      PgEventstore::PgResultDeserializer.new(middlewares, event_class_resolver)
     )
   end
   let(:middlewares) { [] }

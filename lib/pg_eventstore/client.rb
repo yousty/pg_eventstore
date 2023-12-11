@@ -2,7 +2,7 @@
 
 require_relative 'commands'
 require_relative 'event_serializer'
-require_relative 'pgresult_deserializer'
+require_relative 'pg_result_deserializer'
 require_relative 'queries'
 
 module PgEventstore
@@ -126,7 +126,7 @@ module PgEventstore
       Queries.new(
         connection,
         EventSerializer.new(middlewares),
-        PgresultDeserializer.new(middlewares, config.event_class_resolver)
+        PgResultDeserializer.new(middlewares, config.event_class_resolver)
       )
     end
   end

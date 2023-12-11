@@ -9,7 +9,7 @@ module PgEventstore
 
     # @param connection [PgEventstore::Connection]
     # @param serializer [PgEventstore::EventSerializer]
-    # @param deserializer [PgEventstore::PgresultDeserializer]
+    # @param deserializer [PgEventstore::PgResultDeserializer]
     def initialize(connection, serializer, deserializer)
       @connection = connection
       @serializer = serializer
@@ -42,10 +42,10 @@ module PgEventstore
         SELECT * FROM streams WHERE streams.context = $1 AND streams.stream_name = $2 AND streams.stream_id = $3
           LIMIT 1
       SQL
-      pgresult = connection.with do |conn|
+      pg_result = connection.with do |conn|
         conn.exec_params(find_sql, stream.to_a)
       end
-      PgEventstore::Stream.new(**pgresult.to_a.first.transform_keys(&:to_sym)) if pgresult.ntuples == 1
+      PgEventstore::Stream.new(**pg_result.to_a.first.transform_keys(&:to_sym)) if pg_result.ntuples == 1
     end
 
     # @param stream [PgEventstore::Stream]
@@ -54,10 +54,10 @@ module PgEventstore
       create_sql = <<~SQL
         INSERT INTO streams (context, stream_name, stream_id) VALUES ($1, $2, $3) RETURNING *
       SQL
-      pgresult = connection.with do |conn|
+      pg_result = connection.with do |conn|
         conn.exec_params(create_sql, stream.to_a)
       end
-      PgEventstore::Stream.new(**pgresult.to_a.first.transform_keys(&:to_sym))
+      PgEventstore::Stream.new(**pg_result.to_a.first.transform_keys(&:to_sym))
     end
 
     # @return [PgEventstore::Stream] persisted stream
@@ -71,10 +71,10 @@ module PgEventstore
     # @return [Array<PgEventstore::Event>]
     def stream_events(stream, options)
       exec_params = events_filtering_builder(stream, options).to_exec_params
-      pgresult = connection.with do |conn|
+      pg_result = connection.with do |conn|
         conn.exec_params(*exec_params)
       end
-      deserializer.deserialize_many(pgresult)
+      deserializer.deserialize_many(pg_result)
     end
 
     # @param stream [PgEventstore::Stream] persisted stream
@@ -92,10 +92,10 @@ module PgEventstore
           RETURNING *
       SQL
 
-      pgresult = connection.with do |conn|
+      pg_result = connection.with do |conn|
         conn.exec_params(sql, attributes.values)
       end
-      deserializer.without_middlewares.deserialize_one(pgresult).tap do |persisted_event|
+      deserializer.without_middlewares.deserialize_one(pg_result).tap do |persisted_event|
         persisted_event.stream = stream
       end
     end

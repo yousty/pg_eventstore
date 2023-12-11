@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
-  class PgresultDeserializer
+  class PgResultDeserializer
     attr_reader :middlewares, :event_class_resolver
 
     # @param middlewares [Array<Object<#deserialize, #serialize>>]
@@ -11,22 +11,22 @@ module PgEventstore
       @event_class_resolver = event_class_resolver
     end
 
-    # @param pgresult [PG::Result]
+    # @param pg_result [PG::Result]
     # @return [Array<PgEventstore::Event>]
-    def deserialize(pgresult)
-      pgresult.map(&method(:_deserialize))
+    def deserialize(pg_result)
+      pg_result.map(&method(:_deserialize))
     end
     alias deserialize_many deserialize
 
-    # @param pgresult [PG::Result]
+    # @param pg_result [PG::Result]
     # @return [PgEventstore::Event, nil]
-    def deserialize_one(pgresult)
-      return if pgresult.ntuples.zero?
+    def deserialize_one(pg_result)
+      return if pg_result.ntuples.zero?
 
-      _deserialize(pgresult.first)
+      _deserialize(pg_result.first)
     end
 
-    # @return [PgEventstore::PgresultDeserializer]
+    # @return [PgEventstore::PgResultDeserializer]
     def without_middlewares
       self.class.new([], event_class_resolver)
     end
