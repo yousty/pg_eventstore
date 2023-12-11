@@ -58,4 +58,20 @@ RSpec.describe PgEventstore::Event do
       it { is_expected.to eq(false) }
     end
   end
+
+  describe '#system?' do
+    subject { instance.system? }
+
+    let(:instance) { described_class.new(type: 'MyAwesomeEvent') }
+
+    describe 'when type is just a regular event type' do
+      it { is_expected.to eq(false) }
+    end
+
+    describe 'when type starts with "$" sign' do
+      let(:instance) { described_class.new(type: '$MyAwesomeEvent') }
+
+      it { is_expected.to eq(true) }
+    end
+  end
 end

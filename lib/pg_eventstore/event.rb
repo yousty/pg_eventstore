@@ -4,6 +4,8 @@ module PgEventstore
   class Event
     include Extensions::OptionsExtension
 
+    LINK_TYPE = '$>'
+
     # @!attribute id
     #   @return [String] UUIDv4 string
     attribute(:id)
@@ -46,6 +48,12 @@ module PgEventstore
     # @return [Boolean]
     def link?
       !link_id.nil?
+    end
+
+    # Detect whether an event is a system event
+    # @return [Boolean]
+    def system?
+      type.start_with?('$')
     end
   end
 end
