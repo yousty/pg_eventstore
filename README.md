@@ -63,6 +63,14 @@ Then, run `rake spec` to run the tests. You can also run `bin/console` for an in
 
 To install this gem onto your local machine, run `bundle exec rake install`.
 
+### Benchmarks
+
+There is a script to help you to tests the `pg_eventstore` implementation performance. You can run it using next command:
+
+```bash
+./benchmark/run
+```
+
 ### Publishing new version
 
 1. Push commit with updated `version.rb` file to the `release` branch. The new version will be automatically pushed to [rubygems](https://rubygems.org).
