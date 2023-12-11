@@ -70,7 +70,7 @@ module PgEventstore
     # @param options [Hash]
     # @return [Array<PgEventstore::Event>]
     def stream_events(stream, options)
-      exec_params = events_filtering_builder(stream, options).to_exec_params
+      exec_params = events_filtering(stream, options).to_exec_params
       pg_result = connection.with do |conn|
         conn.exec_params(*exec_params)
       end
@@ -116,25 +116,10 @@ module PgEventstore
     # @param options [Hash]
     # @param offset [Integer]
     # @return [PgEventstore::EventsFilteringQuery]
-    def events_filtering_builder(stream, options, offset: 0)
-      event_filter = QueryBuilders::EventsFiltering.new
-      options in { filter: { event_types: Array => event_types } }
-      event_filter.add_event_types(event_types)
-      event_filter.add_limit(options[:max_count])
-      event_filter.add_offset(offset)
-      event_filter.resolve_links(options[:resolve_link_tos])
+    def events_filtering(stream, options, offset: 0)
+      return QueryBuilders::EventsFiltering.all_stream_filtering(options, offset: offset) if stream.all_stream?
 
-      if stream.all_stream?
-        options in { filter: { streams: Array => streams } }
-        streams&.each { |attrs| event_filter.add_stream_attrs(**attrs) }
-        event_filter.add_global_position(options[:from_position], options[:direction])
-        event_filter.add_all_stream_direction(options[:direction])
-      else
-        event_filter.add_stream(stream)
-        event_filter.add_revision(options[:from_revision], options[:direction])
-        event_filter.add_stream_direction(options[:direction])
-      end
-      event_filter
+      QueryBuilders::EventsFiltering.specific_stream_filtering(stream, options, offset: offset)
     end
   end
 end
