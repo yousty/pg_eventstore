@@ -1,6 +1,6 @@
 # Multiple commands
 
-`pg_eventstore` implements `#multiple` method to allow you to make several different commands atomic. Example:
+`pg_eventstore` implements the `#multiple` method to allow you to make several different commands atomic. Example:
 
 ```ruby
 PgEventstore.client.multiple do
@@ -11,9 +11,9 @@ PgEventstore.client.multiple do
 end
 ```
 
-All commands inside a block either all succeed or all fail. This allows you to easily implement complex business rules. This, however, comes with a price of performance. The more you put in a single block - the higher chance it will have conflicts with other commands that come in parallel, thus increasing overall time to complete. **Thus, do not put more than needed in there.** You may still want to use it though as it could simplify your implementation.
+All commands inside a `multiple` block either all succeed or all fail. This allows you to easily implement complex business rules. However, it comes with a price of performance. The more you put in a single block, the higher the chance it will have conflicts with other commands run in parallel, increasing overall time to complete. **Because of this performance implications, do not put more events than needed in a `multple` block.** You may still want to use it though as it could simplify your implementation.
 
-**Please take into account, due to concurrency of parallel commands - a block of code may be re-run several times before succeed.** Thus, if you put any piece of code besides `pg_evenstore`'s commands - make sure it returns the correct result during re-runs. A simple example:
+**Please take into account that due to concurrency of parallel commands, a block of code may be re-run several times before succeeding.** So, if you put any piece of code besides `pg_evenstore`'s commands - make sure it returns the correct result during re-runs. A simple example:
 
 ```ruby
 class PaymentService
@@ -37,4 +37,4 @@ class PaymentService
 end
 ```
 
-In this particular example `amount = @gateway.pay_for(order)` line must return the same result(meaning it must not produce another payment) when run again with same argument. Thus, those steps - payment request, appending of first event and appending of second event either all succeed or all fail.
+In this particular example `amount = @gateway.pay_for(order)` line must return the same result (meaning it must not produce another payment) when run again with same argument. That's why those steps, payment request, appending of first event and appending of second event, either need to all succeed or all fail.
