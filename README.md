@@ -31,7 +31,7 @@ If necessary - adjust your `pg_hba.conf` to allow `pg_eventstore` user to connec
 
 Next step will be configuring a db connection. Please check the **Configuration** chapter bellow to find out how to do it.
 
-After db connection is configured - it is time to create necessary database objects. Please include this line into your `Rakefile`:
+After the db connection is configured, it is time to create necessary database objects. Please include this line into your `Rakefile`:
 
 ```ruby
 load "pg_eventstore/tasks/setup.rake"
