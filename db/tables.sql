@@ -13,7 +13,7 @@ CREATE TABLE public.events
     stream_id       bigint                      NOT NULL,
     type            character varying           NOT NULL,
     global_position bigserial                   NOT NULL,
-    stream_revision bigint                      NOT NULL,
+    stream_revision int                         NOT NULL,
     data            jsonb                       NOT NULL DEFAULT '{}'::jsonb,
     metadata        jsonb                       NOT NULL DEFAULT '{}'::jsonb,
     link_id         uuid,
