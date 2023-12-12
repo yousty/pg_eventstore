@@ -3,6 +3,13 @@
 
 require "bundler/setup"
 require "pg_eventstore"
+require "logger"
+
+PgEventstore.configure do |config|
+  config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore' }
+  config.connection_pool_size = 20
+end
+PgEventstore.logger = Logger.new(STDOUT)
 
 # You can add fixtures and/or initialization code here to make experimenting
 # with your gem easier. You can also use a different console, if you like.

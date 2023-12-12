@@ -7,3 +7,8 @@ services:
       - 5532:5432
     environment:
       - POSTGRES_PASSWORD=postgres
+    command: ["postgres", "-c", "log_statement=all"]
+  redis:
+    image: redis:6
+    ports:
+      - 6579:6379
