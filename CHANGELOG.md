@@ -1,5 +1,7 @@
-## [Unreleased]
+## [0.1.0] - 2023-12-12
 
-## [0.1.0] - 2023-11-10
+Initial release.
 
-- Initial release
+- Implement Read command
+- Implement AppendToStream command
+- Implement Multiple command
