@@ -68,7 +68,7 @@ Now you can use it as follows:
 
 ```ruby
 event = DescriptionChangedEvent.new(data: { 'description' => 'some description' })
-stream = PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-stream', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-stream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.append_to_stream(stream, event)
 # => #<DescriptionChangedEvent:0x0 @data={"description"=>"large-payload:description-7815696ecbf1c96e6894b779456d330e"}, ...>
 ```
@@ -76,7 +76,7 @@ PgEventstore.client.append_to_stream(stream, event)
 But when you read it next time, it will automatically resolve the `description` value:
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-stream', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-stream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.read(stream).last
 # => #<DescriptionChangedEvent:0x0 @data={"description"=>"some description"}, ...>
 ```

@@ -5,7 +5,7 @@
 The easiest way to read a stream forwards is to supply a `PgEventstore::Stream` object.
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.read(stream)
 # => [#<PgEventstore::Event 0x1>, #<PgEventstore::Event 0x1>, ...]
 ```
@@ -15,7 +15,7 @@ PgEventstore.client.read(stream)
 You can provide the `:max_count` option. This option determines how many records to return in a response. Default is `1000` and it can be changed with the `:max_count` configuration setting (see [**"Configuration"**](configuration.md) chapter):
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.read(stream, options: { max_count: 100 })
 ```
 
@@ -24,7 +24,7 @@ PgEventstore.client.read(stream, options: { max_count: 100 })
 When reading streams with projected events (links to other events) you can chose to resolve those links by setting `resolve_link_tos` to `true`, returning the original event instead of the "link" event.
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.read(stream, options: { resolve_link_tos: true })
 ```
 
@@ -33,7 +33,7 @@ PgEventstore.client.read(stream, options: { resolve_link_tos: true })
 You can define from which revision number you would like to start to read events:
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.read(stream, options: { from_revision: 2 })
 ```
 
@@ -42,7 +42,7 @@ PgEventstore.client.read(stream, options: { from_revision: 2 })
 As well as being able to read a stream forwards you can also go backwards. This can be achieved by providing the `:direction` option:
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.read(stream, options: { direction: 'Backwards' })
 ```
 
@@ -52,7 +52,7 @@ In case a stream with given name does not exist, a `PgEventstore::StreamNotFound
 
 ```ruby
 begin
-  stream = PgEventstore::Stream.new(context: 'non-existing-context', stream_name: 'User', stream_id: '1')
+  stream = PgEventstore::Stream.new(context: 'non-existing-context', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
   PgEventstore.client.read(stream)
 rescue PgEventstore::StreamNotFoundError => e
   puts e.message # => Stream #<PgEventstore::Stream:0x01> does not exist.
@@ -99,7 +99,7 @@ When reading events, you can additionally filter the result. Available attribute
 Filtering events by their types:
 
 ```ruby
-stream = PgEventstore::Stream.new(context: 'MYAwesomeContext', stream_name: 'User', stream_id: '1')
+stream = PgEventstore::Stream.new(context: 'MYAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.read(stream, options: { filter: { event_types: %w[Foo Bar] } })
 ```
 
@@ -135,7 +135,7 @@ PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { s
 Filtering events by stream context, stream name and stream id:
 
 ```ruby
-PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MyAwesomeContext', stream_name: 'User', stream_id: '1' }] } })
+PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MyAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae' }] } })
 ```
 
 You can provide several sets of stream's attributes. The result will be a union of events that match those criteria. For example, next query will return all events that belong to streams with `AnotherContext` context and all events that belong to streams with `MyAwesomeContext` context and `User` stream name:
