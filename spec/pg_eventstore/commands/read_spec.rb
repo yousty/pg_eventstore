@@ -96,6 +96,17 @@ RSpec.describe PgEventstore::Commands::Read do
         expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET)
       end
     end
+
+    context 'when a middleware, inherited from Middleware module is present' do
+      let(:middlewares) { [dummy_middleware.new] }
+      let(:dummy_middleware) do
+        Class.new.tap { |c| c.include(PgEventstore::Middleware) }
+      end
+
+      it 'does not modify the event' do
+        expect(subject.first.metadata).to eq({})
+      end
+    end
   end
 
   describe 'event class resolving' do

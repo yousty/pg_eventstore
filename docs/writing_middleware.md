@@ -1,6 +1,49 @@
 # Writing middleware
 
-Middlewares are objects that modify events before they are appended to a stream, or right after they are read from a stream. The `#serialize` method is called each time an event is going to be appended. The `#deserialize` method is called each time an event is read from a stream. Example of middleware:
+Middlewares are objects that modify events before they are appended to a stream, or right after they are read from a stream. Middleware object must respond to `#serialize` and `#deserialize` methods. The `#serialize` method is called each time an event is going to be appended. The `#deserialize` method is called each time an event is read from a stream. There are two ways how you can define a middleware:
+
+- by defining your class and including `PgEventstore::Middleware` module in it. This way you can override only one of its methods, or both of them. Example:
+
+```ruby
+# Override #serialize only to define your custom logic
+class MyAwesomeSerializer
+  include PgEventstore::Middleware
+
+  def serialize(event)
+    do_something
+  end
+end
+
+# Override #deserialize only to define your custom logic
+class MyAwesomeDeserializer
+  include PgEventstore::Middleware
+
+  def deserialize(event)
+    do_something
+  end
+end
+
+# Override both #serialize and #deserialize methods
+class MyAwesomeMiddleware
+  include PgEventstore::Middleware
+
+  def serialize(event)
+    do_something
+  end
+
+  def deserialize(event)
+    do_something
+  end
+end
+
+# Configure your middlewares
+PgEventstore.configure do |config|
+  config.middlewares = [MyAwesomeSerializer.new, MyAwesomeDeserializer.new, MyAwesomeMiddleware.new]
+end
+```
+
+- implement your own object that implements `#serialize` and `#deserialize` methods. Example: 
+
 
 ```ruby
 require 'securerandom'
@@ -23,44 +66,46 @@ class DescriptionChangedEvent < MyAppAbstractEvent
 end
 
 class ExtractLargePayload
-  def serialize(event)
-    return if event.fields_with_large_payloads.empty?
+  class << self
+    def serialize(event)
+      return if event.fields_with_large_payloads.empty?
 
-    event.fields_with_large_payloads.each do |field, value|
-      # Extract fields with large payload asynchronously.
-      event.data[field] = extract_large_payload_async(field, value)
+      event.fields_with_large_payloads.each do |field, value|
+        # Extract fields with large payload asynchronously.
+        event.data[field] = extract_large_payload_async(field, value)
+      end
     end
-  end
 
-  def deserialize(event)
-    # Load real values for large payload fields. You can use self.class.payload_store_fields here, but then you would require
-    # the event definition in each mircoservice you load this event
-    event.data.select { |k, v| v.start_with?('large-payload:') }.each do |field, value|
-      event.data[field] = resolve_large_payload(value.delete('large-payload:'))
+    def deserialize(event)
+      # Load real values for large payload fields. You can use self.class.payload_store_fields here, but then you would require
+      # the event definition in each mircoservice you load this event
+      event.data.select { |k, v| v.start_with?('large-payload:') }.each do |field, value|
+        event.data[field] = resolve_large_payload(value.delete('large-payload:'))
+      end
     end
-  end
 
-  private
+    private
 
-  def extract_large_payload_async(field_name, value)
-    payload_key = "large-payload:#{field_name}-#{Digest::MD5.hexdigest(value)}"
-    Thread.new do
-      Faraday.post(
-        "https://my.awesome.api/api/extract_large_payload",
-        { payload_key: payload_key, value: value }
-      )
+    def extract_large_payload_async(field_name, value)
+      payload_key = "large-payload:#{field_name}-#{Digest::MD5.hexdigest(value)}"
+      Thread.new do
+        Faraday.post(
+          "https://my.awesome.api/api/extract_large_payload",
+          { payload_key: payload_key, value: value }
+        )
+      end
+      payload_key
     end
-    payload_key
-  end
 
-  def resolve_large_payload(payload_key)
-    JSON.parse(Faraday.get("https://my.awesome.api/api/large_payload", { payload_key: payload_key }).body)['value']
-  end
+    def resolve_large_payload(payload_key)
+      JSON.parse(Faraday.get("https://my.awesome.api/api/large_payload", { payload_key: payload_key }).body)['value']
+    end
+  end  
 end
 
 # Configure our middlewares
 PgEventstore.configure do |config|
-  config.middlewares = [ExtractLargePayload.new]
+  config.middlewares = [ExtractLargePayload]
 end
 ```
 

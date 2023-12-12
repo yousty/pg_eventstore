@@ -10,6 +10,7 @@ require_relative 'pg_eventstore/stream'
 require_relative 'pg_eventstore/client'
 require_relative 'pg_eventstore/connection'
 require_relative 'pg_eventstore/errors'
+require_relative 'pg_eventstore/middleware'
 
 module PgEventstore
   class << self

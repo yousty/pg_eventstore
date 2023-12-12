@@ -168,6 +168,17 @@ RSpec.describe PgEventstore::Commands::Append do
         end
       end
 
+      context 'when a middleware, inherited from Middleware module is present' do
+        let(:middlewares) { [dummy_middleware.new] }
+        let(:dummy_middleware) do
+          Class.new.tap { |c| c.include(PgEventstore::Middleware) }
+        end
+
+        it 'does not modify the event' do
+          expect(subject.first.metadata).to eq({})
+        end
+      end
+
       context "when event's class is defined" do
         let(:event_class) { Class.new(PgEventstore::Event) }
         let(:event) { event_class.new }
