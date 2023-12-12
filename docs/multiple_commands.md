@@ -13,28 +13,34 @@ end
 
 All commands inside a `multiple` block either all succeed or all fail. This allows you to easily implement complex business rules. However, it comes with a price of performance. The more you put in a single block, the higher the chance it will have conflicts with other commands run in parallel, increasing overall time to complete. **Because of this performance implications, do not put more events than needed in a `multple` block.** You may still want to use it though as it could simplify your implementation.
 
-**Please take into account that due to concurrency of parallel commands, a block of code may be re-run several times before succeeding.** So, if you put any piece of code besides `pg_evenstore`'s commands - make sure it returns the correct result during re-runs. A simple example:
+**Please take into account that due to concurrency of parallel commands, a block of code may be re-run several times before succeeding.** So, if you put any piece of code besides `pg_evenstore`'s commands - make sure it is ready for re-runs. A good and a bad examples:
+
+## Bad
 
 ```ruby
-class PaymentService
-  def initialize
-    @gateway = MyPaymentGateway.new
-  end
-
-  def pay_for(order)
-    stream1 = PgEventstore::Stream.new(context: 'User', stream_name: 'Order', id: order.id)
-    stream2 = PgEventstore::Stream.new(context: 'User', stream_name: 'InternalTransfer', id: order.user_id)
-    
-    PgEventstore.client.multiple do
-      payment = @gateway.pay_for(order)
-      PgEventstore.client.append_to_stream(stream1, OrderPayed.new(data: { order_id: order.id }))
-      PgEventstore.client.append_to_stream(
-        stream2, 
-        DepositReceived.new(data: { amount: payment.amount, user_id: order.user_id, payment_id: payment.id })
-      )      
-    end
-  end
+PgEventstore.client.multiple do
+  old_email = PgEventstore.client.read(user_stream, options: { filter: { event_types: ['UserEmailChanged'] }, max_count: 1, direction: 'Backwards' }).first&.data&.dig('email')
+  # Email hasn't changed - prevent publishing unnecessary changes
+  next if old_email == user.email
+  
+  PgEventstore.client.append_to_stream(user_stream, UserEmailChanged.new(data: { email: user.email }))
+  # This is the mistake. UserMailer.notify_email_changed may be triggered several times
+  UserMailer.notify_email_changed(user.id, old_email: old_email, new_email: user.email).deliver_later
 end
 ```
 
-In this particular example `amount = @gateway.pay_for(order)` line must return the same result (meaning it must not produce another payment) when run again with same argument. That's why those steps, payment request, appending of first event and appending of second event, either need to all succeed or all fail.
+## Good
+
+```ruby
+old_email =
+  PgEventstore.client.multiple do
+    old_email = PgEventstore.client.read(user_stream, options: { filter: { event_types: ['UserEmailChanged'] }, max_count: 1, direction: 'Backwards' }).first&.data&.dig('email')
+    # Email hasn't changed - prevent publishing unnecessary changes
+    next if old_email == user.email
+
+    PgEventstore.client.append_to_stream(user_stream, UserEmailChanged.new(data: { email: user.email }))
+    old_email
+  end
+# Sending email outside multiple block to prevent potential re-triggering of it 
+UserMailer.notify_email_changed(user.id, old_email: old_email, new_email: user.email).deliver_later
+```
