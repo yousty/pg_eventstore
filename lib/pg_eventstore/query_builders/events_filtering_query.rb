@@ -2,6 +2,7 @@
 
 module PgEventstore
   module QueryBuilders
+    # @!visibility private
     class EventsFiltering
       DEFAULT_OFFSET = 0
       DEFAULT_LIMIT = 1000

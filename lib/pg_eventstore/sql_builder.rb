@@ -2,6 +2,7 @@
 
 module PgEventstore
   # Deadly simple SQL builder
+  # @!visibility private
   class SQLBuilder
     def initialize
       @select_values = []

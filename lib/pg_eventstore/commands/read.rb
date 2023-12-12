@@ -2,6 +2,7 @@
 
 module PgEventstore
   module Commands
+    # @!visibility private
     class Read < AbstractCommand
       # @param stream [PgEventstore::Stream]
       # @param options [Hash] request options

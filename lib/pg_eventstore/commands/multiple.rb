@@ -2,6 +2,7 @@
 
 module PgEventstore
   module Commands
+    # @!visibility private
     class Multiple < AbstractCommand
       def call(&blk)
         queries.transaction do

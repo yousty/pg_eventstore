@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # @!visibility private
   class PgResultDeserializer
     attr_reader :middlewares, :event_class_resolver
 

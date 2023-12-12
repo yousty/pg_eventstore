@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.files = Dir.chdir(__dir__) do
     paths_to_exclude = %w[
       bin/ test/ spec/ features/ .git .circleci appveyor Gemfile .ruby-version .ruby-gemset .rspec docker-compose.yml
-      Rakefile benchmark/
+      Rakefile benchmark/ .yardopts
     ]
     `git ls-files -z`.split("\x0").reject do |f|
       (File.expand_path(f) == __FILE__) || f.start_with?(*paths_to_exclude)

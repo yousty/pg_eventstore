@@ -3,6 +3,7 @@
 require_relative 'query_builders/events_filtering_query'
 
 module PgEventstore
+  # @!visibility private
   class Queries
     attr_reader :connection, :serializer, :deserializer
     private :connection, :serializer, :deserializer

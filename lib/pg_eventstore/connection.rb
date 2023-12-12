@@ -10,6 +10,7 @@ module PgEventstore
     # Starting from ruby v3.1 ConnectionPool closes connections after forking by default. For ruby v3 we need this patch
     # to correctly reload the ConnectionPool. Otherwise the same connection will leak into another process which will
     # result in disaster.
+    # @!visibility private
     module Ruby30Patch
       def initialize(**)
         @current_pid = Process.pid

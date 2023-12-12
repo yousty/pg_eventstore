@@ -2,6 +2,7 @@
 
 module PgEventstore
   module Commands
+    # @!visibility private
     class Append < AbstractCommand
       # @param stream [PgEventstore::Stream]
       # @param events [Array<PgEventstore::Event>]

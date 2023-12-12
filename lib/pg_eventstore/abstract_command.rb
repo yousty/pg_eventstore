@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # @!visibility private
   class AbstractCommand
     attr_reader :queries
     private :queries
