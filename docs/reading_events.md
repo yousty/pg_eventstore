@@ -82,10 +82,20 @@ PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { from_positi
 
 ## Middlewares
 
-If you would like to prevent your registered middlewares from processing the read result - you should use the `:skip_middlewares` argument:
+If you would like to skip some of your registered middlewares from processing events after they being read from a stream - you should use the `:middlewares` argument which allows you to override the list of middlewares you would like to use.
+
+Let's say you have these registered middlewares:
 
 ```ruby
-PgEventstore.client.read(PgEventstore::Stream.all_stream, skip_middlewares: true)
+PgEventstore.configure do |config|
+  config.middlewares = { foo: FooMiddleware.new, bar: BarMiddleware.new, baz: BazMiddleware.new }
+end
+```
+
+And you want to skip `FooMiddleware` and `BazMiddleware`. You simply have to provide an array of corresponding middleware keys you would like to use:
+
+```ruby
+PgEventstore.client.read(PgEventstore::Stream.all_stream, middlewares: %i[bar])
 ```
 
 See [Writing middleware](writing_middleware.md) chapter for info about what is middleware and how to implement it.

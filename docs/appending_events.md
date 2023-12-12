@@ -149,12 +149,22 @@ publish_event(stream, event)
 
 ## Middlewares
 
-If you would like to prevent your registered middlewares from processing events before they get appended to a stream - you should use the `:skip_middlewares` argument:
+If you would like to skip some of your registered middlewares from processing events before they get appended to a stream - you should use the `:middlewares` argument which allows you to override the list of middlewares you would like to use.
+
+Let's say you have these registered middlewares:
+
+```ruby
+PgEventstore.configure do |config|
+  config.middlewares = { foo: FooMiddleware.new, bar: BarMiddleware.new, baz: BazMiddleware.new }
+end
+```
+
+And you want to skip `FooMiddleware` and `BazMiddleware`. You simply have to provide an array of corresponding middleware keys you would like to use:
 
 ```ruby
 event = PgEventstore::Event.new
 stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
-PgEventstore.client.append_to_stream(stream, event, skip_middlewares: true)
+PgEventstore.client.append_to_stream(stream, event, middlewares: %i[bar])
 ```
 
 See [Writing middleware](writing_middleware.md) chapter for info about what is middleware and how to implement it.

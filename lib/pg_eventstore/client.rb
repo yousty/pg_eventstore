@@ -22,12 +22,12 @@ module PgEventstore
     # @param options [Hash]
     # @option options [Integer] :expected_revision provide your own revision number
     # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
-    # @param skip_middlewares [Boolean] whether to skip middlewares. Defaults to false
+    # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
-    def append_to_stream(stream, events_or_event, options: {}, skip_middlewares: false)
+    def append_to_stream(stream, events_or_event, options: {}, middlewares: nil)
       result =
-        Commands::Append.new(queries(middlewares(skip_middlewares))).call(stream, *events_or_event, options: options)
+        Commands::Append.new(queries(middlewares(middlewares))).call(stream, *events_or_event, options: options)
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -96,23 +96,23 @@ module PgEventstore
     #
     #     # Filtering by specific event when reading from the specific stream
     #     PgEventstore.client.read(stream, options: { filter: { event_types: ['MyAwesomeEvent'] } })
-    # @param skip_middlewares [Boolean] whether to skip middlewares. Defaults to false
+    # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
     # @return [Array<PgEventstore::Event>]
     # @raise [PgEventstore::StreamNotFoundError]
-    def read(stream, options: {}, skip_middlewares: false)
+    def read(stream, options: {}, middlewares: nil)
       Commands::Read.
-        new(queries(middlewares(skip_middlewares))).
+        new(queries(middlewares(middlewares))).
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
     private
 
-    # @param skip_middlewares [Boolean]
+    # @param middlewares [Array, nil]
     # @return [Array<Object<#serialize, #deserialize>>]
-    def middlewares(skip_middlewares = false)
-      return config.middlewares unless skip_middlewares
+    def middlewares(middlewares = nil)
+      return config.middlewares.values unless middlewares
 
-      []
+      config.middlewares.slice(*middlewares).values
     end
 
     # @return [PgEventstore::Connection]

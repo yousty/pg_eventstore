@@ -9,7 +9,7 @@ module PgEventstore
     # PostgreSQL connection URI docs https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
     option(:pg_uri) { 'postgresql://postgres:postgres@localhost:5432/eventstore' }
     option(:max_count) { 1000 }
-    option(:middlewares) { [] }
+    option(:middlewares) { {} }
     # Object that responds to #call. Should accept a string and return a class
     option(:event_class_resolver) { EventClassResolver.new }
     option(:connection_pool_size) { 5 }

@@ -38,12 +38,11 @@ end
 
 # Configure your middlewares
 PgEventstore.configure do |config|
-  config.middlewares = [MyAwesomeSerializer.new, MyAwesomeDeserializer.new, MyAwesomeMiddleware.new]
+  config.middlewares = { my_awesome_serializer: MyAwesomeSerializer.new, my_awesome_deserializer: MyAwesomeDeserializer.new, my_awesome_middleware: MyAwesomeMiddleware.new }
 end
 ```
 
 - implement your own object that implements `#serialize` and `#deserialize` methods. Example: 
-
 
 ```ruby
 require 'securerandom'
@@ -105,7 +104,7 @@ end
 
 # Configure our middlewares
 PgEventstore.configure do |config|
-  config.middlewares = [ExtractLargePayload]
+  config.middlewares = { extract_large_payload: ExtractLargePayload }
 end
 ```
 

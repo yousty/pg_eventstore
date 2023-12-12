@@ -3,6 +3,33 @@
 RSpec.describe PgEventstore::Client do
   let(:instance) { described_class.new(config) }
   let(:config) { PgEventstore.config }
+  let(:middleware) do
+    Class.new do
+      def initialize(value)
+        @value = value
+      end
+
+      def serialize(event)
+        event.metadata[@value] = "secret-#{@value}"
+      end
+
+      def deserialize(event)
+        event.metadata[@value] = @value
+      end
+    end
+  end
+
+  before do
+    PgEventstore.configure do |config|
+      config.middlewares = { foo: middleware.new('foo'), bar: middleware.new('bar'), baz: middleware.new('baz') }
+    end
+  end
+
+  after do
+    PgEventstore.configure do |config|
+      config.middlewares = {}
+    end
+  end
 
   describe '#append_to_stream' do
     subject { instance.append_to_stream(stream, events_or_event) }
@@ -16,6 +43,17 @@ RSpec.describe PgEventstore::Client do
         aggregate_failures do
           is_expected.to be_a(PgEventstore::Event)
           expect(subject.type).to eq('foo')
+        end
+      end
+      it 'applies all middlewares' do
+        expect(subject.metadata).to eq('foo' => 'secret-foo', 'bar' => 'secret-bar', 'baz' => 'secret-baz')
+      end
+
+      context 'when :middlewares argument is given' do
+        subject { instance.append_to_stream(stream, events_or_event, middlewares: %i[bar]) }
+
+        it 'applies only provided middlewares' do
+          expect(subject.metadata).to eq('bar' => 'secret-bar')
         end
       end
     end
@@ -54,6 +92,18 @@ RSpec.describe PgEventstore::Client do
           expect(subject.size).to eq(1)
           expect(subject.first.type).to eq('foo')
           expect(subject.first.stream).to eq(stream)
+        end
+      end
+
+      it 'applies all middlewares' do
+        expect(subject.first.metadata).to eq('foo' => 'foo', 'bar' => 'bar', 'baz' => 'baz')
+      end
+
+      context 'when :middlewares argument is given' do
+        subject { instance.read(stream, middlewares: %i[bar]) }
+
+        it 'applies only provided middlewares' do
+          expect(subject.first.metadata).to eq('foo' => 'secret-foo', 'bar' => 'bar', 'baz' => 'secret-baz')
         end
       end
     end
