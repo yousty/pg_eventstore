@@ -35,6 +35,16 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
         expect(instance.public_send(option)).to eq(blk.call)
       end
     end
+
+    context 'when option has the same name as an existing method' do
+      let(:option) { :__id__ }
+
+      it 'outputs warning' do
+        expect { subject }.to(
+          output("Warning: Redefining already defined method #{dummy_class}##{option}\n").to_stdout
+        )
+      end
+    end
   end
 
   describe 'defining options in inherited class' do

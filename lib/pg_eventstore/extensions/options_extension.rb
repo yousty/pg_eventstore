@@ -46,6 +46,8 @@ module PgEventstore
         # @return [Symbol]
         def option(opt_name, &blk)
           self.options = (options + Set.new([opt_name])).freeze
+          warn_already_defined(opt_name)
+          warn_already_defined(:"#{opt_name}=")
           attr_writer opt_name
 
           define_method opt_name do
@@ -60,6 +62,16 @@ module PgEventstore
         def inherited(klass)
           super
           klass.options = Set.new(options).freeze
+        end
+
+        private
+
+        # @param method_name [Symbol]
+        # @return [void]
+        def warn_already_defined(method_name)
+          return unless instance_methods.include?(method_name)
+
+          puts "Warning: Redefining already defined method #{self}##{method_name}"
         end
       end
 
