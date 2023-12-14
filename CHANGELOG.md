@@ -1,3 +1,7 @@
+## [0.2.1] - 2023-12-13
+
+Under certain circumstances `PG::TRSerializationFailure` exception wasn't retried. Adjust connection's states list to fix that.
+
 ## [0.2.0] - 2023-12-13
 
 - Improve performance by reviewing indexes
