@@ -53,6 +53,7 @@ namespace :pg_eventstore do
       conn.exec <<~SQL
         DROP TABLE IF EXISTS public.events;
         DROP TABLE IF EXISTS public.streams;
+        DROP TABLE IF EXISTS public.migrations;
         DROP EXTENSION IF EXISTS "uuid-ossp";
         DROP EXTENSION IF EXISTS pgcrypto;
       SQL
