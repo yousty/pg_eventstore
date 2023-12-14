@@ -20,5 +20,7 @@ end
 
 `PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:drop`
 `PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:create`
+`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:migrate`
 `PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:drop`
 `PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:create`
+`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:migrate`

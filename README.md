@@ -39,9 +39,12 @@ load "pg_eventstore/tasks/setup.rake"
 
 This will include necessary rake tasks. You can now run 
 ```bash
+export PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/postgres" # Replace this with your real connection url
 bundle exec rake pg_eventstore:create
+bundle exec rake pg_eventstore:migrate
 ```
-to create necessary database objects. After this step your `pg_eventstore` is ready to use.
+
+to create necessary database objects and migrate them to the actual version. After this step your `pg_eventstore` is ready to use.
 
 Documentation chapters:
 

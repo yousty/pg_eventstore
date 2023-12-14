@@ -7,7 +7,7 @@ namespace :pg_eventstore do
       config.pg_uri = ENV['PG_EVENTSTORE_URI']
     end
 
-    db_files_root = "#{Gem::Specification.find_by_name("pg_eventstore").gem_dir}/db"
+    db_files_root = "#{Gem::Specification.find_by_name("pg_eventstore").gem_dir}/db/initial"
 
     PgEventstore.connection.with do |conn|
       conn.transaction do
@@ -15,6 +15,30 @@ namespace :pg_eventstore do
         conn.exec(File.read("#{db_files_root}/tables.sql"))
         conn.exec(File.read("#{db_files_root}/primary_and_foreign_keys.sql"))
         conn.exec(File.read("#{db_files_root}/indexes.sql"))
+      end
+    end
+  end
+
+  task :migrate do
+    PgEventstore.configure do |config|
+      config.pg_uri = ENV['PG_EVENTSTORE_URI']
+    end
+
+    migration_files_root = "#{Gem::Specification.find_by_name("pg_eventstore").gem_dir}/db/migrations"
+
+    PgEventstore.connection.with do |conn|
+      conn.exec('CREATE TABLE IF NOT EXISTS migrations (number int NOT NULL)')
+      latest_migration =
+        conn.exec('SELECT number FROM migrations ORDER BY number DESC LIMIT 1').to_a.dig(0, 'number') || -1
+
+      Dir["#{migration_files_root}/*.sql"].each do |f_name|
+        number = File.basename(f_name).split('_')[0].to_i
+        next if latest_migration >= number
+
+        conn.transaction do
+          conn.exec(File.read(f_name))
+          conn.exec_params('INSERT INTO migrations (number) VALUES ($1)', [number])
+        end
       end
     end
   end
