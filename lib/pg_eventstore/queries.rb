@@ -31,7 +31,7 @@ module PgEventstore
         end
       end
     rescue PG::TRSerializationFailure, PG::TRDeadlockDetected => e
-      retry if e.connection.transaction_status == PG::PQTRANS_IDLE
+      retry if [PG::PQTRANS_IDLE, PG::PQTRANS_UNKNOWN].include?(e.connection.transaction_status)
       raise
     end
 
