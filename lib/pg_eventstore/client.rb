@@ -27,7 +27,11 @@ module PgEventstore
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def append_to_stream(stream, events_or_event, options: {}, middlewares: nil)
       result =
-        Commands::Append.new(queries(middlewares(middlewares))).call(stream, *events_or_event, options: options)
+        Commands::Append.new(
+          Queries.new(
+            streams: stream_queries, events: event_queries(middlewares(middlewares)), transactions: transaction_queries
+          )
+        ).call(stream, *events_or_event, options: options)
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -43,7 +47,7 @@ module PgEventstore
     #
     # @return the result of the given block
     def multiple(&blk)
-      Commands::Multiple.new(queries(middlewares)).call(&blk)
+      Commands::Multiple.new(Queries.new(transactions: transaction_queries)).call(&blk)
     end
 
     # Read events from the specific stream or from "all" stream.
@@ -101,7 +105,7 @@ module PgEventstore
     # @raise [PgEventstore::StreamNotFoundError]
     def read(stream, options: {}, middlewares: nil)
       Commands::Read.
-        new(queries(middlewares(middlewares))).
+        new(Queries.new(streams: stream_queries, events: event_queries(middlewares(middlewares)))).
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
@@ -120,10 +124,20 @@ module PgEventstore
       PgEventstore.connection(config.name)
     end
 
+    # @return [PgEventstore::StreamQueries]
+    def stream_queries
+      StreamQueries.new(connection)
+    end
+
+    # @return [PgEventstore::TransactionQueries]
+    def transaction_queries
+      TransactionQueries.new(connection)
+    end
+
     # @param middlewares [Array<Object<#serialize, #deserialize>>]
-    # @return [PgEventstore::Queries]
-    def queries(middlewares)
-      Queries.new(
+    # @return [PgEventstore::EventQueries]
+    def event_queries(middlewares)
+      EventQueries.new(
         connection,
         EventSerializer.new(middlewares),
         PgResultDeserializer.new(middlewares, config.event_class_resolver)

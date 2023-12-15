@@ -14,14 +14,14 @@ module PgEventstore
       def call(stream, *events, options: {})
         raise SystemStreamError, stream if stream.system?
 
-        queries.transaction do
-          stream = queries.find_or_create_stream(stream)
+        queries.transactions.transaction do
+          stream = queries.streams.find_or_create_stream(stream)
           revision = stream.stream_revision
           assert_expected_revision!(revision, options[:expected_revision]) if options[:expected_revision]
           events.map.with_index(1) do |event, index|
-            queries.insert(stream, prepared_event(event, revision + index))
+            queries.events.insert(stream, prepared_event(event, revision + index))
           end.tap do
-            queries.update_stream_revision(stream, revision + events.size)
+            queries.streams.update_stream_revision(stream, revision + events.size)
           end
         end
       end

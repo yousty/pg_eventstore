@@ -3,13 +3,9 @@
 RSpec.describe PgEventstore::Commands::Multiple do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(
-      PgEventstore.connection, PgEventstore::EventSerializer.new(middlewares),
-      PgEventstore::PgResultDeserializer.new(middlewares, event_class_resolver)
-    )
+    PgEventstore::Queries.new(transactions: transaction_queries)
   end
-  let(:middlewares) { [] }
-  let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
+  let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
 
   describe '#call' do
     subject do

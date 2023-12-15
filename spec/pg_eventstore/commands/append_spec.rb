@@ -3,8 +3,14 @@
 RSpec.describe PgEventstore::Commands::Append do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(
-      PgEventstore.connection, PgEventstore::EventSerializer.new(middlewares),
+    PgEventstore::Queries.new(events: event_queries, streams: stream_queries, transactions: transaction_queries)
+  end
+  let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
+  let(:stream_queries) { PgEventstore::StreamQueries.new(PgEventstore.connection) }
+  let(:event_queries) do
+    PgEventstore::EventQueries.new(
+      PgEventstore.connection,
+      PgEventstore::EventSerializer.new(middlewares),
       PgEventstore::PgResultDeserializer.new(middlewares, event_class_resolver)
     )
   end
