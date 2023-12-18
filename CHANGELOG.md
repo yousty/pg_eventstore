@@ -1,3 +1,7 @@
+## [0.2.3] - 2023-12-18
+
+- Fix performance when searching by event type only(under certain circumstances PosetgreSQL was picking wrong index).
+
 ## [0.2.2] - 2023-12-14
 
 - Fix `pg_eventstore:drop` rake task to also drop `migrations` table
