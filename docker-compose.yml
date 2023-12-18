@@ -8,6 +8,8 @@ services:
     environment:
       - POSTGRES_PASSWORD=postgres
     command: ["postgres", "-c", "log_statement=all"]
+    volumes:
+      - "./db/postgresql/data:/var/lib/postgresql/data"
   redis:
     image: redis:6
     ports:
