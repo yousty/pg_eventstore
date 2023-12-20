@@ -32,7 +32,7 @@ namespace :pg_eventstore do
         conn.exec('SELECT number FROM migrations ORDER BY number DESC LIMIT 1').to_a.dig(0, 'number') || -1
 
       Dir.chdir migration_files_root do
-        Dir["*.{sql,rb}"].each do |f_name|
+        Dir["*.{sql,rb}"].sort.each do |f_name|
           number = File.basename(f_name).split('_')[0].to_i
           next if latest_migration >= number
 
