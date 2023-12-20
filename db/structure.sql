@@ -84,7 +84,6 @@ ALTER SEQUENCE public.event_types_id_seq OWNED BY public.event_types.id;
 CREATE TABLE public.events (
     id uuid DEFAULT public.gen_random_uuid() NOT NULL,
     stream_id bigint NOT NULL,
-    type character varying,
     global_position bigint NOT NULL,
     stream_revision integer NOT NULL,
     data jsonb DEFAULT '{}'::jsonb NOT NULL,
