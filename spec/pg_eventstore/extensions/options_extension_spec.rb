@@ -98,11 +98,11 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
 
     let(:option) { :some_option }
 
-    before do
-      dummy_class.option(option)
-    end
-
     context 'when default value is not set' do
+      before do
+        dummy_class.option(option)
+      end
+
       it { is_expected.to be_nil }
     end
 

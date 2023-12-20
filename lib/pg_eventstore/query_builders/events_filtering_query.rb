@@ -23,8 +23,8 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def all_stream_filtering(options, offset: 0)
           event_filter = new
-          options in { filter: { event_types: Array => event_types } }
-          event_filter.add_event_types(event_types)
+          options in { filter: { event_type_ids: Array => event_type_ids } }
+          event_filter.add_event_types(event_type_ids)
           event_filter.add_limit(options[:max_count])
           event_filter.add_offset(offset)
           event_filter.resolve_links(options[:resolve_link_tos])
@@ -41,8 +41,8 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def specific_stream_filtering(stream, options, offset: 0)
           event_filter = new
-          options in { filter: { event_types: Array => event_types } }
-          event_filter.add_event_types(event_types)
+          options in { filter: { event_type_ids: Array => event_type_ids } }
+          event_filter.add_event_types(event_type_ids)
           event_filter.add_limit(options[:max_count])
           event_filter.add_offset(offset)
           event_filter.resolve_links(options[:resolve_link_tos])
@@ -58,8 +58,10 @@ module PgEventstore
           SQLBuilder.new.
             select('events.*').
             select('row_to_json(streams.*) as stream').
+            select('event_types.type as type').
             from('events').
             join('JOIN streams ON streams.id = events.stream_id').
+            join('JOIN event_types ON event_types.id = events.event_type_id').
             limit(DEFAULT_LIMIT).
             offset(DEFAULT_OFFSET)
       end
@@ -85,16 +87,16 @@ module PgEventstore
         @sql_builder.where("streams.id = ?", stream.id)
       end
 
-      # @param event_types [Array, nil]
+      # @param event_type_ids [Array<Integer>, nil]
       # @return [void]
-      def add_event_types(event_types)
-        return if event_types.nil?
-        return if event_types.empty?
+      def add_event_types(event_type_ids)
+        return if event_type_ids.nil?
+        return if event_type_ids.empty?
 
-        sql = event_types.size.times.map do
-          "events.type = ?"
-        end.join(" OR ")
-        @sql_builder.where(sql, *event_types)
+        sql = event_type_ids.size.times.map do
+          "?"
+        end.join(", ")
+        @sql_builder.where("event_types.id IN (#{sql})", *event_type_ids)
       end
 
       # @param revision [Integer, nil]

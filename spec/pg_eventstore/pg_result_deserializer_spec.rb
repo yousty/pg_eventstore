@@ -13,7 +13,9 @@ RSpec.describe PgEventstore::PgResultDeserializer do
       PgEventstore::Event.new(id: SecureRandom.uuid, type: 'some-event', data: { foo: :bar }, metadata: { bar: :baz })
     end
     let(:pg_result) do
-      PgEventstore.connection.with { |c| c.exec('SELECT * FROM events LIMIT 1') }
+      PgEventstore.connection.with do |c|
+        c.exec('SELECT events.*, event_types.type as type FROM events JOIN event_types ON event_types.id = events.event_type_id LIMIT 1')
+      end
     end
 
     before do

@@ -19,14 +19,23 @@ module PgEventstore
           next yield
         end
 
-        conn.transaction do
-          conn.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        pg_transaction(conn) do
           yield
         end
       end
-    rescue PG::TRSerializationFailure, PG::TRDeadlockDetected => e
-      retry if [PG::PQTRANS_IDLE, PG::PQTRANS_UNKNOWN].include?(e.connection.transaction_status)
-      raise
+    end
+
+    private
+
+    # @param pg_connection [PG::Connection]
+    # @return [void]
+    def pg_transaction(pg_connection)
+      pg_connection.transaction do
+        pg_connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        yield
+      end
+    rescue PG::TRSerializationFailure, PG::TRDeadlockDetected
+      retry
     end
   end
 end

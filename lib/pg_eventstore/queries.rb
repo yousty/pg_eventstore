@@ -3,6 +3,7 @@
 require_relative 'queries/transaction_queries'
 require_relative 'queries/event_queries'
 require_relative 'queries/stream_queries'
+require_relative 'queries/event_type_queries'
 
 module PgEventstore
   # @!visibility private

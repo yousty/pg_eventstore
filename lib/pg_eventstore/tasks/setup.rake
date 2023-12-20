@@ -31,12 +31,16 @@ namespace :pg_eventstore do
       latest_migration =
         conn.exec('SELECT number FROM migrations ORDER BY number DESC LIMIT 1').to_a.dig(0, 'number') || -1
 
-      Dir["#{migration_files_root}/*.sql"].each do |f_name|
-        number = File.basename(f_name).split('_')[0].to_i
-        next if latest_migration >= number
+      Dir.chdir migration_files_root do
+        Dir["*.{sql,rb}"].each do |f_name|
+          number = File.basename(f_name).split('_')[0].to_i
+          next if latest_migration >= number
 
-        conn.transaction do
-          conn.exec(File.read(f_name))
+          if File.extname(f_name) == '.rb'
+            load f_name
+          else
+            conn.exec(File.read(f_name))
+          end
           conn.exec_params('INSERT INTO migrations (number) VALUES ($1)', [number])
         end
       end
@@ -53,6 +57,7 @@ namespace :pg_eventstore do
       conn.exec <<~SQL
         DROP TABLE IF EXISTS public.events;
         DROP TABLE IF EXISTS public.streams;
+        DROP TABLE IF EXISTS public.event_types;
         DROP TABLE IF EXISTS public.migrations;
         DROP EXTENSION IF EXISTS "uuid-ossp";
         DROP EXTENSION IF EXISTS pgcrypto;

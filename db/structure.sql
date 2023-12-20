@@ -49,19 +49,49 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: event_types; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_types (
+    id bigint NOT NULL,
+    type character varying NOT NULL
+);
+
+
+--
+-- Name: event_types_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.event_types_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: event_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.event_types_id_seq OWNED BY public.event_types.id;
+
+
+--
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.events (
     id uuid DEFAULT public.gen_random_uuid() NOT NULL,
     stream_id bigint NOT NULL,
-    type character varying NOT NULL,
+    type character varying,
     global_position bigint NOT NULL,
     stream_revision integer NOT NULL,
     data jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     link_id uuid,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    event_type_id bigint NOT NULL
 );
 
 
@@ -126,6 +156,13 @@ ALTER SEQUENCE public.streams_id_seq OWNED BY public.streams.id;
 
 
 --
+-- Name: event_types id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_types ALTER COLUMN id SET DEFAULT nextval('public.event_types_id_seq'::regclass);
+
+
+--
 -- Name: events global_position; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -137,6 +174,14 @@ ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT nextval(
 --
 
 ALTER TABLE ONLY public.streams ALTER COLUMN id SET DEFAULT nextval('public.streams_id_seq'::regclass);
+
+
+--
+-- Name: event_types event_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_types
+    ADD CONSTRAINT event_types_pkey PRIMARY KEY (id);
 
 
 --
@@ -156,17 +201,24 @@ ALTER TABLE ONLY public.streams
 
 
 --
--- Name: idx_events_global_position_including_type; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_event_types_type; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_global_position_including_type ON public.events USING btree (global_position) INCLUDE (type);
+CREATE UNIQUE INDEX idx_event_types_type ON public.event_types USING btree (type);
 
 
 --
--- Name: INDEX idx_events_global_position_including_type; Type: COMMENT; Schema: public; Owner: -
+-- Name: idx_events_event_type_id; Type: INDEX; Schema: public; Owner: -
 --
 
-COMMENT ON INDEX public.idx_events_global_position_including_type IS 'Usually "type" column has low distinct values. Thus, composit index by "type" and "global_position" columns may not be picked by Query Planner properly. Improve an index by "global_position" by including "type" column which allows Query Planner to perform better by picking the correct index.';
+CREATE INDEX idx_events_event_type_id ON public.events USING btree (event_type_id);
+
+
+--
+-- Name: idx_events_global_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_global_position ON public.events USING btree (global_position);
 
 
 --
@@ -184,31 +236,18 @@ CREATE INDEX idx_events_stream_id_and_revision ON public.events USING btree (str
 
 
 --
--- Name: idx_events_stream_id_and_type_and_revision; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_stream_id_and_type_and_revision ON public.events USING btree (stream_id, type, stream_revision);
-
-
---
--- Name: idx_events_type_and_position; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_type_and_position ON public.events USING btree (type, global_position);
-
-
---
--- Name: idx_events_type_and_stream_id_and_position; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_type_and_stream_id_and_position ON public.events USING btree (type, stream_id, global_position);
-
-
---
 -- Name: idx_streams_context_and_stream_name_and_stream_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_streams_context_and_stream_name_and_stream_id ON public.streams USING btree (context, stream_name, stream_id);
+
+
+--
+-- Name: events events_event_type_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_event_type_fk FOREIGN KEY (event_type_id) REFERENCES public.event_types(id);
 
 
 --
