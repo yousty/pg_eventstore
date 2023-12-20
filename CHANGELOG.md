@@ -1,3 +1,7 @@
+## [0.2.6] - 2023-12-20
+
+- Remove `events.type` column
+
 ## [0.2.5] - 2023-12-20
 
 - Fix bug when migrations files are returned in unsorted order on some systems
