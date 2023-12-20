@@ -1,3 +1,7 @@
+## [0.2.5] - 2023-12-20
+
+- Fix bug when migrations files are returned in unsorted order on some systems
+
 ## [0.2.4] - 2023-12-20
 
 Due to performance issues under certain circumstances, searching by event type was giving bad performance. I decided to extract `type` column from `events` table into separated table. **No breaking changes in public API though.**
