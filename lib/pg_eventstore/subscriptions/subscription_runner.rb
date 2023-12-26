@@ -12,7 +12,7 @@ module PgEventstore
 
     attr_reader :id
 
-    def_delegators :@events_processor, :start, :stop, :feed
+    def_delegators :@events_processor, :start, :stop, :feed, :wait_for_finish
     def_delegators :@subscription, :lock!, :unlock!
 
     # @param stats [PgEventstore::SubscriptionStats]
@@ -40,15 +40,6 @@ module PgEventstore
     # @return [Boolean]
     def time_to_feed?
       @subscription.last_chunk_fed_at + @subscription.chunk_query_interval <= Time.now.utc
-    end
-
-    # @return [void]
-    def wait_for_finish
-      loop do
-        break if @events_processor.state.stopped? || @events_processor.state.dead?
-
-        sleep 0.1
-      end
     end
 
     private

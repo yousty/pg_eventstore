@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # This class actually processes events.
   # @!visibility private
   class EventsProcessor
     include Extensions::CallbacksExtension
@@ -12,6 +13,7 @@ module PgEventstore
 
     def_delegators :@lock, :synchronize
 
+    # @param handler [#call]
     def initialize(handler)
       @lock = Thread::Mutex.new
       @handler = handler
@@ -28,15 +30,21 @@ module PgEventstore
       end
     end
 
+    # Start processing events asynchronously. Consecutive calls of this method will result in nothing.
+    # @return [void]
     def start
       synchronize { _start }
     end
 
+    # Number of unprocessed events which are currently in a queue
     # @return [Integer]
     def events_left_in_chunk
       @raw_events.size
     end
 
+    # Initiate the shutdown of events processing. This operation is asynchronous. You can call {#wait_for_finish} to
+    # synchronously wait for the stop. Consecutive calls of this method will result in nothing.
+    # @return [void]
     def stop
       synchronize do
         return self unless @state.running?
@@ -60,7 +68,9 @@ module PgEventstore
       end
     end
 
-    # Use this method only if you want to restart dead runner. For all other cases please use #start/#stop
+    # Restarts dead processor. Use this method only if you want to restart dead runner.
+    # For all other cases please use #start/#stop. The processor may be dead if something went wrong during event's
+    # processing.
     def restore
       synchronize do
         return self unless @state.dead?
@@ -71,8 +81,19 @@ module PgEventstore
     end
     has_callbacks :restart, :restore
 
+    # Wait until the processor switch the state to either "stopped" or "dead". This operation is synchronous.
+    # @return [void]
+    def wait_for_finish
+      loop do
+        break if @state.stopped? || @state.dead?
+
+        sleep 0.1
+      end
+    end
+
     private
 
+    # @return [void]
     def _start
       @runner ||= Thread.new do
         Thread.current.abort_on_exception = false
@@ -96,6 +117,8 @@ module PgEventstore
       end
     end
 
+    # @param raw_event [Hash]
+    # @return [void]
     def process_event(raw_event)
       callbacks.run_callbacks(:process, raw_event['global_position']) do
         @handler.call(raw_event)
