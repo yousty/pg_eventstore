@@ -157,6 +157,11 @@ module PgEventstore
           join("LEFT JOIN events original_events ON original_events.id = events.link_id")
       end
 
+      # @return [PgEventstore::SQLBuilder]
+      def to_sql_builder
+        @sql_builder
+      end
+
       # @return [Array]
       def to_exec_params
         @sql_builder.to_exec_params

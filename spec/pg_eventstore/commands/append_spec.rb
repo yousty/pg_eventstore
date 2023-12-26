@@ -11,7 +11,7 @@ RSpec.describe PgEventstore::Commands::Append do
     PgEventstore::EventQueries.new(
       PgEventstore.connection,
       PgEventstore::EventSerializer.new(middlewares),
-      PgEventstore::PgResultDeserializer.new(middlewares, event_class_resolver)
+      PgEventstore::EventDeserializer.new(middlewares, event_class_resolver)
     )
   end
   let(:middlewares) { [] }
