@@ -7,19 +7,25 @@ require_relative 'events_processor'
 require_relative 'subscription_stats'
 require_relative 'subscription_runner'
 require_relative 'object_state'
+require_relative 'subscriptions_set'
+require_relative 'subscriptions_feeder'
+require_relative 'subscription_runners'
 
 module PgEventstore
-  class SubscriptionManager
-    attr_reader :config, :subscription_set
-    private :config, :subscription_set
+  class SubscriptionsManager
+    extend Forwardable
+
+    attr_reader :config
+    private :config
+
+    def_delegators :@subscriptions_runner, :start_all, :stop_all
 
     # @param config [PgEventstore::Config]
-    # @param subscription_set [String]
-    def initialize(config, subscription_set)
+    # @param set_name [String]
+    def initialize(config, set_name)
       @config = config
-      @subscription_set = subscription_set
-      @runners = {}
-      @lock_id = SecureRandom.uuid
+      @set_name = set_name
+      @subscriptions_runner = SubscriptionRunners.new(config.name, set_name)
     end
 
     # @param subscription_name [String] subscription's name
@@ -34,11 +40,12 @@ module PgEventstore
     # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
     # @param refresh_interval [Integer] an interval in seconds to determine how often to query new events of the given
     #   subscription.
+    # @param max_retries [Integer] max number of retries of failed subscription
     # @return [void]
-    def subscribe(subscription_name, handler:, options: {}, middlewares: nil, refresh_interval: 5)
+    def subscribe(subscription_name, handler:, options: {}, middlewares: nil, refresh_interval: 5, max_retries: 100)
       subscription = Subscription.using_connection(config.name).init_by(
-        set: subscription_set, name: subscription_name, options: options, chunk_query_interval: refresh_interval,
-        lock_id: @lock_id
+        set: @set_name, name: subscription_name, options: options, chunk_query_interval: refresh_interval,
+        max_restarts_number: max_retries
       )
 
       runner = SubscriptionRunner.new(
@@ -47,49 +54,10 @@ module PgEventstore
         subscription: subscription
       )
 
-      @runners[runner.id] = runner
-    end
-
-    # @return [void]
-    def start_all
-      lock_all
-      @runners.each_value(&:start)
-      @feeder ||= Thread.new do
-        loop do
-          sleep 1
-
-          runners = @runners.values.select(&:running?).select(&:time_to_feed?)
-          next if runners.empty?
-
-          runners_query_options = runners.map { |runner| [runner.id, runner.next_chunk_query_opts] }
-          raw_events = subscription_queries.subscriptions_events(runners_query_options)
-          raw_events.group_by { |attrs| attrs['runner_id'] }.each do |runner_id, events|
-            @runners[runner_id].feed(events)
-          end
-        end
-      end
-      nil
-    end
-
-    # @return [void]
-    def stop_all
-      @feeder&.exit
-      @feeder = nil
-      @runners.each_value(&:stop)
-      @runners.each_value(&:wait_for_finish)
-      unlock_all
-      nil
+      @subscriptions_runner.add(runner)
     end
 
     private
-
-    def lock_all
-      @runners.each_value { |runner| runner.lock!(@lock_id) }
-    end
-
-    def unlock_all
-      @runners.each_value(&:unlock!)
-    end
 
     # @param middlewares [Array<Symbol>, nil]
     # @param handler [#call]
@@ -105,16 +73,6 @@ module PgEventstore
       return config.middlewares.values unless middlewares
 
       config.middlewares.slice(*middlewares).values
-    end
-
-    # @return [PgEventstore::Connection]
-    def connection
-      PgEventstore.connection(config.name)
-    end
-
-    # @return [PgEventstore::SubscriptionQueries]
-    def subscription_queries
-      SubscriptionQueries.new(connection)
     end
   end
 end

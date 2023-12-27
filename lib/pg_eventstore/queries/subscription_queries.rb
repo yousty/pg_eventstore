@@ -40,7 +40,7 @@ module PgEventstore
     def create(attrs)
       sql = <<~SQL
         INSERT INTO subscriptions (#{attrs.keys.join(', ')}) 
-          VALUES (#{positional_vars(attrs.values)}) 
+          VALUES (#{Utils.positional_vars(attrs.values)}) 
           RETURNING *
       SQL
       pg_result = connection.with do |conn|
@@ -52,6 +52,7 @@ module PgEventstore
     # @param subscription [PgEventstore::Subscription]
     # @param attrs [Hash]
     def update(subscription, attrs)
+      attrs = { updated_at: Time.now.utc }.merge(attrs)
       attrs_sql = attrs.keys.map.with_index(1) do |attr, index|
         "#{attr} = $#{index}"
       end.join(', ')
@@ -78,7 +79,7 @@ module PgEventstore
     def lock!(id, lock_id)
       transaction_queries.transaction do
         attrs = find_by(id: id)
-        raise(<<~TEXT) if attrs[:locked_by] && attrs[:locked_by] != lock_id
+        raise(<<~TEXT) unless attrs[:locked_by].nil?
           Could not lock Subscription from #{attrs[:set].inspect} set with #{attrs[:name].inspect} name. It is \
           already locked by #{attrs[:locked_by].inspect} set.
         TEXT
@@ -99,7 +100,7 @@ module PgEventstore
         # the matter of consistency.
         raise(<<~TEXT) unless attrs[:locked_by] == lock_id
           Failed to unlock Subscription##{id} by #{lock_id.inspect} lock id - it is locked by \
-          #{attrs[:locked_by].inspect} lock id
+          #{attrs[:locked_by].inspect} lock id.
         TEXT
 
         connection.with do |conn|
@@ -127,12 +128,6 @@ module PgEventstore
       builders[1..].each_with_object(builders[0]) do |builder, first_builder|
         first_builder.union(builder)
       end
-    end
-
-    # @param array [Array]
-    # @return [String] positional variables, based on array size. Example: "$1, $2, $3"
-    def positional_vars(array)
-      array.size.times.map { |t| "$#{t + 1}" }.join(', ')
     end
 
     def transaction_queries

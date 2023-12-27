@@ -5,6 +5,7 @@ require_relative 'pg_eventstore/utils'
 require_relative 'pg_eventstore/callbacks'
 require_relative 'pg_eventstore/extensions/options_extension'
 require_relative 'pg_eventstore/extensions/callbacks_extension'
+require_relative 'pg_eventstore/extensions/using_connection_extension'
 require_relative 'pg_eventstore/event_class_resolver'
 require_relative 'pg_eventstore/config'
 require_relative 'pg_eventstore/event'
@@ -14,7 +15,7 @@ require_relative 'pg_eventstore/client'
 require_relative 'pg_eventstore/connection'
 require_relative 'pg_eventstore/errors'
 require_relative 'pg_eventstore/middleware'
-require_relative 'pg_eventstore/subscriptions/subscription_manager'
+require_relative 'pg_eventstore/subscriptions/subscriptions_manager'
 
 module PgEventstore
   class << self
@@ -65,8 +66,8 @@ module PgEventstore
     # @param config_name [Symbol]
     # @param subscription_set [String]
     # @return [PgEventstore::SubscriptionManager]
-    def subscription_manager(config_name: :default, subscription_set:)
-      SubscriptionManager.new(config(config_name), subscription_set)
+    def subscriptions_manager(config_name: :default, subscription_set:)
+      SubscriptionsManager.new(config(config_name), subscription_set)
     end
 
     # @param name [Symbol]

@@ -4,45 +4,21 @@ module PgEventstore
   # Defines ruby's representation of subscriptions record.
   # @!visibility private
   class Subscription
+    include Extensions::UsingConnectionExtension
+    include Extensions::OptionsExtension
+
     class << self
-      def connection
-        raise(<<~TEXT)
-          No connection was set. Use PgEventstore::Subscription.using_connection(config_name) to create a class with \
-          a connection of specific config.
-        TEXT
-      end
-
-      # @param config_name [Symbol]
-      # @return [Class<PgEventstore::Subscription>]
-      def using_connection(config_name)
-        Class.new(self).tap do |klass|
-          klass.define_singleton_method(:connection) { PgEventstore.connection(config_name) }
-          klass.class_eval do
-            [:to_s, :inspect, :name].each do |m|
-              define_singleton_method(m, &PgEventstore::Subscription.method(m))
-            end
-          end
-        end
-      end
-
       # @param set [String]
       # @param name [String]
       # @param options [Hash]
       # @param chunk_query_interval [Integer]
-      # @param lock_id [String] UUIDv4 id of the set which reserves the subscription after itself
+      # @param max_restarts_number [Integer]
       # @return [PgEventstore::Subscription]
-      def init_by(set:, name:, options:, chunk_query_interval:, lock_id:)
-        new(**subscription_queries.find_or_create_by(set: set, name: name)).tap do |sub|
-          sub.lock!(lock_id)
-          sub.update(
-            options: options,
-            restarts_count: 0,
-            last_restarted_at: nil,
-            chunk_query_interval: chunk_query_interval,
-            last_chunk_fed_at: Time.at(0),
-            last_chunk_greatest_position: nil
-          )
-        end
+      def init_by(set:, name:, options:, chunk_query_interval:, max_restarts_number:)
+        new(
+          set: set, name: name, options: options,
+          chunk_query_interval: chunk_query_interval, max_restarts_number: max_restarts_number
+        )
       end
 
       private
@@ -52,8 +28,6 @@ module PgEventstore
         SubscriptionQueries.new(connection)
       end
     end
-
-    include Extensions::OptionsExtension
 
     # @!attribute id
     #   @return [Integer]
@@ -85,6 +59,9 @@ module PgEventstore
     # @!attribute restarts_count
     #   @return [Integer] the number of Subscription's restarts after its failure
     attribute(:restarts_count)
+    # @!attribute max_restarts_number
+    #   @return [Integer] maximum number of times the Subscription can be restarted
+    attribute(:max_restarts_number)
     # @!attribute last_restarted_at
     #   @return [Time, nil] last time the Subscription was restarted
     attribute(:last_restarted_at)
@@ -120,7 +97,7 @@ module PgEventstore
     end
 
     # @param attrs [Hash]
-    # @return [self]
+    # @return [Hash]
     def update(attrs)
       subscription_queries.update(self, attrs)
     end
@@ -133,8 +110,27 @@ module PgEventstore
       end
     end
 
+    # @return [PgEventstore::Subscription]
+    def persist
+      assign_attributes(subscription_queries.find_or_create_by(set: set, name: name))
+      self
+    end
+
+    # Locks the Subscription by the given lock id
+    # @return [PgEventstore::Subscription]
     def lock!(lock_id)
       assign_attributes(subscription_queries.lock!(id, lock_id))
+      update(
+        options: options,
+        restarts_count: 0,
+        last_restarted_at: nil,
+        max_restarts_number: max_restarts_number,
+        chunk_query_interval: chunk_query_interval,
+        last_chunk_fed_at: Time.at(0),
+        last_chunk_greatest_position: nil,
+        state: ObjectState::STATES[:initial]
+      )
+      self
     end
 
     def unlock!

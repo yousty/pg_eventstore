@@ -10,10 +10,8 @@ module PgEventstore
     MAX_EVENTS_PER_CHUNK = 1_000
     INITIAL_EVENTS_PER_CHUNK = 10
 
-    attr_reader :id
-
     def_delegators :@events_processor, :start, :stop, :feed, :wait_for_finish
-    def_delegators :@subscription, :lock!, :unlock!
+    def_delegators :@subscription, :lock!, :unlock!, :id, :persist
 
     # @param stats [PgEventstore::SubscriptionStats]
     # @param events_processor [PgEventstore::EventsProcessor]
@@ -22,7 +20,6 @@ module PgEventstore
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
-      @id = subscription.id
 
       attach_callbacks
     end
@@ -100,7 +97,7 @@ module PgEventstore
     # @param error [StandardError]
     # @return [void]
     def update_subscription_error(error)
-      @subscription.update(last_error: error_info(error), last_error_occurred_at: Time.now.utc)
+      @subscription.update(last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc)
     end
 
     # @param global_position [Integer, nil]
@@ -108,16 +105,6 @@ module PgEventstore
     def update_subscription_chunk_stats(global_position)
       global_position ||= @subscription.last_chunk_greatest_position
       @subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: global_position)
-    end
-
-    # @param error [StandardError]
-    # @return [Hash]
-    def error_info(error)
-      {
-        class: error.class,
-        message: error.message,
-        backtrace: error.backtrace
-      }
     end
   end
 end

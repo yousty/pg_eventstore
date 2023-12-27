@@ -85,10 +85,11 @@ module PgEventstore
     # @return [void]
     def wait_for_finish
       loop do
-        break if @state.stopped? || @state.dead?
+        break unless @state.halting? || @state.running?
 
         sleep 0.1
       end
+      self
     end
 
     private
@@ -115,6 +116,7 @@ module PgEventstore
         @state.dead!
         callbacks.run_callbacks(:error, e)
       end
+      self
     end
 
     # @param raw_event [Hash]

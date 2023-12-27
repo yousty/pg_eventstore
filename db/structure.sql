@@ -162,17 +162,18 @@ CREATE TABLE public.subscriptions (
     id bigint NOT NULL,
     set character varying NOT NULL,
     name character varying NOT NULL,
-    options jsonb DEFAULT '{}'::jsonb,
-    events_processed_total bigint DEFAULT 0,
+    options jsonb DEFAULT '{}'::jsonb NOT NULL,
+    events_processed_total bigint DEFAULT 0 NOT NULL,
     current_position bigint,
     events_processing_frequency real,
-    state character varying,
-    restarts_count integer DEFAULT 0,
+    state character varying DEFAULT 'initial'::character varying NOT NULL,
+    restarts_count integer DEFAULT 0 NOT NULL,
+    max_restarts_number smallint DEFAULT 100 NOT NULL,
     last_restarted_at timestamp without time zone,
     last_error jsonb,
     last_error_occurred_at timestamp without time zone,
     chunk_query_interval smallint DEFAULT 5 NOT NULL,
-    last_chunk_fed_at timestamp without time zone DEFAULT (to_timestamp((0)::double precision))::timestamp without time zone NOT NULL,
+    last_chunk_fed_at timestamp without time zone DEFAULT to_timestamp((0)::double precision) NOT NULL,
     last_chunk_greatest_position bigint,
     locked_by uuid,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
@@ -197,6 +198,24 @@ CREATE SEQUENCE public.subscriptions_id_seq
 --
 
 ALTER SEQUENCE public.subscriptions_id_seq OWNED BY public.subscriptions.id;
+
+
+--
+-- Name: subscriptions_set; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions_set (
+    id uuid DEFAULT public.gen_random_uuid() NOT NULL,
+    name character varying NOT NULL,
+    state character varying DEFAULT 'initial'::character varying NOT NULL,
+    restarts_count integer DEFAULT 0 NOT NULL,
+    max_restarts_number smallint DEFAULT 10 NOT NULL,
+    last_restarted_at timestamp without time zone,
+    last_error jsonb,
+    last_error_occurred_at timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
 
 
 --
@@ -257,6 +276,14 @@ ALTER TABLE ONLY public.streams
 
 ALTER TABLE ONLY public.subscriptions
     ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: subscriptions_set subscriptions_set_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set
+    ADD CONSTRAINT subscriptions_set_pkey PRIMARY KEY (id);
 
 
 --

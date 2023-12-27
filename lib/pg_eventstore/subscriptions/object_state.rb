@@ -6,29 +6,29 @@ module PgEventstore
   class ObjectState
     include Extensions::CallbacksExtension
 
-    STATES = %i(initial running halting stopped dead).freeze
+    STATES = %i(initial running halting stopped dead).each_with_object({}) { |s, r| r[s] = s.to_s }.freeze
 
     def initialize
       initial!
     end
 
-    STATES.each do |state|
+    STATES.each do |state, value|
       # Checks whether the object is in appropriate state
       # @return [Boolean]
       define_method "#{state}?" do
-        @state == state
+        @state == value
       end
 
       # Sets the state.
       # @return [Symbol]
       define_method "#{state}!" do
-        set_state(state)
+        set_state(value)
       end
     end
 
     # @return [String] string representation of the state
     def to_s
-      @state.to_s
+      @state
     end
 
     private

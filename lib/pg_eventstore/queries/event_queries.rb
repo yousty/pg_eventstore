@@ -42,7 +42,7 @@ module PgEventstore
 
       sql = <<~SQL
         INSERT INTO events (#{attributes.keys.join(', ')}) 
-          VALUES (#{positional_vars(attributes.values)}) 
+          VALUES (#{Utils.positional_vars(attributes.values)}) 
           RETURNING *, $#{attributes.values.size + 1} as type
       SQL
 
@@ -77,12 +77,6 @@ module PgEventstore
       filter[:event_type_ids] = event_type_queries.find_event_types(event_types).uniq
       filter.delete(:event_types)
       options.merge(filter: filter)
-    end
-
-    # @param array [Array]
-    # @return [String] positional variables, based on array size. Example: "$1, $2, $3"
-    def positional_vars(array)
-      array.size.times.map { |t| "$#{t + 1}" }.join(', ')
     end
 
     # @return [PgEventstore::EventTypeQueries]

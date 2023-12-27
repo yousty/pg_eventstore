@@ -18,6 +18,24 @@ module PgEventstore
           object
         end
       end
+
+      # Converts array to the string containing SQL positional variables
+      # @param array [Array]
+      # @return [String] positional variables, based on array size. Example: "$1, $2, $3"
+      def positional_vars(array)
+        array.size.times.map { |t| "$#{t + 1}" }.join(', ')
+      end
+
+      # Transforms exception instance into a hash
+      # @param error [StandardError]
+      # @return [Hash]
+      def error_info(error)
+        {
+          class: error.class,
+          message: error.message,
+          backtrace: error.backtrace
+        }
+      end
     end
   end
 end
