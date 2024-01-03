@@ -43,6 +43,7 @@ module PgEventstore
         @state.halting!
         Thread.new do
           stopping_at = Time.now.utc
+          halt = false
           loop do
             synchronize do
               # Give the runner up to @async_shutdown_time seconds for graceful shutdown
@@ -52,9 +53,10 @@ module PgEventstore
                 @state.stopped!
                 @runner = nil
                 callbacks.run_callbacks(:after_runner_stopped)
-                break
+                halt = true
               end
             end
+            break if halt
             sleep 0.1
           end
         end
