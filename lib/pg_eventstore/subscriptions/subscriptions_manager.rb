@@ -9,7 +9,7 @@ require_relative 'subscription_stats'
 require_relative 'subscription_runner'
 require_relative 'object_state'
 require_relative 'subscriptions_set'
-require_relative 'subscriptions_feeder'
+require_relative 'subscription_runners_feeder'
 require_relative 'subscription_feeder'
 require_relative 'commands_handler'
 

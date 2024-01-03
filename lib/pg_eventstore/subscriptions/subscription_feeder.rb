@@ -54,9 +54,9 @@ module PgEventstore
       @subscription_set ||= SubscriptionsSet.using_connection(@config_name).create(name: @set_name)
     end
 
-    # @return [PgEventstore::SubscriptionsFeeder]
-    def subscription_feeder
-      SubscriptionsFeeder.new(@config_name)
+    # @return [PgEventstore::SubscriptionRunnersFeeder]
+    def feeder
+      SubscriptionRunnersFeeder.new(@config_name)
     end
 
     # @return [void]
@@ -79,7 +79,7 @@ module PgEventstore
     end
 
     def process_async
-      subscription_feeder.feed(@runners)
+      feeder.feed(@runners)
     end
 
     def after_runner_stopped
