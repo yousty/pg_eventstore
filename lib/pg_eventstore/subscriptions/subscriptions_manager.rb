@@ -2,6 +2,7 @@
 
 require 'forwardable'
 require 'securerandom'
+require_relative 'basic_runner'
 require_relative 'subscription'
 require_relative 'events_processor'
 require_relative 'subscription_stats'
@@ -9,7 +10,8 @@ require_relative 'subscription_runner'
 require_relative 'object_state'
 require_relative 'subscriptions_set'
 require_relative 'subscriptions_feeder'
-require_relative 'subscription_runners'
+require_relative 'subscription_feeder'
+require_relative 'commands_handler'
 
 module PgEventstore
   class SubscriptionsManager
@@ -18,14 +20,14 @@ module PgEventstore
     attr_reader :config
     private :config
 
-    def_delegators :@subscriptions_runner, :start_all, :stop_all
+    def_delegators :@subscription_feeder, :start, :stop
 
     # @param config [PgEventstore::Config]
     # @param set_name [String]
     def initialize(config, set_name)
       @config = config
       @set_name = set_name
-      @subscriptions_runner = SubscriptionRunners.new(config.name, set_name)
+      @subscription_feeder = SubscriptionFeeder.new(config.name, set_name)
     end
 
     # @param subscription_name [String] subscription's name
@@ -50,11 +52,11 @@ module PgEventstore
 
       runner = SubscriptionRunner.new(
         stats: SubscriptionStats.new,
-        events_processor: EventsProcessor.new(handler(middlewares, handler)),
+        events_processor: EventsProcessor.new(create_event_handler(middlewares, handler)),
         subscription: subscription
       )
 
-      @subscriptions_runner.add(runner)
+      @subscription_feeder.add(runner)
     end
 
     private
@@ -62,14 +64,14 @@ module PgEventstore
     # @param middlewares [Array<Symbol>, nil]
     # @param handler [#call]
     # @return [Proc]
-    def handler(middlewares, handler)
-      deserializer = EventDeserializer.new(middlewares(middlewares), config.event_class_resolver)
+    def create_event_handler(middlewares, handler)
+      deserializer = EventDeserializer.new(select_middlewares(middlewares), config.event_class_resolver)
       ->(raw_event) { handler.call(deserializer.deserialize(raw_event)) }
     end
 
     # @param middlewares [Array, nil]
     # @return [Array<Object<#serialize, #deserialize>>]
-    def middlewares(middlewares = nil)
+    def select_middlewares(middlewares = nil)
       return config.middlewares.values unless middlewares
 
       config.middlewares.slice(*middlewares).values

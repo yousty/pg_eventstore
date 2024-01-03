@@ -34,8 +34,10 @@ module PgEventstore
     private
 
     def set_state(state)
+      old_state = @state
       @state = state
+      callbacks.run_callbacks(:change_state, self) unless old_state == @state
+      @state
     end
-    has_callbacks :change_state, :set_state
   end
 end

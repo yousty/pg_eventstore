@@ -10,7 +10,7 @@ module PgEventstore
     MAX_EVENTS_PER_CHUNK = 1_000
     INITIAL_EVENTS_PER_CHUNK = 10
 
-    def_delegators :@events_processor, :start, :stop, :feed, :wait_for_finish
+    def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore
     def_delegators :@subscription, :lock!, :unlock!, :id, :persist
 
     # @param stats [PgEventstore::SubscriptionStats]
@@ -85,8 +85,8 @@ module PgEventstore
     end
 
     # @return [void]
-    def update_subscription_state
-      @subscription.update(state: @events_processor.state.to_s)
+    def update_subscription_state(state)
+      @subscription.update(state: state.to_s)
     end
 
     # @return [void]

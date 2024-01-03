@@ -86,7 +86,7 @@ module PgEventstore
     # @param action [Object] an action to run
     # @return [Object] result of your action
     def run_callbacks(action, ...)
-      return yield unless @callbacks[action]
+      return (yield if block_given?) unless @callbacks[action]
 
       result = nil
 

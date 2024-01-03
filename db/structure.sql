@@ -155,6 +155,37 @@ ALTER SEQUENCE public.streams_id_seq OWNED BY public.streams.id;
 
 
 --
+-- Name: subscription_commands; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscription_commands (
+    id bigint NOT NULL,
+    name character varying NOT NULL,
+    subscription_id bigint NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: subscription_commands_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.subscription_commands_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: subscription_commands_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.subscription_commands_id_seq OWNED BY public.subscription_commands.id;
+
+
+--
 -- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -219,6 +250,37 @@ CREATE TABLE public.subscriptions_set (
 
 
 --
+-- Name: subscriptions_set_commands; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions_set_commands (
+    id bigint NOT NULL,
+    name character varying NOT NULL,
+    subscriptions_set_id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: subscriptions_set_commands_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.subscriptions_set_commands_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: subscriptions_set_commands_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.subscriptions_set_commands_id_seq OWNED BY public.subscriptions_set_commands.id;
+
+
+--
 -- Name: event_types id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -240,10 +302,24 @@ ALTER TABLE ONLY public.streams ALTER COLUMN id SET DEFAULT nextval('public.stre
 
 
 --
+-- Name: subscription_commands id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_commands ALTER COLUMN id SET DEFAULT nextval('public.subscription_commands_id_seq'::regclass);
+
+
+--
 -- Name: subscriptions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.subscriptions ALTER COLUMN id SET DEFAULT nextval('public.subscriptions_id_seq'::regclass);
+
+
+--
+-- Name: subscriptions_set_commands id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set_commands ALTER COLUMN id SET DEFAULT nextval('public.subscriptions_set_commands_id_seq'::regclass);
 
 
 --
@@ -271,11 +347,27 @@ ALTER TABLE ONLY public.streams
 
 
 --
+-- Name: subscription_commands subscription_commands_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_commands
+    ADD CONSTRAINT subscription_commands_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: subscriptions subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.subscriptions
     ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: subscriptions_set_commands subscriptions_set_commands_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set_commands
+    ADD CONSTRAINT subscriptions_set_commands_pkey PRIMARY KEY (id);
 
 
 --
@@ -329,6 +421,20 @@ CREATE UNIQUE INDEX idx_streams_context_and_stream_name_and_stream_id ON public.
 
 
 --
+-- Name: idx_subscr_set_commands_subscriptions_set_id_and_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_subscr_set_commands_subscriptions_set_id_and_name ON public.subscriptions_set_commands USING btree (subscriptions_set_id, name);
+
+
+--
+-- Name: idx_subscription_commands_subscription_id_and_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_subscription_commands_subscription_id_and_name ON public.subscription_commands USING btree (subscription_id, name);
+
+
+--
 -- Name: idx_subscriptions_set_and_name; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -357,6 +463,22 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_stream_fk FOREIGN KEY (stream_id) REFERENCES public.streams(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subscription_commands subscription_commands_subscription_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_commands
+    ADD CONSTRAINT subscription_commands_subscription_fk FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subscriptions_set_commands subscriptions_set_commands_subscriptions_set_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set_commands
+    ADD CONSTRAINT subscriptions_set_commands_subscriptions_set_fk FOREIGN KEY (subscriptions_set_id) REFERENCES public.subscriptions_set(id) ON DELETE CASCADE;
 
 
 --

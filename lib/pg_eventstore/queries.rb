@@ -6,6 +6,8 @@ require_relative 'queries/stream_queries'
 require_relative 'queries/event_type_queries'
 require_relative 'queries/subscription_queries'
 require_relative 'queries/subscriptions_set_queries'
+require_relative 'queries/subscription_command_queries'
+require_relative 'queries/subscriptions_set_command_queries'
 
 module PgEventstore
   # @!visibility private
