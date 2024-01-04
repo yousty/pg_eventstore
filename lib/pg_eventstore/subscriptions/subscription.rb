@@ -2,7 +2,6 @@
 
 module PgEventstore
   # Defines ruby's representation of subscriptions record.
-  # @!visibility private
   class Subscription
     include Extensions::UsingConnectionExtension
     include Extensions::OptionsExtension

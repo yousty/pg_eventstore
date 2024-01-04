@@ -14,6 +14,9 @@ module PgEventstore
     option(:event_class_resolver) { EventClassResolver.new }
     option(:connection_pool_size) { 5 }
     option(:connection_pool_timeout) { 5 } # seconds
+    option(:subscription_refresh_interval) { 5 } # seconds
+    option(:subscription_max_retries) { 100 }
+    option(:subscription_restart_terminator)
 
     # @param name [Symbol] config's name. Its value matches the appropriate key in PgEventstore.config hash
     def initialize(name:, **options)

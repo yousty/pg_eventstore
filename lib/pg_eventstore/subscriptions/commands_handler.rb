@@ -4,6 +4,7 @@ require_relative 'command_handlers/subscription_feeder_commands'
 require_relative 'command_handlers/subscription_runners_commands'
 
 module PgEventstore
+  # @!visibility private
   class CommandsHandler
     extend Forwardable
 

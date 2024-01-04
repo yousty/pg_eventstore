@@ -16,10 +16,12 @@ module PgEventstore
     # @param stats [PgEventstore::SubscriptionStats]
     # @param events_processor [PgEventstore::EventsProcessor]
     # @param subscription [PgEventstore::Subscription]
-    def initialize(stats:, events_processor:, subscription:)
+    # @param restart_terminator [#call, nil]
+    def initialize(stats:, events_processor:, subscription:, restart_terminator:)
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
+      @restart_terminator = restart_terminator
 
       attach_callbacks
     end
@@ -63,9 +65,10 @@ module PgEventstore
       @events_processor.define_callback(:process, :around, method(:track_exec_time))
       @events_processor.define_callback(:process, :after, method(:update_subscription_stats))
       @events_processor.define_callback(:error, :after, method(:update_subscription_error))
+      @events_processor.define_callback(:error, :after, method(:restart_subscription))
       @events_processor.define_callback(:feed, :after, method(:update_subscription_chunk_stats))
+      @events_processor.define_callback(:restart, :after, method(:update_subscription_restarts))
       @events_processor.state.define_callback(:change_state, :after, method(:update_subscription_state))
-      @events_processor.state.define_callback(:restart, :after, method(:update_subscription_restarts))
     end
 
     # @param action [Proc]
@@ -105,6 +108,15 @@ module PgEventstore
     def update_subscription_chunk_stats(global_position)
       global_position ||= @subscription.last_chunk_greatest_position
       @subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: global_position)
+    end
+
+    # @param _error [StandardError]
+    # @return [void]
+    def restart_subscription(_error)
+      return if @restart_terminator&.call(@subscription)
+      return if @subscription.restarts_count >= @subscription.max_restarts_number
+
+      Thread.new { restore }
     end
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # @!visibility private
   class SubscriptionRunnersFeeder
     # @param config_name [String]
     def initialize(config_name)

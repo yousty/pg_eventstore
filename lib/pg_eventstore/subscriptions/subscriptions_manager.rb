@@ -43,8 +43,13 @@ module PgEventstore
     # @param refresh_interval [Integer] an interval in seconds to determine how often to query new events of the given
     #   subscription.
     # @param max_retries [Integer] max number of retries of failed subscription
+    # @param restart_terminator [#call, nil] a callable object which, when called - accepts PgEventstore::Subscription
+    #   object to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
     # @return [void]
-    def subscribe(subscription_name, handler:, options: {}, middlewares: nil, refresh_interval: 5, max_retries: 100)
+    def subscribe(subscription_name, handler:, options: {}, middlewares: nil,
+                  refresh_interval: config.subscription_refresh_interval,
+                  max_retries: config.subscription_max_retries,
+                  restart_terminator: config.subscription_restart_terminator)
       subscription = Subscription.using_connection(config.name).init_by(
         set: @set_name, name: subscription_name, options: options, chunk_query_interval: refresh_interval,
         max_restarts_number: max_retries
@@ -53,7 +58,8 @@ module PgEventstore
       runner = SubscriptionRunner.new(
         stats: SubscriptionStats.new,
         events_processor: EventsProcessor.new(create_event_handler(middlewares, handler)),
-        subscription: subscription
+        subscription: subscription,
+        restart_terminator: restart_terminator
       )
 
       @subscription_feeder.add(runner)
