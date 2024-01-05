@@ -393,6 +393,13 @@ CREATE INDEX idx_events_event_type_id ON public.events USING btree (event_type_i
 
 
 --
+-- Name: idx_events_event_type_id_and_global_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_event_type_id_and_global_position ON public.events USING btree (event_type_id, global_position);
+
+
+--
 -- Name: idx_events_global_position; Type: INDEX; Schema: public; Owner: -
 --
 

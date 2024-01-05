@@ -96,7 +96,7 @@ module PgEventstore
         sql = event_type_ids.size.times.map do
           "?"
         end.join(", ")
-        @sql_builder.where("event_types.id IN (#{sql})", *event_type_ids)
+        @sql_builder.where("events.event_type_id IN (#{sql})", *event_type_ids)
       end
 
       # @param revision [Integer, nil]
