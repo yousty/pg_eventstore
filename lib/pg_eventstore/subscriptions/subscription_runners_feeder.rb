@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # This class pulls events from db and feeds given SubscriptionRunners
   # @!visibility private
   class SubscriptionRunnersFeeder
     # @param config_name [String]
@@ -18,7 +19,7 @@ module PgEventstore
       raw_events = subscription_queries.subscriptions_events(runners_query_options)
       grouped_events = raw_events.group_by { |attrs| attrs['runner_id'] }
       runners.each do |runner|
-        runner.feed(grouped_events[runner.id])
+        runner.feed(grouped_events[runner.id]) if grouped_events[runner.id]
       end
     end
 

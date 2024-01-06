@@ -19,6 +19,22 @@ module PgEventstore
         end
       end
 
+      # Deep dup Array or Hash
+      # @param object [Object]
+      # @return [Object]
+      def deep_dup(object)
+        case object
+        when Hash
+          object.each_with_object({}) do |(key, value), result|
+            result[deep_dup(key)] = deep_dup(value)
+          end
+        when Array
+          object.map { |e| deep_dup(e) }
+        else
+          object.dup
+        end
+      end
+
       # Converts array to the string containing SQL positional variables
       # @param array [Array]
       # @return [String] positional variables, based on array size. Example: "$1, $2, $3"

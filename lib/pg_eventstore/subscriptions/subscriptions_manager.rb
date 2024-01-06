@@ -1,26 +1,26 @@
 # frozen_string_literal: true
 
 require 'forwardable'
-require 'securerandom'
 require_relative 'basic_runner'
 require_relative 'subscription'
 require_relative 'events_processor'
-require_relative 'subscription_stats'
+require_relative 'subscription_handler_performance'
 require_relative 'subscription_runner'
-require_relative 'object_state'
+require_relative 'runner_state'
 require_relative 'subscriptions_set'
 require_relative 'subscription_runners_feeder'
 require_relative 'subscription_feeder'
 require_relative 'commands_handler'
 
 module PgEventstore
+  # The public Subscriptions API, available to the user.
   class SubscriptionsManager
     extend Forwardable
 
     attr_reader :config
     private :config
 
-    def_delegators :@subscription_feeder, :start, :stop
+    def_delegators :@subscription_feeder, :start, :stop, :force_lock!
 
     # @param config [PgEventstore::Config]
     # @param set_name [String]
@@ -40,29 +40,39 @@ module PgEventstore
     # @option options [Hash] :filter provide it to filter events. It works the same way as a :filter option of
     #   {PgEventstore::Client#read} method. Filtering by both - event types and streams are available.
     # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
-    # @param refresh_interval [Integer] an interval in seconds to determine how often to query new events of the given
+    # @param pull_interval [Integer] an interval in seconds to determine how often to query new events of the given
     #   subscription.
     # @param max_retries [Integer] max number of retries of failed subscription
     # @param restart_terminator [#call, nil] a callable object which, when called - accepts PgEventstore::Subscription
     #   object to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
     # @return [void]
     def subscribe(subscription_name, handler:, options: {}, middlewares: nil,
-                  refresh_interval: config.subscription_refresh_interval,
+                  pull_interval: config.subscription_pull_interval,
                   max_retries: config.subscription_max_retries,
                   restart_terminator: config.subscription_restart_terminator)
       subscription = Subscription.using_connection(config.name).init_by(
-        set: @set_name, name: subscription_name, options: options, chunk_query_interval: refresh_interval,
+        set: @set_name, name: subscription_name, options: options, chunk_query_interval: pull_interval,
         max_restarts_number: max_retries
       )
 
       runner = SubscriptionRunner.new(
-        stats: SubscriptionStats.new,
+        stats: SubscriptionHandlerPerformance.new,
         events_processor: EventsProcessor.new(create_event_handler(middlewares, handler)),
         subscription: subscription,
         restart_terminator: restart_terminator
       )
 
       @subscription_feeder.add(runner)
+    end
+
+    # @return [Array<PgEventstore::Subscription>]
+    def subscriptions
+      @subscription_feeder.read_only_subscriptions
+    end
+
+    # @return [PgEventstore::SubscriptionsSet, nil]
+    def subscriptions_set
+      @subscription_feeder.read_only_subscriptions_set
     end
 
     private

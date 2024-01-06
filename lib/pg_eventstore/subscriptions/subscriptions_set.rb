@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # Defines ruby's representation of subscriptions_set record.
   class SubscriptionsSet
     include Extensions::UsingConnectionExtension
     include Extensions::OptionsExtension
@@ -21,10 +22,10 @@ module PgEventstore
     end
 
     # @!attribute id
-    #   @return [String] UUIDv4
+    #   @return [String] UUIDv4. It is used to lock the Subscription by updating Subscription#locked_by attribute
     attribute(:id)
     # @!attribute name
-    #   @return [String]
+    #   @return [String] name of the set
     attribute(:name)
     # @!attribute state
     #   @return [String]
@@ -39,7 +40,8 @@ module PgEventstore
     #   @return [Time, nil] last time the SubscriptionsSet was restarted
     attribute(:last_restarted_at)
     # @!attribute last_error
-    #   @return [Hash, nil] the information about last error caused when processing events by the SubscriptionsSet
+    #   @return [Hash{'class' => String, 'message' => String, 'backtrace' => Array<String>}, nil] the information about
+    #     last error caused when pulling Subscriptions events.
     attribute(:last_error)
     # @!attribute last_error_occurred_at
     #   @return [Time, nil] the time when the last error occurred
@@ -62,15 +64,23 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [Hash]
     def update(attrs)
-      subscriptions_set_queries.update(self, attrs)
+      assign_attributes(subscriptions_set_queries.update(id, attrs))
     end
 
+    # @return [void]
     def delete
       subscriptions_set_queries.delete(id)
     end
 
+    # Dup the current object without assigned connection
+    # @return [PgEventstore::SubscriptionsSet]
+    def dup
+      SubscriptionsSet.new(**Utils.deep_dup(options_hash))
+    end
+
     private
 
+    # @return [PgEventstore::SubscriptionsSetQueries]
     def subscriptions_set_queries
       SubscriptionsSetQueries.new(self.class.connection)
     end

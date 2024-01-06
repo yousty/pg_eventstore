@@ -1,19 +1,21 @@
 # frozen_string_literal: true
 
 module PgEventstore
-  # Defines various states. It is used to set and get current object's state.
+  # Implements different states of a runner.
   # @!visibility private
-  class ObjectState
+  class RunnerState
     include Extensions::CallbacksExtension
 
-    STATES = %i(initial running halting stopped dead).each_with_object({}) { |s, r| r[s] = s.to_s }.freeze
+    STATES = %i(initial running halting stopped dead).each_with_object({}) do |sym, result|
+      result[sym] = sym.to_s.freeze
+    end.freeze
 
     def initialize
       initial!
     end
 
     STATES.each do |state, value|
-      # Checks whether the object is in appropriate state
+      # Checks whether a runner is in appropriate state
       # @return [Boolean]
       define_method "#{state}?" do
         @state == value
@@ -36,7 +38,7 @@ module PgEventstore
     def set_state(state)
       old_state = @state
       @state = state
-      callbacks.run_callbacks(:change_state, self) unless old_state == @state
+      callbacks.run_callbacks(:change_state, @state) unless old_state == @state
       @state
     end
   end

@@ -3,6 +3,9 @@
 require 'forwardable'
 
 module PgEventstore
+  # This class connects Subscription and EventsProcessor. Its public API is directed on locking/unlocking related
+  # Subscription, starting/stopping/restarting EventsProcessor and calculating options(starting position, number of
+  # events to fetch, etc) for the events pulling query.
   # @!visibility private
   class SubscriptionRunner
     extend Forwardable
@@ -10,10 +13,12 @@ module PgEventstore
     MAX_EVENTS_PER_CHUNK = 1_000
     INITIAL_EVENTS_PER_CHUNK = 10
 
-    def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore
-    def_delegators :@subscription, :lock!, :unlock!, :id, :persist
+    attr_reader :subscription
 
-    # @param stats [PgEventstore::SubscriptionStats]
+    def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore
+    def_delegators :@subscription, :lock!, :unlock!, :id
+
+    # @param stats [PgEventstore::SubscriptionHandlerPerformance]
     # @param events_processor [PgEventstore::EventsProcessor]
     # @param subscription [PgEventstore::Subscription]
     # @param restart_terminator [#call, nil]
@@ -33,7 +38,7 @@ module PgEventstore
 
     # @return [Boolean]
     def running?
-      @events_processor.state.running?
+      @events_processor.running?
     end
 
     # @return [Boolean]
@@ -55,9 +60,8 @@ module PgEventstore
     def estimate_events_number
       return INITIAL_EVENTS_PER_CHUNK if @stats.events_processing_frequency.zero?
 
-      estimate_number =
-        @subscription.chunk_query_interval / @stats.events_processing_frequency - @events_processor.events_left_in_chunk
-      [estimate_number.round, MAX_EVENTS_PER_CHUNK].min
+      events_per_chunk = @subscription.chunk_query_interval / @stats.events_processing_frequency
+      [events_per_chunk, MAX_EVENTS_PER_CHUNK].min - @events_processor.events_left_in_chunk
     end
 
     # @return [void]
@@ -68,7 +72,7 @@ module PgEventstore
       @events_processor.define_callback(:error, :after, method(:restart_subscription))
       @events_processor.define_callback(:feed, :after, method(:update_subscription_chunk_stats))
       @events_processor.define_callback(:restart, :after, method(:update_subscription_restarts))
-      @events_processor.state.define_callback(:change_state, :after, method(:update_subscription_state))
+      @events_processor.define_callback(:change_state, :after, method(:update_subscription_state))
     end
 
     # @param action [Proc]
@@ -113,7 +117,7 @@ module PgEventstore
     # @param _error [StandardError]
     # @return [void]
     def restart_subscription(_error)
-      return if @restart_terminator&.call(@subscription)
+      return if @restart_terminator&.call(@subscription.dup)
       return if @subscription.restarts_count >= @subscription.max_restarts_number
 
       Thread.new { restore }

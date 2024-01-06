@@ -32,7 +32,7 @@ module PgEventstore
       end
       return if pg_result.ntuples.zero?
 
-      pg_result.to_a.first.transform_keys(&:to_sym)
+      deserialize(pg_result.to_a.first)
     end
 
     # @param attrs [Hash]
@@ -46,22 +46,22 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(sql, attrs.values)
       end
-      pg_result.to_a.first.transform_keys(&:to_sym)
+      deserialize(pg_result.to_a.first)
     end
 
-    # @param subscription [PgEventstore::Subscription]
+    # @param id [Integer]
     # @param attrs [Hash]
-    def update(subscription, attrs)
+    def update(id, attrs)
       attrs = { updated_at: Time.now.utc }.merge(attrs)
       attrs_sql = attrs.keys.map.with_index(1) do |attr, index|
         "#{attr} = $#{index}"
       end.join(', ')
       sql =
-        "UPDATE subscriptions SET #{attrs_sql} WHERE id = $#{attrs.keys.size + 1} RETURNING #{attrs.keys.join(', ')}"
+        "UPDATE subscriptions SET #{attrs_sql} WHERE id = $#{attrs.keys.size + 1} RETURNING *"
       pg_result = connection.with do |conn|
-        conn.exec_params(sql, [*attrs.values, subscription.id])
+        conn.exec_params(sql, [*attrs.values, id])
       end
-      subscription.assign_attributes(pg_result.to_a.first)
+      deserialize(pg_result.to_a.first)
     end
 
     # @param query_options [Array<Array<Integer, Hash>>] array of runner ids and query options
@@ -75,11 +75,13 @@ module PgEventstore
 
     # @param id [Integer] subscription's id
     # @param lock_id [String] UUIDv4 id of the set which reserves the subscription after itself
-    # @return [Hash]
-    def lock!(id, lock_id)
+    # @param force [Boolean] whether to lock the subscription despite on #locked_by value
+    # @return [String] UUIDv4 lock id
+    # @raise [RuntimeError] in case the Subscription is already locked
+    def lock!(id, lock_id, force = false)
       transaction_queries.transaction do
         attrs = find_by(id: id)
-        raise(<<~TEXT) unless attrs[:locked_by].nil?
+        raise(<<~TEXT) if attrs[:locked_by] && !force
           Could not lock Subscription from #{attrs[:set].inspect} set with #{attrs[:name].inspect} name. It is \
           already locked by #{attrs[:locked_by].inspect} set.
         TEXT
@@ -87,12 +89,14 @@ module PgEventstore
           conn.exec_params('UPDATE subscriptions SET locked_by = $1 WHERE id = $2', [lock_id, id])
         end
       end
-      { locked_by: lock_id }
+      lock_id
     end
 
     # @param id [Integer] subscription's id
     # @param lock_id [String] UUIDv4 id of the set which reserved the subscription after itself
-    # @return [Hash]
+    # @return [void]
+    # @raise [RuntimeError] in case the Subscription is locked by some SubscriptionsSet, other than the one, persisted
+    #   in memory
     def unlock!(id, lock_id)
       transaction_queries.transaction do
         attrs = find_by(id: id)
@@ -107,7 +111,6 @@ module PgEventstore
           conn.exec_params('UPDATE subscriptions SET locked_by = $1 WHERE id = $2', [nil, id])
         end
       end
-      { locked_by: nil }
     end
 
     private
@@ -117,7 +120,9 @@ module PgEventstore
     # @return [PgEventstore::SQLBuilder]
     def query_builder(id, options)
       builder = PgEventstore::QueryBuilders::EventsFiltering.all_stream_filtering(
-        options.slice(:from_position, :resolve_link_tos, :filter, :max_count)
+        event_type_queries.include_event_types_ids(
+          options.slice(:from_position, :resolve_link_tos, :filter, :max_count)
+        )
       ).to_sql_builder
       builder.select("#{id} as runner_id")
     end
@@ -130,8 +135,20 @@ module PgEventstore
       end
     end
 
+    # @return [PgEventstore::TransactionQueries]
     def transaction_queries
       TransactionQueries.new(connection)
+    end
+
+    # @return [PgEventstore::EventTypeQueries]
+    def event_type_queries
+      EventTypeQueries.new(connection)
+    end
+
+    # @param hash [Hash]
+    # @return [Hash]
+    def deserialize(hash)
+      hash.transform_keys(&:to_sym)
     end
   end
 end

@@ -2,6 +2,10 @@
 
 module PgEventstore
   module Extensions
+    # Extension that implements creating of a subclass of the class it is used in. The point of creating a subclass is
+    # to bound it to the specific connection. This way the specific connection will be available within tha class and
+    # all its instances without affecting on the original class.
+    # @!visibility private
     module UsingConnectionExtension
       def self.included(klass)
         klass.extend(ClassMethods)
@@ -9,10 +13,7 @@ module PgEventstore
 
       module ClassMethods
         def connection
-          raise(<<~TEXT)
-            No connection was set. Use PgEventstore::Subscription.using_connection(config_name) to create a class with \
-            a connection of specific config.
-          TEXT
+          raise("No connection was set. Are you trying to manipulate #{name} outside of its lifecycle?")
         end
 
         # @param config_name [Symbol]

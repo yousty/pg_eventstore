@@ -11,6 +11,9 @@ module PgEventstore
       @connection = connection
     end
 
+    # @param subscription_id [Integer]
+    # @param command_name [String]
+    # @return [Hash, nil]
     def find_by(subscription_id:, command_name:)
       sql_builder =
         SQLBuilder.new.
@@ -20,9 +23,14 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end
+      return if pg_result.ntuples.zero?
+
       deserialize(pg_result.to_a.first)
     end
 
+    # @param subscription_id [Integer]
+    # @param command_name [String]
+    # @return [Hash]
     def create_by(subscription_id:, command_name:)
       sql = <<~SQL
         INSERT INTO subscription_commands (name, subscription_id) 
@@ -35,6 +43,8 @@ module PgEventstore
       deserialize(pg_result.to_a.first)
     end
 
+    # @param subscription_ids [Array<Integer>]
+    # @return [Array<Hash>]
     def find_commands(subscription_ids)
       return [] if subscription_ids.empty?
 
@@ -52,6 +62,8 @@ module PgEventstore
       pg_result.to_a.map(&method(:deserialize))
     end
 
+    # @param id [Integer]
+    # @return [void]
     def delete(id)
       connection.with do |conn|
         conn.exec_params('DELETE FROM subscription_commands WHERE id = $1', [id])
@@ -60,6 +72,8 @@ module PgEventstore
 
     private
 
+    # @param hash [Hash]
+    # @return [Hash]
     def deserialize(hash)
       hash.transform_keys(&:to_sym)
     end

@@ -9,7 +9,6 @@ require_relative 'pg_eventstore/extensions/using_connection_extension'
 require_relative 'pg_eventstore/event_class_resolver'
 require_relative 'pg_eventstore/config'
 require_relative 'pg_eventstore/event'
-require_relative 'pg_eventstore/sql_builder'
 require_relative 'pg_eventstore/stream'
 require_relative 'pg_eventstore/client'
 require_relative 'pg_eventstore/connection'
@@ -66,7 +65,7 @@ module PgEventstore
     # @param config_name [Symbol]
     # @param subscription_set [String]
     # @return [PgEventstore::SubscriptionManager]
-    def subscriptions_manager(config_name: :default, subscription_set:)
+    def subscriptions_manager(config_name = :default, subscription_set:)
       SubscriptionsManager.new(config(config_name), subscription_set)
     end
 

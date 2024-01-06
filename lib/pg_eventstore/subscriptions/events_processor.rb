@@ -7,7 +7,7 @@ module PgEventstore
     include Extensions::CallbacksExtension
     extend Forwardable
 
-    def_delegators :@basic_runner, :state, :start, :stop, :wait_for_finish, :stop_async, :restore
+    def_delegators :@basic_runner, :state, :start, :stop, :wait_for_finish, :stop_async, :restore, :running?
 
     # @param handler [#call]
     def initialize(handler)
@@ -44,6 +44,7 @@ module PgEventstore
       @basic_runner.define_callback(:process_async, :before, method(:process_async))
       @basic_runner.define_callback(:after_runner_died, :before, method(:after_runner_died))
       @basic_runner.define_callback(:before_runner_restored, :before, method(:before_runner_restored))
+      @basic_runner.define_callback(:change_state, :before, method(:change_state))
     end
 
     def process_async
@@ -59,6 +60,10 @@ module PgEventstore
 
     def before_runner_restored
       callbacks.run_callbacks(:restart)
+    end
+
+    def change_state(...)
+      callbacks.run_callbacks(:change_state, ...)
     end
   end
 end

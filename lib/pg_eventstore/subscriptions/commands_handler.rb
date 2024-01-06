@@ -4,12 +4,17 @@ require_relative 'command_handlers/subscription_feeder_commands'
 require_relative 'command_handlers/subscription_runners_commands'
 
 module PgEventstore
+  # This class implements the runner which processes remote commands in the background. This allows you to remotely
+  # control such actions as stop, start and restart of your Subscriptions.
   # @!visibility private
   class CommandsHandler
     extend Forwardable
 
     def_delegators :@basic_runner, :start, :stop
 
+    # @param config_name [Symbol]
+    # @param subscription_feeder [PgEventstore::SUbscriptionFeeder]
+    # @param runners [Array<PgEventstore::SubscriptionRunner>]
     def initialize(config_name, subscription_feeder, runners)
       @config_name = config_name
       @subscription_feeder = subscription_feeder
@@ -30,6 +35,8 @@ module PgEventstore
       subscription_runners_commands.process
     end
 
+    # @param error [StandardError]
+    # @return [void]
     def after_runner_died(error)
       PgEventstore.logger&.error "#{self.class.name}: Error occurred: #{error.message}"
       PgEventstore.logger&.error "#{self.class.name}: Backtrace: #{error.backtrace&.join("\n")}"
@@ -40,10 +47,12 @@ module PgEventstore
       end
     end
 
+    # @return [PgEventstore::CommandHandlers::SubscriptionFeederCommands]
     def subscription_feeder_commands
       CommandHandlers::SubscriptionFeederCommands.new(@config_name, @subscription_feeder)
     end
 
+    # @return [PgEventstore::CommandHandlers::SubscriptionRunnersCommands]
     def subscription_runners_commands
       CommandHandlers::SubscriptionRunnersCommands.new(@config_name, @runners)
     end

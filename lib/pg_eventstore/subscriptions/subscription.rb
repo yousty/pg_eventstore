@@ -49,7 +49,7 @@ module PgEventstore
     attribute(:current_position)
     # @!attribute state
     #   @return [String, nil] current Subscription's state. It is updated automatically during Subscription's life cycle.
-    #     See {ObjectState::STATES} for possible values.
+    #     See {RunnerState::STATES} for possible values.
     attribute(:state)
     # @!attribute events_processing_frequency
     #   @return [Float, nil] a speed of the subscription. Divide 1 by this value to determine how much events are
@@ -65,7 +65,8 @@ module PgEventstore
     #   @return [Time, nil] last time the Subscription was restarted
     attribute(:last_restarted_at)
     # @!attribute last_error
-    #   @return [Hash, nil] the information about last error caused when processing events by the Subscription.
+    #   @return [Hash{'class' => String, 'message' => String, 'backtrace' => Array<String>}, nil] the information about
+    #     last error caused when processing events by the Subscription.
     attribute(:last_error)
     # @!attribute last_error_occurred_at
     #   @return [Time, nil] the time when the last error occurred
@@ -98,7 +99,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [Hash]
     def update(attrs)
-      subscription_queries.update(self, attrs)
+      assign_attributes(subscription_queries.update(id, attrs))
     end
 
     # @param attrs [Hash]
@@ -109,16 +110,31 @@ module PgEventstore
       end
     end
 
+    # Locks the Subscription by the given lock id
     # @return [PgEventstore::Subscription]
-    def persist
-      assign_attributes(subscription_queries.find_or_create_by(set: set, name: name))
+    def lock!(lock_id, force = false)
+      self.id = subscription_queries.find_or_create_by(set: set, name: name)[:id]
+      self.locked_by = subscription_queries.lock!(id, lock_id, force)
+      reset_runtime_attributes
       self
     end
 
-    # Locks the Subscription by the given lock id
+    # Unlocks the Subscription.
+    # @return [void]
+    def unlock!
+      subscription_queries.unlock!(id, locked_by)
+      self.locked_by = nil
+    end
+
+    # Dup the current object without assigned connection
     # @return [PgEventstore::Subscription]
-    def lock!(lock_id)
-      assign_attributes(subscription_queries.lock!(id, lock_id))
+    def dup
+      Subscription.new(**Utils.deep_dup(options_hash))
+    end
+
+    private
+
+    def reset_runtime_attributes
       update(
         options: options,
         restarts_count: 0,
@@ -127,23 +143,9 @@ module PgEventstore
         chunk_query_interval: chunk_query_interval,
         last_chunk_fed_at: Time.at(0),
         last_chunk_greatest_position: nil,
-        state: ObjectState::STATES[:initial]
+        state: RunnerState::STATES[:initial]
       )
-      self
     end
-
-    def unlock!
-      assign_attributes(subscription_queries.unlock!(id, locked_by))
-    end
-
-    def reload
-      attrs = subscription_queries.find_by(id: id)
-      raise "Subscription #{id} does not exist any more!" unless attrs
-
-      assign_attributes(attrs.transform_keys(&:to_s))
-    end
-
-    private
 
     def subscription_queries
       SubscriptionQueries.new(self.class.connection)

@@ -22,12 +22,12 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(sql, attrs.values)
       end
-      pg_result.to_a.first.transform_keys(&:to_sym)
+      deserialize(pg_result.to_a.first)
     end
 
-    # @param subscriptions_set [PgEventstore::SubscriptionsSet]
+    # @param id [String] UUIDv4
     # @param attrs [Hash]
-    def update(subscriptions_set, attrs)
+    def update(id, attrs)
       attrs = { updated_at: Time.now.utc }.merge(attrs)
       attrs_sql = attrs.keys.map.with_index(1) do |attr, index|
         "#{attr} = $#{index}"
@@ -36,15 +36,23 @@ module PgEventstore
         UPDATE subscriptions_set SET #{attrs_sql} WHERE id = $#{attrs.keys.size + 1} RETURNING #{attrs.keys.join(', ')}
       SQL
       pg_result = connection.with do |conn|
-        conn.exec_params(sql, [*attrs.values, subscriptions_set.id])
+        conn.exec_params(sql, [*attrs.values, id])
       end
-      subscriptions_set.assign_attributes(pg_result.to_a.first)
+      deserialize(pg_result.to_a.first)
     end
 
+    # @return id [Integer]
+    # @return [void]
     def delete(id)
       connection.with do |conn|
         conn.exec_params('DELETE FROM subscriptions_set WHERE id = $1', [id])
       end
+    end
+
+    # @param hash [Hash]
+    # @return [Hash]
+    def deserialize(hash)
+      hash.transform_keys(&:to_sym)
     end
   end
 end

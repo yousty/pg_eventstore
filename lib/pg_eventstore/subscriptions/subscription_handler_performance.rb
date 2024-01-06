@@ -3,8 +3,9 @@
 require 'benchmark'
 
 module PgEventstore
+  # This class measures the performance of Subscription's handler and returns average events consumptions per second^-1
   # @!visibility private
-  class SubscriptionStats
+  class SubscriptionHandlerPerformance
     extend Forwardable
 
     TIMINGS_TO_KEEP = 100
