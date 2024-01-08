@@ -160,4 +160,80 @@ RSpec.describe PgEventstore do
       expect { subject }.to change { described_class.instance_variable_get(:@connection) }.from(nil).to({})
     end
   end
+
+  describe '.client' do
+    context 'when no config name is given' do
+      subject { described_class.client }
+
+      it 'sets default config' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::Client)
+          expect(subject.send(:config).name).to eq(:default)
+        end
+      end
+    end
+
+    context 'when config name is given' do
+      subject { described_class.client(config_name) }
+
+      let(:config_name) { :some_config }
+
+      before do
+        described_class.configure(name: config_name, &:itself)
+      end
+
+      it 'sets the given config' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::Client)
+          expect(subject.send(:config).name).to eq(config_name)
+        end
+      end
+    end
+
+    context 'when non-existing config name is given' do
+      subject { described_class.client(:non_existing_config) }
+
+      it 'raises error' do
+        expect { subject }.to raise_error(/Could not find #{:non_existing_config.inspect} config/)
+      end
+    end
+  end
+
+  describe '.subscriptions_manager' do
+    context 'when no config name is given' do
+      subject { described_class.subscriptions_manager(subscription_set: 'MySubscriptions') }
+
+      it 'sets default config' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::SubscriptionsManager)
+          expect(subject.send(:config).name).to eq(:default)
+        end
+      end
+    end
+
+    context 'when config name is given' do
+      subject { described_class.subscriptions_manager(config_name, subscription_set: 'MySubscriptions') }
+
+      let(:config_name) { :some_config }
+
+      before do
+        described_class.configure(name: config_name, &:itself)
+      end
+
+      it 'sets the given config' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::SubscriptionsManager)
+          expect(subject.send(:config).name).to eq(config_name)
+        end
+      end
+    end
+
+    context 'when non-existing config name is given' do
+      subject { described_class.subscriptions_manager(:non_existing_config, subscription_set: 'MySubscriptions') }
+
+      it 'raises error' do
+        expect { subject }.to raise_error(/Could not find #{:non_existing_config.inspect} config/)
+      end
+    end
+  end
 end

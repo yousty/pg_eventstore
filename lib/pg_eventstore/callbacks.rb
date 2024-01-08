@@ -76,6 +76,7 @@ module PgEventstore
 
     # @param action [Object] an object, that represents your action. In most cases you want to use a symbol there
     # @param filter [Symbol] callback filter. Supported values are :before, :after and :around
+    # @param callback [#call]
     # @return [void]
     def define_callback(action, filter, callback)
       @callbacks[action] ||= {}
@@ -84,26 +85,38 @@ module PgEventstore
     end
 
     # @param action [Object] an action to run
-    # @return [Object] result of your action
-    def run_callbacks(action, ...)
+    # @return [Object] the result of passed block
+    def run_callbacks(action, *args, **kwargs, &blk)
       return (yield if block_given?) unless @callbacks[action]
 
-      result = nil
-
-      @callbacks[action][:before]&.each do |callback|
-        callback.call(...)
-      end
-
-      stack = [proc { result = yield if block_given? }]
-      @callbacks[action][:around]&.each&.with_index do |callback, index|
-        stack.push(proc { callback.call(stack[index], ...); result })
-      end
-      stack.last.call(...)
-
-      @callbacks[action][:after]&.each do |callback|
-        callback.call(...)
-      end
+      run_before_callbacks(action, *args, **kwargs)
+      result = run_around_callbacks(action, *args, **kwargs, &blk)
+      run_after_callbacks(action, *args, **kwargs)
       result
+    end
+
+    private
+
+    def run_before_callbacks(action, *args, **kwargs)
+      @callbacks[action][:before]&.each do |callback|
+        callback.call(*args, **kwargs)
+      end
+    end
+
+    def run_around_callbacks(action, *args, **kwargs, &blk)
+      result = nil
+      stack = [proc { result = yield if block_given? }]
+      @callbacks[action][:around]&.reverse_each&.with_index do |callback, index|
+        stack.push(proc { callback.call(stack[index], *args, **kwargs); result })
+      end
+      stack.last.call(*args, **kwargs)
+      result
+    end
+
+    def run_after_callbacks(action, *args, **kwargs)
+      @callbacks[action][:after]&.each do |callback|
+        callback.call(*args, **kwargs)
+      end
     end
   end
 end
