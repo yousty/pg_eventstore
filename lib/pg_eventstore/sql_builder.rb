@@ -82,6 +82,8 @@ module PgEventstore
       self
     end
 
+    # @param another_builder [PgEventstore::SQLBuilder]
+    # @return [self]
     def union(another_builder)
       @union_values.push(another_builder)
       self
@@ -95,6 +97,7 @@ module PgEventstore
 
     protected
 
+    # @return [Array<Object>] sql positional values
     def positional_values
       @positional_values
     end
@@ -154,6 +157,8 @@ module PgEventstore
       @order_values.join(', ')
     end
 
+    # Replaces "?" signs in the given string with positional variables and memorize positional values they refer to.
+    # @return [String]
     def extract_positional_args(sql, *arguments)
       sql.gsub("?").each_with_index do |_, index|
         @positional_values.push(arguments[index])

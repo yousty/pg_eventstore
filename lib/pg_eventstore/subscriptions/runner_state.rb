@@ -22,7 +22,7 @@ module PgEventstore
       end
 
       # Sets the state.
-      # @return [Symbol]
+      # @return [String]
       define_method "#{state}!" do
         set_state(value)
       end
@@ -35,6 +35,8 @@ module PgEventstore
 
     private
 
+    # @param state [String]
+    # @return [String]
     def set_state(state)
       old_state = @state
       @state = state
