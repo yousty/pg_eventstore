@@ -116,13 +116,11 @@ module PgEventstore
     private
 
     # @param id [Integer] runner id
-    # @param options [Integer] query options
+    # @param options [Hash] query options
     # @return [PgEventstore::SQLBuilder]
     def query_builder(id, options)
-      builder = PgEventstore::QueryBuilders::EventsFiltering.all_stream_filtering(
-        event_type_queries.include_event_types_ids(
-          options.slice(:from_position, :resolve_link_tos, :filter, :max_count)
-        )
+      builder = PgEventstore::QueryBuilders::EventsFiltering.subscriptions_events_filtering(
+        event_type_queries.include_event_types_ids(options)
       ).to_sql_builder
       builder.select("#{id} as runner_id")
     end
