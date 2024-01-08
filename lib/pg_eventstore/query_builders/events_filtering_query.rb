@@ -5,7 +5,7 @@ module PgEventstore
     # @!visibility private
     class EventsFiltering
       DEFAULT_OFFSET = 0
-      DEFAULT_LIMIT = 1000
+      DEFAULT_LIMIT = 1_000
       SQL_DIRECTIONS = {
         'asc' => 'ASC',
         'desc' => 'DESC',
@@ -16,8 +16,15 @@ module PgEventstore
       }.tap do |directions|
         directions.default = 'ASC'
       end.freeze
+      SUBSCRIPTIONS_OPTIONS = %i[from_position resolve_link_tos filter max_count].freeze
 
       class << self
+        # @param options [Hash]
+        # @return [PgEventstore::QueryBuilders::EventsFiltering]
+        def subscriptions_events_filtering(options)
+          all_stream_filtering(options.slice(*SUBSCRIPTIONS_OPTIONS))
+        end
+
         # @param options [Hash]
         # @param offset [Integer]
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
@@ -96,7 +103,7 @@ module PgEventstore
         sql = event_type_ids.size.times.map do
           "?"
         end.join(", ")
-        @sql_builder.where("event_types.id IN (#{sql})", *event_type_ids)
+        @sql_builder.where("events.event_type_id IN (#{sql})", *event_type_ids)
       end
 
       # @param revision [Integer, nil]
@@ -155,6 +162,11 @@ module PgEventstore
           select("(COALESCE(original_events.*, events.*)).*").
           select('row_to_json(streams.*) as stream').
           join("LEFT JOIN events original_events ON original_events.id = events.link_id")
+      end
+
+      # @return [PgEventstore::SQLBuilder]
+      def to_sql_builder
+        @sql_builder
       end
 
       # @return [Array]

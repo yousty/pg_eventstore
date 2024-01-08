@@ -3,7 +3,7 @@
 RSpec.describe PgEventstore::EventQueries do
   let(:instance) { described_class.new(PgEventstore.connection, serializer, deserializer) }
   let(:serializer) { PgEventstore::EventSerializer.new(middlewares) }
-  let(:deserializer) { PgEventstore::PgResultDeserializer.new(middlewares, PgEventstore::EventClassResolver.new) }
+  let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, PgEventstore::EventClassResolver.new) }
   let(:middlewares) { [] }
   let(:stream_queries) { PgEventstore::StreamQueries.new(PgEventstore.connection) }
 
