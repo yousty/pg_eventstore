@@ -50,7 +50,7 @@ module PgEventstore
                   pull_interval: config.subscription_pull_interval,
                   max_retries: config.subscription_max_retries,
                   restart_terminator: config.subscription_restart_terminator)
-      subscription = Subscription.using_connection(config.name).init_by(
+      subscription = Subscription.using_connection(config.name).new(
         set: @set_name, name: subscription_name, options: options, chunk_query_interval: pull_interval,
         max_restarts_number: max_retries
       )

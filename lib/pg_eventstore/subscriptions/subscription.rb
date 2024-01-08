@@ -6,28 +6,6 @@ module PgEventstore
     include Extensions::UsingConnectionExtension
     include Extensions::OptionsExtension
 
-    class << self
-      # @param set [String]
-      # @param name [String]
-      # @param options [Hash]
-      # @param chunk_query_interval [Integer]
-      # @param max_restarts_number [Integer]
-      # @return [PgEventstore::Subscription]
-      def init_by(set:, name:, options:, chunk_query_interval:, max_restarts_number:)
-        new(
-          set: set, name: name, options: options,
-          chunk_query_interval: chunk_query_interval, max_restarts_number: max_restarts_number
-        )
-      end
-
-      private
-
-      # @return [PgEventstore::SubscriptionQueries]
-      def subscription_queries
-        SubscriptionQueries.new(connection)
-      end
-    end
-
     # @!attribute id
     #   @return [Integer]
     attribute(:id)
