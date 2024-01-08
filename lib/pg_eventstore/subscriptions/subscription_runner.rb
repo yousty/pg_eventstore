@@ -58,9 +58,9 @@ module PgEventstore
 
     # @return [Integer]
     def estimate_events_number
-      return INITIAL_EVENTS_PER_CHUNK if @stats.events_processing_frequency.zero?
+      return INITIAL_EVENTS_PER_CHUNK if @stats.average_event_time.zero?
 
-      events_per_chunk = @subscription.chunk_query_interval / @stats.events_processing_frequency
+      events_per_chunk = @subscription.chunk_query_interval / @stats.average_event_time
       [events_per_chunk, MAX_EVENTS_PER_CHUNK].min - @events_processor.events_left_in_chunk
     end
 
@@ -85,7 +85,7 @@ module PgEventstore
     # @return [void]
     def update_subscription_stats(current_position)
       @subscription.update(
-        events_processing_frequency: @stats.events_processing_frequency,
+        average_event_time: @stats.average_event_time,
         current_position: current_position,
         events_processed_total: @subscription.events_processed_total + 1
       )

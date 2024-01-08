@@ -3,7 +3,8 @@
 require 'benchmark'
 
 module PgEventstore
-  # This class measures the performance of Subscription's handler and returns average events consumptions per second^-1
+  # This class measures the performance of Subscription's handler and returns the average time required to process an
+  # event.
   # @!visibility private
   class SubscriptionHandlerPerformance
     extend Forwardable
@@ -29,7 +30,9 @@ module PgEventstore
       result
     end
 
-    def events_processing_frequency
+    # The average time required to process an event.
+    # @return [Float]
+    def average_event_time
       synchronize { @timings.size.zero? ? 0 : @timings.sum / @timings.size }
     end
   end

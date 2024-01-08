@@ -196,7 +196,7 @@ CREATE TABLE public.subscriptions (
     options jsonb DEFAULT '{}'::jsonb NOT NULL,
     events_processed_total bigint DEFAULT 0 NOT NULL,
     current_position bigint,
-    events_processing_frequency real,
+    average_event_time real,
     state character varying DEFAULT 'initial'::character varying NOT NULL,
     restarts_count integer DEFAULT 0 NOT NULL,
     max_restarts_number smallint DEFAULT 100 NOT NULL,
