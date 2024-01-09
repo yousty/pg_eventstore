@@ -41,4 +41,4 @@ CREATE TABLE public.subscriptions
 ALTER TABLE ONLY public.subscriptions
     ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
 
-CREATE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING btree (set, name);
+CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING btree (set, name);

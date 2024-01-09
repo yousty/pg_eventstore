@@ -445,7 +445,7 @@ CREATE UNIQUE INDEX idx_subscription_commands_subscription_id_and_name ON public
 -- Name: idx_subscriptions_set_and_name; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING btree (set, name);
+CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING btree (set, name);
 
 
 --
