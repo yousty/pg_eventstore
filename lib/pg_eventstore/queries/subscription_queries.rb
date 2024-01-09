@@ -35,6 +35,13 @@ module PgEventstore
       deserialize(pg_result.to_a.first)
     end
 
+    # @param id [Integer]
+    # @return [Hash]
+    # @raise [PgEventstore::RecordNotFound]
+    def find!(id)
+      find_by(id: id) || raise(RecordNotFound.new("subscriptions", id))
+    end
+
     # @param attrs [Hash]
     # @return [Hash]
     def create(attrs)
@@ -61,12 +68,16 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(sql, [*attrs.values, id])
       end
+      raise(RecordNotFound.new("subscriptions", id)) if pg_result.ntuples.zero?
+
       deserialize(pg_result.to_a.first)
     end
 
     # @param query_options [Array<Array<Integer, Hash>>] array of runner ids and query options
     # @return [Array<Hash>] array of raw events
     def subscriptions_events(query_options)
+      return [] if query_options.empty?
+
       final_builder = union_builders(query_options.map { |id, opts| query_builder(id, opts) })
       connection.with do |conn|
         conn.exec_params(*final_builder.to_exec_params)
@@ -77,14 +88,13 @@ module PgEventstore
     # @param lock_id [String] UUIDv4 id of the set which reserves the subscription after itself
     # @param force [Boolean] whether to lock the subscription despite on #locked_by value
     # @return [String] UUIDv4 lock id
-    # @raise [RuntimeError] in case the Subscription is already locked
+    # @raise [SubscriptionAlreadyLockedError] in case the Subscription is already locked
     def lock!(id, lock_id, force = false)
       transaction_queries.transaction do
-        attrs = find_by(id: id)
-        raise(<<~TEXT) if attrs[:locked_by] && !force
-          Could not lock Subscription from #{attrs[:set].inspect} set with #{attrs[:name].inspect} name. It is \
-          already locked by #{attrs[:locked_by].inspect} set.
-        TEXT
+        attrs = find!(id)
+        if attrs[:locked_by] && !force
+          raise SubscriptionAlreadyLockedError.new(attrs[:set], attrs[:name], attrs[:locked_by])
+        end
         connection.with do |conn|
           conn.exec_params('UPDATE subscriptions SET locked_by = $1 WHERE id = $2', [lock_id, id])
         end
@@ -95,18 +105,16 @@ module PgEventstore
     # @param id [Integer] subscription's id
     # @param lock_id [String] UUIDv4 id of the set which reserved the subscription after itself
     # @return [void]
-    # @raise [RuntimeError] in case the Subscription is locked by some SubscriptionsSet, other than the one, persisted
-    #   in memory
+    # @raise [SubscriptionUnlockError] in case the Subscription is locked by some SubscriptionsSet, other than the one,
+    #   persisted in memory
     def unlock!(id, lock_id)
       transaction_queries.transaction do
-        attrs = find_by(id: id)
+        attrs = find!(id)
         # Normally this should never happen as locking/unlocking happens within the same process. This is done only for
         # the matter of consistency.
-        raise(<<~TEXT) unless attrs[:locked_by] == lock_id
-          Failed to unlock Subscription##{id} by #{lock_id.inspect} lock id - it is locked by \
-          #{attrs[:locked_by].inspect} lock id.
-        TEXT
-
+        unless attrs[:locked_by] == lock_id
+          raise SubscriptionUnlockError.new(attrs[:set], attrs[:name], lock_id, attrs[:locked_by])
+        end
         connection.with do |conn|
           conn.exec_params('UPDATE subscriptions SET locked_by = $1 WHERE id = $2', [nil, id])
         end

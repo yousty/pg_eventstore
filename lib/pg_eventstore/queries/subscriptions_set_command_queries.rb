@@ -19,7 +19,7 @@ module PgEventstore
         SQLBuilder.new.
           select('*').
           from('subscriptions_set_commands').
-          where('subscriptions_set_id = ? AND command_name = ?', subscriptions_set_id, command_name)
+          where('subscriptions_set_id = ? AND name = ?', subscriptions_set_id, command_name)
       pg_result = connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end

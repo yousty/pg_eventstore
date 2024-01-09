@@ -54,10 +54,10 @@ module PgEventstore
       options in { filter: { event_types: Array => event_types } }
       return options unless event_types
 
-      filter = options[:filter].dup
-      filter[:event_type_ids] = find_event_types(event_types).uniq
-      filter.delete(:event_types)
-      options.merge(filter: filter)
+      options = Utils.deep_dup(options)
+      options[:filter][:event_type_ids] = find_event_types(event_types).uniq
+      options[:filter].delete(:event_types)
+      options
     end
   end
 end
