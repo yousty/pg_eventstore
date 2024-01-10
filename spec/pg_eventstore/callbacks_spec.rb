@@ -24,8 +24,7 @@ RSpec.describe PgEventstore::Callbacks do
     let(:call_once_object) { double }
 
     before do
-      # Ensure the passed block executes only once
-      allow(call_once_object).to receive(:result).once.and_return(:some_block_result)
+      allow(call_once_object).to receive(:result).and_return(:some_block_result)
     end
 
     context 'when no callbacks are registered for the given action' do
@@ -38,6 +37,10 @@ RSpec.describe PgEventstore::Callbacks do
       context 'when block is given' do
         it 'returns the result of the given block' do
           is_expected.to eq(:some_block_result)
+        end
+        it 'calls the block exactly once' do
+          subject
+          expect(call_once_object).to have_received(:result).once
         end
       end
     end
@@ -95,6 +98,10 @@ RSpec.describe PgEventstore::Callbacks do
           is_expected.to eq(:some_block_result)
         end
         it_behaves_like 'callbacks execution'
+        it 'calls the block exactly once' do
+          subject
+          expect(call_once_object).to have_received(:result).once
+        end
       end
     end
 

@@ -157,7 +157,6 @@ module PgEventstore
       synchronize do
         return self unless @state.dead?
 
-        @runner = nil
         callbacks.run_callbacks(:before_runner_restored)
         _start
       end
