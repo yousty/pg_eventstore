@@ -54,8 +54,8 @@ module PgEventstore
       process_event(raw_event)
     end
 
-    def after_runner_died(error)
-      callbacks.run_callbacks(:error, error)
+    def after_runner_died(...)
+      callbacks.run_callbacks(:error, ...)
     end
 
     def before_runner_restored

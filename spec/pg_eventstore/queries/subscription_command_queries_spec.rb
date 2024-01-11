@@ -2,7 +2,7 @@
 
 RSpec.describe PgEventstore::SubscriptionCommandQueries do
   let(:instance) { described_class.new(PgEventstore.connection) }
-  let(:subscription) { create_subscription }
+  let(:subscription) { SubscriptionsHelper.create }
 
   describe '#find_by' do
     subject { instance.find_by(subscription_id: subscription.id, command_name: command_name) }
@@ -58,7 +58,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
     end
 
     context 'when command with the same name exist, but for different Subscription' do
-      let(:another_subscription) { create_subscription(set: 'BarSet') }
+      let(:another_subscription) { SubscriptionsHelper.create(set: 'BarSet') }
       let!(:command) { instance.create_by(subscription_id: another_subscription.id, command_name: command_name) }
 
       it 'creates new command' do
@@ -81,8 +81,8 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
     context 'when subscription ids are present' do
       let(:subscription_ids) { [subscription.id, subscription3.id] }
 
-      let(:subscription2) { create_subscription(set: 'Bar') }
-      let(:subscription3) { create_subscription(set: 'Baz') }
+      let(:subscription2) { SubscriptionsHelper.create(set: 'Bar') }
+      let(:subscription3) { SubscriptionsHelper.create(set: 'Baz') }
       let!(:command1) { instance.create_by(subscription_id: subscription.id, command_name: 'Foo') }
       let!(:command2) { instance.create_by(subscription_id: subscription2.id, command_name: 'Foo') }
       let!(:command3) { instance.create_by(subscription_id: subscription3.id, command_name: 'Bar') }

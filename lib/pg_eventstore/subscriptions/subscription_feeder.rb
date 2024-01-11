@@ -8,7 +8,7 @@ module PgEventstore
     extend Forwardable
 
     def_delegators :subscriptions_set, :id
-    def_delegators :@basic_runner, :start, :stop, :restore
+    def_delegators :@basic_runner, :start, :stop, :restore, :state
 
     # @param config_name [Symbol]
     # @param set_name [String]

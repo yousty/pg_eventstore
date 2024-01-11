@@ -9,7 +9,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     let(:attrs) { { set: 'Foo', name: 'Bar' } }
 
     describe 'when subscription exists' do
-      let!(:subscription) { create_subscription(**attrs) }
+      let!(:subscription) { SubscriptionsHelper.create(**attrs) }
 
       it 'returns its attributes' do
         is_expected.to eq(subscription.options_hash)
@@ -28,7 +28,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
 
     describe 'when subscription exists' do
       let(:id) { subscription.id }
-      let!(:subscription) { create_subscription }
+      let!(:subscription) { SubscriptionsHelper.create }
 
       it 'returns its attributes' do
         is_expected.to eq(subscription.options_hash)
@@ -50,7 +50,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     let(:attrs) { { set: 'Foo', name: 'Bar' } }
 
     describe 'when subscription with same set and name exists' do
-      let!(:subscription) { create_subscription(**attrs) }
+      let!(:subscription) { SubscriptionsHelper.create(**attrs) }
 
       it 'raises error' do
         expect { subject }.to raise_error(PG::UniqueViolation)
@@ -75,7 +75,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     subject { instance.update(id, attrs) }
 
     let(:id) { subscription.id }
-    let(:subscription) { create_subscription }
+    let(:subscription) { SubscriptionsHelper.create }
     let(:attrs) { { max_restarts_number: 123 } }
 
     context 'when subscription exists' do
@@ -182,7 +182,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     let(:id) { 123 }
 
     context 'when subscription exists' do
-      let(:subscription) { create_subscription }
+      let(:subscription) { SubscriptionsHelper.create }
       let(:id) { subscription.id }
 
       context 'when subscription is not locked' do
@@ -227,7 +227,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     let(:id) { 123 }
 
     context 'when subscription exists' do
-      let(:subscription) { create_subscription }
+      let(:subscription) { SubscriptionsHelper.create }
       let(:id) { subscription.id }
 
       context "when subscription's lock id does not match the given lock id" do

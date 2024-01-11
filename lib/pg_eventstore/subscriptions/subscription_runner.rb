@@ -15,14 +15,14 @@ module PgEventstore
 
     attr_reader :subscription
 
-    def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore
+    def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore, :running?
     def_delegators :@subscription, :lock!, :unlock!, :id
 
     # @param stats [PgEventstore::SubscriptionHandlerPerformance]
     # @param events_processor [PgEventstore::EventsProcessor]
     # @param subscription [PgEventstore::Subscription]
     # @param restart_terminator [#call, nil]
-    def initialize(stats:, events_processor:, subscription:, restart_terminator:)
+    def initialize(stats:, events_processor:, subscription:, restart_terminator: nil)
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
@@ -34,11 +34,6 @@ module PgEventstore
     # @return [Hash]
     def next_chunk_query_opts
       @subscription.options.merge(from_position: next_chunk_global_position, max_count: estimate_events_number)
-    end
-
-    # @return [Boolean]
-    def running?
-      @events_processor.running?
     end
 
     # @return [Boolean]

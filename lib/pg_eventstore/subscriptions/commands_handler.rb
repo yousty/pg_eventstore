@@ -10,7 +10,9 @@ module PgEventstore
   class CommandsHandler
     extend Forwardable
 
-    def_delegators :@basic_runner, :start, :stop
+    RESTART_DELAY = 5 # seconds
+
+    def_delegators :@basic_runner, :start, :stop, :state
 
     # @param config_name [Symbol]
     # @param subscription_feeder [PgEventstore::SUbscriptionFeeder]
@@ -40,9 +42,9 @@ module PgEventstore
     def after_runner_died(error)
       PgEventstore.logger&.error "#{self.class.name}: Error occurred: #{error.message}"
       PgEventstore.logger&.error "#{self.class.name}: Backtrace: #{error.backtrace&.join("\n")}"
-      PgEventstore.logger&.error "#{self.class.name}: Trying to auto-repair in 5 seconds..."
+      PgEventstore.logger&.error "#{self.class.name}: Trying to auto-repair in #{RESTART_DELAY} seconds..."
       Thread.new do
-        sleep 5
+        sleep RESTART_DELAY
         @basic_runner.restore
       end
     end
