@@ -24,7 +24,7 @@ module PgEventstore
       result = nil
       time = Benchmark.realtime { result = yield }
       synchronize do
-        @timings.unshift if @timings.size == TIMINGS_TO_KEEP
+        @timings.shift if @timings.size == TIMINGS_TO_KEEP
         @timings.push(time)
       end
       result

@@ -110,6 +110,11 @@ module PgEventstore
       Subscription.new(**Utils.deep_dup(options_hash))
     end
 
+    def reload
+      assign_attributes(subscription_queries.find!(id))
+      self
+    end
+
     private
 
     def reset_runtime_attributes
@@ -119,7 +124,7 @@ module PgEventstore
         last_restarted_at: nil,
         max_restarts_number: max_restarts_number,
         chunk_query_interval: chunk_query_interval,
-        last_chunk_fed_at: Time.at(0),
+        last_chunk_fed_at: Time.at(0).utc,
         last_chunk_greatest_position: nil,
         state: RunnerState::STATES[:initial]
       )

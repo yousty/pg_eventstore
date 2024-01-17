@@ -5,6 +5,12 @@ RSpec.describe PgEventstore::BasicRunner do
   let(:run_interval) { 1 }
   let(:async_shutdown_time) { 1 }
 
+  describe 'instance' do
+    subject { instance }
+
+    it { is_expected.to be_a(PgEventstore::Extensions::CallbacksExtension) }
+  end
+
   describe '#start' do
     subject { instance.start }
 
@@ -397,10 +403,10 @@ RSpec.describe PgEventstore::BasicRunner do
         # The thread which spawns to stop the current runner is to fast. It uses #loop method internally - slow it down
         # a bit to give tests the time to perform assertions
         allow(instance).to receive(:loop).and_wrap_original do |orig_method, *args, **kwargs, &blk|
-          sleep 0.1
+          sleep 0.2
           orig_method.call(*args, **kwargs, &blk)
         end
-        sleep run_interval + 0.1 # let the runner die
+        sleep run_interval + 0.2 # let the runner die
       end
 
       it 'spawns another thread to stop the current runner' do
@@ -656,6 +662,29 @@ RSpec.describe PgEventstore::BasicRunner do
 
         expect { subject; sleep 0.6 }.to change { instance.state }.from("halting").to("stopped")
       end
+    end
+  end
+
+  describe '#wait_for_finish and :after_runner_stopped action' do
+    subject { instance.wait_for_finish }
+
+    let(:after_stopped_cbx) do
+      proc do
+        # Add some delay to ensure the thread which runs #wait_for_finish is potentially already acknowledged about
+        # state change, but dut to implementation it still waits for the :after_runner_stopped action to finish
+        sleep 0.5
+        REDIS.set('foo', 'bar')
+      end
+    end
+
+    before do
+      instance.define_callback(:after_runner_stopped, :after, after_stopped_cbx)
+      instance.start.stop_async
+    end
+
+    it 'performs :after_runner_stopped action before stopping' do
+      subject
+      expect(REDIS.get('foo')).to eq('bar')
     end
   end
 end

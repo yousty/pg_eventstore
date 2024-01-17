@@ -167,7 +167,10 @@ module PgEventstore
     # @return [self]
     def wait_for_finish
       loop do
-        break unless @state.halting? || @state.running?
+        continue = synchronize do
+          @state.halting? || @state.running?
+        end
+        break unless continue
 
         sleep 0.1
       end

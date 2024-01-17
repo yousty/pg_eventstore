@@ -3,6 +3,8 @@
 RSpec.describe PgEventstore::RunnerState do
   let(:instance) { described_class.new }
 
+  it { is_expected.to be_a(PgEventstore::Extensions::CallbacksExtension) }
+
   shared_examples 'state transition' do
     context 'when object is in the given state' do
       before do

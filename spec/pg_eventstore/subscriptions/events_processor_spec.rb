@@ -5,6 +5,12 @@ RSpec.describe PgEventstore::EventsProcessor do
   let(:handler) { proc { |raw_event| processed_events.push(raw_event['id']) } }
   let(:processed_events) { [] }
 
+  describe 'instance' do
+    subject { instance }
+
+    it { is_expected.to be_a(PgEventstore::Extensions::CallbacksExtension) }
+  end
+
   describe '#feed' do
     subject { instance.feed(raw_events) }
 

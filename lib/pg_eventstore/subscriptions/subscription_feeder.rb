@@ -8,7 +8,7 @@ module PgEventstore
     extend Forwardable
 
     def_delegators :subscriptions_set, :id
-    def_delegators :@basic_runner, :start, :stop, :restore, :state
+    def_delegators :@basic_runner, :start, :stop, :restore, :state, :wait_for_finish, :stop_async
 
     # @param config_name [Symbol]
     # @param set_name [String]
@@ -27,6 +27,7 @@ module PgEventstore
     def add(runner)
       assert_proper_state!
       @runners.push(runner)
+      runner
     end
 
     # Starts all SubscriptionRunners. This is only available if SubscriptionFeeder's runner is alive.
@@ -38,7 +39,7 @@ module PgEventstore
       self
     end
 
-    # Stops all SubscriptionRunners. This is only available if SubscriptionFeeder's runner is alive.
+    # Stops all SubscriptionRunners asynchronous. This is only available if SubscriptionFeeder's runner is alive.
     # @return [void]
     def stop_all
       return self unless @basic_runner.running?
@@ -102,8 +103,8 @@ module PgEventstore
     # @return [void]
     def before_runner_started
       lock_all
-      @commands_handler.start
       @runners.each(&:start)
+      @commands_handler.start
     end
 
     # @param error [StandardError]
@@ -119,11 +120,11 @@ module PgEventstore
 
     # @return [void]
     def after_runner_stopped
+      @commands_handler.stop
       @subscriptions_set&.delete
       @subscriptions_set = nil
       @runners.each(&:stop_async).each(&:wait_for_finish)
       unlock_all
-      @commands_handler.stop
     end
 
     # @return [void]

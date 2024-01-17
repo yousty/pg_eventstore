@@ -15,7 +15,7 @@ module PgEventstore
 
     attr_reader :subscription
 
-    def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore, :running?
+    def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore, :state, :running?
     def_delegators :@subscription, :lock!, :unlock!, :id
 
     # @param stats [PgEventstore::SubscriptionHandlerPerformance]
@@ -86,9 +86,10 @@ module PgEventstore
       )
     end
 
+    # @param state [String]
     # @return [void]
     def update_subscription_state(state)
-      @subscription.update(state: state.to_s)
+      @subscription.update(state: state)
     end
 
     # @return [void]
