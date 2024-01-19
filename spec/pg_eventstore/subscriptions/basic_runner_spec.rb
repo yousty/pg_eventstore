@@ -406,7 +406,7 @@ RSpec.describe PgEventstore::BasicRunner do
           sleep 0.2
           orig_method.call(*args, **kwargs, &blk)
         end
-        sleep run_interval + 0.2 # let the runner die
+        instance.wait_for_finish # let the runner die
       end
 
       it 'spawns another thread to stop the current runner' do
