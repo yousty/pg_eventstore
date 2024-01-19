@@ -108,12 +108,15 @@ module PgEventstore
   class RecordNotFound < Error
     attr_reader :table_name, :id
 
+    # @param table_name [String]
+    # @param id [Integer, String]
     def initialize(table_name, id)
       @table_name = table_name
       @id = id
       super(user_friendly_message)
     end
 
+    # @return [String]
     def user_friendly_message
       "Could not find/update #{table_name.inspect} record with #{id.inspect} id."
     end
@@ -122,6 +125,9 @@ module PgEventstore
   class SubscriptionAlreadyLockedError < Error
     attr_reader :set, :name, :lock_id
 
+    # @param set [String] subscriptions' set name
+    # @param name [String] subscription's name
+    # @param lock_id [String] UUIDv4
     def initialize(set, name, lock_id)
       @set = set
       @name = name
@@ -129,6 +135,7 @@ module PgEventstore
       super(user_friendly_message)
     end
 
+    # @return [String]
     def user_friendly_message
       <<~TEXT
         Could not lock Subscription from #{set.inspect} set with #{name.inspect} name. It is already locked by \
@@ -140,6 +147,10 @@ module PgEventstore
   class SubscriptionUnlockError < Error
     attr_reader :set, :name, :expected_locked_by, :actual_locked_by
 
+    # @param set [String] subscriptions' set name
+    # @param name [String] subscription's name
+    # @param expected_locked_by [String] UUIDv4
+    # @param actual_locked_by [String, nil] UUIDv4
     def initialize(set, name, expected_locked_by, actual_locked_by)
       @set = set
       @name = name
@@ -148,6 +159,7 @@ module PgEventstore
       super(user_friendly_message)
     end
 
+    # @return [String]
     def user_friendly_message
       <<~TEXT
         Failed to unlock Subscription from #{set.inspect} set with #{name.inspect} name by \
