@@ -31,6 +31,13 @@ module PgEventstore
       find_all(...).first
     end
 
+    # @param id [String] UUIDv4
+    # @return [Hash]
+    # @raise [PgEventstore::RecordNotFound]
+    def find!(id)
+      find_by(id: id) || raise(RecordNotFound.new("subscriptions_set", id))
+    end
+
     # @param attrs [Hash]
     # @return [Hash]
     def create(attrs)

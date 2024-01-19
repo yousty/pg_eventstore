@@ -31,7 +31,7 @@ RSpec.describe PgEventstore::BasicRunner do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     shared_examples "asynchronous execution" do
@@ -91,8 +91,7 @@ RSpec.describe PgEventstore::BasicRunner do
 
     context 'when state is "stopped"' do
       before do
-        instance.start
-        instance.stop
+        instance.start.stop_async.wait_for_finish
         callbacks_definitions
       end
 
@@ -207,7 +206,7 @@ RSpec.describe PgEventstore::BasicRunner do
 
     context 'when state is "stopped"' do
       before do
-        instance.start.stop
+        instance.start.stop_async.wait_for_finish
         callbacks_definitions
       end
 
@@ -327,6 +326,7 @@ RSpec.describe PgEventstore::BasicRunner do
     context 'when state is "stopped"' do
       before do
         instance.start.stop
+        sleep 0.2
       end
 
       it 'does not spawn another async job to stop the runner' do
@@ -460,7 +460,7 @@ RSpec.describe PgEventstore::BasicRunner do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     context 'when state is "initial"' do
@@ -482,8 +482,7 @@ RSpec.describe PgEventstore::BasicRunner do
 
     context 'when state is "stopped"' do
       before do
-        instance.start
-        instance.stop
+        instance.start.stop_async.wait_for_finish
         callbacks_definitions
       end
 

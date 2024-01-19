@@ -192,9 +192,6 @@ module PgEventstore
     def _start
       @state.running!
       @runner = Thread.new do
-        Thread.current.abort_on_exception = false
-        Thread.current.report_on_exception = false
-
         loop do
           Thread.current.exit unless @state.running?
           sleep @run_interval
@@ -203,6 +200,8 @@ module PgEventstore
         end
       rescue => error
         synchronize do
+          raise unless @state.halting? || @state.running?
+
           @state.dead!
           callbacks.run_callbacks(:after_runner_died, error)
         end

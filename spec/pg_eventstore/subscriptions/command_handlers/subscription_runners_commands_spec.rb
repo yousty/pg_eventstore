@@ -25,7 +25,7 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
     let(:command_queries) { PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection) }
 
     after do
-      runners.each(&:stop)
+      runners.each(&:stop_async).each(&:wait_for_finish)
     end
 
     shared_examples 'executes the command' do

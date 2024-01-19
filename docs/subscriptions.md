@@ -128,7 +128,7 @@ You will see then the output your Subscriptions handlers produce. To gracefully 
 
 ## Overriding Subscription config values
 
-You can override `subscription_pull_interval`, `subscription_max_retries` and `subscription_restart_terminator` config values(see [**Configuration**](configuration.md) chapter for details) for the specific Subscription by providing corresponding arguments. Example:
+You can override `subscription_pull_interval`, `subscription_max_retries`, `subscription_retries_interval` and `subscription_restart_terminator` config values(see [**Configuration**](configuration.md) chapter for details) for the specific Subscription by providing corresponding arguments. Example:
 
 ```ruby
 subscriptions_manager.subscribe(
@@ -138,6 +138,8 @@ subscriptions_manager.subscribe(
   pull_interval: 1,
   # overrides config.subscription_max_retries
   max_retries: 10,
+  # overrides config.subscription_retries_interval
+  retries_interval: 2,
   # overrides config.subscription_restart_terminator
   restart_terminator: proc { |subscription| subscription.last_error['class'] == 'NoMethodError' }, 
 )

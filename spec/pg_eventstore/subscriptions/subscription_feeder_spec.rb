@@ -31,7 +31,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       end
 
       after do
-        instance.stop
+        instance.stop_async.wait_for_finish
       end
 
       it 'raises error' do
@@ -44,7 +44,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     context "when feeder's runner is in the 'stopped' state" do
       before do
-        instance.start.stop
+        instance.start.stop_async.wait_for_finish
       end
 
       it 'adds the subscription runner' do
@@ -160,7 +160,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       end
 
       after do
-        instance.stop
+        instance.stop_async.wait_for_finish
       end
 
       it_behaves_like 'runners are starting'
@@ -169,7 +169,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     context "when feeder's runner is in the 'stopped' state" do
       before do
-        instance.start.stop
+        instance.start.stop_async.wait_for_finish
         setup_subscription_runners
       end
 
@@ -186,7 +186,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       end
 
       after do
-        instance.stop
+        instance.stop_async.wait_for_finish
       end
 
       it_behaves_like 'runners does not start'
@@ -278,7 +278,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       end
 
       after do
-        instance.stop
+        instance.stop_async.wait_for_finish
       end
 
       it_behaves_like 'runners are stopping'
@@ -287,7 +287,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     context "when feeder's runner is in the 'stopped' state" do
       before do
-        instance.start.stop
+        instance.start.stop_async.wait_for_finish
         setup_subscription_runners
       end
 
@@ -304,7 +304,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       end
 
       after do
-        instance.stop
+        instance.stop_async.wait_for_finish
       end
 
       it_behaves_like 'runners does not stop'
@@ -375,7 +375,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     context 'when related SubscriptionsSet does not exist yet' do
@@ -433,7 +433,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'creates SubscriptionsSet' do
@@ -485,7 +485,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it "persists error's info into SubscriptionsSet" do
@@ -528,7 +528,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'processes matching events' do
@@ -542,7 +542,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
   end
 
   describe 'on after runner stopped' do
-    subject { instance.stop }
+    subject { instance.stop_async.wait_for_finish }
 
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
     let(:subscription_runner1) do

@@ -116,7 +116,10 @@ module PgEventstore
       return if @restart_terminator&.call(@subscription.dup)
       return if @subscription.restarts_count >= @subscription.max_restarts_number
 
-      Thread.new { restore }
+      Thread.new do
+        sleep @subscription.time_between_restarts
+        restore
+      end
     end
   end
 end

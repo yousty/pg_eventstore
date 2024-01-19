@@ -185,7 +185,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'tracks execution time' do
@@ -205,14 +205,26 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   describe 'on error' do
     subject { instance.start; sleep 0.2 }
 
-    let(:handler) { proc { raise 'You rolled 1. Critical failure!' } }
+    let(:handler) do
+      should_raise = true
+      proc do |event|
+        if should_raise
+          should_raise = false
+          raise 'You rolled 1. Critical failure!'
+        end
+        processed_events.push(event)
+      end
+    end
+    let(:processed_events) { [] }
+    let(:event) { { 'id' => SecureRandom.uuid, 'global_position' => 1 } }
+    let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', time_between_restarts: 0) }
 
     before do
-      instance.feed(['id' => SecureRandom.uuid, 'global_position' => 1])
+      instance.feed([event])
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'updates Subscription#last_error' do
@@ -228,6 +240,9 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     it 'restarts EventsProcessor' do
       subject
       expect(instance.state).to eq('running')
+    end
+    it 'processes the event' do
+      expect { subject }.to change { processed_events }.to([event])
     end
 
     context 'when the number of restarts hit the limit' do
@@ -293,16 +308,22 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'on restart' do
-    subject { instance.start; sleep 0.2 }
+    subject { instance.start; sleep 0.5 }
 
     let(:handler) { proc { raise 'You rolled 1. Critical failure!' } }
+    let(:subscription) do
+      SubscriptionsHelper.create_with_connection(
+        name: 'Foo', time_between_restarts: 0, max_restarts_number: max_restarts_number
+      )
+    end
+    let(:max_restarts_number) { 3 }
 
     before do
       instance.feed(['id' => SecureRandom.uuid, 'global_position' => 1])
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'updates Subscription#last_restarted_at' do
@@ -311,7 +332,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       }.to(be_between(Time.now.utc - 1, Time.now.utc + 1))
     end
     it 'updates Subscription#restarts_count' do
-      expect { subject }.to change { subscription.reload.restarts_count }.by(1)
+      expect { subject }.to change { subscription.reload.restarts_count }.by(max_restarts_number)
     end
   end
 
@@ -319,7 +340,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     subject { instance.start }
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'updates Subscription#state' do

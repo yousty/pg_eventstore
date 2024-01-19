@@ -12,7 +12,7 @@ module PgEventstore
 
     RESTART_DELAY = 5 # seconds
 
-    def_delegators :@basic_runner, :start, :stop, :state
+    def_delegators :@basic_runner, :start, :stop, :state, :stop_async, :wait_for_finish
 
     # @param config_name [Symbol]
     # @param subscription_feeder [PgEventstore::SUbscriptionFeeder]

@@ -78,6 +78,12 @@ module PgEventstore
       SubscriptionsSet.new(**Utils.deep_dup(options_hash))
     end
 
+    # @return [PgEventstore::SubscriptionsSet]
+    def reload
+      assign_attributes(subscriptions_set_queries.find!(id))
+      self
+    end
+
     private
 
     # @return [PgEventstore::SubscriptionsSetQueries]

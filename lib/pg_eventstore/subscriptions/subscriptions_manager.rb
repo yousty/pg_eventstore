@@ -49,12 +49,12 @@ module PgEventstore
     def subscribe(subscription_name, handler:, options: {}, middlewares: nil,
                   pull_interval: config.subscription_pull_interval,
                   max_retries: config.subscription_max_retries,
+                  retries_interval: config.subscription_retries_interval,
                   restart_terminator: config.subscription_restart_terminator)
       subscription = Subscription.using_connection(config.name).new(
         set: @set_name, name: subscription_name, options: options, chunk_query_interval: pull_interval,
-        max_restarts_number: max_retries
+        max_restarts_number: max_retries, time_between_restarts: retries_interval
       )
-
       runner = SubscriptionRunner.new(
         stats: SubscriptionHandlerPerformance.new,
         events_processor: EventsProcessor.new(create_event_handler(middlewares, handler)),
@@ -63,6 +63,7 @@ module PgEventstore
       )
 
       @subscription_feeder.add(runner)
+      true
     end
 
     # @return [Array<PgEventstore::Subscription>]

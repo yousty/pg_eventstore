@@ -52,6 +52,9 @@ module PgEventstore
       return sleep 0.5 if raw_event.nil?
 
       process_event(raw_event)
+    rescue
+      @raw_events.unshift(raw_event)
+      raise
     end
 
     def after_runner_died(...)

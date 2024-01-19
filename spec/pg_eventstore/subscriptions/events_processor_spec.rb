@@ -74,7 +74,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'processes the given events' do
@@ -98,7 +98,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'runs :error action' do
@@ -131,7 +131,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'runs :restart action' do
@@ -156,7 +156,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'runs :change_state action' do
@@ -180,7 +180,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'runs :process action' do

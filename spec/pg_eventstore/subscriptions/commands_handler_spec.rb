@@ -32,7 +32,7 @@ RSpec.describe PgEventstore::CommandsHandler do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'processes commands asynchronous' do
@@ -65,7 +65,7 @@ RSpec.describe PgEventstore::CommandsHandler do
     end
 
     after do
-      instance.stop
+      instance.stop_async.wait_for_finish
     end
 
     it 'restarts the runner after RESTART_DELAY seconds' do

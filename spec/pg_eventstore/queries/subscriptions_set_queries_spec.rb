@@ -40,6 +40,31 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     end
   end
 
+  describe '#find!' do
+    subject { instance.find!(id) }
+
+    let(:id) { SecureRandom.uuid }
+
+    describe 'when SubscriptionsSet exists' do
+      let(:id) { subscriptions_set.id }
+      let!(:subscriptions_set) { PgEventstore::SubscriptionsSet.new(**instance.create(name: 'Foo')) }
+
+      it 'returns its attributes' do
+        is_expected.to eq(subscriptions_set.options_hash)
+      end
+    end
+
+    describe 'when SubscriptionsSet does not exist' do
+      it 'raises error' do
+        expect { subject }.to(
+          raise_error(
+            PgEventstore::RecordNotFound, "Could not find/update \"subscriptions_set\" record with #{id.inspect} id."
+          )
+        )
+      end
+    end
+  end
+
   describe '#create' do
     subject { instance.create(attrs) }
 

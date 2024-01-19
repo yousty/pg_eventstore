@@ -39,6 +39,9 @@ module PgEventstore
     # @!attribute max_restarts_number
     #   @return [Integer] maximum number of times the Subscription can be restarted
     attribute(:max_restarts_number)
+    # @!attribute time_between_restarts
+    #   @return [Integer] interval in seconds between retries of failed Subscription
+    attribute(:time_between_restarts)
     # @!attribute last_restarted_at
     #   @return [Time, nil] last time the Subscription was restarted
     attribute(:last_restarted_at)

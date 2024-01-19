@@ -33,6 +33,9 @@ module PgEventstore
     # @!attribute subscription_max_retries
     #   @return [Integer] max number of retries of failed Subscription
     option(:subscription_max_retries) { 100 }
+    # @!attribute subscription_retries_interval
+    #   @return [Integer] interval in seconds between retries of failed Subscription
+    option(:subscription_retries_interval) { 1 }
     # @!attribute subscription_restart_terminator
     #   @return [#call, nil] provide callable object that accepts Subscription object to decide whether to prevent
     #     further Subscription restarts

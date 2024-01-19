@@ -27,6 +27,7 @@ CREATE TABLE public.subscriptions
     state                        character varying           NOT NULL DEFAULT 'initial',
     restarts_count               integer                     NOT NULL DEFAULT 0,
     max_restarts_number          int2                        NOT NULL DEFAULT 100,
+    time_between_restarts        int2                        NOT NULL DEFAULT 1,
     last_restarted_at            timestamp without time zone,
     last_error                   jsonb,
     last_error_occurred_at       timestamp without time zone,

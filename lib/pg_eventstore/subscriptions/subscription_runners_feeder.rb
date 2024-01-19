@@ -4,7 +4,7 @@ module PgEventstore
   # This class pulls events from db and feeds given SubscriptionRunners
   # @!visibility private
   class SubscriptionRunnersFeeder
-    # @param config_name [String]
+    # @param config_name [Symbol]
     def initialize(config_name)
       @config_name = config_name
     end
