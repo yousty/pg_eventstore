@@ -64,9 +64,16 @@ module PgEventstore
 
     # @param config_name [Symbol]
     # @param subscription_set [String]
+    # @param max_retries [Integer, nil] max number of retries of failed SubscriptionsSet
+    # @param retries_interval [Integer, nil] a delay between retries of failed SubscriptionsSet
     # @return [PgEventstore::SubscriptionManager]
-    def subscriptions_manager(config_name = :default, subscription_set:)
-      SubscriptionsManager.new(config(config_name), subscription_set)
+    def subscriptions_manager(config_name = :default, subscription_set:, max_retries: nil, retries_interval: nil)
+      SubscriptionsManager.new(
+        config: config(config_name),
+        set_name: subscription_set,
+        max_retries: max_retries,
+        retries_interval: retries_interval
+      )
     end
 
     # @param name [Symbol]

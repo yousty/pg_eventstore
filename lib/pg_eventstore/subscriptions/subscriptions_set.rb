@@ -7,10 +7,10 @@ module PgEventstore
     include Extensions::OptionsExtension
 
     class << self
-      # @param name [String]
+      # @param attrs [Hash]
       # @return [PgEventstore::SubscriptionsSet]
-      def create(name:)
-        new(**subscriptions_set_queries.create(name: name))
+      def create(attrs)
+        new(**subscriptions_set_queries.create(attrs))
       end
 
       private
@@ -36,6 +36,9 @@ module PgEventstore
     # @!attribute max_restarts_number
     #   @return [Integer] maximum number of times the SubscriptionsSet can be restarted
     attribute(:max_restarts_number)
+    # @!attribute time_between_restarts
+    #   @return [Integer] interval in seconds between retries of failed SubscriptionsSet
+    attribute(:time_between_restarts)
     # @!attribute last_restarted_at
     #   @return [Time, nil] last time the SubscriptionsSet was restarted
     attribute(:last_restarted_at)

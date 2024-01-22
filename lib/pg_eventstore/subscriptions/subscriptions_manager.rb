@@ -24,10 +24,17 @@ module PgEventstore
 
     # @param config [PgEventstore::Config]
     # @param set_name [String]
-    def initialize(config, set_name)
+    # @param max_retries [Integer, nil] max number of retries of failed SubscriptionsSet
+    # @param retries_interval [Integer, nil] a delay between retries of failed SubscriptionsSet
+    def initialize(config:, set_name:, max_retries: nil, retries_interval: nil)
       @config = config
       @set_name = set_name
-      @subscription_feeder = SubscriptionFeeder.new(config.name, set_name)
+      @subscription_feeder = SubscriptionFeeder.new(
+        config_name: config.name,
+        set_name: set_name,
+        max_retries: max_retries || config.subscriptions_set_max_retries,
+        retries_interval: retries_interval || config.subscriptions_set_retries_interval
+      )
     end
 
     # @param subscription_name [String] subscription's name
@@ -42,7 +49,8 @@ module PgEventstore
     # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
     # @param pull_interval [Integer] an interval in seconds to determine how often to query new events of the given
     #   subscription.
-    # @param max_retries [Integer] max number of retries of failed subscription
+    # @param max_retries [Integer] max number of retries of failed Subscription
+    # @param retries_interval [Integer] a delay between retries of failed Subscription
     # @param restart_terminator [#call, nil] a callable object which, when called - accepts PgEventstore::Subscription
     #   object to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
     # @return [void]

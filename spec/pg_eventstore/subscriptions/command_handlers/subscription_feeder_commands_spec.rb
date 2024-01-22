@@ -3,7 +3,11 @@
 RSpec.describe PgEventstore::CommandHandlers::SubscriptionFeederCommands do
   let(:instance) { described_class.new(config_name, subscription_feeder) }
   let(:config_name) { :default }
-  let(:subscription_feeder) { PgEventstore::SubscriptionFeeder.new(config_name, 'MySubscriptionsSet') }
+  let(:subscription_feeder) do
+    PgEventstore::SubscriptionFeeder.new(
+      config_name: config_name, set_name: 'MySubscriptionsSet', max_retries: 0, retries_interval: 0
+    )
+  end
 
   describe '#process' do
     subject { instance.process }

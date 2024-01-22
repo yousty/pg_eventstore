@@ -40,6 +40,12 @@ module PgEventstore
     #   @return [#call, nil] provide callable object that accepts Subscription object to decide whether to prevent
     #     further Subscription restarts
     option(:subscription_restart_terminator)
+    # @!attribute subscriptions_set_max_retries
+    #   @return [Integer] max number of retries of failed SubscriptionsSet
+    option(:subscriptions_set_max_retries) { 10 }
+    # @!attribute subscriptions_set_retries_interval
+    #   @return [Integer] interval in seconds between retries of failed SubscriptionsSet
+    option(:subscriptions_set_retries_interval) { 1 }
 
     # @param name [Symbol] config's name. Its value matches the appropriate key in PgEventstore.config hash
     def initialize(name:, **options)

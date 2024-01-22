@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::SubscriptionFeeder do
-  let(:instance) { described_class.new(config_name, set_name) }
+  let(:instance) do
+    described_class.new(config_name: config_name, set_name: set_name, max_retries: max_retries, retries_interval: 0)
+  end
   let(:config_name) { :default }
   let(:set_name) { 'FooSet' }
+  let(:max_retries) { 0 }
+  let(:retries_interval) { 0 }
 
   describe '#add' do
     subject { instance.add(subscription_runner) }
@@ -474,14 +478,26 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
   describe "on runner's death" do
     subject do
       instance.start
-      sleep 1.1 # Let the feeder's runner die
+      sleep 1.1 # Let the feeder's runner restart
     end
 
     let(:error) { StandardError.new('gg wp') }
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
+    let(:max_retries) { 1 }
+    let(:runners_feeder) { PgEventstore::SubscriptionRunnersFeeder.new(:default) }
 
     before do
-      allow(instance).to receive(:feeder).and_raise(error)
+      should_raise = true
+      error = self.error
+      allow(PgEventstore::SubscriptionRunnersFeeder).to receive(:new).and_return(runners_feeder)
+      allow(runners_feeder).to receive(:feed).and_call_original
+      allow(instance).to receive(:feeder).and_wrap_original do |orig_meth, *args, **kwargs, &blk|
+        if should_raise
+          should_raise = false
+          raise error
+        end
+        orig_meth.call(*args, **kwargs, &blk)
+      end
     end
 
     after do
@@ -502,6 +518,57 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       expect { subject }.to change {
         queries.find_by(name: set_name)&.dig(:last_error_occurred_at)
       }.to(be_between(Time.now.utc, Time.now.utc + 2))
+    end
+    it "restarts the feeder's runner" do
+      subject
+      expect(instance.state).to eq('running')
+    end
+    it 'feeds subscription runners' do
+      subject
+      sleep 1.1 # Sleep an additional second to let the runner to process async action after the restart
+      expect(runners_feeder).to have_received(:feed)
+    end
+
+    context 'when max number of restarts is reached' do
+      let(:max_retries) { 0 }
+
+      it "does not restart the feeder's runner" do
+        subject
+        expect(instance.state).to eq('dead')
+      end
+      it 'does not feed subscription runners' do
+        subject
+        sleep 1.1 # Sleep an additional second to prevent false-positive result
+        expect(runners_feeder).not_to have_received(:feed)
+      end
+    end
+  end
+
+  describe 'on before runner restored' do
+    subject do
+      instance.start
+      sleep 1.1 # Let the feeder's runner restart
+    end
+
+    let(:error) { StandardError.new('gg wp') }
+    let(:max_retries) { 1 }
+    let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
+
+    before do
+      allow(instance).to receive(:feeder).and_raise(error)
+    end
+
+    after do
+      instance.stop_async.wait_for_finish
+    end
+
+    it 'updates Subscription#last_restarted_at' do
+      expect { subject }.to change {
+        queries.find_by(name: set_name)&.dig(:last_restarted_at)
+      }.to(be_between(Time.now.utc, Time.now.utc + 2))
+    end
+    it 'updates Subscription#restarts_count' do
+      expect { subject }.to change { queries.find_by(name: set_name)&.dig(:restarts_count) }.to(max_retries)
     end
   end
 

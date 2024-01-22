@@ -10,6 +10,7 @@ RSpec.describe PgEventstore::SubscriptionsSet do
     it { is_expected.to have_attribute(:state) }
     it { is_expected.to have_attribute(:restarts_count) }
     it { is_expected.to have_attribute(:max_restarts_number) }
+    it { is_expected.to have_attribute(:time_between_restarts) }
     it { is_expected.to have_attribute(:last_restarted_at) }
     it { is_expected.to have_attribute(:last_error) }
     it { is_expected.to have_attribute(:last_error_occurred_at) }

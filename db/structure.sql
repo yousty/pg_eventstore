@@ -242,6 +242,7 @@ CREATE TABLE public.subscriptions_set (
     state character varying DEFAULT 'initial'::character varying NOT NULL,
     restarts_count integer DEFAULT 0 NOT NULL,
     max_restarts_number smallint DEFAULT 10 NOT NULL,
+    time_between_restarts smallint DEFAULT 1 NOT NULL,
     last_restarted_at timestamp without time zone,
     last_error jsonb,
     last_error_occurred_at timestamp without time zone,

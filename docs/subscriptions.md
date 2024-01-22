@@ -8,17 +8,17 @@ In order to process new events in your microservices you have to have the abilit
 
 ## PgEventstore::SubscriptionsSet
 
-Along with Subscription information `pg_eventstore` stores information about subscriptions set. The corresponding object that describes database record is `PgEventstore::SubscriptionsSet`. You can find its attributes summary [here](https://rubydoc.info/gems/pg_eventstore/PgEventstore/SubscriptionsSet).
+Along with Subscription information `pg_eventstore` stores information about Subscriptions set. The corresponding object that describes database record is `PgEventstore::SubscriptionsSet`. You can find its attributes summary [here](https://rubydoc.info/gems/pg_eventstore/PgEventstore/SubscriptionsSet).
 
-In general - this record is created when you start your Subscriptions. All Subscriptions get locked using `PgEventstore::SubscriptionsSet#id` value when start happens. When you stop your Subscriptions - `PgEventstore::SubscriptionsSet` is deleted. It also holds the information about the state and last error of the background runner which is responsible for pulling Subscriptions events.
+In general - this record is created when you start your Subscriptions. All Subscriptions created using single subscriptions manager instance get locked behind single `PgEventstore::SubscriptionsSet`. When you stop your Subscriptions - `PgEventstore::SubscriptionsSet` is deleted, thus Subscriptions are unlocked. It also holds the information about the state, restarts number, restart interval and last error of the background runner which is responsible for pulling Subscriptions events. You can set the max number of restarts and restarts interval of your Subscriptions set via `config.subscriptions_set_max_retries` and `config.subscriptions_set_retries_interval` settings. See [**Configuration**](configuration.md) chapter for more info.
 
 ## Creating Subscription
 
-First step you need to do is to create `PgEventstore::SubscriptionsManager` object and provide `subscription_set` keyword argument. Optionally you can provide a config name to use:
+First step you need to do is to create `PgEventstore::SubscriptionsManager` object and provide `subscription_set` keyword argument. Optionally you can provide a config name to use, override `config.subscriptions_set_max_retries` and `config.subscriptions_set_retries_interval` settings:
 
 ```ruby
 subscriptions_manager = PgEventstore.subscriptions_manager(subscription_set: 'SubscriptionsOfMyAwesomeMicroservice')
-another_subscriptions_manager = PgEventstore.subscriptions_manager(:my_custom_config, subscription_set: 'SubscriptionsOfMyAwesomeMicroservice')
+another_subscriptions_manager = PgEventstore.subscriptions_manager(:my_custom_config, subscription_set: 'SubscriptionsOfMyAwesomeMicroservice', max_retries: 5, retries_interval: 2)
 ```
 
 The meaning of `subscription_set` value is to group Subscriptions by certain definition. For example, it could be a name of your microservice Subscriptions belong to.

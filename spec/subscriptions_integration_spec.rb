@@ -77,7 +77,7 @@ RSpec.describe 'Subscriptions integration' do
     end
   end
 
-  describe 'overriding max_retries' do
+  describe "overriding Subscription's max_retries" do
     subject { manager.start }
 
     let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
@@ -120,7 +120,7 @@ RSpec.describe 'Subscriptions integration' do
     end
   end
 
-  describe 'overriding retries_interval' do
+  describe "overriding Subscription's retries_interval" do
     subject { manager.start }
 
     let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
@@ -217,6 +217,40 @@ RSpec.describe 'Subscriptions integration' do
         expect(processed_events2).to(
           all satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET }
         )
+      end
+    end
+  end
+
+  describe "overriding SubscriptionsSet's max_retries" do
+    subject { manager.start }
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name, max_retries: max_retries) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+    let(:max_retries) { 2 }
+    let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
+
+    before do
+      PgEventstore.configure do |config|
+        config.subscriptions_set_max_retries = 0
+        config.subscriptions_set_retries_interval = 1
+      end
+      allow(PgEventstore::SubscriptionRunnersFeeder).to receive(:new).and_raise('Oops!')
+    end
+
+    after do
+      manager.stop
+      PgEventstore.send(:init_variables)
+    end
+
+    it 'retries custom number of times' do
+      subject
+      # - max_retries + 1 comes from the neediness to wait for the initial try
+      # - PgEventstore.config.subscriptions_set_retries_interval + 1 comes from the neediness to wait for runner's run
+      #   interval which is always 1 second
+      sleep 0.6 + (max_retries + 1) * (PgEventstore.config.subscriptions_set_retries_interval + 1)
+      aggregate_failures do
+        expect(queries.find_by(name: set_name)&.dig(:state)).to eq('dead')
+        expect(queries.find_by(name: set_name)&.dig(:restarts_count)).to eq(max_retries)
       end
     end
   end
