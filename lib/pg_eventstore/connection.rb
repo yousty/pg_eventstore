@@ -4,6 +4,7 @@ require 'pg'
 require 'pg/basic_type_map_for_results'
 require 'pg/basic_type_map_for_queries'
 require 'connection_pool'
+require_relative 'pg_connection'
 
 module PgEventstore
   class Connection
@@ -73,10 +74,9 @@ module PgEventstore
     # @return [ConnectionPool]
     def init_pool
       @pool ||= ConnectionPool.new(size: pool_size, timeout: pool_timeout) do
-        PG::Connection.new(uri).tap do |conn|
+        PgConnection.new(uri).tap do |conn|
           conn.type_map_for_results = PG::BasicTypeMapForResults.new(conn, registry: pg_type_registry)
           conn.type_map_for_queries = PG::BasicTypeMapForQueries.new(conn, registry: pg_type_registry)
-          # conn.trace($stdout) # logs
         end
       end
     end

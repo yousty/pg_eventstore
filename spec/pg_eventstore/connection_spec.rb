@@ -6,7 +6,7 @@ RSpec.describe PgEventstore::Connection do
 
   describe '#with' do
     it 'yields connection instance' do
-      expect { |blk| instance.with(&blk) }.to yield_with_args(instance_of(PG::Connection))
+      expect { |blk| instance.with(&blk) }.to yield_with_args(instance_of(PgEventstore::PgConnection))
     end
 
     describe 'behaviour after fork' do

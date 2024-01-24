@@ -16,3 +16,5 @@ gem 'webrick', '~> 1.8', '>= 1.8.1'
 gem 'redis', '~> 5'
 
 gem 'rainbow', '~> 3.1', '>= 3.1.1'
+
+gem 'niceql', '~> 0.5.1'

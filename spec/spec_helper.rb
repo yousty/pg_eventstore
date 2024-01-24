@@ -4,6 +4,7 @@ require 'pg_eventstore'
 require 'pg_eventstore/rspec/has_option_matcher'
 require 'securerandom'
 require 'redis'
+require 'logger'
 
 Dir[File.join(File.expand_path('.', __dir__), 'support/**/*.rb')].each { |f| require f }
 
