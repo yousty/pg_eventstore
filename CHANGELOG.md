@@ -1,3 +1,7 @@
+## [0.3.0] - 2024-01-24
+
+- Log SQL queries when `PgEvenstore.logger` is set and it is in `:debug` mode 
+
 ## [0.2.6] - 2023-12-20
 
 - Remove `events.type` column
