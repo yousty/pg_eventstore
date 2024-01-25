@@ -29,10 +29,10 @@ module PgEventstore
     #   @return [String, nil] current Subscription's state. It is updated automatically during Subscription's life cycle.
     #     See {RunnerState::STATES} for possible values.
     attribute(:state)
-    # @!attribute average_event_time
+    # @!attribute average_event_processing_time
     #   @return [Float, nil] a speed of the subscription. Divide 1 by this value to determine how much events are
     #     processed by the Subscription per second.
-    attribute(:average_event_time)
+    attribute(:average_event_processing_time)
     # @!attribute restarts_count
     #   @return [Integer] the number of Subscription's restarts after its failure
     attribute(:restarts_count)

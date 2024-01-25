@@ -101,7 +101,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           end
 
           it 'calculates approximate events number of :max_count' do
-            is_expected.to include(max_count: chunk_query_interval / stats.average_event_time)
+            is_expected.to include(max_count: chunk_query_interval / stats.average_event_processing_time)
           end
 
           context 'when there are events left in the queue' do
@@ -110,7 +110,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             end
 
             it 'subtracts queue size from the final value' do
-              is_expected.to include(max_count: chunk_query_interval / stats.average_event_time - 2)
+              is_expected.to include(max_count: chunk_query_interval / stats.average_event_processing_time - 2)
             end
           end
         end
@@ -189,10 +189,10 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     end
 
     it 'tracks execution time' do
-      expect { subject }.to change { stats.average_event_time }.to(be_between(0.1, 0.11))
+      expect { subject }.to change { stats.average_event_processing_time }.to(be_between(0.1, 0.11))
     end
-    it 'updates Subscription#average_event_time' do
-      expect { subject }.to change { subscription.reload.average_event_time }.to(be_between(0.1, 0.11))
+    it 'updates Subscription#average_event_processing_time' do
+      expect { subject }.to change { subscription.reload.average_event_processing_time }.to(be_between(0.1, 0.11))
     end
     it 'updates Subscription#current_position' do
       expect { subject }.to change { subscription.reload.current_position }.to(event2['global_position'])

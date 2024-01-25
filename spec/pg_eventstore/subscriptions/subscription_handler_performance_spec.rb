@@ -14,8 +14,8 @@ RSpec.describe PgEventstore::SubscriptionHandlerPerformance do
     end
   end
 
-  describe '#average_event_time' do
-    subject { instance.average_event_time }
+  describe '#average_event_processing_time' do
+    subject { instance.average_event_processing_time }
 
     context 'when there were no measurement yet' do
       it { is_expected.to be_zero }

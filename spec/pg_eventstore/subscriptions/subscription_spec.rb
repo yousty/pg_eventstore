@@ -12,7 +12,7 @@ RSpec.describe PgEventstore::Subscription do
     it { is_expected.to have_attribute(:options) }
     it { is_expected.to have_attribute(:current_position) }
     it { is_expected.to have_attribute(:state) }
-    it { is_expected.to have_attribute(:average_event_time) }
+    it { is_expected.to have_attribute(:average_event_processing_time) }
     it { is_expected.to have_attribute(:restarts_count) }
     it { is_expected.to have_attribute(:max_restarts_number) }
     it { is_expected.to have_attribute(:time_between_restarts) }
@@ -113,7 +113,7 @@ RSpec.describe PgEventstore::Subscription do
             expect(subject.options).to eq(resolve_link_tos: true)
             expect(subject.current_position).to eq(nil)
             expect(subject.state).to eq('initial')
-            expect(subject.average_event_time).to eq(nil)
+            expect(subject.average_event_processing_time).to eq(nil)
             expect(subject.restarts_count).to eq(0)
             expect(subject.max_restarts_number).to eq(12)
             expect(subject.last_restarted_at).to eq(nil)

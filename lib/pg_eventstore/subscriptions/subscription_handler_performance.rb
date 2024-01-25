@@ -32,7 +32,7 @@ module PgEventstore
 
     # The average time required to process an event.
     # @return [Float]
-    def average_event_time
+    def average_event_processing_time
       synchronize { @timings.size.zero? ? 0 : @timings.sum / @timings.size }
     end
   end
