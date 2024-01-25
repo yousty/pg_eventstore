@@ -85,7 +85,7 @@ module PgEventstore
     end
 
     # @param id [Integer] subscription's id
-    # @param lock_id [String] UUIDv4 id of the set which reserves the subscription after itself
+    # @param lock_id [String] UUIDv4 id of the set which reserves the subscription for itself
     # @param force [Boolean] whether to lock the subscription despite on #locked_by value
     # @return [String] UUIDv4 lock id
     # @raise [SubscriptionAlreadyLockedError] in case the Subscription is already locked
