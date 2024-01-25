@@ -94,7 +94,7 @@ module PgEventstore
 
     # @return [void]
     def update_subscription_restarts
-      @subscription.update(last_restarted_at: Time.now.utc, restarts_count: @subscription.restarts_count + 1)
+      @subscription.update(last_restarted_at: Time.now.utc, restart_count: @subscription.restart_count + 1)
     end
 
     # @param error [StandardError]
@@ -114,7 +114,7 @@ module PgEventstore
     # @return [void]
     def restart_subscription(_error)
       return if @restart_terminator&.call(@subscription.dup)
-      return if @subscription.restarts_count >= @subscription.max_restarts_number
+      return if @subscription.restart_count >= @subscription.max_restarts_number
 
       Thread.new do
         sleep @subscription.time_between_restarts

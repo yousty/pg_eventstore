@@ -123,7 +123,7 @@ module PgEventstore
     # @param _error [StandardError]
     # @return [void]
     def restart_runner(_error)
-      return if subscriptions_set.restarts_count >= subscriptions_set.max_restarts_number
+      return if subscriptions_set.restart_count >= subscriptions_set.max_restarts_number
 
       Thread.new do
         sleep subscriptions_set.time_between_restarts
@@ -133,7 +133,7 @@ module PgEventstore
 
     # @return [void]
     def update_runner_restarts
-      subscriptions_set.update(last_restarted_at: Time.now.utc, restarts_count: subscriptions_set.restarts_count + 1)
+      subscriptions_set.update(last_restarted_at: Time.now.utc, restart_count: subscriptions_set.restart_count + 1)
     end
 
     # @return [void]

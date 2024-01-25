@@ -13,7 +13,7 @@ RSpec.describe PgEventstore::Subscription do
     it { is_expected.to have_attribute(:current_position) }
     it { is_expected.to have_attribute(:state) }
     it { is_expected.to have_attribute(:average_event_processing_time) }
-    it { is_expected.to have_attribute(:restarts_count) }
+    it { is_expected.to have_attribute(:restart_count) }
     it { is_expected.to have_attribute(:max_restarts_number) }
     it { is_expected.to have_attribute(:time_between_restarts) }
     it { is_expected.to have_attribute(:last_restarted_at) }
@@ -43,7 +43,7 @@ RSpec.describe PgEventstore::Subscription do
     subject { subscription.update(attrs) }
 
     let(:subscription) { SubscriptionsHelper.create_with_connection }
-    let(:attrs) { { locked_by: SecureRandom.uuid, restarts_count: 321, max_restarts_number: 123 } }
+    let(:attrs) { { locked_by: SecureRandom.uuid, restart_count: 321, max_restarts_number: 123 } }
 
     it 'updates attributes of the given subscription' do
       expect { subject }.to change { subscription.reload.options_hash }.to(include(attrs))
@@ -52,7 +52,7 @@ RSpec.describe PgEventstore::Subscription do
       subject
       aggregate_failures do
         expect(subscription.locked_by).to eq(attrs[:locked_by])
-        expect(subscription.restarts_count).to eq(attrs[:restarts_count])
+        expect(subscription.restart_count).to eq(attrs[:restart_count])
         expect(subscription.max_restarts_number).to eq(attrs[:max_restarts_number])
       end
     end
@@ -114,7 +114,7 @@ RSpec.describe PgEventstore::Subscription do
             expect(subject.current_position).to eq(nil)
             expect(subject.state).to eq('initial')
             expect(subject.average_event_processing_time).to eq(nil)
-            expect(subject.restarts_count).to eq(0)
+            expect(subject.restart_count).to eq(0)
             expect(subject.max_restarts_number).to eq(12)
             expect(subject.last_restarted_at).to eq(nil)
             expect(subject.last_error).to eq(nil)
@@ -138,7 +138,7 @@ RSpec.describe PgEventstore::Subscription do
           options: { resolve_link_tos: false },
           max_restarts_number: 21,
           chunk_query_interval: 43,
-          restarts_count: 10,
+          restart_count: 10,
           last_restarted_at: Time.now.utc,
           last_chunk_fed_at: Time.now.utc,
           last_chunk_greatest_position: 1234,
@@ -155,7 +155,7 @@ RSpec.describe PgEventstore::Subscription do
               options: { resolve_link_tos: true },
               max_restarts_number: 12,
               chunk_query_interval: 34,
-              restarts_count: 0,
+              restart_count: 0,
               last_restarted_at: nil,
               last_chunk_fed_at: Time.at(0).utc,
               last_chunk_greatest_position: nil,

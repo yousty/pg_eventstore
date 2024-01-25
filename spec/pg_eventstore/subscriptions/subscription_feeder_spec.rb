@@ -567,8 +567,8 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         queries.find_by(name: set_name)&.dig(:last_restarted_at)
       }.to(be_between(Time.now.utc, Time.now.utc + 2))
     end
-    it 'updates Subscription#restarts_count' do
-      expect { subject }.to change { queries.find_by(name: set_name)&.dig(:restarts_count) }.to(max_retries)
+    it 'updates Subscription#restart_count' do
+      expect { subject }.to change { queries.find_by(name: set_name)&.dig(:restart_count) }.to(max_retries)
     end
   end
 

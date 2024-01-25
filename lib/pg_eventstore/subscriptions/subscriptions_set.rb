@@ -30,9 +30,9 @@ module PgEventstore
     # @!attribute state
     #   @return [String]
     attribute(:state)
-    # @!attribute restarts_count
+    # @!attribute restart_count
     #   @return [Integer] the number of SubscriptionsSet's restarts after its failure
-    attribute(:restarts_count)
+    attribute(:restart_count)
     # @!attribute max_restarts_number
     #   @return [Integer] maximum number of times the SubscriptionsSet can be restarted
     attribute(:max_restarts_number)

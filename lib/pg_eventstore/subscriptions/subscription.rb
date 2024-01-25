@@ -33,9 +33,9 @@ module PgEventstore
     #   @return [Float, nil] a speed of the subscription. Divide 1 by this value to determine how much events are
     #     processed by the Subscription per second.
     attribute(:average_event_processing_time)
-    # @!attribute restarts_count
+    # @!attribute restart_count
     #   @return [Integer] the number of Subscription's restarts after its failure
-    attribute(:restarts_count)
+    attribute(:restart_count)
     # @!attribute max_restarts_number
     #   @return [Integer] maximum number of times the Subscription can be restarted
     attribute(:max_restarts_number)
@@ -124,7 +124,7 @@ module PgEventstore
     def reset_runtime_attributes
       update(
         options: options,
-        restarts_count: 0,
+        restart_count: 0,
         last_restarted_at: nil,
         max_restarts_number: max_restarts_number,
         chunk_query_interval: chunk_query_interval,

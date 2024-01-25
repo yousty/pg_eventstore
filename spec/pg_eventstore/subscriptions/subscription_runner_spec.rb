@@ -331,8 +331,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
         subscription.reload.last_restarted_at
       }.to(be_between(Time.now.utc - 1, Time.now.utc + 1))
     end
-    it 'updates Subscription#restarts_count' do
-      expect { subject }.to change { subscription.reload.restarts_count }.by(max_restarts_number)
+    it 'updates Subscription#restart_count' do
+      expect { subject }.to change { subscription.reload.restart_count }.by(max_restarts_number)
     end
   end
 

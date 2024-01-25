@@ -115,7 +115,7 @@ RSpec.describe 'Subscriptions integration' do
       sleep 0.6 + (max_retries + 1) * PgEventstore.config.subscription_retries_interval
       aggregate_failures do
         expect(manager.subscriptions.first.state).to eq('dead')
-        expect(manager.subscriptions.first.restarts_count).to eq(max_retries)
+        expect(manager.subscriptions.first.restart_count).to eq(max_retries)
       end
     end
   end
@@ -159,7 +159,7 @@ RSpec.describe 'Subscriptions integration' do
       sleep 0.5 + number_of_retries * retries_interval
       aggregate_failures do
         expect(manager.subscriptions.first.state).to eq('dead')
-        expect(manager.subscriptions.first.restarts_count).to eq(number_of_retries)
+        expect(manager.subscriptions.first.restart_count).to eq(number_of_retries)
       end
     end
   end
@@ -250,7 +250,7 @@ RSpec.describe 'Subscriptions integration' do
       sleep 0.6 + (max_retries + 1) * (PgEventstore.config.subscriptions_set_retries_interval + 1)
       aggregate_failures do
         expect(queries.find_by(name: set_name)&.dig(:state)).to eq('dead')
-        expect(queries.find_by(name: set_name)&.dig(:restarts_count)).to eq(max_retries)
+        expect(queries.find_by(name: set_name)&.dig(:restart_count)).to eq(max_retries)
       end
     end
   end

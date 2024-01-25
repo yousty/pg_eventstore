@@ -91,11 +91,11 @@ RSpec.describe PgEventstore::SubscriptionQueries do
 
       context 'when subscription is updated by someone else' do
         before do
-          instance.update(id, { restarts_count: 2 })
+          instance.update(id, { restart_count: 2 })
         end
 
         it 'returns those changes as well' do
-          is_expected.to match(a_hash_including(id: id, max_restarts_number: 123, restarts_count: 2))
+          is_expected.to match(a_hash_including(id: id, max_restarts_number: 123, restart_count: 2))
         end
       end
     end
