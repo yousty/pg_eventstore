@@ -25,7 +25,7 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(*exec_params)
       end
-      deserializer.deserialize_pg(pg_result)
+      deserializer.deserialize_pg_result(pg_result)
     end
 
     # @param stream [PgEventstore::Stream] persisted stream
@@ -47,7 +47,7 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(sql, [*attributes.values, event.type])
       end
-      deserializer.without_middlewares.deserialize_one_pg(pg_result).tap do |persisted_event|
+      deserializer.without_middlewares.deserialize_one_pg_result(pg_result).tap do |persisted_event|
         persisted_event.stream = stream
       end
     end

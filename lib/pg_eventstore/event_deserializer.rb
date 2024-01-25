@@ -14,13 +14,13 @@ module PgEventstore
 
     # @param pg_result [PG::Result]
     # @return [Array<PgEventstore::Event>]
-    def deserialize_pg(pg_result)
+    def deserialize_pg_result(pg_result)
       pg_result.map(&method(:deserialize))
     end
 
     # @param pg_result [PG::Result]
     # @return [PgEventstore::Event, nil]
-    def deserialize_one_pg(pg_result)
+    def deserialize_one_pg_result(pg_result)
       return if pg_result.ntuples.zero?
 
       deserialize(pg_result.first)

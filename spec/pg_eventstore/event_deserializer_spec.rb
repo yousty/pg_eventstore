@@ -5,8 +5,8 @@ RSpec.describe PgEventstore::EventDeserializer do
   let(:middlewares) { [] }
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
 
-  describe '#deserialize_pg' do
-    subject { instance.deserialize_pg(pg_result) }
+  describe '#deserialize_pg_result' do
+    subject { instance.deserialize_pg_result(pg_result) }
 
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
     let(:event) do
@@ -76,8 +76,8 @@ RSpec.describe PgEventstore::EventDeserializer do
     end
   end
 
-  describe '#deserialize_one_pg' do
-    subject { instance.deserialize_one_pg(pg_result) }
+  describe '#deserialize_one_pg_result' do
+    subject { instance.deserialize_one_pg_result(pg_result) }
 
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
     let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid) }
