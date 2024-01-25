@@ -8,13 +8,13 @@ Configuration options:
 | max_count                          | Integer | `1000`                                                       | Number of events to return in one response when reading from a stream.                                                                                                                                                                                                                                             |
 | middlewares                        | Array   | `{}`                                                         | A hash where a key is a name of your middleware and value is an object that respond to `#serialize` and `#deserialize` methods. See [**Writing middleware**](writing_middleware.md) chapter.                                                                                                                       |
 | event_class_resolver               | `#call` | `PgEventstore::EventClassResolver.new`                       | A `#call`-able object that accepts a string and returns an event's class. See **Resolving events classes** chapter bellow for more info.                                                                                                                                                                           |
-| connection_pool_size               | Integer | `5`                                                          | Max number of connections per ruby process. It must equal the number of threads of your application. When using Subscriptions it is recommended to set it to number of subscriptions divided by two or greater. See [**Picking max connections number**](#picking-max-connections-number) chapter of this section. |
-| connection_pool_timeout            | Integer | `5`                                                          | Time in seconds to wait for the connection in pool to be released. If no connections are available during this time - `ConnectionPool::TimeoutError` will be raised. See `connection_pool` gem [docs](https://github.com/mperham/connection_pool#usage) for more info.                                             |
-| subscription_pull_interval         | Integer | `2`                                                          | How often to pull new Subscription events in seconds.                                                                                                                                                                                                                                                              |
-| subscription_max_retries           | Integer | `5`                                                          | Max number of retries of failed Subscription.                                                                                                                                                                                                                                                                      |
-| subscription_retries_interval      | Integer | `1`                                                          | Interval in seconds between retries of failed Subscription.                                                                                                                                                                                                                                                        |
-| subscriptions_set_max_retries      | Integer | `10`                                                         | Max number of retries of failed SubscriptionsSet.                                                                                                                                                                                                                                                                  |
-| subscriptions_set_retries_interval | Integer | `1`                                                          | interval in seconds between retries of failed SubscriptionsSet.                                                                                                                                                                                                                                                    |
+| connection_pool_size               | Integer | `5`                                                          | Max number of connections per ruby process. It must equal the number of threads of your application. When using subscriptions it is recommended to set it to the number of subscriptions divided by two or greater. See [**Picking max connections number**](#picking-max-connections-number) chapter of this section. |
+| connection_pool_timeout            | Integer | `5`                                                          | Time in seconds to wait for a connection in the pool to be released. If no connections are available during this time - `ConnectionPool::TimeoutError` will be raised. See `connection_pool` gem [docs](https://github.com/mperham/connection_pool#usage) for more info.                                             |
+| subscription_pull_interval         | Integer | `2`                                                          | How often to pull new subscription events in seconds.                                                                                                                                                                                                                                                              |
+| subscription_max_retries           | Integer | `5`                                                          | Max number of retries of failed subscription.                                                                                                                                                                                                                                                                      |
+| subscription_retries_interval      | Integer | `1`                                                          | Interval in seconds between retries of failed subscriptions.                                                                                                                                                                                                                                                        |
+| subscriptions_set_max_retries      | Integer | `10`                                                         | Max number of retries for failed subscription sets.                                                                                                                                                                                                                                                                  |
+| subscriptions_set_retries_interval | Integer | `1`                                                          | interval in seconds between retries of failed subscription sets.                                                                                                                                                                                                                                                    |
 
 ## Multiple configurations
 
@@ -87,19 +87,19 @@ end
 
 ## Picking max connections number
 
-Connection is hold from the connection pool to perform the request and it is released back to the connection pool once
-the request is finished. If to imaging an edge case, when all your application's threads(or Subscriptions) are
+A connection is hold from the connection pool to perform the request and it is released back to the connection pool once
+the request is finished. If you run into the (theoretical) edge case, when all your application's threads (or subscriptions) are
 performing `pg_eventstore` queries at the same time and all those queries take more than `connection_pool_timeout`
-seconds to complete - you have to have `connection_pool_size` set to the exact amount of your application's threads(or
-to the number of Subscriptions when using Subscriptions) to prevent timeout errors. Practically this is not the case, as
-all `pg_eventstore` queries are pretty fast. So, good value for `connection_pool_size` option would be **half the number
+seconds to complete, you have to have `connection_pool_size` set to the exact amount of your application's threads (or
+to the number of subscriptions when using subscriptions) to prevent timeout errors. Practically this is not the case, as
+all `pg_eventstore` queries are pretty fast. So, a good value for the `connection_pool_size` option is **half the number
 ** of your application's threads(or half the number of Subscriptions).
 
 ### Exception scenario
 
-If you are using [`#multiple`](multiple_commands.md) method - you have to take into account the execution time of the
+If you are using the [`#multiple`](multiple_commands.md) method - you have to take into account the execution time of the
 whole block you pass in it. This is because the connection will be released only after the block's execution is
-finished. So, for example, if you perform several commands within the block, as well as some API request - the
+finished. So, for example, if you perform several commands within the block, as well as some API request, the
 connection will be release only after all those steps:
 
 ```ruby
@@ -113,7 +113,7 @@ end
 ```
 
 Taking this into account you may want to increase `connection_pool_size` up to the number of your application's threads(
-or Subscriptions).
+or subscriptions).
 
 ### Usage of external connection pooler
 
