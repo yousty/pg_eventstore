@@ -6,9 +6,7 @@ module PgEventstore
   class RunnerState
     include Extensions::CallbacksExtension
 
-    STATES = %i(initial running halting stopped dead).each_with_object({}) do |sym, result|
-      result[sym] = sym.to_s.freeze
-    end.freeze
+    STATES = %i(initial running halting stopped dead).to_h { [_1, _1.to_s] }.freeze
 
     def initialize
       initial!

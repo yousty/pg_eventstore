@@ -125,7 +125,7 @@ module PgEventstore
   class SubscriptionAlreadyLockedError < Error
     attr_reader :set, :name, :lock_id
 
-    # @param set [String] subscriptions' set name
+    # @param set [String] subscriptions set name
     # @param name [String] subscription's name
     # @param lock_id [String] UUIDv4
     def initialize(set, name, lock_id)
