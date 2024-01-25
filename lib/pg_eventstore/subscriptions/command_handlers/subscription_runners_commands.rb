@@ -3,6 +3,8 @@
 module PgEventstore
   module CommandHandlers
     class SubscriptionRunnersCommands
+      AVAILABLE_COMMANDS = %w[StopRunner RestoreRunner StartRunner].freeze
+
       # @param config_name [Symbol]
       # @param runners [Array<PgEventstore::SubscriptionRunner>]
       def initialize(config_name, runners)
@@ -14,18 +16,14 @@ module PgEventstore
       # @return [void]
       def process
         queries.find_commands(@runners.map(&:id)).each do |command|
-          case command[:name]
-          when 'StopRunner'
-            find_subscription_runner(command[:subscription_id])&.stop_async
-          when 'RestoreRunner'
-            find_subscription_runner(command[:subscription_id])&.restore
-          when 'StartRunner'
-            find_subscription_runner(command[:subscription_id])&.start
-          else
+          unless AVAILABLE_COMMANDS.include?(command[:name])
             PgEventstore.logger&.warn(
               "#{self.class.name}: Don't know how to handle #{command[:name].inspect}. Details: #{command.inspect}."
             )
+            next
           end
+          send(Utils.underscore_str(command[:name]), command[:subscription_id])
+        ensure
           queries.delete(command[:id])
         end
       end
@@ -46,6 +44,24 @@ module PgEventstore
       # @return [PgEventstore::SubscriptionRunner, nil]
       def find_subscription_runner(subscription_id)
         @runners.find { |runner| runner.id == subscription_id }
+      end
+
+      # @param subscription_id [Integer]
+      # @return [void]
+      def start_runner(subscription_id)
+        find_subscription_runner(subscription_id)&.start
+      end
+
+      # @param subscription_id [Integer]
+      # @return [void]
+      def restore_runner(subscription_id)
+        find_subscription_runner(subscription_id)&.restore
+      end
+
+      # @param subscription_id [Integer]
+      # @return [void]
+      def stop_runner(subscription_id)
+        find_subscription_runner(subscription_id)&.stop_async
       end
     end
   end

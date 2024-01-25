@@ -3,6 +3,8 @@
 module PgEventstore
   module CommandHandlers
     class SubscriptionFeederCommands
+      AVAILABLE_COMMANDS = %w[StopAll StartAll].freeze
+
       # @param config_name [Symbol]
       # @param subscription_feeder [PgEventstore::SubscriptionFeeder]
       def initialize(config_name, subscription_feeder)
@@ -14,16 +16,14 @@ module PgEventstore
       # @return [void]
       def process
         queries.find_commands(@subscription_feeder.id).each do |command|
-          case command[:name]
-          when 'StopAll'
-            @subscription_feeder.stop_all
-          when 'StartAll'
-            @subscription_feeder.start_all
-          else
+          unless AVAILABLE_COMMANDS.include?(command[:name])
             PgEventstore.logger&.warn(
               "#{self.class.name}: Don't know how to handle #{command[:name].inspect}. Details: #{command.inspect}."
             )
+            next
           end
+          send(Utils.underscore_str(command[:name]))
+        ensure
           queries.delete(command[:id])
         end
       end
@@ -38,6 +38,14 @@ module PgEventstore
       # @return [PgEventstore::Connection]
       def connection
         PgEventstore.connection(@config_name)
+      end
+
+      def stop_all
+        @subscription_feeder.stop_all
+      end
+
+      def start_all
+        @subscription_feeder.start_all
       end
     end
   end

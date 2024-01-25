@@ -52,6 +52,15 @@ module PgEventstore
           backtrace: error.backtrace
         }
       end
+
+      # @param str [String]
+      # @return [String]
+      def underscore_str(str)
+        str = str.dup
+        str[0] = str[0].downcase
+        str.gsub!(/[A-Z]/) { |letter| '_' + letter.downcase }
+        str
+      end
     end
   end
 end
