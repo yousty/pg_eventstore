@@ -243,7 +243,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
               PgEventstore::SubscriptionUnlockError,
               <<~TEXT
                 Failed to unlock Subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
-                name by #{lock_id.inspect} lock id - it is currently locked by #{another_lock_id.inspect} lock id.
+                name by #{lock_id.inspect} lock id. It is currently locked by #{another_lock_id.inspect} lock id.
               TEXT
             )
           )
