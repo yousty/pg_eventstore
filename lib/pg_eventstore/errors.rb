@@ -147,7 +147,7 @@ module PgEventstore
   class SubscriptionUnlockError < Error
     attr_reader :set, :name, :expected_locked_by, :actual_locked_by
 
-    # @param set [String] subscriptions' set name
+    # @param set [String] subscription's set name
     # @param name [String] subscription's name
     # @param expected_locked_by [String] UUIDv4
     # @param actual_locked_by [String, nil] UUIDv4
@@ -163,7 +163,7 @@ module PgEventstore
     def user_friendly_message
       <<~TEXT
         Failed to unlock Subscription from #{set.inspect} set with #{name.inspect} name by \
-        #{expected_locked_by.inspect} lock id - it is currently locked by #{actual_locked_by.inspect} lock id.
+        #{expected_locked_by.inspect} lock id. It is currently locked by #{actual_locked_by.inspect} lock id.
       TEXT
     end
   end
