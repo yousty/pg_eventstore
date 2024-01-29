@@ -60,8 +60,14 @@ RSpec.configure do |config|
       config.connection_pool_size = 20
     end
     # Clean up db
-    PgEventstore.connection.with { |c| c.exec('TRUNCATE streams, events, event_types CASCADE') }
+    tables_to_purge = %w[
+      events streams event_types subscription_commands subscriptions_set_commands subscriptions subscriptions_set
+    ]
+    tables_to_purge.each do |table_name|
+      PgEventstore.connection.with { |c| c.exec("DELETE FROM #{table_name}") }
+    end
   end
 
   config.include EventHelpers
+  config.include TestHelper
 end

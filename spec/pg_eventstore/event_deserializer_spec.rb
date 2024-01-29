@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-RSpec.describe PgEventstore::PgResultDeserializer do
+RSpec.describe PgEventstore::EventDeserializer do
   let(:instance) { described_class.new(middlewares, event_class_resolver) }
   let(:middlewares) { [] }
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
 
-  describe '#deserialize' do
-    subject { instance.deserialize(pg_result) }
+  describe '#deserialize_pg_result' do
+    subject { instance.deserialize_pg_result(pg_result) }
 
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
     let(:event) do
@@ -76,8 +76,8 @@ RSpec.describe PgEventstore::PgResultDeserializer do
     end
   end
 
-  describe '#deserialize_one' do
-    subject { instance.deserialize_one(pg_result) }
+  describe '#deserialize_one_pg_result' do
+    subject { instance.deserialize_one_pg_result(pg_result) }
 
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
     let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid) }
@@ -126,6 +126,50 @@ RSpec.describe PgEventstore::PgResultDeserializer do
 
       it 'transforms an event using those middlewares' do
         expect(subject.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET, 'foo' => 'bar')
+      end
+    end
+  end
+
+  describe '#deserialize' do
+    subject { instance.deserialize(attrs) }
+
+    let(:attrs) { { 'id' => 123 } }
+
+    it 'deserializes raw attributes into Event class instance' do
+      aggregate_failures do
+        is_expected.to be_a(PgEventstore::Event)
+        expect(subject.id).to eq(attrs['id'])
+      end
+    end
+
+    context 'when middlewares are given' do
+      let(:middlewares) { [DummyMiddleware.new, another_middleware.new] }
+      let(:another_middleware) do
+        Class.new do
+          def deserialize(event)
+            event.metadata['foo'] = 'bar'
+          end
+        end
+      end
+
+      it 'transforms an event using those middlewares' do
+        expect(subject.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET, 'foo' => 'bar')
+      end
+    end
+
+    context 'when "stream" attribute is present' do
+      let(:attrs) do
+        { 'id' => 123, 'stream' => { 'context' => 'MyAwesomeCtx', 'stream_name' => 'Foo', 'stream_id' => 'Bar' } }
+      end
+
+      it 'deserializes it into Stream class instance' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::Event)
+          expect(subject.stream).to be_a(PgEventstore::Stream)
+          expect(subject.stream.context).to eq('MyAwesomeCtx')
+          expect(subject.stream.stream_name).to eq('Foo')
+          expect(subject.stream.stream_id).to eq('Bar')
+        end
       end
     end
   end

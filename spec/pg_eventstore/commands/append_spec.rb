@@ -11,7 +11,7 @@ RSpec.describe PgEventstore::Commands::Append do
     PgEventstore::EventQueries.new(
       PgEventstore.connection,
       PgEventstore::EventSerializer.new(middlewares),
-      PgEventstore::PgResultDeserializer.new(middlewares, event_class_resolver)
+      PgEventstore::EventDeserializer.new(middlewares, event_class_resolver)
     )
   end
   let(:middlewares) { [] }
@@ -36,7 +36,7 @@ RSpec.describe PgEventstore::Commands::Append do
 
           it 'has correct attributes' do
             aggregate_failures do
-              expect(subject.id).to be_a(String).and match(/\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\z/i)
+              expect(subject.id).to be_a(String).and match(EventHelpers::UUID_REGEXP)
               expect(subject.global_position).to be_a(Integer)
               expect(subject.stream_revision).to eq(stream_revision)
               expect(subject.stream).to eq(stream)

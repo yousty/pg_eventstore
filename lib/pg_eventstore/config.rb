@@ -6,14 +6,46 @@ module PgEventstore
 
     attr_reader :name
 
-    # PostgreSQL connection URI docs https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
+    # @!attribute pg_uri
+    #   @return [String] PostgreSQL connection URI docs
+    #     https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
     option(:pg_uri) { 'postgresql://postgres:postgres@localhost:5432/eventstore' }
+    # @!attribute max_count
+    #   @return [Integer] Number of events to return in one response when reading from a stream
     option(:max_count) { 1000 }
+    # @!attribute middlewares
+    #   @return [Hash{Symbol => <#serialize, #deserialize>}] A set of identified(by key) objects that respond to
+    #     #serialize and #deserialize
     option(:middlewares) { {} }
-    # Object that responds to #call. Should accept a string and return a class
+    # @!attribute event_class_resolver
+    #   @return [#call] A callable object that must accept a string and return a class. It is used when resolving
+    #     event's class during event's deserialization process
     option(:event_class_resolver) { EventClassResolver.new }
+    # @!attribute connection_pool_size
+    #   @return [Integer] Max number of connections per ruby process
     option(:connection_pool_size) { 5 }
-    option(:connection_pool_timeout) { 5 } # seconds
+    # @!attribute connection_pool_timeout
+    #   @return [Integer] Time in seconds to wait for the connection in pool to be released
+    option(:connection_pool_timeout) { 5 }
+    # @!attribute subscription_pull_interval
+    #   @return [Integer] How often Subscription should pull new events
+    option(:subscription_pull_interval) { 2 }
+    # @!attribute subscription_max_retries
+    #   @return [Integer] max number of retries of failed Subscription
+    option(:subscription_max_retries) { 100 }
+    # @!attribute subscription_retries_interval
+    #   @return [Integer] interval in seconds between retries of failed Subscription
+    option(:subscription_retries_interval) { 1 }
+    # @!attribute subscription_restart_terminator
+    #   @return [#call, nil] provide callable object that accepts Subscription object to decide whether to prevent
+    #     further Subscription restarts
+    option(:subscription_restart_terminator)
+    # @!attribute subscriptions_set_max_retries
+    #   @return [Integer] max number of retries of failed SubscriptionsSet
+    option(:subscriptions_set_max_retries) { 10 }
+    # @!attribute subscriptions_set_retries_interval
+    #   @return [Integer] interval in seconds between retries of failed SubscriptionsSet
+    option(:subscriptions_set_retries_interval) { 1 }
 
     # @param name [Symbol] config's name. Its value matches the appropriate key in PgEventstore.config hash
     def initialize(name:, **options)

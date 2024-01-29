@@ -16,3 +16,20 @@ class DummyMiddleware
     event.metadata['dummy_secret'] = DECR_SECRET
   end
 end
+
+class Dummy2Middleware
+  ENCR_SECRET = 'terces'
+  DECR_SECRET = '654321'
+
+  # @param event [PgEventstore::Event]
+  # @return [void]
+  def serialize(event)
+    event.metadata['dummy2_secret'] = ENCR_SECRET
+  end
+
+  # @param event [PgEventstore::Event]
+  # @return [void]
+  def deserialize(event)
+    event.metadata['dummy2_secret'] = DECR_SECRET
+  end
+end

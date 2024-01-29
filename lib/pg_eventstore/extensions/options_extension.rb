@@ -7,38 +7,40 @@ module PgEventstore
     # A very simple extension that implements a DSL for adding attr_accessors with default values,
     # and assigning their values during object initialization.
     # Example. Let's say you frequently do something like this:
-    # ```ruby
-    # class SomeClass
-    #   attr_accessor :attr1, :attr2, :attr3, :attr4
+    #   class SomeClass
+    #     attr_accessor :attr1, :attr2, :attr3, :attr4
     #
-    #   def initialize(opts = {})
-    #     @attr1 = opts[:attr1] || 'Attr 1 value'
-    #     @attr2 = opts[:attr2] || 'Attr 2 value'
-    #     @attr3 = opts[:attr3] || do_some_calc
-    #     @attr4 = opts[:attr4]
+    #     def initialize(opts = {})
+    #       @attr1 = opts[:attr1] || 'Attr 1 value'
+    #       @attr2 = opts[:attr2] || 'Attr 2 value'
+    #       @attr3 = opts[:attr3] || do_some_calc
+    #       @attr4 = opts[:attr4]
+    #     end
+    #
+    #     def do_some_calc
+    #       "Some calculations"
+    #     end
     #   end
     #
-    #   def do_some_calc
-    #   end
-    # end
-    #
-    # SomeClass.new(attr1: 'hihi', attr4: 'byebye')
-    # ```
+    #   SomeClass.new(attr1: 'hihi', attr4: 'byebye')
     #
     # You can replace the code above using the OptionsExtension:
-    # ```ruby
-    # class SomeClass
-    #   include PgEventstore::Extensions::OptionsExtension
+    #   class SomeClass
+    #     include PgEventstore::Extensions::OptionsExtension
     #
-    #   option(:attr1) { 'Attr 1 value' }
-    #   option(:attr2) { 'Attr 2 value' }
-    #   option(:attr3) { do_some_calc }
-    #   option(:attr4)
-    # end
+    #     option(:attr1) { 'Attr 1 value' }
+    #     option(:attr2) { 'Attr 2 value' }
+    #     option(:attr3) { do_some_calc }
+    #     option(:attr4)
     #
-    # SomeClass.new(attr1: 'hihi', attr4: 'byebye')
-    # ```
+    #     def do_some_calc
+    #       "Some calculations"
+    #     end
+    #   end
+    #
+    #   SomeClass.new(attr1: 'hihi', attr4: 'byebye')
     module OptionsExtension
+      # @!visibility private
       module ClassMethods
         # @param opt_name [Symbol] option name
         # @param blk [Proc] provide define value using block. It will be later evaluated in the

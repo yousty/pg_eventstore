@@ -155,6 +155,134 @@ ALTER SEQUENCE public.streams_id_seq OWNED BY public.streams.id;
 
 
 --
+-- Name: subscription_commands; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscription_commands (
+    id bigint NOT NULL,
+    name character varying NOT NULL,
+    subscription_id bigint NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: subscription_commands_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.subscription_commands_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: subscription_commands_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.subscription_commands_id_seq OWNED BY public.subscription_commands.id;
+
+
+--
+-- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions (
+    id bigint NOT NULL,
+    set character varying NOT NULL,
+    name character varying NOT NULL,
+    options jsonb DEFAULT '{}'::jsonb NOT NULL,
+    total_processed_events bigint DEFAULT 0 NOT NULL,
+    current_position bigint,
+    average_event_processing_time real,
+    state character varying DEFAULT 'initial'::character varying NOT NULL,
+    restart_count integer DEFAULT 0 NOT NULL,
+    max_restarts_number smallint DEFAULT 100 NOT NULL,
+    time_between_restarts smallint DEFAULT 1 NOT NULL,
+    last_restarted_at timestamp without time zone,
+    last_error jsonb,
+    last_error_occurred_at timestamp without time zone,
+    chunk_query_interval smallint DEFAULT 5 NOT NULL,
+    last_chunk_fed_at timestamp without time zone DEFAULT to_timestamp((0)::double precision) NOT NULL,
+    last_chunk_greatest_position bigint,
+    locked_by uuid,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: subscriptions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.subscriptions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: subscriptions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.subscriptions_id_seq OWNED BY public.subscriptions.id;
+
+
+--
+-- Name: subscriptions_set; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions_set (
+    id uuid DEFAULT public.gen_random_uuid() NOT NULL,
+    name character varying NOT NULL,
+    state character varying DEFAULT 'initial'::character varying NOT NULL,
+    restart_count integer DEFAULT 0 NOT NULL,
+    max_restarts_number smallint DEFAULT 10 NOT NULL,
+    time_between_restarts smallint DEFAULT 1 NOT NULL,
+    last_restarted_at timestamp without time zone,
+    last_error jsonb,
+    last_error_occurred_at timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: subscriptions_set_commands; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions_set_commands (
+    id bigint NOT NULL,
+    name character varying NOT NULL,
+    subscriptions_set_id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: subscriptions_set_commands_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.subscriptions_set_commands_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: subscriptions_set_commands_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.subscriptions_set_commands_id_seq OWNED BY public.subscriptions_set_commands.id;
+
+
+--
 -- Name: event_types id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -173,6 +301,27 @@ ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT nextval(
 --
 
 ALTER TABLE ONLY public.streams ALTER COLUMN id SET DEFAULT nextval('public.streams_id_seq'::regclass);
+
+
+--
+-- Name: subscription_commands id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_commands ALTER COLUMN id SET DEFAULT nextval('public.subscription_commands_id_seq'::regclass);
+
+
+--
+-- Name: subscriptions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions ALTER COLUMN id SET DEFAULT nextval('public.subscriptions_id_seq'::regclass);
+
+
+--
+-- Name: subscriptions_set_commands id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set_commands ALTER COLUMN id SET DEFAULT nextval('public.subscriptions_set_commands_id_seq'::regclass);
 
 
 --
@@ -200,6 +349,38 @@ ALTER TABLE ONLY public.streams
 
 
 --
+-- Name: subscription_commands subscription_commands_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_commands
+    ADD CONSTRAINT subscription_commands_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: subscriptions subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: subscriptions_set_commands subscriptions_set_commands_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set_commands
+    ADD CONSTRAINT subscriptions_set_commands_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: subscriptions_set subscriptions_set_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set
+    ADD CONSTRAINT subscriptions_set_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idx_event_types_type; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -211,6 +392,13 @@ CREATE UNIQUE INDEX idx_event_types_type ON public.event_types USING btree (type
 --
 
 CREATE INDEX idx_events_event_type_id ON public.events USING btree (event_type_id);
+
+
+--
+-- Name: idx_events_event_type_id_and_global_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_event_type_id_and_global_position ON public.events USING btree (event_type_id, global_position);
 
 
 --
@@ -242,6 +430,27 @@ CREATE UNIQUE INDEX idx_streams_context_and_stream_name_and_stream_id ON public.
 
 
 --
+-- Name: idx_subscr_set_commands_subscriptions_set_id_and_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_subscr_set_commands_subscriptions_set_id_and_name ON public.subscriptions_set_commands USING btree (subscriptions_set_id, name);
+
+
+--
+-- Name: idx_subscription_commands_subscription_id_and_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_subscription_commands_subscription_id_and_name ON public.subscription_commands USING btree (subscription_id, name);
+
+
+--
+-- Name: idx_subscriptions_set_and_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING btree (set, name);
+
+
+--
 -- Name: events events_event_type_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -263,6 +472,22 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_stream_fk FOREIGN KEY (stream_id) REFERENCES public.streams(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subscription_commands subscription_commands_subscription_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_commands
+    ADD CONSTRAINT subscription_commands_subscription_fk FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subscriptions_set_commands subscriptions_set_commands_subscriptions_set_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set_commands
+    ADD CONSTRAINT subscriptions_set_commands_subscriptions_set_fk FOREIGN KEY (subscriptions_set_id) REFERENCES public.subscriptions_set(id) ON DELETE CASCADE;
 
 
 --

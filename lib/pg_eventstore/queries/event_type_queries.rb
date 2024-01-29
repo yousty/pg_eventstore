@@ -46,5 +46,18 @@ module PgEventstore
         SQL
       end.to_a.map { |attrs| attrs['id'] }
     end
+
+    # Replaces filter by event type strings with filter by event type ids
+    # @param options [Hash]
+    # @return [Hash]
+    def include_event_types_ids(options)
+      options in { filter: { event_types: Array => event_types } }
+      return options unless event_types
+
+      options = Utils.deep_dup(options)
+      options[:filter][:event_type_ids] = find_event_types(event_types).uniq
+      options[:filter].delete(:event_types)
+      options
+    end
   end
 end

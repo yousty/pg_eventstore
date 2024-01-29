@@ -82,4 +82,53 @@ RSpec.describe PgEventstore::EventTypeQueries do
       end
     end
   end
+
+  describe '#include_event_types_ids' do
+    subject { instance.include_event_types_ids(options) }
+
+    let(:options) { { filter: { streams: [{ context: 'FooCtx' }] } } }
+
+    context 'when filter by event types is absent' do
+      it { is_expected.to eq(options) }
+    end
+
+    context 'when filter by event types is present' do
+      let(:types) { %w[Foo Bar] }
+
+      before do
+        options[:filter][:event_types] = types
+      end
+
+      context 'when related events exist' do
+        let!(:event_types_ids) { types.map { |type| instance.create_type(type) } }
+
+        it 'replaces string representations with ids' do
+          is_expected.to eq(filter: { streams: [{ context: 'FooCtx' }], event_type_ids: event_types_ids })
+        end
+        it 'does not change original hash' do
+          expect { subject }.not_to change { options }
+        end
+      end
+
+      context 'when related events does not exist' do
+        it 'replaces string representations with nil' do
+          is_expected.to eq(filter: { streams: [{ context: 'FooCtx' }], event_type_ids: [nil] })
+        end
+        it 'does not change original hash' do
+          expect { subject }.not_to change { options }
+        end
+      end
+
+      context 'when one of related events exists' do
+        let!(:foo_type_id) { instance.create_type('Foo') }
+
+        it 'replaces string representations with nil and event id' do
+          is_expected.to eq(filter: { streams: [{ context: 'FooCtx' }], event_type_ids: [foo_type_id, nil] })
+        end
+        it 'does not change original hash' do
+          expect { subject }.not_to change { options }
+        end
+      end
+    end
+  end
 end
