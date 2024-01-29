@@ -64,13 +64,12 @@ module PgEventstore
         @sql_builder =
           SQLBuilder.new.
             select('events.*').
-            select('row_to_json(streams.*) as stream').
-            select('event_types.type as type').
             from('events').
             join('JOIN streams ON streams.id = events.stream_id').
             join('JOIN event_types ON event_types.id = events.event_type_id').
             limit(DEFAULT_LIMIT).
             offset(DEFAULT_OFFSET)
+        setup_common_select_values
       end
 
       # @param context [String, nil]
@@ -160,8 +159,8 @@ module PgEventstore
         @sql_builder.
           unselect.
           select("(COALESCE(original_events.*, events.*)).*").
-          select('row_to_json(streams.*) as stream').
           join("LEFT JOIN events original_events ON original_events.id = events.link_id")
+        setup_common_select_values
       end
 
       # @return [PgEventstore::SQLBuilder]
@@ -175,6 +174,10 @@ module PgEventstore
       end
 
       private
+
+      def setup_common_select_values
+        @sql_builder.select('row_to_json(streams.*) as stream').select('event_types.type as type')
+      end
 
       # @param stream_attrs [Hash]
       # @return [Boolean]
