@@ -18,7 +18,8 @@ module PgEventstore
       end
     end
 
-    attr_reader :context, :stream_name, :stream_id, :id, :stream_revision
+    attr_reader :context, :stream_name, :stream_id, :id
+    attr_accessor :stream_revision
 
     # @param context [String]
     # @param stream_name [String]

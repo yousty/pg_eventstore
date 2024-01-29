@@ -30,6 +30,12 @@ RSpec.describe PgEventstore::Commands::Append do
         it 'appends the given event' do
           expect { subject }.to change { safe_read(stream).count }.by(1)
         end
+        it 'returns the appended event' do
+          aggregate_failures do
+            is_expected.to eq([PgEventstore.client.read(stream).last])
+            expect(subject.first.stream.stream_revision).to eq(stream_revision)
+          end
+        end
 
         describe 'appended event' do
           subject { super(); PgEventstore.client.read(stream).last }

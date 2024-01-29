@@ -44,13 +44,15 @@ module PgEventstore
     end
 
     # @param stream [PgEventstore::Stream] persisted stream
-    # @return [void]
+    # @return [PgEventstore::Stream]
     def update_stream_revision(stream, revision)
       connection.with do |conn|
         conn.exec_params(<<~SQL, [revision, stream.id])
           UPDATE streams SET stream_revision = $1 WHERE id = $2
         SQL
       end
+      stream.stream_revision = revision
+      stream
     end
 
     private
