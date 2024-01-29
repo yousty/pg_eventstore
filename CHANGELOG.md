@@ -1,3 +1,7 @@
+## [0.4.0] - 2024-01-29
+
+- Implement asynchronous subscriptions. Refer to the documentation for more info
+
 ## [0.3.0] - 2024-01-24
 
 - Log SQL queries when `PgEvenstore.logger` is set and it is in `:debug` mode 
