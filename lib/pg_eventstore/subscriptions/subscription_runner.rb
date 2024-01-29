@@ -82,7 +82,7 @@ module PgEventstore
       @subscription.update(
         average_event_processing_time: @stats.average_event_processing_time,
         current_position: current_position,
-        events_processed_total: @subscription.events_processed_total + 1
+        total_processed_events: @subscription.total_processed_events + 1
       )
     end
 

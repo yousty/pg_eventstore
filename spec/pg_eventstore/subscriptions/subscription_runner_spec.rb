@@ -197,8 +197,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     it 'updates Subscription#current_position' do
       expect { subject }.to change { subscription.reload.current_position }.to(event2['global_position'])
     end
-    it 'updates Subscription#events_processed_total' do
-      expect { subject }.to change { subscription.reload.events_processed_total }.by(2)
+    it 'updates Subscription#total_processed_events' do
+      expect { subject }.to change { subscription.reload.total_processed_events }.by(2)
     end
   end
 

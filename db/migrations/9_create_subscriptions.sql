@@ -22,7 +22,7 @@ CREATE TABLE public.subscriptions
     set                           character varying           NOT NULL,
     name                          character varying           NOT NULL,
     options                       jsonb                       NOT NULL DEFAULT '{}'::jsonb,
-    events_processed_total        bigint                      NOT NULL DEFAULT 0,
+    total_processed_events        bigint                      NOT NULL DEFAULT 0,
     current_position              bigint,
     average_event_processing_time float4,
     state                         character varying           NOT NULL DEFAULT 'initial',

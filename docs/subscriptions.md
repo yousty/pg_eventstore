@@ -101,7 +101,7 @@ loop do
   subscriptions_manager.subscriptions.each do |subscription|
     puts <<~TEXT
       Subscription <<#{subscription.name.inspect}>> is at position #{subscription.current_position}. \
-      Events processed: #{subscription.events_processed_total}
+      Events processed: #{subscription.total_processed_events}
     TEXT
   end
   puts "Current SubscriptionsSet: #{subscriptions_manager.subscriptions_set}"

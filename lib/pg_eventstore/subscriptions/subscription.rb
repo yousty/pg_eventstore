@@ -15,9 +15,9 @@ module PgEventstore
     # @!attribute name
     #   @return [String] Subscription's name. Subscription should have unique pair of set and name.
     attribute(:name)
-    # @!attribute events_processed_total
+    # @!attribute total_processed_events
     #   @return [Integer] total number of events, processed by this subscription
-    attribute(:events_processed_total)
+    attribute(:total_processed_events)
     # @!attribute options
     #   @return [Hash] subscription's options to be used to query events. See {SubscriptionManager#subscribe} for the
     #     list of available options

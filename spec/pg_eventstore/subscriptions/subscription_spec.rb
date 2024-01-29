@@ -8,7 +8,7 @@ RSpec.describe PgEventstore::Subscription do
     it { is_expected.to have_attribute(:id) }
     it { is_expected.to have_attribute(:set) }
     it { is_expected.to have_attribute(:name) }
-    it { is_expected.to have_attribute(:events_processed_total) }
+    it { is_expected.to have_attribute(:total_processed_events) }
     it { is_expected.to have_attribute(:options) }
     it { is_expected.to have_attribute(:current_position) }
     it { is_expected.to have_attribute(:state) }
@@ -109,7 +109,7 @@ RSpec.describe PgEventstore::Subscription do
             expect(subject.id).to be_a(Integer)
             expect(subject.set).to eq(set)
             expect(subject.name).to eq(name)
-            expect(subject.events_processed_total).to eq(0)
+            expect(subject.total_processed_events).to eq(0)
             expect(subject.options).to eq(resolve_link_tos: true)
             expect(subject.current_position).to eq(nil)
             expect(subject.state).to eq('initial')
