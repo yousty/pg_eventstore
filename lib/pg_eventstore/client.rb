@@ -109,6 +109,27 @@ module PgEventstore
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
+    # Links event from one stream into another stream. You can later access it by providing :resolve_link_tos option
+    # when reading from a stream. Only existing events can be linked.
+    # @param stream [PgEventstore::Stream]
+    # @param events_or_event [PgEventstore::Event, Array<PgEventstore::Event>]
+    # @param options [Hash]
+    # @option options [Integer] :expected_revision provide your own revision number
+    # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
+    # @param middlewares [Array] provide a list of middleware names to use. Defaults to empty array, meaning no
+    #   middlewares will be applied to the "link" event
+    # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
+    # @raise [PgEventstore::WrongExpectedRevisionError]
+    def link_to(stream, events_or_event, options: {}, middlewares: [])
+      result =
+        Commands::LinkTo.new(
+          Queries.new(
+            streams: stream_queries, events: event_queries(middlewares(middlewares)), transactions: transaction_queries
+          )
+        ).call(stream, *events_or_event, options: options)
+      events_or_event.is_a?(Array) ? result : result.first
+    end
+
     private
 
     # @param middlewares [Array, nil]

@@ -203,7 +203,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           expect { subject }.to(
             raise_error(
               PgEventstore::SubscriptionAlreadyLockedError,
-              <<~TEXT
+              <<~TEXT.strip
                 Could not lock Subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
                 name. It is already locked by #{lock_id.inspect} set.
               TEXT
@@ -241,7 +241,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           expect { subject }.to(
             raise_error(
               PgEventstore::SubscriptionUnlockError,
-              <<~TEXT
+              <<~TEXT.strip
                 Failed to unlock Subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
                 name by #{lock_id.inspect} lock id. It is currently locked by #{another_lock_id.inspect} lock id.
               TEXT

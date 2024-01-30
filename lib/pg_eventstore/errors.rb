@@ -137,7 +137,7 @@ module PgEventstore
 
     # @return [String]
     def user_friendly_message
-      <<~TEXT
+      <<~TEXT.strip
         Could not lock Subscription from #{set.inspect} set with #{name.inspect} name. It is already locked by \
         #{lock_id.inspect} set.
       TEXT
@@ -161,9 +161,26 @@ module PgEventstore
 
     # @return [String]
     def user_friendly_message
-      <<~TEXT
+      <<~TEXT.strip
         Failed to unlock Subscription from #{set.inspect} set with #{name.inspect} name by \
         #{expected_locked_by.inspect} lock id. It is currently locked by #{actual_locked_by.inspect} lock id.
+      TEXT
+    end
+  end
+
+  class NotPersistedEventError < Error
+    attr_reader :event
+
+    # @param event [PgEventstore::Event]
+    def initialize(event)
+      @event = event
+      super(user_friendly_message)
+    end
+
+    # @return [String]
+    def user_friendly_message
+      <<~TEXT.strip
+        Event#id must be present, got #{event.id.inspect} instead.
       TEXT
     end
   end
