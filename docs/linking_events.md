@@ -59,8 +59,8 @@ end
 event1 = SomethingHappened.new
 event2 = SomethingHappened.new
 
-events_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeStream', stream_id: SecureRandom.uuid)
-projection_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeProjection', stream_id: '1')
+events_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeStream', stream_id: '1')
+projection_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeProjection', stream_id: SecureRandom.uuid)
 
 event1, event2 = PgEventstore.client.append_to_stream(events_stream, [event1, event2])
 
@@ -69,3 +69,27 @@ PgEventstore.client.link_to(projection_stream, event1, options: { expected_revis
 # Raises PgEventstore::WrongExpectedVersionError error because stream already exists
 PgEventstore.client.link_to(projection_stream, event2, options: { expected_revision: :no_stream })
 ```
+
+## Middlewares
+
+If you would like to modify your link events before they persisted - you should use the `:middlewares` argument which allows you to pass the list of middlewares you would like to use. **By default no middlewares will be applied to the link event despite on `config.middlewares` option**.
+
+Let's say you have these registered middlewares:
+
+```ruby
+PgEventstore.configure do |config|
+  config.middlewares = { foo: FooMiddleware.new, bar: BarMiddleware.new, baz: BazMiddleware.new }
+end
+```
+
+And you want to use `FooMiddleware` and `BazMiddleware`. You simply have to provide an array of corresponding middleware keys you would like to use:
+
+```ruby
+events_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeStream', stream_id: '1')
+projection_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeProjection', stream_id: '1')
+
+event = PgEventstore.client.append_to_stream(events_stream, PgEventstore::Event.new)
+PgEventstore.client.link_to(projection_stream, event, middlewares: %i[foo baz])
+```
+
+See [Writing middleware](writing_middleware.md) chapter for info about what is middleware and how to implement it.
