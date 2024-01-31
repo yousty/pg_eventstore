@@ -14,8 +14,8 @@ module PgEventstore
     # @param raw_events [Array<Hash>]
     # @return [Array<Hash>]
     def preload_related_objects(raw_events)
-      streams = stream_queries.find_by_ids(raw_events.map { _1['stream_id'] }).map { [_1['id'], _1] }.to_h
-      types = event_type_queries.find_by_ids(raw_events.map { _1['event_type_id'] }).map { [_1['id'], _1] }.to_h
+      streams = stream_queries.find_by_ids(raw_events.map { _1['stream_id'] }).to_h { [_1['id'], _1] }
+      types = event_type_queries.find_by_ids(raw_events.map { _1['event_type_id'] }).to_h { [_1['id'], _1] }
       raw_events.each do |event|
         event['stream'] = streams[event['stream_id']]
         event['type'] = types[event['event_type_id']]['type']

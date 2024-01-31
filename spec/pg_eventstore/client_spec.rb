@@ -147,4 +147,48 @@ RSpec.describe PgEventstore::Client do
       expect(PgEventstore.client.read(PgEventstore::Stream.all_stream).map(&:id)).to eq([event1.id, event2.id])
     end
   end
+
+  describe '#link_to' do
+    subject { instance.link_to(projection_stream, events_or_event) }
+
+    let(:persisted_event) { PgEventstore.client.append_to_stream(events_stream, PgEventstore::Event.new(type: :foo)) }
+    let(:events_stream) { PgEventstore::Stream.new(context: 'MyCtx', stream_name: 'Foo', stream_id: 'bar') }
+    let(:projection_stream) { PgEventstore::Stream.new(context: 'MyCtx', stream_name: 'MyProjection', stream_id: '1') }
+
+    let(:events_or_event) { persisted_event }
+
+    context 'when single event is given' do
+      it { expect { subject }.to change { safe_read(projection_stream).count }.by(1) }
+      it 'returns persisted link event' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::Event)
+          expect(subject.type).to eq(PgEventstore::Event::LINK_TYPE)
+        end
+      end
+      it 'does not apply any middlewares' do
+        expect(subject.metadata).to eq({})
+      end
+
+      context 'when :middlewares argument is given' do
+        subject { instance.link_to(projection_stream, events_or_event, middlewares: %i[bar]) }
+
+        it 'applies provided middlewares' do
+          expect(subject.metadata).to eq('bar' => 'secret-bar')
+        end
+      end
+    end
+
+    context 'when array of events is given' do
+      let(:events_or_event) { [persisted_event] }
+
+      it 'returns an array of persisted link events' do
+        aggregate_failures do
+          is_expected.to be_an(Array)
+          is_expected.to all be_a(PgEventstore::Event)
+          expect(subject.size).to eq(1)
+          expect(subject.first.type).to eq(PgEventstore::Event::LINK_TYPE)
+        end
+      end
+    end
+  end
 end
