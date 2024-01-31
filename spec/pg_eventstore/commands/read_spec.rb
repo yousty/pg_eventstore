@@ -73,6 +73,8 @@ RSpec.describe PgEventstore::Commands::Read do
         it 'resolves links to original events' do
           aggregate_failures do
             expect(subject).to eq([existing_event])
+            expect(subject.first.stream).to eq(events_stream2)
+            expect(subject.first.type).to eq('baz')
           end
         end
       end
