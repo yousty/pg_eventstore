@@ -13,9 +13,9 @@ RSpec.describe PgEventstore::EventQueries do
 
     let(:stream1) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
     let(:stream2) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '2') }
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid) }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid) }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
 
     before do
       PgEventstore.client.append_to_stream(stream1, [event1, event2])
@@ -27,6 +27,8 @@ RSpec.describe PgEventstore::EventQueries do
         is_expected.to be_an(Array)
         is_expected.to all be_a(PgEventstore::Event)
         expect(subject.map(&:id)).to eq([event1.id, event2.id])
+        expect(subject.map(&:type)).to eq(%w[foo bar])
+        expect(subject.map(&:stream)).to eq([stream1, stream1])
       end
     end
   end

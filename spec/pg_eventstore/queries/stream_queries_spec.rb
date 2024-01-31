@@ -101,4 +101,36 @@ RSpec.describe PgEventstore::StreamQueries do
       expect { subject }.to change { instance.find_stream(stream).stream_revision }.to(3)
     end
   end
+
+  describe '#find_by_ids' do
+    subject { instance.find_by_ids(ids) }
+
+    let(:ids) { [] }
+
+    context 'when empty array is provided' do
+      it { is_expected.to eq([]) }
+    end
+
+    context 'when array of ids is given' do
+      let(:ids) { [1, 2, stream.id] }
+
+      let(:stream) do
+        instance.create_stream(PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1'))
+      end
+
+      it 'returns existing event types' do
+        is_expected.to(
+          eq(
+            [{
+               'id' => stream.id,
+               'context' => 'FooCtx',
+               'stream_name' => 'Foo',
+               'stream_id' => '1',
+               'stream_revision' => -1
+             }]
+          )
+        )
+      end
+    end
+  end
 end

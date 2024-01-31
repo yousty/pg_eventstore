@@ -145,10 +145,22 @@ RSpec.describe PgEventstore::SubscriptionQueries do
         is_expected.to(
           match(
             [
-              a_hash_including('id' => event1.id, 'runner_id' => runner_id1),
-              a_hash_including('id' => event3.id, 'runner_id' => runner_id1),
-              a_hash_including('id' => event1.id, 'runner_id' => runner_id2),
-              a_hash_including('id' => event2.id, 'runner_id' => runner_id2),
+              a_hash_including(
+                'id' => event1.id, 'runner_id' => runner_id1, 'type' => 'Foo',
+                'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+              ),
+              a_hash_including(
+                'id' => event3.id, 'runner_id' => runner_id1, 'type' => 'Foo',
+                'stream' => a_hash_including(stream2.to_hash.transform_keys(&:to_s))
+              ),
+              a_hash_including(
+                'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
+                'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+              ),
+              a_hash_including(
+                'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
+                'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+              ),
             ]
           )
         )
@@ -165,8 +177,14 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           is_expected.to(
             match(
               [
-                a_hash_including('id' => event1.id, 'runner_id' => runner_id2),
-                a_hash_including('id' => event2.id, 'runner_id' => runner_id2)
+                a_hash_including(
+                  'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
+                  'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+                ),
+                a_hash_including(
+                  'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
+                  'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+                )
               ]
             )
           )

@@ -12,18 +12,9 @@ module PgEventstore
       @event_class_resolver = event_class_resolver
     end
 
-    # @param pg_result [PG::Result]
-    # @return [Array<PgEventstore::Event>]
-    def deserialize_pg_result(pg_result)
-      pg_result.map(&method(:deserialize))
-    end
-
-    # @param pg_result [PG::Result]
-    # @return [PgEventstore::Event, nil]
-    def deserialize_one_pg_result(pg_result)
-      return if pg_result.ntuples.zero?
-
-      deserialize(pg_result.first)
+    # @param raw_events [Array<Hash>]
+    def deserialize_many(raw_events)
+      raw_events.map(&method(:deserialize))
     end
 
     # @param attrs [Hash]

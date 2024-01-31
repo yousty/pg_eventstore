@@ -33,6 +33,17 @@ module PgEventstore
       end.to_a.dig(0, 'id')
     end
 
+    # @param ids [Array<Integer>]
+    # @return [Array<Hash>]
+    def find_by_ids(ids)
+      return [] if ids.empty?
+
+      builder = SQLBuilder.new.from('event_types').where('id = ANY(?)', ids.uniq.sort)
+      connection.with do |conn|
+        conn.exec_params(*builder.to_exec_params)
+      end.to_a
+    end
+
     # @param types [Array<String>]
     # @return [Array<Integer, nil>]
     def find_event_types(types)
