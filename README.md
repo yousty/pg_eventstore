@@ -52,6 +52,7 @@ Documentation chapters:
 - [Configuration](docs/configuration.md)
 - [Events and streams definitions](docs/events_and_streams.md)
 - [Appending events](docs/appending_events.md)
+- [Linking events](docs/linking_events.md)
 - [Reading events](docs/reading_events.md)
 - [Subscriptions](docs/subscriptions.md)
 - [Writing middlewares](docs/writing_middleware.md)
