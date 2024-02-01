@@ -2,6 +2,7 @@
 
 - Fix event class resolving when providing `resolve_link_tos: true` option
 - Return correct stream revision of the `Event#stream` object of the appended event
+- Implement events linking feature
 
 ## [0.4.0] - 2024-01-29
 
