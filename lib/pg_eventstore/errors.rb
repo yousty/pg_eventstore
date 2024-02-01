@@ -138,7 +138,7 @@ module PgEventstore
     # @return [String]
     def user_friendly_message
       <<~TEXT.strip
-        Could not lock Subscription from #{set.inspect} set with #{name.inspect} name. It is already locked by \
+        Could not lock subscription from #{set.inspect} set with #{name.inspect} name. It is already locked by \
         #{lock_id.inspect} set.
       TEXT
     end
@@ -162,7 +162,7 @@ module PgEventstore
     # @return [String]
     def user_friendly_message
       <<~TEXT.strip
-        Failed to unlock Subscription from #{set.inspect} set with #{name.inspect} name by \
+        Failed to unlock subscription from #{set.inspect} set with #{name.inspect} name by \
         #{expected_locked_by.inspect} lock id. It is currently locked by #{actual_locked_by.inspect} lock id.
       TEXT
     end

@@ -2,7 +2,7 @@
 
 ## Linking single event
 
-To create a link on an existing event, you need to have a stream where you want to link that event to and you need to have an event, fetched from the database:
+You can create a link to an existing event. Next example demonstrates how you can link an existing event from another stream:
 
 ```ruby
 class SomethingHappened < PgEventstore::Event
@@ -14,6 +14,7 @@ event = SomethingHappened.new(
 
 events_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeStream', stream_id: '1')
 projection_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeProjection', stream_id: '1')
+# Persist our event
 event = PgEventstore.client.append_to_stream(events_stream, event)
 
 # Link event into your projection
@@ -27,7 +28,7 @@ projection_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'My
 PgEventstore.client.read(projection_stream, options: { resolve_link_tos: true })
 ```
 
-If you don't provide the `:resolve_link_tos` option, the "linked" event will be returned instead of the original one.
+If you don't provide the `:resolve_link_tos` option, the linked event will be returned instead of the original one.
 
 ## Linking multiple events
 

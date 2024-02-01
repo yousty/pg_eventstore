@@ -38,7 +38,7 @@ module PgEventstore
     def find_by_ids(ids)
       return [] if ids.empty?
 
-      builder = SQLBuilder.new.from('event_types').where('id = ANY(?)', ids.uniq.sort)
+      builder = SQLBuilder.new.from('event_types').where('id = ANY(?)', ids.uniq)
       connection.with do |conn|
         conn.exec_params(*builder.to_exec_params)
       end.to_a
