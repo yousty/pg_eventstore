@@ -4,7 +4,6 @@ module PgEventstore
   module QueryBuilders
     # @!visibility private
     class EventsFiltering
-      DEFAULT_OFFSET = 0
       DEFAULT_LIMIT = 1_000
       SQL_DIRECTIONS = {
         'asc' => 'ASC',
@@ -26,14 +25,12 @@ module PgEventstore
         end
 
         # @param options [Hash]
-        # @param offset [Integer]
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
-        def all_stream_filtering(options, offset: 0)
+        def all_stream_filtering(options)
           event_filter = new
           options in { filter: { event_type_ids: Array => event_type_ids } }
           event_filter.add_event_types(event_type_ids)
           event_filter.add_limit(options[:max_count])
-          event_filter.add_offset(offset)
           event_filter.resolve_links(options[:resolve_link_tos])
           options in { filter: { streams: Array => streams } }
           streams&.each { |attrs| event_filter.add_stream_attrs(**attrs) }
@@ -44,14 +41,12 @@ module PgEventstore
 
         # @param stream [PgEventstore::Stream]
         # @param options [Hash]
-        # @param offset [Integer]
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
-        def specific_stream_filtering(stream, options, offset: 0)
+        def specific_stream_filtering(stream, options)
           event_filter = new
           options in { filter: { event_type_ids: Array => event_type_ids } }
           event_filter.add_event_types(event_type_ids)
           event_filter.add_limit(options[:max_count])
-          event_filter.add_offset(offset)
           event_filter.resolve_links(options[:resolve_link_tos])
           event_filter.add_stream(stream)
           event_filter.add_revision(options[:from_revision], options[:direction])
@@ -67,8 +62,7 @@ module PgEventstore
             from('events').
             join('JOIN streams ON streams.id = events.stream_id').
             join('JOIN event_types ON event_types.id = events.event_type_id').
-            limit(DEFAULT_LIMIT).
-            offset(DEFAULT_OFFSET)
+            limit(DEFAULT_LIMIT)
       end
 
       # @param context [String, nil]
@@ -140,14 +134,6 @@ module PgEventstore
         return unless limit
 
         @sql_builder.limit(limit)
-      end
-
-      # @param offset [Integer, nil]
-      # @return [void]
-      def add_offset(offset)
-        return unless offset
-
-        @sql_builder.offset(offset)
       end
 
       # @param should_resolve [Boolean]

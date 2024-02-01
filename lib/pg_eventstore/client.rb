@@ -109,6 +109,15 @@ module PgEventstore
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
+    # @see {#read} for available params
+    # @return [Enumerator] enumerator will yield PgEventstore::Event
+    def read_paginated(stream, options: {}, middlewares: nil)
+      cmd_class = stream.system? ? Commands::SystemStreamReadPaginated : Commands::RegularStreamReadPaginated
+      cmd_class.
+        new(Queries.new(streams: stream_queries, events: event_queries(middlewares(middlewares)))).
+        call(stream, options: { max_count: config.max_count }.merge(options))
+    end
+
     # Links event from one stream into another stream. You can later access it by providing :resolve_link_tos option
     # when reading from a stream. Only existing events can be linked.
     # @param stream [PgEventstore::Stream]
