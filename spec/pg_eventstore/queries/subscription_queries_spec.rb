@@ -145,10 +145,22 @@ RSpec.describe PgEventstore::SubscriptionQueries do
         is_expected.to(
           match(
             [
-              a_hash_including('id' => event1.id, 'runner_id' => runner_id1),
-              a_hash_including('id' => event3.id, 'runner_id' => runner_id1),
-              a_hash_including('id' => event1.id, 'runner_id' => runner_id2),
-              a_hash_including('id' => event2.id, 'runner_id' => runner_id2),
+              a_hash_including(
+                'id' => event1.id, 'runner_id' => runner_id1, 'type' => 'Foo',
+                'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+              ),
+              a_hash_including(
+                'id' => event3.id, 'runner_id' => runner_id1, 'type' => 'Foo',
+                'stream' => a_hash_including(stream2.to_hash.transform_keys(&:to_s))
+              ),
+              a_hash_including(
+                'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
+                'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+              ),
+              a_hash_including(
+                'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
+                'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+              ),
             ]
           )
         )
@@ -165,8 +177,14 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           is_expected.to(
             match(
               [
-                a_hash_including('id' => event1.id, 'runner_id' => runner_id2),
-                a_hash_including('id' => event2.id, 'runner_id' => runner_id2)
+                a_hash_including(
+                  'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
+                  'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+                ),
+                a_hash_including(
+                  'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
+                  'stream' => a_hash_including(stream1.to_hash.transform_keys(&:to_s))
+                )
               ]
             )
           )
@@ -203,8 +221,8 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           expect { subject }.to(
             raise_error(
               PgEventstore::SubscriptionAlreadyLockedError,
-              <<~TEXT
-                Could not lock Subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
+              <<~TEXT.strip
+                Could not lock subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
                 name. It is already locked by #{lock_id.inspect} set.
               TEXT
             )
@@ -241,8 +259,8 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           expect { subject }.to(
             raise_error(
               PgEventstore::SubscriptionUnlockError,
-              <<~TEXT
-                Failed to unlock Subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
+              <<~TEXT.strip
+                Failed to unlock subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
                 name by #{lock_id.inspect} lock id. It is currently locked by #{another_lock_id.inspect} lock id.
               TEXT
             )

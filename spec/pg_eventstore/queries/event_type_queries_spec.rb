@@ -131,4 +131,24 @@ RSpec.describe PgEventstore::EventTypeQueries do
       end
     end
   end
+
+  describe '#find_by_ids' do
+    subject { instance.find_by_ids(ids) }
+
+    let(:ids) { [] }
+
+    context 'when empty array is provided' do
+      it { is_expected.to eq([]) }
+    end
+
+    context 'when array of ids is given' do
+      let(:ids) { [1, 2, event_type_id] }
+
+      let(:event_type_id) { instance.create_type('foo') }
+
+      it 'returns existing event types' do
+        is_expected.to eq([{ 'id' => event_type_id,  'type' => 'foo' }])
+      end
+    end
+  end
 end

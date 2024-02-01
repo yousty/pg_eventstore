@@ -26,6 +26,17 @@ module PgEventstore
       deserialize(pg_result) if pg_result.ntuples == 1
     end
 
+    # @param ids [Array<Integer>]
+    # @return [Array<Hash>]
+    def find_by_ids(ids)
+      return [] if ids.empty?
+
+      builder = SQLBuilder.new.from('streams').where('id = ANY(?)', ids.uniq.sort)
+      connection.with do |conn|
+        conn.exec_params(*builder.to_exec_params)
+      end.to_a
+    end
+
     # @param stream [PgEventstore::Stream]
     # @return [PgEventstore::RawStream] persisted stream
     def create_stream(stream)

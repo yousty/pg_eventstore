@@ -79,9 +79,10 @@ module PgEventstore
       return [] if query_options.empty?
 
       final_builder = union_builders(query_options.map { |id, opts| query_builder(id, opts) })
-      connection.with do |conn|
+      raw_events = connection.with do |conn|
         conn.exec_params(*final_builder.to_exec_params)
       end.to_a
+      preloader.preload_related_objects(raw_events)
     end
 
     # @param id [Integer] subscription's id
@@ -149,6 +150,11 @@ module PgEventstore
     # @return [PgEventstore::EventTypeQueries]
     def event_type_queries
       EventTypeQueries.new(connection)
+    end
+
+    # @return [PgEventstore::Preloader]
+    def preloader
+      Preloader.new(connection)
     end
 
     # @param hash [Hash]

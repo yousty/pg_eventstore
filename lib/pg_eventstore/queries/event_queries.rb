@@ -22,10 +22,11 @@ module PgEventstore
     def stream_events(stream, options)
       options = event_type_queries.include_event_types_ids(options)
       exec_params = events_filtering(stream, options).to_exec_params
-      pg_result = connection.with do |conn|
+      raw_events = connection.with do |conn|
         conn.exec_params(*exec_params)
-      end
-      deserializer.deserialize_pg_result(pg_result)
+      end.to_a
+      preloader.preload_related_objects(raw_events)
+      deserializer.deserialize_many(raw_events)
     end
 
     # @param stream [PgEventstore::Stream] persisted stream
@@ -44,10 +45,10 @@ module PgEventstore
           RETURNING *, $#{attributes.values.size + 1} as type
       SQL
 
-      pg_result = connection.with do |conn|
+      raw_event = connection.with do |conn|
         conn.exec_params(sql, [*attributes.values, event.type])
-      end
-      deserializer.without_middlewares.deserialize_one_pg_result(pg_result).tap do |persisted_event|
+      end.to_a.first
+      deserializer.without_middlewares.deserialize(raw_event).tap do |persisted_event|
         persisted_event.stream = stream
       end
     end
@@ -67,6 +68,11 @@ module PgEventstore
     # @return [PgEventstore::EventTypeQueries]
     def event_type_queries
       EventTypeQueries.new(connection)
+    end
+
+    # @return [PgEventstore::Preloader]
+    def preloader
+      Preloader.new(connection)
     end
   end
 end

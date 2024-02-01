@@ -53,18 +53,17 @@ RSpec.describe PgEventstore::Commands::Read do
 
     describe 'reading links' do
       let(:existing_event) { PgEventstore.client.read(events_stream2).first }
-      let!(:link) do
-        # TODO: use LinkTo command here when it will be implemented instead manual query
-        queries.events.insert(
-          existing_event.stream,
-          PgEventstore::Event.new(link_id: existing_event.id, stream_revision: 1, type: PgEventstore::Event::LINK_TYPE)
-        )
+      let(:projection_stream) do
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyProjection', stream_id: '1')
       end
-      let(:stream) { events_stream2 }
+      let!(:link) do
+        PgEventstore.client.link_to(projection_stream, existing_event)
+      end
+      let(:stream) { projection_stream }
 
       context 'when :resolve_link_tos is not provided' do
         it 'returns links as is' do
-          expect(subject.map(&:id)).to eq([existing_event.id, link.id])
+          expect(subject).to eq([link])
         end
       end
 
@@ -72,7 +71,11 @@ RSpec.describe PgEventstore::Commands::Read do
         let(:options) { { resolve_link_tos: true } }
 
         it 'resolves links to original events' do
-          expect(subject.map(&:id)).to eq([existing_event.id, existing_event.id])
+          aggregate_failures do
+            expect(subject).to eq([existing_event])
+            expect(subject.first.stream).to eq(events_stream2)
+            expect(subject.first.type).to eq('baz')
+          end
         end
       end
     end

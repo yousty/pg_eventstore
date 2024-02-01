@@ -9,9 +9,10 @@ module PgEventstore
       # @param options [Hash]
       # @option options [Integer] :expected_revision provide your own revision number
       # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
+      # @param event_modifier [#call]
       # @return [Array<PgEventstore::Event>] persisted events
       # @raise [PgEventstore::WrongExpectedRevisionError]
-      def call(stream, *events, options: {})
+      def call(stream, *events, options: {}, event_modifier: EventModifiers::PrepareRegularEvent)
         raise SystemStreamError, stream if stream.system?
 
         queries.transactions.transaction do
@@ -19,7 +20,7 @@ module PgEventstore
           revision = stream.stream_revision
           assert_expected_revision!(revision, options[:expected_revision]) if options[:expected_revision]
           events.map.with_index(1) do |event, index|
-            queries.events.insert(stream, prepared_event(event, revision + index))
+            queries.events.insert(stream, event_modifier.call(event, revision + index))
           end.tap do
             queries.streams.update_stream_revision(stream, revision + events.size)
           end
@@ -27,15 +28,6 @@ module PgEventstore
       end
 
       private
-
-      # @param event [PgEventstore::Event]
-      # @param revision [Integer]
-      # @return [PgEventstore::Event]
-      def prepared_event(event, revision)
-        event.class.new(
-          id: event.id, data: event.data, metadata: event.metadata, type: event.type, stream_revision: revision
-        )
-      end
 
       # @param revision [Integer]
       # @param expected_revision [Symbol, Integer]
