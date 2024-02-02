@@ -75,8 +75,6 @@ PgEventstore.client.link_to(projection_stream, event2, options: { expected_revis
 
 If you would like to modify your link events before they get persisted - you should use the `:middlewares` argument which allows you to pass the list of middlewares you would like to use. **By default no middlewares will be applied to the link event despite on `config.middlewares` option**.
 
-**Warning! It is recommended your middlewares do not change `Event#type` and `Event#link_id`.** Otherwise linking feature will simply not work.
-
 Let's say you have these registered middlewares:
 
 ```ruby
