@@ -191,6 +191,50 @@ RSpec.describe PgEventstore::Commands::Append do
         end
       end
 
+      context 'when middleware which changes #link_id is given' do
+        let(:middlewares) { [middleware] }
+        let(:middleware) do
+          Class.new do
+            class << self
+              def serialize(event)
+                event.link_id = -1
+              end
+            end
+          end
+        end
+
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
+              /:link_id attribute was marked as read only/
+            )
+          )
+        end
+      end
+
+      context 'when middleware which changes #stream_revision is given' do
+        let(:middlewares) { [middleware] }
+        let(:middleware) do
+          Class.new do
+            class << self
+              def serialize(event)
+                event.stream_revision = -1
+              end
+            end
+          end
+        end
+
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
+              /:stream_revision attribute was marked as read only/
+            )
+          )
+        end
+      end
+
       context "when event's class is defined" do
         let(:event_class) { Class.new(PgEventstore::Event) }
         let(:event) { event_class.new }

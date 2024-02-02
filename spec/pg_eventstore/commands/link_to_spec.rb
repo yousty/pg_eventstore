@@ -211,6 +211,72 @@ RSpec.describe PgEventstore::Commands::LinkTo do
         end
       end
 
+      context 'when middleware which changes #link_id is given' do
+        let(:middlewares) { [middleware] }
+        let(:middleware) do
+          Class.new do
+            class << self
+              def serialize(event)
+                event.link_id = -1
+              end
+            end
+          end
+        end
+
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
+              /:link_id attribute was marked as read only/
+            )
+          )
+        end
+      end
+
+      context 'when middleware which changes #stream_revision is given' do
+        let(:middlewares) { [middleware] }
+        let(:middleware) do
+          Class.new do
+            class << self
+              def serialize(event)
+                event.stream_revision = -1
+              end
+            end
+          end
+        end
+
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
+              /:stream_revision attribute was marked as read only/
+            )
+          )
+        end
+      end
+
+      context 'when middleware which changes #type is given' do
+        let(:middlewares) { [middleware] }
+        let(:middleware) do
+          Class.new do
+            class << self
+              def serialize(event)
+                event.type = 'Baz'
+              end
+            end
+          end
+        end
+
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
+              /:type attribute was marked as read only/
+            )
+          )
+        end
+      end
+
       context "when link's class is resolved" do
         let(:event_class) { Class.new(PgEventstore::Event) }
         let(:event_class_resolver) { proc { |_event_type| DummyClass } }

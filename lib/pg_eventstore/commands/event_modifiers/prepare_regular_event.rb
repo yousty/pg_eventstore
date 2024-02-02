@@ -13,7 +13,9 @@ module PgEventstore
           def call(event, revision)
             event.class.new(
               id: event.id, data: event.data, metadata: event.metadata, type: event.type, stream_revision: revision
-            )
+            ).tap do |e|
+              %i[link_id stream_revision].each { |attr| e.readonly!(attr) }
+            end
           end
         end
       end

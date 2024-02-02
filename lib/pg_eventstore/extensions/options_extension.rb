@@ -50,7 +50,11 @@ module PgEventstore
           self.options = (options + Set.new([opt_name])).freeze
           warn_already_defined(opt_name)
           warn_already_defined(:"#{opt_name}=")
-          attr_writer opt_name
+          define_method "#{opt_name}=" do |value|
+            readonly_error(opt_name) if readonly?(opt_name)
+
+            instance_variable_set(:"@#{opt_name}", value)
+          end
 
           define_method opt_name do
             result = instance_variable_get(:"@#{opt_name}")
@@ -77,6 +81,8 @@ module PgEventstore
         end
       end
 
+      ReadonlyAttributeError = Class.new(StandardError)
+
       def self.included(klass)
         klass.singleton_class.attr_accessor(:options)
         klass.options = Set.new.freeze
@@ -84,11 +90,8 @@ module PgEventstore
       end
 
       def initialize(**options)
-        self.class.options.each do |option|
-          # init default values of options
-          value = options.key?(option) ? options[option] : public_send(option)
-          public_send("#{option}=", value)
-        end
+        @readonly = Set.new
+        init_default_values(options)
       end
 
       # Construct a hash from options, where key is the option's name and the value is option's
@@ -100,6 +103,41 @@ module PgEventstore
         end
       end
       alias attributes_hash options_hash
+
+      # @param opt_name [Symbol]
+      # @return [Boolean]
+      def readonly!(opt_name)
+        return false unless self.class.options.include?(opt_name)
+
+        @readonly.add(opt_name)
+        true
+      end
+
+      # @param opt_name [Symbol]
+      # @return [Boolean]
+      def readonly?(opt_name)
+        @readonly.include?(opt_name)
+      end
+
+      private
+
+      # @param opt_name [Symbol]
+      # @raise [PgEventstore::Extensions::OptionsExtension::ReadOnlyError]
+      def readonly_error(opt_name)
+        raise(
+          ReadonlyAttributeError, "#{opt_name.inspect} attribute was marked as read only. You can no longer modify it."
+        )
+      end
+
+      # @param options [Hash]
+      # @return [void]
+      def init_default_values(options)
+        self.class.options.each do |option|
+          # init default values of options
+          value = options.key?(option) ? options[option] : public_send(option)
+          public_send("#{option}=", value)
+        end
+      end
     end
   end
 end
