@@ -1,8 +1,12 @@
 ## [Unreleased]
 
+## [0.5.0] - 2024-02-05
+
 - Fix event class resolving when providing `resolve_link_tos: true` option
 - Return correct stream revision of the `Event#stream` object of the appended event
 - Implement events linking feature
+- Implement paginated read
+- Remove duplicated `idx_events_event_type_id` index
 
 ## [0.4.0] - 2024-01-29
 
