@@ -57,12 +57,11 @@ module PgEventstore
 
     # @param stream [PgEventstore::Stream]
     # @param options [Hash]
-    # @param offset [Integer]
     # @return [PgEventstore::EventsFilteringQuery]
-    def events_filtering(stream, options, offset: 0)
-      return QueryBuilders::EventsFiltering.all_stream_filtering(options, offset: offset) if stream.all_stream?
+    def events_filtering(stream, options)
+      return QueryBuilders::EventsFiltering.all_stream_filtering(options) if stream.all_stream?
 
-      QueryBuilders::EventsFiltering.specific_stream_filtering(stream, options, offset: offset)
+      QueryBuilders::EventsFiltering.specific_stream_filtering(stream, options)
     end
 
     # @return [PgEventstore::EventTypeQueries]

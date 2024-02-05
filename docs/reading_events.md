@@ -159,3 +159,59 @@ You can also mix filtering by stream's attributes and event types. The result wi
 ```ruby
 PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MyAwesomeContext' }], event_types: %w[Foo Bar] } })
 ```
+
+
+## Pagination
+
+You can use `#read_paginated` to iterate over all (filtered) events. It yields each batch of records that was found according to the filter options:
+
+```ruby
+# Read from the specific stream
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
+PgEventstore.client.read_paginated(stream).each do |events|
+  events.each do |event|
+    # iterate through events
+  end
+end
+
+# Read from "all" stream
+PgEventstore.client.read_paginated(PgEventstore::Stream.all_stream).each do |events|
+  events.each do |event|
+    # iterate through events
+  end
+end
+```
+
+Options are the same as for `#read` method. Several examples:
+
+```ruby
+# Read "Foo" events only from the specific stream
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
+PgEventstore.client.read_paginated(stream, options: { filter: { event_types: ['Foo'] } }).each do |events|
+  events.each do |event|
+    # iterate through events
+  end
+end
+
+# Backwards read from "all" stream
+PgEventstore.client.read_paginated(PgEventstore::Stream.all_stream, options: { direction: 'Backwards' }).each do |events|
+  events.each do |event|
+    # iterate through events
+  end
+end
+
+# Set batch size to 100
+PgEventstore.client.read_paginated(PgEventstore::Stream.all_stream, options: { max_count: 100 }).each do |events|
+  events.each do |event|
+    # iterate through events
+  end
+end
+
+# Reading from projection stream
+projection_stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'MyAwesomeProjection', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae') 
+PgEventstore.client.read_paginated(projection_stream, options: { resolve_link_tos: true }).each do |events|
+  events.each do |event|
+    # iterate through events
+  end
+end
+```
