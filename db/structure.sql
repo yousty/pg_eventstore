@@ -388,13 +388,6 @@ CREATE UNIQUE INDEX idx_event_types_type ON public.event_types USING btree (type
 
 
 --
--- Name: idx_events_event_type_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_event_type_id ON public.events USING btree (event_type_id);
-
-
---
 -- Name: idx_events_event_type_id_and_global_position; Type: INDEX; Schema: public; Owner: -
 --
 
