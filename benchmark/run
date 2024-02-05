@@ -11,11 +11,12 @@ require 'rainbow'
 # Number of processes/threads for the benchmark
 CONCURRENCY = 5
 # A constant that maps concurrency number to expected performance(events per second)
-CONCURRENCY_TO_PERFORMANCE_MAPPING = { 5 => 1500 }
+CONCURRENCY_TO_PERFORMANCE_MAPPING = { 5 => { threads: 1200, processes: 1500 } }
 
 def colorize_write_result(result, result_key)
   current = result[result_key][:avg]
-  min = CONCURRENCY_TO_PERFORMANCE_MAPPING[CONCURRENCY]
+  scope = result_key.to_s.include?('threads') ? :threads : :processes
+  min = CONCURRENCY_TO_PERFORMANCE_MAPPING[CONCURRENCY][scope]
   current = (1 / current).to_i
 
   if current + 50 < min
@@ -41,6 +42,7 @@ end
 
 PgEventstore.configure do |config|
   config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore' }
+  config.connection_pool_size = CONCURRENCY + 1 # +1 comes from LiveMonitor
 end
 
 Benchmarks.warm_up
