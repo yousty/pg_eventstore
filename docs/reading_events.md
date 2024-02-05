@@ -163,7 +163,7 @@ PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { s
 
 ## Pagination
 
-`pg_eventstore` implements `#read_paginated` that allows to go trough all events. It yields each batch of records that was found according to the filter options:
+You can use `#read_paginated` to iterate over all (filtered) events. It yields each batch of records that was found according to the filter options:
 
 ```ruby
 # Read from the specific stream
@@ -195,6 +195,13 @@ end
 
 # Backwards read from "all" stream
 PgEventstore.client.read_paginated(PgEventstore::Stream.all_stream, options: { direction: 'Backwards' }).each do |events|
+  events.each do |event|
+    # iterate through events
+  end
+end
+
+# Set batch size to 100
+PgEventstore.client.read_paginated(PgEventstore::Stream.all_stream, options: { max_count: 100 }).each do |events|
   events.each do |event|
     # iterate through events
   end
