@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.5.2] - 2024-02-06
+
+- Improve speed of `PgEventstore::Stream#eql?` a bit
+
 ## [0.5.1] - 2024-02-06
 
 - Fix `PgEventstore::Stream` to be properly recognizable inside Hash
