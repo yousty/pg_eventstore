@@ -64,6 +64,17 @@ module PgEventstore
       deconstruct_keys(nil)
     end
 
+    # @return [Integer]
+    def hash
+      to_hash.hash
+    end
+
+    # @param another [Object]
+    # @return [Boolean]
+    def eql?(another)
+      hash == another.hash && another.is_a?(PgEventstore::Stream)
+    end
+
     def ==(other_stream)
       return false unless other_stream.is_a?(Stream)
 

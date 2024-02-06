@@ -95,4 +95,28 @@ RSpec.describe PgEventstore::Stream do
       it { is_expected.to eq(false) }
     end
   end
+
+  describe '#hash' do
+    let(:hash) { {} }
+    let(:stream1) { described_class.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
+    let(:stream2) { described_class.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
+
+    before do
+      hash[stream1] = :foo
+    end
+
+    context 'when streams matches' do
+      it 'recognizes second stream' do
+        expect(hash[stream2]).to eq(:foo)
+      end
+    end
+
+    context 'when streams does not match' do
+      let(:stream2) { described_class.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '2') }
+
+      it 'does not recognize second stream' do
+        expect(hash[stream2]).to eq(nil)
+      end
+    end
+  end
 end
