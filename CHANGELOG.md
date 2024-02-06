@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.5.1] - 2024-02-06
+
+- Fix `PgEventstore::Stream` to be properly recognizable inside Hash
+
 ## [0.5.0] - 2024-02-05
 
 - Fix event class resolving when providing `resolve_link_tos: true` option
