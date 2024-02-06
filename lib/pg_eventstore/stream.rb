@@ -72,7 +72,9 @@ module PgEventstore
     # @param another [Object]
     # @return [Boolean]
     def eql?(another)
-      hash == another.hash && another.is_a?(PgEventstore::Stream)
+      return false unless another.is_a?(Stream)
+
+      hash == another.hash
     end
 
     def ==(other_stream)
