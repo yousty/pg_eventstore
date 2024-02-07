@@ -59,10 +59,10 @@ namespace :pg_eventstore do
         DROP TABLE IF EXISTS public.streams;
         DROP TABLE IF EXISTS public.event_types;
         DROP TABLE IF EXISTS public.migrations;
-        DROP TABLE IF EXISTS public.subscriptions_set;
-        DROP TABLE IF EXISTS public.subscriptions;
         DROP TABLE IF EXISTS public.subscription_commands;
         DROP TABLE IF EXISTS public.subscriptions_set_commands;
+        DROP TABLE IF EXISTS public.subscriptions_set;
+        DROP TABLE IF EXISTS public.subscriptions;
         DROP EXTENSION IF EXISTS "uuid-ossp";
         DROP EXTENSION IF EXISTS pgcrypto;
       SQL
