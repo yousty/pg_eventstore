@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.5.3] - 2024-02-07
+
+- Fix `pg_eventstore:drop` rake task
+
 ## [0.5.2] - 2024-02-06
 
 - Improve speed of `PgEventstore::Stream#eql?` a bit
