@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.6.0] - 2024-02-08
+
+- Add stream info into `PgEventstore::WrongExpectedRevisionError` error details
+
 ## [0.5.3] - 2024-02-07
 
 - Fix `pg_eventstore:drop` rake task
