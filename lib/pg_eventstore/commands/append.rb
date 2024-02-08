@@ -18,7 +18,7 @@ module PgEventstore
         queries.transactions.transaction do
           stream = queries.streams.find_or_create_stream(stream)
           revision = stream.stream_revision
-          assert_expected_revision!(revision, options[:expected_revision]) if options[:expected_revision]
+          assert_expected_revision!(revision, options[:expected_revision], stream) if options[:expected_revision]
           events.map.with_index(1) do |event, index|
             queries.events.insert(stream, event_modifier.call(event, revision + index))
           end.tap do
@@ -31,20 +31,30 @@ module PgEventstore
 
       # @param revision [Integer]
       # @param expected_revision [Symbol, Integer]
+      # @param stream [PgEventstore::Stream]
       # @raise [PgEventstore::WrongExpectedRevisionError] in case if revision does not satisfy expected revision
       # @return [void]
-      def assert_expected_revision!(revision, expected_revision)
+      def assert_expected_revision!(revision, expected_revision, stream)
         return if expected_revision == :any
 
         case [revision, expected_revision]
         in [Integer, Integer]
-          raise WrongExpectedRevisionError.new(revision, expected_revision) unless revision == expected_revision
+          unless revision == expected_revision
+            raise WrongExpectedRevisionError.new(
+              revision: revision, expected_revision: expected_revision, stream: stream
+            )
+          end
+
         in [Integer, Symbol]
           if revision == Stream::INITIAL_STREAM_REVISION && expected_revision == :stream_exists
-            raise WrongExpectedRevisionError.new(revision, expected_revision)
+            raise WrongExpectedRevisionError.new(
+              revision: revision, expected_revision: expected_revision, stream: stream
+            )
           end
           if revision > Stream::INITIAL_STREAM_REVISION && expected_revision == :no_stream
-            raise WrongExpectedRevisionError.new(revision, expected_revision)
+            raise WrongExpectedRevisionError.new(
+              revision: revision, expected_revision: expected_revision, stream: stream
+            )
           end
         end
       end

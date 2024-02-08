@@ -42,13 +42,15 @@ module PgEventstore
   end
 
   class WrongExpectedRevisionError < Error
-    attr_reader :revision, :expected_revision
+    attr_reader :stream, :revision, :expected_revision
 
     # @param revision [Integer]
     # @param expected_revision [Integer, Symbol]
-    def initialize(revision, expected_revision)
+    # @param stream [PgEventstore::Stream]
+    def initialize(revision:, expected_revision:, stream:)
       @revision = revision
       @expected_revision = expected_revision
+      @stream = stream
       super(user_friendly_message)
     end
 
@@ -65,22 +67,30 @@ module PgEventstore
 
     # @return [String]
     def expected_stream_exists
-      "Expected stream to exist, but it doesn't."
+      "Expected stream #{stream_descr} to exist, but it doesn't."
     end
 
     # @return [String]
     def expected_no_stream
-      "Expected stream to be absent, but it actually exists."
+      "Expected stream #{stream_descr} to be absent, but it actually exists."
     end
 
     # @return [String]
     def current_no_stream
-      "Stream revision #{expected_revision} is expected, but stream does not exist."
+      "#{stream_descr} stream revision #{expected_revision.inspect} is expected, but stream does not exist."
     end
 
     # @return [String]
     def unmatched_stream_revision
-      "Stream revision #{expected_revision} is expected, but actual stream revision is #{revision.inspect}."
+      <<~TEXT.strip
+        #{stream_descr} stream revision #{expected_revision.inspect} is expected, but actual stream revision is \
+        #{revision.inspect}.
+      TEXT
+    end
+
+    # @return [String]
+    def stream_descr
+      stream.to_hash.inspect
     end
   end
 
