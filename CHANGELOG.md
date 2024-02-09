@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.7.1] - 2024-02-09
+
+- Fix rake tasks
+
 ## [0.7.0] - 2024-02-09
 
 - Refactor `pg_eventstore:create` and `pg_eventstore:drop` rake tasks. They now actually create/drop the database. You will have to execute `delete from migrations where number > 6` query before deploying this version.
