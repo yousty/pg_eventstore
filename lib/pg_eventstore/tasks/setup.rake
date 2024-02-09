@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'uri'
+
 helpers = Class.new do
   class << self
     def postgres_uri
