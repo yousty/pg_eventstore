@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.7.0] - 2024-02-09
+
+- Refactor `pg_eventstore:create` and `pg_eventstore:drop` rake tasks. They now actually create/drop the database. You will have to execute `delete from migrations where number > 6` query before deploying this version.
+- Drop legacy migrations
+
 ## [0.6.0] - 2024-02-08
 
 - Add stream info into `PgEventstore::WrongExpectedRevisionError` error details
