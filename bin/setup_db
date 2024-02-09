@@ -1,26 +1,8 @@
-#!/usr/bin/env ruby
-# frozen_string_literal: true
+#!/usr/bin/env sh
 
-require "bundler/setup"
-require "pg_eventstore"
-
-PgEventstore.configure do |config|
-  config.pg_uri = 'postgresql://postgres:postgres@localhost:5532/postgres'
-end
-
-PgEventstore.connection.with do |conn|
-  conn.exec('DROP DATABASE IF EXISTS eventstore')
-  conn.exec('CREATE DATABASE eventstore WITH OWNER postgres')
-end
-
-PgEventstore.connection.with do |conn|
-  conn.exec('DROP DATABASE IF EXISTS eventstore_test')
-  conn.exec('CREATE DATABASE eventstore_test WITH OWNER postgres')
-end
-
-`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:drop`
-`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:create`
-`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:migrate`
-`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:drop`
-`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:create`
-`PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:migrate`
+PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:drop
+PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:create
+PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore" bundle exec rake pg_eventstore:migrate
+PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:drop
+PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:create
+PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_test" bundle exec rake pg_eventstore:migrate

@@ -9,7 +9,9 @@ module PgEventstore
     # @!attribute pg_uri
     #   @return [String] PostgreSQL connection URI docs
     #     https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
-    option(:pg_uri) { 'postgresql://postgres:postgres@localhost:5432/eventstore' }
+    option(:pg_uri) do
+      ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5432/eventstore' }
+    end
     # @!attribute max_count
     #   @return [Integer] Number of events to return in one response when reading from a stream
     option(:max_count) { 1000 }

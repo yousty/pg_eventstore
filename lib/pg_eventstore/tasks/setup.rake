@@ -1,20 +1,36 @@
 # frozen_string_literal: true
 
+helpers = Class.new do
+  class << self
+    def postgres_uri
+      @postgres_uri ||=
+        begin
+          uri = URI.parse(ENV.fetch('PG_EVENTSTORE_URI'))
+          uri.path = '/postgres'
+          uri.to_s
+        end
+    end
+
+    def db_name
+      @db_name ||= URI.parse(ENV.fetch('PG_EVENTSTORE_URI')).path&.delete("/")
+    end
+  end
+end
+
 namespace :pg_eventstore do
   desc "Creates events table, indexes, etc."
   task :create do
     PgEventstore.configure do |config|
-      config.pg_uri = ENV['PG_EVENTSTORE_URI']
+      config.pg_uri = helpers.postgres_uri
     end
 
-    db_files_root = "#{Gem::Specification.find_by_name("pg_eventstore").gem_dir}/db/initial"
-
     PgEventstore.connection.with do |conn|
-      conn.transaction do
-        conn.exec(File.read("#{db_files_root}/extensions.sql"))
-        conn.exec(File.read("#{db_files_root}/tables.sql"))
-        conn.exec(File.read("#{db_files_root}/primary_and_foreign_keys.sql"))
-        conn.exec(File.read("#{db_files_root}/indexes.sql"))
+      exists =
+        conn.exec_params("SELECT 1 as exists FROM pg_database where datname = $1", [helpers.db_name]).first&.dig('exists')
+      if exists
+        puts "#{helpers.db_name} already exists. Skipping."
+      else
+        conn.exec("CREATE DATABASE #{conn.escape_string(helpers.db_name)} WITH OWNER #{conn.escape_string(conn.user)}")
       end
     end
   end
@@ -50,22 +66,11 @@ namespace :pg_eventstore do
   desc "Drops events table and related pg_eventstore objects."
   task :drop do
     PgEventstore.configure do |config|
-      config.pg_uri = ENV['PG_EVENTSTORE_URI']
+      config.pg_uri = helpers.postgres_uri
     end
 
     PgEventstore.connection.with do |conn|
-      conn.exec <<~SQL
-        DROP TABLE IF EXISTS public.events;
-        DROP TABLE IF EXISTS public.streams;
-        DROP TABLE IF EXISTS public.event_types;
-        DROP TABLE IF EXISTS public.migrations;
-        DROP TABLE IF EXISTS public.subscription_commands;
-        DROP TABLE IF EXISTS public.subscriptions_set_commands;
-        DROP TABLE IF EXISTS public.subscriptions_set;
-        DROP TABLE IF EXISTS public.subscriptions;
-        DROP EXTENSION IF EXISTS "uuid-ossp";
-        DROP EXTENSION IF EXISTS pgcrypto;
-      SQL
+      conn.exec("DROP DATABASE IF EXISTS #{conn.escape_string(helpers.db_name)}")
     end
   end
 end

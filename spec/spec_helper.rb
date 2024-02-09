@@ -2,6 +2,7 @@
 
 require 'pg_eventstore'
 require 'pg_eventstore/rspec/has_option_matcher'
+require 'pg_eventstore/rspec/test_helpers'
 require 'securerandom'
 require 'redis'
 require 'logger'
@@ -55,17 +56,11 @@ RSpec.configure do |config|
   config.before do
     REDIS.flushdb
     # Some tests reset default config, connection, etc. Thus. reconfigure a client before each test
-    PgEventstore.configure do |config|
-      config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore_test' }
-      config.connection_pool_size = 20
+    PgEventstore.configure do |pg_conf|
+      pg_conf.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore_test' }
+      pg_conf.connection_pool_size = 20
     end
-    # Clean up db
-    tables_to_purge = %w[
-      events streams event_types subscription_commands subscriptions_set_commands subscriptions subscriptions_set
-    ]
-    tables_to_purge.each do |table_name|
-      PgEventstore.connection.with { |c| c.exec("DELETE FROM #{table_name}") }
-    end
+    PgEventstore::TestHelpers.clean_up_db
   end
 
   config.include EventHelpers

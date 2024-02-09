@@ -20,19 +20,7 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
 ## Usage
 
-Before you start, make sure you created a database where events will be stored. A PostgreSQL user must be a superuser to be able to create tables, indexes, primary/foreign keys, etc. Please don't use an existing database/user for this purpose. Example of creating such database and user:
-
-```bash
-sudo -u postgres createuser pg_eventstore --superuser
-sudo -u postgres psql --command="CREATE DATABASE eventstore OWNER pg_eventstore"
-sudo -u postgres psql --command="CREATE DATABASE eventstore OWNER pg_eventstore"
-```
-
-If necessary - adjust your `pg_hba.conf` to allow `pg_eventstore` user to connect to your PostgreSQL server. 
-
-Next step will be configuring a db connection. Please check the **Configuration** chapter bellow to find out how to do it.
-
-After the db connection is configured, it is time to create necessary database objects. Please include this line into your `Rakefile`:
+Before start using the gem - you have to create the database. Please include this line into your `Rakefile`:
 
 ```ruby
 load "pg_eventstore/tasks/setup.rake"
@@ -40,12 +28,13 @@ load "pg_eventstore/tasks/setup.rake"
 
 This will include necessary rake tasks. You can now run 
 ```bash
-export PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/postgres" # Replace this with your real connection url
+# Replace this with your real connection url
+export PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore"
 bundle exec rake pg_eventstore:create
 bundle exec rake pg_eventstore:migrate
 ```
 
-to create necessary database objects and migrate them to the actual version. After this step your `pg_eventstore` is ready to use.
+to create the database, necessary database objects and migrate them to the latest version. After this step your `pg_eventstore` is ready to use. There is also a `rake pg_eventstore:drop` task which drops the database.
 
 Documentation chapters:
 
