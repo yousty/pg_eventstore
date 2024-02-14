@@ -52,7 +52,7 @@ module PgEventstore
           SELECT event_types.id, types.type
             FROM event_types 
             RIGHT JOIN (
-              SELECT unnest($1::varchar[]) type
+              SELECT unnest($1::varchar[]) as type
             ) types ON types.type = event_types.type
         SQL
       end.to_a.map { |attrs| attrs['id'] }
