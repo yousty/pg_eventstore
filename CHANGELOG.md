@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.7.2] - 2024-02-14
+
+- Fix the implementation for PostgreSQL v11
+
 ## [0.7.1] - 2024-02-09
 
 - Fix rake tasks
