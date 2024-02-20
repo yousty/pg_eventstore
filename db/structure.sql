@@ -204,7 +204,7 @@ CREATE TABLE public.subscriptions (
     last_restarted_at timestamp without time zone,
     last_error jsonb,
     last_error_occurred_at timestamp without time zone,
-    chunk_query_interval smallint DEFAULT 5 NOT NULL,
+    chunk_query_interval real DEFAULT 1.0 NOT NULL,
     last_chunk_fed_at timestamp without time zone DEFAULT to_timestamp((0)::double precision) NOT NULL,
     last_chunk_greatest_position bigint,
     locked_by uuid,

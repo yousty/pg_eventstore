@@ -53,7 +53,7 @@ module PgEventstore
     #   @return [Time, nil] the time when the last error occurred
     attribute(:last_error_occurred_at)
     # @!attribute chunk_query_interval
-    #   @return [Integer] determines how often to pull events for the given Subscription in seconds
+    #   @return [Float] determines how often to pull events for the given Subscription in seconds
     attribute(:chunk_query_interval)
     # @!attribute chunk_query_interval
     #   @return [Time] shows the time when last time events were fed to the event's processor

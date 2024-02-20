@@ -11,7 +11,7 @@ RSpec.describe 'Subscriptions integration' do
     let(:handler2) { proc { |event| processed_events2.push(event) } }
     let(:processed_events1) { [] }
     let(:processed_events2) { [] }
-    let(:pull_interval) { PgEventstore.config.subscription_pull_interval }
+    let(:pull_interval) { 2 }
 
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
     let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
@@ -21,10 +21,12 @@ RSpec.describe 'Subscriptions integration' do
       manager.subscribe('Subscription 1', handler: handler1, options: { filter: { event_types: ['Foo'] } })
       manager.subscribe('Subscription 2', handler: handler2, options: { filter: { streams: [{ context: 'FooCtx' }] } })
       PgEventstore.client.append_to_stream(stream, [event1, event2])
+      PgEventstore.config.subscription_pull_interval = pull_interval
     end
 
     after do
       manager.stop
+      PgEventstore.send(:init_variables)
     end
 
     it 'processes events by first subscription' do
@@ -174,7 +176,7 @@ RSpec.describe 'Subscriptions integration' do
     let(:handler2) { proc { |event| processed_events2.push(event) } }
     let(:processed_events1) { [] }
     let(:processed_events2) { [] }
-    let(:pull_interval) { PgEventstore.config.subscription_pull_interval }
+    let(:pull_interval) { 2 }
 
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
     let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
@@ -183,6 +185,7 @@ RSpec.describe 'Subscriptions integration' do
     before do
       PgEventstore.configure do |config|
         config.middlewares = { dummy: DummyMiddleware.new, dummy2: Dummy2Middleware.new }
+        config.subscription_pull_interval = pull_interval
       end
 
       manager.subscribe('Subscription 1', handler: handler1, options: { filter: { event_types: ['Foo'] } })

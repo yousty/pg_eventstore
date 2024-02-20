@@ -135,7 +135,7 @@ subscriptions_manager.subscribe(
   'MyAwesomeSubscription', 
   handler: proc { |event| puts event },
   # overrides config.subscription_pull_interval
-  pull_interval: 1,
+  pull_interval: 0.5,
   # overrides config.subscription_max_retries
   max_retries: 10,
   # overrides config.subscription_retries_interval
