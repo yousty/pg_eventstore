@@ -1,7 +1,7 @@
 CREATE TABLE public.event_types
 (
-    id   bigserial         NOT NULL,
-    type character varying NOT NULL
+    id   bigserial                         NOT NULL,
+    type character varying COLLATE "POSIX" NOT NULL
 );
 
 ALTER TABLE ONLY public.event_types

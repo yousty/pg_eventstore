@@ -1,10 +1,10 @@
 CREATE TABLE public.streams
 (
-    id              bigserial                     NOT NULL,
-    context         character varying             NOT NULL,
-    stream_name     character varying             NOT NULL,
-    stream_id       character varying             NOT NULL,
-    stream_revision integer DEFAULT '-1'::integer NOT NULL
+    id              bigserial                         NOT NULL,
+    context         character varying COLLATE "POSIX" NOT NULL,
+    stream_name     character varying COLLATE "POSIX" NOT NULL,
+    stream_id       character varying COLLATE "POSIX" NOT NULL,
+    stream_revision integer DEFAULT '-1'::integer     NOT NULL
 );
 
 ALTER TABLE ONLY public.streams

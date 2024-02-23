@@ -54,7 +54,7 @@ SET default_table_access_method = heap;
 
 CREATE TABLE public.event_types (
     id bigint NOT NULL,
-    type character varying NOT NULL
+    type character varying NOT NULL COLLATE pg_catalog."POSIX"
 );
 
 
@@ -128,9 +128,9 @@ CREATE TABLE public.migrations (
 
 CREATE TABLE public.streams (
     id bigint NOT NULL,
-    context character varying NOT NULL,
-    stream_name character varying NOT NULL,
-    stream_id character varying NOT NULL,
+    context character varying NOT NULL COLLATE pg_catalog."POSIX",
+    stream_name character varying NOT NULL COLLATE pg_catalog."POSIX",
+    stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
     stream_revision integer DEFAULT '-1'::integer NOT NULL
 );
 
