@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.9.0] - 2024-02-23
+
+- Use POSIX locale for streams and event types
+
 ## [0.8.0] - 2024-02-20
 
 - Allow float values for `subscription_pull_interval`. The default value of it was also set to `1.0`(it was `2` previously)
