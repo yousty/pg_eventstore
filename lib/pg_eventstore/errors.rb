@@ -198,6 +198,8 @@ module PgEventstore
   class MissingPartitions < Error
     attr_reader :stream, :event_types
 
+    # @param stream [PgEventstore::Stream]
+    # @param event_types [Array<String>]
     def initialize(stream, event_types)
       @stream = stream
       @event_types = event_types

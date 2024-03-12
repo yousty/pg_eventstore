@@ -32,10 +32,6 @@ module PgEventstore
       # @param events [Array<PgEventstore::Event>]
       # @return [void]
       def create_partitions(stream, events)
-        # threads = events.map(&:type).uniq.map do |event_type|
-        #   queries.partitions.create_partitions_async(stream, event_type)
-        # end
-        # raise TransactionQueries::RestartRequired if threads.any?
         missing_event_types = events.map(&:type).map(&:to_s).uniq.select do |event_type|
           queries.partitions.partition_required?(stream, event_type)
         end
