@@ -16,18 +16,27 @@ module PgEventstore
         raise SystemStreamError, stream if stream.system?
 
         queries.transactions.transaction do
-          stream = queries.streams.find_or_create_stream(stream)
-          revision = stream.stream_revision
+          revision = queries.events.stream_revision(stream) || Stream::NON_EXISTING_STREAM_REVISION
           assert_expected_revision!(revision, options[:expected_revision], stream) if options[:expected_revision]
-          events.map.with_index(1) do |event, index|
-            queries.events.insert(stream, event_modifier.call(event, revision + index))
-          end.tap do
-            queries.streams.update_stream_revision(stream, revision + events.size)
+          formatted_events = events.map.with_index(1) do |event, index|
+            event_modifier.call(event, revision + index)
           end
+          create_partitions(stream, formatted_events)
+          queries.events.insert(stream, formatted_events)
         end
       end
 
       private
+
+      # @param stream [PgEventstore::Stream]
+      # @param events [Array<PgEventstore::Event>]
+      # @return [void]
+      def create_partitions(stream, events)
+        missing_event_types = events.map(&:type).map(&:to_s).uniq.select do |event_type|
+          queries.partitions.partition_required?(stream, event_type)
+        end
+        raise MissingPartitions.new(stream, missing_event_types) if missing_event_types.any?
+      end
 
       # @param revision [Integer]
       # @param expected_revision [Symbol, Integer]
@@ -46,12 +55,12 @@ module PgEventstore
           end
 
         in [Integer, Symbol]
-          if revision == Stream::INITIAL_STREAM_REVISION && expected_revision == :stream_exists
+          if revision == Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :stream_exists
             raise WrongExpectedRevisionError.new(
               revision: revision, expected_revision: expected_revision, stream: stream
             )
           end
-          if revision > Stream::INITIAL_STREAM_REVISION && expected_revision == :no_stream
+          if revision > Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :no_stream
             raise WrongExpectedRevisionError.new(
               revision: revision, expected_revision: expected_revision, stream: stream
             )

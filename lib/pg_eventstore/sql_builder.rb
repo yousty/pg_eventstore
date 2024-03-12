@@ -9,6 +9,7 @@ module PgEventstore
       @from_value = nil
       @where_values = { 'AND' => [], 'OR' => [] }
       @join_values = []
+      @group_values = []
       @order_values = []
       @limit_value = nil
       @offset_value = nil
@@ -68,10 +69,20 @@ module PgEventstore
       self
     end
 
+    def remove_order
+      @order_values.clear
+      self
+    end
+
     # @param limit [Integer]
     # @return self
     def limit(limit)
       @limit_value = limit.to_i
+      self
+    end
+
+    def remove_limit
+      @limit_value = nil
       self
     end
 
@@ -89,10 +100,22 @@ module PgEventstore
       self
     end
 
-    def to_exec_params
-      return [single_query_sql, @positional_values] if @union_values.empty?
+    # @param sql [String]
+    # @return self
+    def group(sql)
+      @group_values.push(sql)
+      self
+    end
 
-      [union_query_sql, @positional_values]
+    def remove_group
+      @group_values.clear
+      self
+    end
+
+    def to_exec_params
+      @positional_values.clear
+      @positional_values_size = 0
+      _to_exec_params
     end
 
     protected
@@ -106,6 +129,12 @@ module PgEventstore
       @positional_values_size = val
     end
 
+    def _to_exec_params
+      return [single_query_sql, @positional_values] if @union_values.empty?
+
+      [union_query_sql, @positional_values]
+    end
+
     private
 
     # @return [String]
@@ -114,6 +143,7 @@ module PgEventstore
       sql = "SELECT #{select_sql} FROM #{@from_value}"
       sql += " #{join_sql}" unless @join_values.empty?
       sql += " WHERE #{where_sql}" unless where_sql.empty?
+      sql += " GROUP BY #{@group_values.join(', ')}" unless @group_values.empty?
       sql += " ORDER BY #{order_sql}" unless @order_values.empty?
       sql += " LIMIT #{@limit_value}" if @limit_value
       sql += " OFFSET #{@offset_value}" if @offset_value
@@ -126,7 +156,7 @@ module PgEventstore
       union_parts = ["(#{sql})"]
       union_parts += @union_values.map do |builder|
         builder.positional_values_size = @positional_values_size
-        builder_sql, values = builder.to_exec_params
+        builder_sql, values = builder._to_exec_params
         @positional_values.push(*values)
         @positional_values_size += values.size
         "(#{builder_sql})"

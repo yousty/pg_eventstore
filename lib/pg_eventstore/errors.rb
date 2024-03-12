@@ -58,9 +58,11 @@ module PgEventstore
 
     # @return [String]
     def user_friendly_message
-      return expected_stream_exists if revision == -1 && expected_revision == :stream_exists
-      return expected_no_stream if revision > -1 && expected_revision == :no_stream
-      return current_no_stream if revision == -1 && expected_revision.is_a?(Integer)
+      if revision == Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :stream_exists
+        return expected_stream_exists
+      end
+      return expected_no_stream if revision > Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :no_stream
+      return current_no_stream if revision == Stream::NON_EXISTING_STREAM_REVISION && expected_revision.is_a?(Integer)
 
       unmatched_stream_revision
     end
@@ -189,9 +191,18 @@ module PgEventstore
 
     # @return [String]
     def user_friendly_message
-      <<~TEXT.strip
-        Event#id must be present, got #{event.id.inspect} instead.
-      TEXT
+      "Event with #id #{event.id.inspect} must be present, but it could not be found."
+    end
+  end
+
+  class MissingPartitions < Error
+    attr_reader :stream, :event_types
+
+    # @param stream [PgEventstore::Stream]
+    # @param event_types [Array<String>]
+    def initialize(stream, event_types)
+      @stream = stream
+      @event_types = event_types
     end
   end
 end

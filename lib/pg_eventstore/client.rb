@@ -29,7 +29,9 @@ module PgEventstore
       result =
         Commands::Append.new(
           Queries.new(
-            streams: stream_queries, events: event_queries(middlewares(middlewares)), transactions: transaction_queries
+            partitions: partition_queries,
+            events: event_queries(middlewares(middlewares)),
+            transactions: transaction_queries
           )
         ).call(stream, *events_or_event, options: options)
       events_or_event.is_a?(Array) ? result : result.first
@@ -105,7 +107,7 @@ module PgEventstore
     # @raise [PgEventstore::StreamNotFoundError]
     def read(stream, options: {}, middlewares: nil)
       Commands::Read.
-        new(Queries.new(streams: stream_queries, events: event_queries(middlewares(middlewares)))).
+        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
@@ -114,7 +116,7 @@ module PgEventstore
     def read_paginated(stream, options: {}, middlewares: nil)
       cmd_class = stream.system? ? Commands::SystemStreamReadPaginated : Commands::RegularStreamReadPaginated
       cmd_class.
-        new(Queries.new(streams: stream_queries, events: event_queries(middlewares(middlewares)))).
+        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
@@ -133,7 +135,9 @@ module PgEventstore
       result =
         Commands::LinkTo.new(
           Queries.new(
-            streams: stream_queries, events: event_queries(middlewares(middlewares)), transactions: transaction_queries
+            partitions: partition_queries,
+            events: event_queries(middlewares(middlewares)),
+            transactions: transaction_queries
           )
         ).call(stream, *events_or_event, options: options)
       events_or_event.is_a?(Array) ? result : result.first
@@ -154,9 +158,9 @@ module PgEventstore
       PgEventstore.connection(config.name)
     end
 
-    # @return [PgEventstore::StreamQueries]
-    def stream_queries
-      StreamQueries.new(connection)
+    # @return [PgEventstore::PartitionQueries]
+    def partition_queries
+      PartitionQueries.new(connection)
     end
 
     # @return [PgEventstore::TransactionQueries]

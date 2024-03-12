@@ -3,10 +3,10 @@
 RSpec.describe PgEventstore::Commands::LinkTo do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(events: event_queries, streams: stream_queries, transactions: transaction_queries)
+    PgEventstore::Queries.new(events: event_queries, partitions: partition_queries, transactions: transaction_queries)
   end
   let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
-  let(:stream_queries) { PgEventstore::StreamQueries.new(PgEventstore.connection) }
+  let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
   let(:event_queries) do
     PgEventstore::EventQueries.new(
       PgEventstore.connection,
@@ -43,7 +43,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
         it 'returns the link event' do
           aggregate_failures do
             is_expected.to eq([PgEventstore.client.read(projection_stream).last])
-            expect(subject.first.stream.stream_revision).to eq(stream_revision)
+            expect(subject.first.stream_revision).to eq(stream_revision)
           end
         end
 
@@ -384,7 +384,10 @@ RSpec.describe PgEventstore::Commands::LinkTo do
 
         it 'raises error' do
           expect { subject }.to(
-            raise_error(PgEventstore::NotPersistedEventError, 'Event#id must be present, got nil instead.')
+            raise_error(
+              PgEventstore::NotPersistedEventError,
+              "Event with #id #{nil.inspect} must be present, but it could not be found."
+            )
           )
         end
       end
@@ -395,7 +398,12 @@ RSpec.describe PgEventstore::Commands::LinkTo do
         let(:event) { PgEventstore::Event.new(id: SecureRandom.uuid) }
 
         it 'raises error' do
-          expect { subject }.to raise_error(PG::ForeignKeyViolation)
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::NotPersistedEventError,
+              "Event with #id #{event.id.inspect} must be present, but it could not be found."
+            )
+          )
         end
       end
     end

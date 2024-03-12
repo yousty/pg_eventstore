@@ -65,4 +65,5 @@ RSpec.configure do |config|
 
   config.include EventHelpers
   config.include TestHelper
+  config.include PartitionsHelper
 end

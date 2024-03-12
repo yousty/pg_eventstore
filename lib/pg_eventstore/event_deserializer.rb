@@ -24,7 +24,9 @@ module PgEventstore
       middlewares.each do |middleware|
         middleware.deserialize(event)
       end
-      event.stream = PgEventstore::Stream.new(**attrs['stream'].transform_keys(&:to_sym)) if attrs.key?('stream')
+      event.stream = PgEventstore::Stream.new(
+        **attrs.slice('context', 'stream_name', 'stream_id').transform_keys(&:to_sym)
+      )
       event
     end
 

@@ -34,8 +34,19 @@ module PgEventstore
         pg_connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
         yield
       end
-    rescue PG::TRSerializationFailure, PG::TRDeadlockDetected
+    rescue PG::TRSerializationFailure, PG::TRDeadlockDetected#, PG::DuplicateTable
       retry
+    rescue MissingPartitions => error
+      error.event_types.each do |event_type|
+        transaction do
+          partition_queries.create_partitions(error.stream, event_type)
+        end
+      end
+      retry
+    end
+
+    def partition_queries
+      PartitionQueries.new(connection)
     end
   end
 end

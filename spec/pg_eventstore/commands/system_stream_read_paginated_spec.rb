@@ -3,9 +3,9 @@
 RSpec.describe PgEventstore::Commands::SystemStreamReadPaginated do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(events: event_queries, streams: stream_queries)
+    PgEventstore::Queries.new(events: event_queries, partitions: partition_queries)
   end
-  let(:stream_queries) { PgEventstore::StreamQueries.new(PgEventstore.connection) }
+  let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
   let(:event_queries) do
     PgEventstore::EventQueries.new(
       PgEventstore.connection,
