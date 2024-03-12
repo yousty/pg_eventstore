@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.10.1] - 2024-03-12
+
+- Handle edge case when creating partitions
+
 ## [0.10.0] - 2024-03-12
 
 - Reimplement db structure
