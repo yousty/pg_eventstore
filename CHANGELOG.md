@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.10.0] - 2024-03-12
+
+- Reimplement db structure
+- Optimize `#append_to_stream` method - it now produces one `INSERT` query when publishing multiple events
+
 ## [0.9.0] - 2024-02-23
 
 - Use POSIX locale for streams and event types
