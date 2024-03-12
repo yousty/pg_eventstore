@@ -15,7 +15,7 @@ module PgEventstore
       # @return [Array<PgEventstore::Event>]
       # @raise [PgEventstore::StreamNotFoundError]
       def call(stream, options: {})
-        stream = queries.streams.find_stream(stream) || raise(StreamNotFoundError, stream) unless stream.all_stream?
+        queries.events.stream_revision(stream) || raise(StreamNotFoundError, stream) unless stream.all_stream?
 
         queries.events.stream_events(stream, options)
       end

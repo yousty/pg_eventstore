@@ -79,10 +79,9 @@ module PgEventstore
       return [] if query_options.empty?
 
       final_builder = union_builders(query_options.map { |id, opts| query_builder(id, opts) })
-      raw_events = connection.with do |conn|
+      connection.with do |conn|
         conn.exec_params(*final_builder.to_exec_params)
       end.to_a
-      preloader.preload_related_objects(raw_events)
     end
 
     # @param id [Integer] subscription's id
@@ -128,9 +127,7 @@ module PgEventstore
     # @param options [Hash] query options
     # @return [PgEventstore::SQLBuilder]
     def query_builder(id, options)
-      builder = PgEventstore::QueryBuilders::EventsFiltering.subscriptions_events_filtering(
-        event_type_queries.include_event_types_ids(options)
-      ).to_sql_builder
+      builder = PgEventstore::QueryBuilders::EventsFiltering.subscriptions_events_filtering(options).to_sql_builder
       builder.select("#{id} as runner_id")
     end
 
@@ -150,11 +147,6 @@ module PgEventstore
     # @return [PgEventstore::EventTypeQueries]
     def event_type_queries
       EventTypeQueries.new(connection)
-    end
-
-    # @return [PgEventstore::Preloader]
-    def preloader
-      Preloader.new(connection)
     end
 
     # @param hash [Hash]

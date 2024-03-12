@@ -5,7 +5,7 @@ require 'digest/md5'
 module PgEventstore
   class Stream
     SYSTEM_STREAM_PREFIX = '$'
-    INITIAL_STREAM_REVISION = -1 # this is the default value of streams.stream_revision column
+    NON_EXISTING_STREAM_REVISION = -1
 
     class << self
       # Produces "all" stream instance. "all" stream does not represent any specific stream. Instead, it indicates that
@@ -18,20 +18,15 @@ module PgEventstore
       end
     end
 
-    attr_reader :context, :stream_name, :stream_id, :id
-    attr_accessor :stream_revision
+    attr_reader :context, :stream_name, :stream_id
 
     # @param context [String]
     # @param stream_name [String]
     # @param stream_id [String]
-    # @param id [Integer, nil] internal stream's id, read only
-    # @param stream_revision [Integer, nil] current stream revision, read only
-    def initialize(context:, stream_name:, stream_id:, id: nil, stream_revision: nil)
+    def initialize(context:, stream_name:, stream_id:)
       @context = context
       @stream_name = stream_name
       @stream_id = stream_id
-      @id = id
-      @stream_revision = stream_revision
     end
 
     # @return [Boolean]

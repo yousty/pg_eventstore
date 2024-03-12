@@ -14,7 +14,7 @@ RSpec.describe PgEventstore::EventDeserializer do
     end
     let(:raw_events) do
       PgEventstore.connection.with do |c|
-        c.exec('SELECT events.*, event_types.type as type FROM events JOIN event_types ON event_types.id = events.event_type_id LIMIT 1')
+        c.exec('SELECT events.* FROM events LIMIT 1')
       end.to_a
     end
 
@@ -50,27 +50,12 @@ RSpec.describe PgEventstore::EventDeserializer do
 
       it 'has correct attributes' do
         aggregate_failures do
-          expect(subject.stream).to be_nil
           expect(subject.id).to eq(event.id)
+          expect(subject.stream).to eq(stream)
           expect(subject.type).to eq('some-event')
           expect(subject.data).to eq('foo' => 'bar')
           expect(subject.metadata).to eq('bar' => 'baz')
           expect(subject.stream_revision).to eq(0)
-        end
-      end
-
-      context 'when raw events contains info about stream' do
-        let(:raw_events) do
-          PgEventstore.connection.with do |c|
-            c.exec('SELECT events.*, row_to_json(streams.*) as stream FROM events JOIN streams on streams.id = events.stream_id LIMIT 1')
-          end
-        end
-
-        it 'includes stream attributes' do
-          aggregate_failures do
-            expect(subject.stream).to eq(stream)
-            expect(subject.stream.id).to be_an(Integer)
-          end
         end
       end
     end
@@ -79,12 +64,19 @@ RSpec.describe PgEventstore::EventDeserializer do
   describe '#deserialize' do
     subject { instance.deserialize(attrs) }
 
-    let(:attrs) { { 'id' => 123 } }
+    let(:attrs) do
+      { 'id' => 123, 'context' => 'MyAwesomeCtx', 'stream_name' => 'Foo', 'stream_id' => 'Bar', 'type' => 'Foo' }
+    end
 
     it 'deserializes raw attributes into Event class instance' do
       aggregate_failures do
         is_expected.to be_a(PgEventstore::Event)
         expect(subject.id).to eq(attrs['id'])
+        expect(subject.stream).to be_a(PgEventstore::Stream)
+        expect(subject.type).to eq('Foo')
+        expect(subject.stream.context).to eq('MyAwesomeCtx')
+        expect(subject.stream.stream_name).to eq('Foo')
+        expect(subject.stream.stream_id).to eq('Bar')
       end
     end
 
@@ -100,22 +92,6 @@ RSpec.describe PgEventstore::EventDeserializer do
 
       it 'transforms an event using those middlewares' do
         expect(subject.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET, 'foo' => 'bar')
-      end
-    end
-
-    context 'when "stream" attribute is present' do
-      let(:attrs) do
-        { 'id' => 123, 'stream' => { 'context' => 'MyAwesomeCtx', 'stream_name' => 'Foo', 'stream_id' => 'Bar' } }
-      end
-
-      it 'deserializes it into Stream class instance' do
-        aggregate_failures do
-          is_expected.to be_a(PgEventstore::Event)
-          expect(subject.stream).to be_a(PgEventstore::Stream)
-          expect(subject.stream.context).to eq('MyAwesomeCtx')
-          expect(subject.stream.stream_name).to eq('Foo')
-          expect(subject.stream.stream_id).to eq('Bar')
-        end
       end
     end
   end

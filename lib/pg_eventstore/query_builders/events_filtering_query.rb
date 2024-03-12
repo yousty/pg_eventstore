@@ -28,7 +28,7 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def all_stream_filtering(options)
           event_filter = new
-          options in { filter: { event_type_ids: Array => event_type_ids } }
+          options in { filter: { event_types: Array => event_type_ids } }
           event_filter.add_event_types(event_type_ids)
           event_filter.add_limit(options[:max_count])
           event_filter.resolve_links(options[:resolve_link_tos])
@@ -44,11 +44,11 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def specific_stream_filtering(stream, options)
           event_filter = new
-          options in { filter: { event_type_ids: Array => event_type_ids } }
+          options in { filter: { event_types: Array => event_type_ids } }
           event_filter.add_event_types(event_type_ids)
           event_filter.add_limit(options[:max_count])
           event_filter.resolve_links(options[:resolve_link_tos])
-          event_filter.add_stream(stream)
+          event_filter.add_stream_attrs(**stream.to_hash)
           event_filter.add_revision(options[:from_revision], options[:direction])
           event_filter.add_stream_direction(options[:direction])
           event_filter
@@ -60,8 +60,6 @@ module PgEventstore
           SQLBuilder.new.
             select('events.*').
             from('events').
-            join('JOIN streams ON streams.id = events.stream_id').
-            join('JOIN event_types ON event_types.id = events.event_type_id').
             limit(DEFAULT_LIMIT)
       end
 
@@ -75,27 +73,21 @@ module PgEventstore
 
         stream_attrs.compact!
         sql = stream_attrs.map do |attr, _|
-          "streams.#{attr} = ?"
+          "events.#{attr} = ?"
         end.join(" AND ")
         @sql_builder.where_or(sql, *stream_attrs.values)
       end
 
-      # @param stream [PgEventstore::Stream]
+      # @param event_types [Array<String>, nil]
       # @return [void]
-      def add_stream(stream)
-        @sql_builder.where("streams.id = ?", stream.id)
-      end
+      def add_event_types(event_types)
+        return if event_types.nil?
+        return if event_types.empty?
 
-      # @param event_type_ids [Array<Integer>, nil]
-      # @return [void]
-      def add_event_types(event_type_ids)
-        return if event_type_ids.nil?
-        return if event_type_ids.empty?
-
-        sql = event_type_ids.size.times.map do
+        sql = event_types.size.times.map do
           "?"
         end.join(", ")
-        @sql_builder.where("events.event_type_id IN (#{sql})", *event_type_ids)
+        @sql_builder.where("events.type IN (#{sql})", *event_types)
       end
 
       # @param revision [Integer, nil]

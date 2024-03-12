@@ -46,52 +46,24 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 SET default_tablespace = '';
 
-SET default_table_access_method = heap;
-
---
--- Name: event_types; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.event_types (
-    id bigint NOT NULL,
-    type character varying NOT NULL COLLATE pg_catalog."POSIX"
-);
-
-
---
--- Name: event_types_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.event_types_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: event_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.event_types_id_seq OWNED BY public.event_types.id;
-
-
 --
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.events (
     id uuid DEFAULT public.gen_random_uuid() NOT NULL,
-    stream_id bigint NOT NULL,
+    context character varying NOT NULL COLLATE pg_catalog."POSIX",
+    stream_name character varying NOT NULL COLLATE pg_catalog."POSIX",
+    stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
     global_position bigint NOT NULL,
     stream_revision integer NOT NULL,
     data jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     link_id uuid,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    event_type_id bigint NOT NULL
-);
+    type character varying NOT NULL COLLATE pg_catalog."POSIX"
+)
+PARTITION BY LIST (context);
 
 
 --
@@ -113,6 +85,8 @@ CREATE SEQUENCE public.events_global_position_seq
 ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_position;
 
 
+SET default_table_access_method = heap;
+
 --
 -- Name: migrations; Type: TABLE; Schema: public; Owner: -
 --
@@ -123,23 +97,23 @@ CREATE TABLE public.migrations (
 
 
 --
--- Name: streams; Type: TABLE; Schema: public; Owner: -
+-- Name: partitions; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.streams (
+CREATE TABLE public.partitions (
     id bigint NOT NULL,
     context character varying NOT NULL COLLATE pg_catalog."POSIX",
-    stream_name character varying NOT NULL COLLATE pg_catalog."POSIX",
-    stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
-    stream_revision integer DEFAULT '-1'::integer NOT NULL
+    stream_name character varying COLLATE pg_catalog."POSIX",
+    event_type character varying COLLATE pg_catalog."POSIX",
+    table_name character varying NOT NULL COLLATE pg_catalog."POSIX"
 );
 
 
 --
--- Name: streams_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: partitions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.streams_id_seq
+CREATE SEQUENCE public.partitions_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -148,10 +122,10 @@ CREATE SEQUENCE public.streams_id_seq
 
 
 --
--- Name: streams_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: partitions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.streams_id_seq OWNED BY public.streams.id;
+ALTER SEQUENCE public.partitions_id_seq OWNED BY public.partitions.id;
 
 
 --
@@ -283,13 +257,6 @@ ALTER SEQUENCE public.subscriptions_set_commands_id_seq OWNED BY public.subscrip
 
 
 --
--- Name: event_types id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.event_types ALTER COLUMN id SET DEFAULT nextval('public.event_types_id_seq'::regclass);
-
-
---
 -- Name: events global_position; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -297,10 +264,10 @@ ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT nextval(
 
 
 --
--- Name: streams id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: partitions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.streams ALTER COLUMN id SET DEFAULT nextval('public.streams_id_seq'::regclass);
+ALTER TABLE ONLY public.partitions ALTER COLUMN id SET DEFAULT nextval('public.partitions_id_seq'::regclass);
 
 
 --
@@ -325,27 +292,19 @@ ALTER TABLE ONLY public.subscriptions_set_commands ALTER COLUMN id SET DEFAULT n
 
 
 --
--- Name: event_types event_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.event_types
-    ADD CONSTRAINT event_types_pkey PRIMARY KEY (id);
-
-
---
 -- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT events_pkey PRIMARY KEY (context, stream_name, type, global_position);
 
 
 --
--- Name: streams streams_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: partitions partitions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.streams
-    ADD CONSTRAINT streams_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.partitions
+    ADD CONSTRAINT partitions_pkey PRIMARY KEY (id);
 
 
 --
@@ -381,45 +340,66 @@ ALTER TABLE ONLY public.subscriptions_set
 
 
 --
--- Name: idx_event_types_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_event_types_type ON public.event_types USING btree (type);
-
-
---
--- Name: idx_events_event_type_id_and_global_position; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_event_type_id_and_global_position ON public.events USING btree (event_type_id, global_position);
-
-
---
 -- Name: idx_events_global_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_global_position ON public.events USING btree (global_position);
+CREATE INDEX idx_events_global_position ON ONLY public.events USING btree (global_position);
+
+
+--
+-- Name: idx_events_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_id ON ONLY public.events USING btree (id);
 
 
 --
 -- Name: idx_events_link_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_link_id ON public.events USING btree (link_id);
+CREATE INDEX idx_events_link_id ON ONLY public.events USING btree (link_id);
 
 
 --
--- Name: idx_events_stream_id_and_revision; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_events_stream_id_and_global_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_stream_id_and_revision ON public.events USING btree (stream_id, stream_revision);
+CREATE INDEX idx_events_stream_id_and_global_position ON ONLY public.events USING btree (stream_id, global_position);
 
 
 --
--- Name: idx_streams_context_and_stream_name_and_stream_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_events_stream_id_and_stream_revision; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_streams_context_and_stream_name_and_stream_id ON public.streams USING btree (context, stream_name, stream_id);
+CREATE INDEX idx_events_stream_id_and_stream_revision ON ONLY public.events USING btree (stream_id, stream_revision);
+
+
+--
+-- Name: idx_partitions_by_context; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_partitions_by_context ON public.partitions USING btree (context) WHERE ((stream_name IS NULL) AND (event_type IS NULL));
+
+
+--
+-- Name: idx_partitions_by_context_and_stream_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_partitions_by_context_and_stream_name ON public.partitions USING btree (context, stream_name) WHERE (event_type IS NULL);
+
+
+--
+-- Name: idx_partitions_by_context_and_stream_name_and_event_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_partitions_by_context_and_stream_name_and_event_type ON public.partitions USING btree (context, stream_name, event_type);
+
+
+--
+-- Name: idx_partitions_by_partition_table_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_partitions_by_partition_table_name ON public.partitions USING btree (table_name);
 
 
 --
@@ -441,30 +421,6 @@ CREATE UNIQUE INDEX idx_subscription_commands_subscription_id_and_name ON public
 --
 
 CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING btree (set, name);
-
-
---
--- Name: events events_event_type_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_event_type_fk FOREIGN KEY (event_type_id) REFERENCES public.event_types(id);
-
-
---
--- Name: events events_link_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_link_fk FOREIGN KEY (link_id) REFERENCES public.events(id) ON DELETE CASCADE;
-
-
---
--- Name: events events_stream_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_stream_fk FOREIGN KEY (stream_id) REFERENCES public.streams(id) ON DELETE CASCADE;
 
 
 --

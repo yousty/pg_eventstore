@@ -3,10 +3,10 @@
 RSpec.describe PgEventstore::Commands::Append do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(events: event_queries, streams: stream_queries, transactions: transaction_queries)
+    PgEventstore::Queries.new(events: event_queries, partitions: partition_queries, transactions: transaction_queries)
   end
   let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
-  let(:stream_queries) { PgEventstore::StreamQueries.new(PgEventstore.connection) }
+  let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
   let(:event_queries) do
     PgEventstore::EventQueries.new(
       PgEventstore.connection,
@@ -33,7 +33,7 @@ RSpec.describe PgEventstore::Commands::Append do
         it 'returns the appended event' do
           aggregate_failures do
             is_expected.to eq([PgEventstore.client.read(stream).last])
-            expect(subject.first.stream.stream_revision).to eq(stream_revision)
+            expect(subject.first.stream_revision).to eq(stream_revision)
           end
         end
 

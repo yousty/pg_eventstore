@@ -13,7 +13,7 @@ module PgEventstore
       # @raise [PgEventstore::WrongExpectedRevisionError]
       # @raise [PgEventstore::NotPersistedEventError]
       def call(stream, *events, options: {})
-        events.each(&method(:check_id_presence))
+        events.each(&method(:check_event_presence))
         append_cmd = Append.new(queries)
         append_cmd.call(stream, *events, options: options, event_modifier: EventModifiers::PrepareLinkEvent)
       end
@@ -23,8 +23,8 @@ module PgEventstore
       # Checks if Event#id is present. An event must have the #id value in order to be linked.
       # @param event [PgEventstore::Event]
       # @return [void]
-      def check_id_presence(event)
-        return unless event.id.nil?
+      def check_event_presence(event)
+        return if queries.events.event_exists?(event.id)
 
         raise NotPersistedEventError, event
       end

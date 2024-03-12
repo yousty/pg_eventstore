@@ -2,26 +2,30 @@
 
 require 'pg_eventstore'
 require 'benchmark'
+require 'securerandom'
 require_relative 'stats'
 
 class Benchmarks
   EVENT_TYPES = %w[Foo Bar Baz Lorem Ipsum Dolor Sit Amet].freeze
   CONTEXTS = %w[SomeContext AnotherContext FooCtx Ctx BarCtx BazCtx BazBarCtx FooBarCtx FooBazCtx].freeze
+  STREAM_NAMES = %w[User Post Article Comment Reaction Chapter UserProfile Book].freeze
 
   class << self
     # Populate db with some data, so that tests are performed over non-empty db
     def warm_up
       puts "Warming up..."
-      100.times do |i|
-        stream = PgEventstore::Stream.new(
-          context: CONTEXTS.sample,
-          stream_name: "some-stream-#{i}",
-          stream_id: "#{Process.pid}-#{Thread.current.__id__}-#{i}"
-        )
-        events = 100.times.map do |j|
-          PgEventstore::Event.new(data: { foo: "#{i}-#{j}" }, type: EVENT_TYPES.sample)
+      CONTEXTS.each do |context|
+        STREAM_NAMES.each do |stream_name|
+          stream = PgEventstore::Stream.new(
+            context: context,
+            stream_name: stream_name,
+            stream_id: SecureRandom.uuid
+          )
+          events = 1000.times.map do |j|
+            PgEventstore::Event.new(data: { foo: "foo-#{j}" }, type: EVENT_TYPES.sample)
+          end
+          PgEventstore.client.append_to_stream(stream, events)
         end
-        PgEventstore.client.append_to_stream(stream, events)
       end
     end
   end
@@ -65,7 +69,7 @@ class Benchmarks
     1_000.times do |i|
       stream = PgEventstore::Stream.new(
         context: CONTEXTS[i % CONTEXTS.size],
-        stream_name: "some-stream-#{i}",
+        stream_name: STREAM_NAMES[i % STREAM_NAMES.size],
         stream_id: "#{Process.pid}-#{Thread.current.__id__}-#{i}"
       )
       10.times.each do |j|
@@ -79,7 +83,7 @@ class Benchmarks
     10.times do |i|
       stream = PgEventstore::Stream.new(
         context: CONTEXTS[i % CONTEXTS.size],
-        stream_name: "some-stream-#{i}",
+        stream_name: STREAM_NAMES[i % STREAM_NAMES.size],
         stream_id: "#{Process.pid}-#{Thread.current.__id__}-#{i}"
       )
       1_000.times.each do |j|
