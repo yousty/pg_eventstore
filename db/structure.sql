@@ -396,6 +396,13 @@ CREATE UNIQUE INDEX idx_partitions_by_context_and_stream_name_and_event_type ON 
 
 
 --
+-- Name: idx_partitions_by_event_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_by_event_type ON public.partitions USING btree (event_type);
+
+
+--
 -- Name: idx_partitions_by_partition_table_name; Type: INDEX; Schema: public; Owner: -
 --
 

@@ -14,3 +14,4 @@ CREATE UNIQUE INDEX idx_partitions_by_context ON public.partitions USING btree (
 CREATE UNIQUE INDEX idx_partitions_by_context_and_stream_name ON public.partitions USING btree (context, stream_name) WHERE event_type IS NULL;
 CREATE UNIQUE INDEX idx_partitions_by_context_and_stream_name_and_event_type ON public.partitions USING btree (context, stream_name, event_type);
 CREATE UNIQUE INDEX idx_partitions_by_partition_table_name ON public.partitions USING btree (table_name);
+CREATE INDEX idx_partitions_by_event_type ON public.partitions USING btree (event_type);
