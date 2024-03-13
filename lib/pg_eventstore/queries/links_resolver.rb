@@ -16,8 +16,10 @@ module PgEventstore
       ids = raw_events.map { _1['link_id'] }.compact.uniq
       return raw_events if ids.empty?
 
-      original_events = connection.with do |conn|
-        conn.exec_params('select * from events where id = ANY($1::uuid[])', [ids])
+      original_events = ids.each_slice(100).flat_map do |ids_part|
+        connection.with do |conn|
+          conn.exec_params('select * from events where id = ANY($1::uuid[])', [ids_part])
+        end.to_a
       end.to_h { |attrs| [attrs['id'], attrs] }
 
       raw_events.map do |attrs|
