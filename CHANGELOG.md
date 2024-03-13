@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.10.2] - 2024-03-13
+
+- Review the approach to resolve link events 
+- Fix subscriptions restart interval option not being processed correctly
+
 ## [0.10.1] - 2024-03-12
 
 - Handle edge case when creating partitions
