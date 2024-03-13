@@ -130,6 +130,7 @@ module PgEventstore
         chunk_query_interval: chunk_query_interval,
         last_chunk_fed_at: Time.at(0).utc,
         last_chunk_greatest_position: nil,
+        time_between_restarts: time_between_restarts,
         state: RunnerState::STATES[:initial]
       )
     end

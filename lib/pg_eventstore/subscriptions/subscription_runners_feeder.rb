@@ -15,9 +15,8 @@ module PgEventstore
       runners = runners.select(&:running?).select(&:time_to_feed?)
       return if runners.empty?
 
-      runners_query_options = runners.map { |runner| [runner.id, runner.next_chunk_query_opts] }
-      raw_events = subscription_queries.subscriptions_events(runners_query_options)
-      grouped_events = raw_events.group_by { |attrs| attrs['runner_id'] }
+      runners_query_options = runners.to_h { |runner| [runner.id, runner.next_chunk_query_opts] }
+      grouped_events = subscription_queries.subscriptions_events(runners_query_options)
       runners.each do |runner|
         runner.feed(grouped_events[runner.id]) if grouped_events[runner.id]
       end

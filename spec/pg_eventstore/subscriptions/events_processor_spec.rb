@@ -48,6 +48,15 @@ RSpec.describe PgEventstore::EventsProcessor do
         expect(global_position_receiver).to have_received(:call).with(nil)
       end
     end
+
+    context 'when last event is a link event' do
+      let(:event2) { { 'id' => SecureRandom.uuid, 'global_position' => 3, 'link' => { 'global_position' => 5 } } }
+
+      it "passes link's global position into :feed action" do
+        subject
+        expect(global_position_receiver).to have_received(:call).with(5)
+      end
+    end
   end
 
   describe '#events_left_in_chunk' do
@@ -171,7 +180,10 @@ RSpec.describe PgEventstore::EventsProcessor do
     let(:on_process_cbx) { proc { |global_position| global_position_receiver.call(global_position) } }
     let(:global_position_receiver) { double('Global position receiver') }
     let(:raw_events) do
-      [{ 'id' => SecureRandom.uuid, 'global_position' => 123 }, { 'id' => SecureRandom.uuid, 'global_position' => 124 }]
+      [
+        { 'id' => SecureRandom.uuid, 'global_position' => 123 },
+        { 'id' => SecureRandom.uuid, 'global_position' => 124, 'link' => { 'global_position' => 125 } }
+      ]
     end
 
     before do
@@ -196,7 +208,7 @@ RSpec.describe PgEventstore::EventsProcessor do
         # After half a second we perform the same test over the same object, but with different expectation to prove
         # that the action is actually asynchronous
         expect(global_position_receiver).to have_received(:call).with(123)
-        expect(global_position_receiver).to have_received(:call).with(124)
+        expect(global_position_receiver).to have_received(:call).with(125)
       end
     end
   end

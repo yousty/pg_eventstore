@@ -27,6 +27,7 @@ module PgEventstore
       event.stream = PgEventstore::Stream.new(
         **attrs.slice('context', 'stream_name', 'stream_id').transform_keys(&:to_sym)
       )
+      event.link = without_middlewares.deserialize(attrs['link']) if attrs.key?('link')
       event
     end
 

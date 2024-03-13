@@ -31,7 +31,6 @@ module PgEventstore
           options in { filter: { event_types: Array => event_type_ids } }
           event_filter.add_event_types(event_type_ids)
           event_filter.add_limit(options[:max_count])
-          event_filter.resolve_links(options[:resolve_link_tos])
           options in { filter: { streams: Array => streams } }
           streams&.each { |attrs| event_filter.add_stream_attrs(**attrs) }
           event_filter.add_global_position(options[:from_position], options[:direction])
@@ -47,7 +46,6 @@ module PgEventstore
           options in { filter: { event_types: Array => event_type_ids } }
           event_filter.add_event_types(event_type_ids)
           event_filter.add_limit(options[:max_count])
-          event_filter.resolve_links(options[:resolve_link_tos])
           event_filter.add_stream_attrs(**stream.to_hash)
           event_filter.add_revision(options[:from_revision], options[:direction])
           event_filter.add_stream_direction(options[:direction])
@@ -126,17 +124,6 @@ module PgEventstore
         return unless limit
 
         @sql_builder.limit(limit)
-      end
-
-      # @param should_resolve [Boolean]
-      # @return [void]
-      def resolve_links(should_resolve)
-        return unless should_resolve
-
-        @sql_builder.
-          unselect.
-          select("(COALESCE(original_events.*, events.*)).*").
-          join("LEFT JOIN events original_events ON original_events.id = events.link_id")
       end
 
       # @return [PgEventstore::SQLBuilder]

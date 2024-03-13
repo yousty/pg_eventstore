@@ -20,7 +20,7 @@ module PgEventstore
     # @param raw_events [Array<Hash>]
     # @return [void]
     def feed(raw_events)
-      callbacks.run_callbacks(:feed, raw_events.last&.dig('global_position'))
+      callbacks.run_callbacks(:feed, global_position(raw_events.last))
       @raw_events.push(*raw_events)
     end
 
@@ -35,7 +35,7 @@ module PgEventstore
     # @param raw_event [Hash]
     # @return [void]
     def process_event(raw_event)
-      callbacks.run_callbacks(:process, raw_event['global_position']) do
+      callbacks.run_callbacks(:process, global_position(raw_event)) do
         @handler.call(raw_event)
       end
     end
@@ -67,6 +67,14 @@ module PgEventstore
 
     def change_state(...)
       callbacks.run_callbacks(:change_state, ...)
+    end
+
+    # @param raw_event [Hash, nil]
+    # @return [Integer, nil]
+    def global_position(raw_event)
+      return unless raw_event
+
+      raw_event['link'] ? raw_event['link']['global_position'] : raw_event['global_position']
     end
   end
 end

@@ -73,15 +73,20 @@ module PgEventstore
       deserialize(pg_result.to_a.first)
     end
 
-    # @param query_options [Array<Array<Integer, Hash>>] array of runner ids and query options
-    # @return [Array<Hash>] array of raw events
+    # @param query_options [Hash{Integer => Hash}] runner_id/query options association
+    # @return [Hash{Integer => Hash}] runner_id/events association
     def subscriptions_events(query_options)
-      return [] if query_options.empty?
+      return {} if query_options.empty?
 
       final_builder = union_builders(query_options.map { |id, opts| query_builder(id, opts) })
-      connection.with do |conn|
+      raw_events = connection.with do |conn|
         conn.exec_params(*final_builder.to_exec_params)
       end.to_a
+      raw_events.group_by { _1['runner_id'] }.to_h do |runner_id, runner_raw_events|
+        next [runner_id, runner_raw_events] unless query_options[runner_id][:resolve_link_tos]
+
+        [runner_id, links_resolver.resolve(runner_raw_events)]
+      end
     end
 
     # @param id [Integer] subscription's id
@@ -144,9 +149,9 @@ module PgEventstore
       TransactionQueries.new(connection)
     end
 
-    # @return [PgEventstore::EventTypeQueries]
-    def event_type_queries
-      EventTypeQueries.new(connection)
+    # @return [PgEventstore::LinksResolver]
+    def links_resolver
+      LinksResolver.new(connection)
     end
 
     # @param hash [Hash]

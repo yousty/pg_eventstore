@@ -9,6 +9,7 @@ require_relative 'queries/subscription_queries'
 require_relative 'queries/subscriptions_set_queries'
 require_relative 'queries/subscription_command_queries'
 require_relative 'queries/subscriptions_set_command_queries'
+require_relative 'queries/links_resolver'
 
 module PgEventstore
   # @!visibility private

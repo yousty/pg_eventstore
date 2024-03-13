@@ -478,7 +478,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
   describe "on runner's death" do
     subject do
       instance.start
-      sleep 1.1 # Let the feeder's runner restart
+      sleep 1
     end
 
     let(:error) { StandardError.new('gg wp') }
@@ -525,8 +525,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
     it 'feeds subscription runners' do
       subject
-      sleep 1.1 # Sleep an additional second to let the runner to process async action after the restart
-      expect(runners_feeder).to have_received(:feed)
+      expect(runners_feeder).to have_received(:feed).at_least(:once)
     end
 
     context 'when max number of restarts is reached' do

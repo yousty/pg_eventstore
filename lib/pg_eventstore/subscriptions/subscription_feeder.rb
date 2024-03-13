@@ -21,7 +21,7 @@ module PgEventstore
       @max_retries = max_retries
       @retries_interval = retries_interval
       @commands_handler = CommandsHandler.new(@config_name, self, @runners)
-      @basic_runner = BasicRunner.new(1, 0)
+      @basic_runner = BasicRunner.new(0.2, 0)
       @force_lock = false
       attach_runner_callbacks
     end

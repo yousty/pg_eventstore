@@ -114,69 +114,53 @@ RSpec.describe PgEventstore::SubscriptionQueries do
   describe '#subscriptions_events' do
     subject { instance.subscriptions_events(query_options) }
 
-    let(:query_options) { [] }
+    let(:query_options) { {} }
 
     context 'when query_options are absent' do
-      it { is_expected.to eq([]) }
+      it { is_expected.to eq({}) }
     end
 
     context 'when query_options are present' do
       let(:query_options) do
-        [
-          [runner_id1, { filter: { event_types: ['Foo'] } }],
-          [runner_id2, { filter: { streams: [{ context: 'BarCtx' }] } }]
-        ]
+        {
+          runner_id1 => { filter: { event_types: ['Foo'] } },
+          runner_id2 => { filter: { streams: [{ context: 'BarCtx' }] } }
+        }
       end
       let(:runner_id1) { 1 }
       let(:runner_id2) { 2 }
 
       let(:stream1) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'foo', stream_id: '1') }
       let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'foo', stream_id: '2') }
-      let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo') }
-      let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Bar') }
-      let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo') }
-
-      before do
-        PgEventstore.client.append_to_stream(stream1, [event1, event2])
-        PgEventstore.client.append_to_stream(stream2, event3)
+      let!(:event1) do
+        event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo')
+        PgEventstore.client.append_to_stream(stream1, event)
       end
+      let!(:event2) do
+        event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Bar')
+        PgEventstore.client.append_to_stream(stream1, event)
+      end
+      let!(:event3) do
+        event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo')
+        PgEventstore.client.append_to_stream(stream2, event)
+      end
+      let!(:link) { PgEventstore.client.link_to(stream1, event3) }
 
       it 'returns events attributes along with the related runner ids' do
         is_expected.to(
           match(
-            [
-              a_hash_including(
-                'id' => event1.id, 'runner_id' => runner_id1, 'type' => 'Foo',
-                **stream1.to_hash.transform_keys(&:to_s)
-              ),
-              a_hash_including(
-                'id' => event3.id, 'runner_id' => runner_id1, 'type' => 'Foo',
-                **stream2.to_hash.transform_keys(&:to_s)
-              ),
-              a_hash_including(
-                'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
-                **stream1.to_hash.transform_keys(&:to_s)
-              ),
-              a_hash_including(
-                'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
-                **stream1.to_hash.transform_keys(&:to_s)
-              ),
-            ]
-          )
-        )
-      end
-
-      context 'when only one set of query options is given' do
-        let(:query_options) do
-          [
-            [runner_id2, { filter: { streams: [{ context: 'BarCtx' }] } }]
-          ]
-        end
-
-        it 'returns the result only for it' do
-          is_expected.to(
-            match(
-              [
+            {
+              runner_id1 => [
+                a_hash_including(
+                  'id' => event1.id, 'runner_id' => runner_id1, 'type' => 'Foo',
+                  **stream1.to_hash.transform_keys(&:to_s)
+                ),
+                a_hash_including(
+                  'id' => event3.id, 'runner_id' => runner_id1, 'type' => 'Foo',
+                  **stream2.to_hash.transform_keys(&:to_s)
+                )
+              ],
+              runner_id2 => [
                 a_hash_including(
                   'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
                   **stream1.to_hash.transform_keys(&:to_s)
@@ -184,7 +168,40 @@ RSpec.describe PgEventstore::SubscriptionQueries do
                 a_hash_including(
                   'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
                   **stream1.to_hash.transform_keys(&:to_s)
-                )
+                ),
+                a_hash_including(
+                  'id' => link.id, 'runner_id' => runner_id2, 'type' => PgEventstore::Event::LINK_TYPE,
+                  **stream1.to_hash.transform_keys(&:to_s)
+                ),
+              ]
+            }
+          )
+        )
+      end
+
+      context 'when :resolve_link_tos option is given' do
+        let(:query_options) do
+          {
+            runner_id2 => { filter: { streams: [{ context: 'BarCtx' }] }, resolve_link_tos: true }
+          }
+        end
+
+        it 'resolves links' do
+          is_expected.to(
+            match(
+              runner_id2 => [
+                a_hash_including(
+                  'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
+                  **stream1.to_hash.transform_keys(&:to_s)
+                ),
+                a_hash_including(
+                  'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
+                  **stream1.to_hash.transform_keys(&:to_s)
+                ),
+                a_hash_including(
+                  'id' => event3.id, 'runner_id' => runner_id2, 'type' => 'Foo',
+                  **stream2.to_hash.transform_keys(&:to_s)
+                ),
               ]
             )
           )

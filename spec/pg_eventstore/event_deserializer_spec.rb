@@ -68,15 +68,17 @@ RSpec.describe PgEventstore::EventDeserializer do
       { 'id' => 123, 'context' => 'MyAwesomeCtx', 'stream_name' => 'Foo', 'stream_id' => 'Bar', 'type' => 'Foo' }
     end
 
-    it 'deserializes raw attributes into Event class instance' do
-      aggregate_failures do
-        is_expected.to be_a(PgEventstore::Event)
-        expect(subject.id).to eq(attrs['id'])
-        expect(subject.stream).to be_a(PgEventstore::Stream)
-        expect(subject.type).to eq('Foo')
-        expect(subject.stream.context).to eq('MyAwesomeCtx')
-        expect(subject.stream.stream_name).to eq('Foo')
-        expect(subject.stream.stream_id).to eq('Bar')
+    shared_examples 'attributes deserialization' do
+      it 'deserializes raw attributes into Event class instance' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::Event)
+          expect(subject.id).to eq(attrs['id'])
+          expect(subject.stream).to be_a(PgEventstore::Stream)
+          expect(subject.type).to eq('Foo')
+          expect(subject.stream.context).to eq('MyAwesomeCtx')
+          expect(subject.stream.stream_name).to eq('Foo')
+          expect(subject.stream.stream_id).to eq('Bar')
+        end
       end
     end
 
@@ -92,6 +94,30 @@ RSpec.describe PgEventstore::EventDeserializer do
 
       it 'transforms an event using those middlewares' do
         expect(subject.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET, 'foo' => 'bar')
+      end
+    end
+
+    context 'when deserializing resolved link event' do
+      let(:attrs) do
+        super().merge('link' => link_attrs)
+      end
+      let(:link_attrs) do
+        {
+          'id' => 124, 'link_id' => 123, 'type' => PgEventstore::Event::LINK_TYPE,
+          'context' => 'MyAwesomeCtx', 'stream_name' => 'Bar', 'stream_id' => 'Baz'
+        }
+      end
+
+      it_behaves_like 'attributes deserialization'
+      it 'deserializes link attributes' do
+        aggregate_failures do
+          expect(subject.link.id).to eq(link_attrs['id'])
+          expect(subject.link.link_id).to eq(link_attrs['link_id'])
+          expect(subject.link.type).to eq(link_attrs['type'])
+          expect(subject.link.stream).to(
+            eq(PgEventstore::Stream.new(context: 'MyAwesomeCtx', stream_name: 'Bar', stream_id: 'Baz'))
+          )
+        end
       end
     end
   end

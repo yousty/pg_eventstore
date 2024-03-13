@@ -43,7 +43,9 @@ RSpec.describe PgEventstore::Subscription do
     subject { subscription.update(attrs) }
 
     let(:subscription) { SubscriptionsHelper.create_with_connection }
-    let(:attrs) { { locked_by: SecureRandom.uuid, restart_count: 321, max_restarts_number: 123 } }
+    let(:attrs) do
+      { locked_by: SecureRandom.uuid, restart_count: 321, max_restarts_number: 123, time_between_restarts: 10 }
+    end
 
     it 'updates attributes of the given subscription' do
       expect { subject }.to change { subscription.reload.options_hash }.to(include(attrs))
@@ -54,6 +56,7 @@ RSpec.describe PgEventstore::Subscription do
         expect(subscription.locked_by).to eq(attrs[:locked_by])
         expect(subscription.restart_count).to eq(attrs[:restart_count])
         expect(subscription.max_restarts_number).to eq(attrs[:max_restarts_number])
+        expect(subscription.time_between_restarts).to eq(attrs[:time_between_restarts])
       end
     end
     it 'returns updated attributes' do
@@ -81,7 +84,8 @@ RSpec.describe PgEventstore::Subscription do
     let(:subscription) do
       PgEventstore::Subscription.using_connection(:default).
         new(
-          set: set, name: name, options: { resolve_link_tos: true }, max_restarts_number: 12, chunk_query_interval: 34
+          set: set, name: name, options: { resolve_link_tos: true }, max_restarts_number: 12, chunk_query_interval: 34,
+          time_between_restarts: 1
         )
     end
     let(:set) { 'FooSet' }

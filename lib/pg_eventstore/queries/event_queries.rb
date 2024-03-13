@@ -47,6 +47,7 @@ module PgEventstore
       raw_events = connection.with do |conn|
         conn.exec_params(*exec_params)
       end.to_a
+      raw_events = links_resolver.resolve(raw_events) if options[:resolve_link_tos]
       deserializer.deserialize_many(raw_events)
     end
 
@@ -105,6 +106,11 @@ module PgEventstore
       return QueryBuilders::EventsFiltering.all_stream_filtering(options) if stream.all_stream?
 
       QueryBuilders::EventsFiltering.specific_stream_filtering(stream, options)
+    end
+
+    # @return [PgEventstore::LinksResolver]
+    def links_resolver
+      LinksResolver.new(connection)
     end
   end
 end

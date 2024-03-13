@@ -18,10 +18,10 @@ RSpec.describe 'Subscriptions integration' do
     let(:event2) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar') }
 
     before do
-      manager.subscribe('Subscription 1', handler: handler1, options: { filter: { event_types: ['Foo'] } })
-      manager.subscribe('Subscription 2', handler: handler2, options: { filter: { streams: [{ context: 'FooCtx' }] } })
       PgEventstore.client.append_to_stream(stream, [event1, event2])
       PgEventstore.config.subscription_pull_interval = pull_interval
+      manager.subscribe('Subscription 1', handler: handler1, options: { filter: { event_types: ['Foo'] } })
+      manager.subscribe('Subscription 2', handler: handler2, options: { filter: { streams: [{ context: 'FooCtx' }] } })
     end
 
     after do
@@ -130,6 +130,7 @@ RSpec.describe 'Subscriptions integration' do
 
     let(:handler) { proc { raise 'oops!' } }
     let(:retries_interval) { 2 }
+    let(:subscription_pull_interval) { 1 }
 
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
     let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
@@ -158,7 +159,7 @@ RSpec.describe 'Subscriptions integration' do
       subject
       # Number of retries to do before making assumptions.
       number_of_retries = 2
-      sleep 0.5 + number_of_retries * retries_interval
+      sleep (number_of_retries + 1) * retries_interval
       aggregate_failures do
         expect(manager.subscriptions.first.state).to eq('dead')
         expect(manager.subscriptions.first.restart_count).to eq(number_of_retries)
@@ -255,6 +256,47 @@ RSpec.describe 'Subscriptions integration' do
         expect(queries.find_by(name: set_name)&.dig(:state)).to eq('dead')
         expect(queries.find_by(name: set_name)&.dig(:restart_count)).to eq(max_retries)
       end
+    end
+  end
+
+  describe 'events processing with :resolve_link_tos option' do
+    subject { manager.start }
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+
+    let(:handler) { proc { |event| processed_events.push(event) } }
+    let(:processed_events) { [] }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
+    let(:event1) do
+      event = PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo')
+      PgEventstore.client.append_to_stream(stream, event)
+    end
+    let(:event2) do
+      event = PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar')
+      PgEventstore.client.append_to_stream(stream, event)
+    end
+
+    before do
+      PgEventstore.client.link_to(stream, [event1, event2])
+      PgEventstore.config.subscription_pull_interval = 0.2
+      manager.subscribe(
+        'Subscription 1',
+        handler: handler, options: { filter: { streams: [{ context: 'FooCtx' }] }, resolve_link_tos: true }
+      )
+    end
+
+    after do
+      manager.stop
+      PgEventstore.send(:init_variables)
+    end
+
+    it 'processes events correctly' do
+      subject
+      sleep 1
+      #puts processed_events.map(&:id)
+      expect(processed_events.map(&:id)).to eq([event1, event2, event1, event2].map(&:id))
     end
   end
 end

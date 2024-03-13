@@ -31,6 +31,10 @@ module PgEventstore
     #   @return [String, nil] UUIDv4 of an event the current event points to. If it is not nil, then the current
     #     event is a link
     attribute(:link_id)
+    # @!attribute link
+    #   @return [PgEventstore::Event, nil] when resolve_link_tos: true option is provided during the read of events and
+    #     event is a link event - this attribute will be pointing on that link
+    attribute(:link)
     # @!attribute created_at
     #   @return [Time, nil] a timestamp an event was created at
     attribute(:created_at)
@@ -41,7 +45,7 @@ module PgEventstore
     def ==(other)
       return false unless other.is_a?(PgEventstore::Event)
 
-      attributes_hash == other.attributes_hash
+      attributes_hash.except(:link) == other.attributes_hash.except(:link)
     end
 
     # Detect whether an event is a link event

@@ -14,7 +14,10 @@ class SubscriptionsHelper
     end
 
     def init_with_connection(config_name = :default, **attrs)
-      defaults = { set: 'FooSet', name: 'FooSubscription', options: {}, max_restarts_number: 0, chunk_query_interval: 1 }
+      defaults = {
+        set: 'FooSet', name: 'FooSubscription', options: {}, max_restarts_number: 0, chunk_query_interval: 1,
+        time_between_restarts: 1
+      }
       PgEventstore::Subscription.using_connection(config_name).new(**defaults.merge(attrs))
     end
   end

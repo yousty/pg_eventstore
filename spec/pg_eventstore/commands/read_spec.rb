@@ -75,6 +75,7 @@ RSpec.describe PgEventstore::Commands::Read do
             expect(subject).to eq([existing_event])
             expect(subject.first.stream).to eq(events_stream2)
             expect(subject.first.type).to eq('baz')
+            expect(subject.first.link).to eq(link)
           end
         end
       end
