@@ -38,6 +38,11 @@ module PgEventstore
       end
     end
 
+    # @return [Array<Symbol>]
+    def available_configs
+      @config.keys
+    end
+
     # @param name [Symbol]
     # @return [PgEventstore::Config]
     def config(name = :default)

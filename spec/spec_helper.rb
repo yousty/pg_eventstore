@@ -6,6 +6,8 @@ require 'pg_eventstore/rspec/test_helpers'
 require 'securerandom'
 require 'redis'
 require 'logger'
+require 'pg_eventstore/web'
+require 'rack/test'
 
 Dir[File.join(File.expand_path('.', __dir__), 'support/**/*.rb')].each { |f| require f }
 
@@ -66,4 +68,6 @@ RSpec.configure do |config|
   config.include EventHelpers
   config.include TestHelper
   config.include PartitionsHelper
+  config.include Rack::Test::Methods, type: :request
+  config.include RequestsHelper, type: :request
 end
