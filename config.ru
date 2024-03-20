@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require 'pg_eventstore'
 require 'pg_eventstore/web'
 
 PgEventstore.configure do |config|

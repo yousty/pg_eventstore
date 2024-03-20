@@ -34,9 +34,6 @@ module PgEventstore
       end
 
       get '/' do
-        #puts params
-        #p streams_filter
-
         @collection = Paginator::EventsCollection.new(
           current_config,
           starting_id: params[:starting_id]&.to_i,
@@ -44,7 +41,6 @@ module PgEventstore
           order: Paginator::EventsCollection::SQL_DIRECTIONS[params[:order]],
           options: { filter: { event_types: events_filter, streams: streams_filter } }
         )
-        #binding.irb
         erb :'home/dashboard'
       end
 

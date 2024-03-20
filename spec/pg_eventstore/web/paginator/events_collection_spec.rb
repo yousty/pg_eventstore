@@ -296,6 +296,15 @@ RSpec.describe PgEventstore::Paginator::EventsCollection do
       end
     end
 
+    context 'when prev page contains less events than per_page number' do
+      let(:starting_id) { event4.global_position }
+      let(:order) { :desc }
+
+      it 'picks global_position correctly' do
+        is_expected.to eq(event5.global_position)
+      end
+    end
+
     context 'when prev page does not exist' do
       it { is_expected.to eq(nil) }
     end

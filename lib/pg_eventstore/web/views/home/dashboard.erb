@@ -107,7 +107,14 @@
             <table class="table table-hover">
               <thead>
               <tr>
-                <th>Global position</th>
+                <th>
+                  Global position
+                  <% if params[:order] == 'asc' %>
+                    <a href="<%= sort_url('desc') %>"><i class="fa fa-sort-desc"></i></a>
+                  <% else %>
+                    <a href="<%= sort_url('asc') %>"><i class="fa fa-sort-asc"></i></a>
+                  <% end %>
+                </th>
                 <th>Stream revision</th>
                 <th>Context</th>
                 <th>Stream name</th>

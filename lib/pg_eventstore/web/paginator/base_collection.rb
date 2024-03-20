@@ -28,10 +28,12 @@ module PgEventstore
         collection.size
       end
 
+      # @return [String, Integer, nil]
       def next_page_starting_id
         raise NotImplementedError
       end
 
+      # @return [String, Integer, nil]
       def prev_page_starting_id
         raise NotImplementedError
       end
@@ -43,6 +45,7 @@ module PgEventstore
 
       private
 
+      # @return [PgEventstore::Connection]
       def connection
         PgEventstore.connection(config_name)
       end
