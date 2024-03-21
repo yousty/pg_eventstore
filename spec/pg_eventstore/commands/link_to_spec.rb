@@ -61,6 +61,9 @@ RSpec.describe PgEventstore::Commands::LinkTo do
               expect(subject.metadata).to eq({})
               expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
               expect(subject.link_id).to eq(event.id)
+              expect(subject.link_partition_id).to(
+                eq(partition_queries.event_type_partition(events_stream, event.type)['id'])
+              )
             end
           end
         end
@@ -214,6 +217,17 @@ RSpec.describe PgEventstore::Commands::LinkTo do
         end
       end
 
+      shared_examples 'read only attribute' do
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
+              /#{attribute.inspect} attribute was marked as read only/
+            )
+          )
+        end
+      end
+
       context 'when middleware which changes #link_id is given' do
         let(:middlewares) { [middleware] }
         let(:middleware) do
@@ -226,13 +240,25 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           end
         end
 
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
-              /:link_id attribute was marked as read only/
-            )
-          )
+        it_behaves_like 'read only attribute' do
+          let(:attribute) { :link_id }
+        end
+      end
+
+      context 'when middleware which changes #link_partition_id is given' do
+        let(:middlewares) { [middleware] }
+        let(:middleware) do
+          Class.new do
+            class << self
+              def serialize(event)
+                event.link_partition_id = -1
+              end
+            end
+          end
+        end
+
+        it_behaves_like 'read only attribute' do
+          let(:attribute) { :link_partition_id }
         end
       end
 
@@ -248,13 +274,8 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           end
         end
 
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
-              /:stream_revision attribute was marked as read only/
-            )
-          )
+        it_behaves_like 'read only attribute' do
+          let(:attribute) { :stream_revision }
         end
       end
 
@@ -270,13 +291,8 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           end
         end
 
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
-              /:type attribute was marked as read only/
-            )
-          )
+        it_behaves_like 'read only attribute' do
+          let(:attribute) { :type }
         end
       end
 
@@ -326,13 +342,13 @@ RSpec.describe PgEventstore::Commands::LinkTo do
       let(:event1) do
         PgEventstore.client.append_to_stream(
           events_stream,
-          PgEventstore::Event.new(type: 'MyAwesomeEvent', data: { foo: :bar })
+          PgEventstore::Event.new(type: 'MyAwesomeEvent1', data: { foo: :bar })
         )
       end
       let(:event2) do
         PgEventstore.client.append_to_stream(
           events_stream,
-          PgEventstore::Event.new(type: 'MyAwesomeEvent', data: { foo: :baz })
+          PgEventstore::Event.new(type: 'MyAwesomeEvent2', data: { foo: :baz })
         )
       end
       let(:options) { {} }
@@ -354,6 +370,9 @@ RSpec.describe PgEventstore::Commands::LinkTo do
             expect(subject.metadata).to eq({})
             expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
             expect(subject.link_id).to eq(event1.id)
+            expect(subject.link_partition_id).to(
+              eq(partition_queries.event_type_partition(events_stream, event1.type)['id'])
+            )
           end
         end
       end
@@ -371,6 +390,9 @@ RSpec.describe PgEventstore::Commands::LinkTo do
             expect(subject.metadata).to eq({})
             expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
             expect(subject.link_id).to eq(event2.id)
+            expect(subject.link_partition_id).to(
+              eq(partition_queries.event_type_partition(events_stream, event2.type)['id'])
+            )
           end
         end
       end

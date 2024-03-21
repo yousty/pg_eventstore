@@ -29,30 +29,56 @@ RSpec.describe PgEventstore::EventQueries do
   end
 
   describe '#event_exists?' do
-    subject { instance.event_exists?(event_id) }
+    subject { instance.event_exists?(event) }
 
-    let(:event_id) { nil }
+    let(:event) { PgEventstore::Event.new }
 
-    context 'when given id is nil' do
+    context 'when event#id is nil' do
       it { is_expected.to eq(false) }
     end
 
-    context 'when given id is present' do
-      let(:event_id) { SecureRandom.uuid }
+    context 'when event#id is present' do
+      let(:event) { PgEventstore::Event.new(id: SecureRandom.uuid) }
 
-      context 'when event with the given id exists' do
+      context 'when event is persisted event' do
         let(:stream) { PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
-
-        before do
-          PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new(id: event_id))
+        let(:event) do
+          event = PgEventstore::Event.new(id: SecureRandom.uuid)
+          PgEventstore.client.append_to_stream(stream, event)
         end
 
         it { is_expected.to eq(true) }
       end
 
-      context 'when event with the given id does not exist' do
+      context 'when event does not exist' do
         it { is_expected.to eq(false) }
       end
+    end
+  end
+
+  describe '#ids_from_db' do
+    subject { instance.ids_from_db(events) }
+
+    let(:events) { [persisted_event1, persisted_event2, non_persisted_event, event_without_id] }
+    let(:persisted_event1) do
+      event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo')
+      PgEventstore.client.append_to_stream(
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: '1'),
+        event
+      )
+    end
+    let(:persisted_event2) do
+      event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Bar')
+      PgEventstore.client.append_to_stream(
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'AnotherStream', stream_id: '1'),
+        event
+      )
+    end
+    let(:non_persisted_event) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Baz') }
+    let(:event_without_id) { PgEventstore::Event.new(type: 'Lorem') }
+
+    it 'returns ids of persisted events' do
+      is_expected.to match_array([persisted_event1.id, persisted_event2.id])
     end
   end
 

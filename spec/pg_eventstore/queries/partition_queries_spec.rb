@@ -459,6 +459,18 @@ RSpec.describe PgEventstore::PartitionQueries do
     end
   end
 
+  describe '#find_by_ids' do
+    subject { instance.find_by_ids([partition1['id'], partition2['id']]) }
+
+    let(:partition1) { instance.create_context_partition(stream) }
+    let(:partition2) { instance.create_stream_name_partition(stream, partition1['table_name']) }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+
+    it 'returns partitions by ids' do
+      is_expected.to match_array([partition1, partition2])
+    end
+  end
+
   describe '#context_partition_name' do
     subject { instance.context_partition_name(stream) }
 

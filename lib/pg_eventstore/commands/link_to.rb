@@ -13,20 +13,27 @@ module PgEventstore
       # @raise [PgEventstore::WrongExpectedRevisionError]
       # @raise [PgEventstore::NotPersistedEventError]
       def call(stream, *events, options: {})
-        events.each(&method(:check_event_presence))
+        check_events_presence(events)
         append_cmd = Append.new(queries)
-        append_cmd.call(stream, *events, options: options, event_modifier: EventModifiers::PrepareLinkEvent)
+        append_cmd.call(
+          stream, *events, options: options, event_modifier: EventModifiers::PrepareLinkEvent.new(queries.partitions)
+        )
       end
 
       private
 
-      # Checks if Event#id is present. An event must have the #id value in order to be linked.
-      # @param event [PgEventstore::Event]
+      # Checks if the given events are persisted events. This is needed to prevent potentially non-existing id valuess
+      # from appearing in #link_id column.
+      # @param events [Array<PgEventstore::Event>]
       # @return [void]
-      def check_event_presence(event)
-        return if queries.events.event_exists?(event.id)
+      def check_events_presence(events)
+        ids_from_db = queries.events.ids_from_db(events)
+        (events.map(&:id) - ids_from_db).tap do |missing_ids|
+          return if missing_ids.empty?
 
-        raise NotPersistedEventError, event
+          missing_event = events.find { |event| event.id == missing_ids.first }
+          raise NotPersistedEventError, missing_event
+        end
       end
     end
   end

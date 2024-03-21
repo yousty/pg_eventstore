@@ -1,16 +1,17 @@
 CREATE TABLE public.events
 (
-    id              uuid                        DEFAULT public.gen_random_uuid() NOT NULL,
-    context         character varying COLLATE "POSIX"                            NOT NULL,
-    stream_name     character varying COLLATE "POSIX"                            NOT NULL,
-    stream_id       character varying COLLATE "POSIX"                            NOT NULL,
-    global_position bigserial                                                    NOT NULL,
-    stream_revision integer                                                      NOT NULL,
-    data            jsonb                       DEFAULT '{}'::jsonb              NOT NULL,
-    metadata        jsonb                       DEFAULT '{}'::jsonb              NOT NULL,
-    link_id         uuid,
-    created_at      timestamp without time zone DEFAULT now()                    NOT NULL,
-    type            character varying COLLATE "POSIX"                            NOT NULL
+    id                uuid                        DEFAULT public.gen_random_uuid() NOT NULL,
+    context           character varying COLLATE "POSIX"                            NOT NULL,
+    stream_name       character varying COLLATE "POSIX"                            NOT NULL,
+    stream_id         character varying COLLATE "POSIX"                            NOT NULL,
+    global_position   bigserial                                                    NOT NULL,
+    stream_revision   integer                                                      NOT NULL,
+    data              jsonb                       DEFAULT '{}'::jsonb              NOT NULL,
+    metadata          jsonb                       DEFAULT '{}'::jsonb              NOT NULL,
+    link_id           uuid,
+    link_partition_id bigint,
+    created_at        timestamp without time zone DEFAULT now()                    NOT NULL,
+    type              character varying COLLATE "POSIX"                            NOT NULL
 ) PARTITION BY LIST (context);
 
 ALTER TABLE ONLY public.events

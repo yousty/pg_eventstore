@@ -51,6 +51,7 @@ RSpec.describe PgEventstore::Commands::Append do
               expect(subject.metadata).to eq({})
               expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
               expect(subject.link_id).to eq(nil)
+              expect(subject.link_partition_id).to eq(nil)
             end
           end
         end
@@ -194,6 +195,17 @@ RSpec.describe PgEventstore::Commands::Append do
         end
       end
 
+      shared_examples 'read only attribute' do
+        it 'raises error' do
+          expect { subject }.to(
+            raise_error(
+              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
+              /#{attribute.inspect} attribute was marked as read only/
+            )
+          )
+        end
+      end
+
       context 'when middleware which changes #link_id is given' do
         let(:middlewares) { [middleware] }
         let(:middleware) do
@@ -206,13 +218,25 @@ RSpec.describe PgEventstore::Commands::Append do
           end
         end
 
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
-              /:link_id attribute was marked as read only/
-            )
-          )
+        it_behaves_like 'read only attribute' do
+          let(:attribute) { :link_id }
+        end
+      end
+
+      context 'when middleware which changes #link_partition_id is given' do
+        let(:middlewares) { [middleware] }
+        let(:middleware) do
+          Class.new do
+            class << self
+              def serialize(event)
+                event.link_partition_id = -1
+              end
+            end
+          end
+        end
+
+        it_behaves_like 'read only attribute' do
+          let(:attribute) { :link_partition_id }
         end
       end
 
@@ -228,13 +252,8 @@ RSpec.describe PgEventstore::Commands::Append do
           end
         end
 
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::Extensions::OptionsExtension::ReadonlyAttributeError,
-              /:stream_revision attribute was marked as read only/
-            )
-          )
+        it_behaves_like 'read only attribute' do
+          let(:attribute) { :stream_revision }
         end
       end
 
@@ -302,6 +321,7 @@ RSpec.describe PgEventstore::Commands::Append do
             expect(subject.metadata).to eq({})
             expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
             expect(subject.link_id).to eq(nil)
+            expect(subject.link_partition_id).to eq(nil)
           end
         end
       end
@@ -319,6 +339,7 @@ RSpec.describe PgEventstore::Commands::Append do
             expect(subject.metadata).to eq({})
             expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
             expect(subject.link_id).to eq(nil)
+            expect(subject.link_partition_id).to eq(nil)
           end
         end
       end

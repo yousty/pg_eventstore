@@ -31,6 +31,10 @@ module PgEventstore
     #   @return [String, nil] UUIDv4 of an event the current event points to. If it is not nil, then the current
     #     event is a link
     attribute(:link_id)
+    # @!attribute link_partition_id
+    #   @return [Integer, nil] a partition id of an event the link event points to. It is used to load original event
+    #     when resolve_link_tos: true option is provided when reading events.
+    attribute(:link_partition_id)
     # @!attribute link
     #   @return [PgEventstore::Event, nil] when resolve_link_tos: true option is provided during the read of events and
     #     event is a link event - this attribute will be pointing on that link

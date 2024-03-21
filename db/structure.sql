@@ -60,6 +60,7 @@ CREATE TABLE public.events (
     data jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     link_id uuid,
+    link_partition_id bigint,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     type character varying NOT NULL COLLATE pg_catalog."POSIX"
 )

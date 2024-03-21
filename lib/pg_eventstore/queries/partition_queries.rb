@@ -165,6 +165,14 @@ module PgEventstore
       end.to_a.dig(0, 'exists') == 1
     end
 
+    # @param ids [Array<Integer>]
+    # @return [Array<Hash>]
+    def find_by_ids(ids)
+      connection.with do |conn|
+        conn.exec_params('select * from partitions where id = ANY($1::bigint[])', [ids])
+      end.to_a
+    end
+
     # @param stream [PgEventstore::Stream]
     # @return [String]
     def context_partition_name(stream)

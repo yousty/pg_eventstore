@@ -12,7 +12,7 @@ module PgEventstore
       # @param event_modifier [#call]
       # @return [Array<PgEventstore::Event>] persisted events
       # @raise [PgEventstore::WrongExpectedRevisionError]
-      def call(stream, *events, options: {}, event_modifier: EventModifiers::PrepareRegularEvent)
+      def call(stream, *events, options: {}, event_modifier: EventModifiers::PrepareRegularEvent.new)
         raise SystemStreamError, stream if stream.system?
 
         queries.transactions.transaction do
