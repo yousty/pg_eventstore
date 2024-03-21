@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+- Improve performance of loading original events when resolve_link_tos: true option is provided
+- Adjust `partitions` table indexes
+
 ## [0.10.2] - 2024-03-13
 
 - Review the approach to resolve link events 
