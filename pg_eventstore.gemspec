@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.files = Dir.chdir(__dir__) do
     paths_to_exclude = %w[
       bin/ test/ spec/ features/ .git .circleci appveyor Gemfile .ruby-version .ruby-gemset .rspec docker-compose.yml
-      Rakefile benchmark/ .yardopts db/structure.sql
+      Rakefile benchmark/ .yardopts db/structure.sql config.ru
     ]
     `git ls-files -z`.split("\x0").reject do |f|
       (File.expand_path(f) == __FILE__) || f.start_with?(*paths_to_exclude)
@@ -37,4 +37,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "pg", "~> 1.5"
   spec.add_dependency "connection_pool", "~> 2.4"
+  spec.add_dependency "sinatra", "~> 4.0"
 end

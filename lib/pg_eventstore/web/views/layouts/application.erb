@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <!-- Meta, title, CSS, favicons, etc. -->
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="images/favicon.ico" type="image/ico"/>
+
+  <title>PG EventStore admin</title>
+
+  <!-- Bootstrap -->
+  <link href="stylesheets/vendor/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="stylesheets/vendor/font-awesome.min.css" rel="stylesheet">
+
+  <!-- Custom Theme Style -->
+  <link href="stylesheets/vendor/gentelella.min.css" rel="stylesheet">
+  <link href="stylesheets/vendor/select2.min.css" rel="stylesheet">
+  <link href="stylesheets/vendor/select2-bootstrap4.min.css" rel="stylesheet">
+</head>
+
+<body class="nav-md">
+<div class="container body">
+  <div class="main_container">
+    <div class="col-md-3 left_col">
+      <div class="left_col scroll-view">
+        <div class="navbar nav_title" style="border: 0;">
+          <a href="<%= url('/') %>" class="site_title"><i class="fa fa-server"></i> <span>PG EventStore</span></a>
+        </div>
+
+        <div class="clearfix"></div>
+
+        <br/>
+
+        <!-- sidebar menu -->
+        <div id="sidebar-menu" class="main_menu_side hidden-print main_menu">
+          <div class="menu_section">
+            <h3>General</h3>
+            <ul class="nav side-menu">
+              <li>
+                <a href="<%= url('/') %>">
+                  <i class="fa fa-search-plus"></i>
+                  Events lookup
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <!-- /sidebar menu -->
+      </div>
+    </div>
+
+    <!-- top navigation -->
+    <div class="top_nav">
+      <div class="nav_menu">
+        <div class="nav toggle">
+          <a id="menu_toggle"><i class="fa fa-bars"></i></a>
+        </div>
+        <nav class="nav navbar-nav">
+          <ul class="navbar-right" style="height: 29px;">
+            <li class="nav-item dropdown open" style="padding-left: 15px;">
+              <a href="javascript: void(0);" class="user-profile dropdown-toggle" aria-haspopup="true" id="navbarDropdown" data-toggle="dropdown" aria-expanded="false">
+                <strong>Current config:</strong> <%= current_config.inspect %>
+              </a>
+              <div class="dropdown-menu dropdown-usermenu pull-right" aria-labelledby="navbarDropdown">
+                <% PgEventstore.available_configs.each do |config| %>
+                  <form action="<%= url('/change_config') %>" method="POST">
+                    <input type="hidden" name="config" value="<%= config %>">
+                    <button type="submit" class="dropdown-item"><%= config.inspect %></button>
+                  </form>
+                <% end %>
+              </div>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <!-- /top navigation -->
+
+    <!-- page content -->
+    <%= yield %>
+    <!-- /page content -->
+
+    <!-- footer content -->
+    <footer>
+      <div class="pull-right">
+        Gentelella - Bootstrap Admin Template by <a href="https://colorlib.com" rel="noreferrer">Colorlib</a>
+      </div>
+      <div class="clearfix"></div>
+    </footer>
+    <!-- /footer content -->
+  </div>
+</div>
+
+<!-- jQuery -->
+<script src="javascripts/vendor/jquery.min.js"></script>
+<!-- Bootstrap -->
+<script src="javascripts/vendor/bootstrap.bundle.min.js"></script>
+<!--<script src="javascripts/jquery.autocomplete.min.js"></script>-->
+<script src="javascripts/vendor/select2.full.min.js"></script>
+
+<!-- Custom Theme Scripts -->
+<script src="javascripts/gentelella.js"></script>
+<script src="javascripts/pg_eventstore.js"></script>
+
+</body>
+</html>

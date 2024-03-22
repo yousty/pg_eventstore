@@ -28,8 +28,8 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def all_stream_filtering(options)
           event_filter = new
-          options in { filter: { event_types: Array => event_type_ids } }
-          event_filter.add_event_types(event_type_ids)
+          options in { filter: { event_types: Array => event_types } }
+          event_filter.add_event_types(event_types)
           event_filter.add_limit(options[:max_count])
           options in { filter: { streams: Array => streams } }
           streams&.each { |attrs| event_filter.add_stream_attrs(**attrs) }
@@ -43,8 +43,8 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def specific_stream_filtering(stream, options)
           event_filter = new
-          options in { filter: { event_types: Array => event_type_ids } }
-          event_filter.add_event_types(event_type_ids)
+          options in { filter: { event_types: Array => event_types } }
+          event_filter.add_event_types(event_types)
           event_filter.add_limit(options[:max_count])
           event_filter.add_stream_attrs(**stream.to_hash)
           event_filter.add_revision(options[:from_revision], options[:direction])

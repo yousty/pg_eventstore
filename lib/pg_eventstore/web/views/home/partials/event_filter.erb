@@ -1,0 +1,15 @@
+<div class="form-row align-items-center">
+  <div class="col-11">
+    <select name="filter[events][]" class="form-control mb-2" data-placeholder="Event type" data-url="<%= url('/event_types_filtering') %>">
+      <option></option>
+      <% if event_type %>
+        <option value="<%= event_type %>" selected><%= event_type %></option>
+      <% end %>
+    </select>
+  </div>
+  <div class="col-1">
+    <a class="btn btn-default remove-filter" href="javascript: void(0);">
+      <i class="fa fa-minus-circle"></i>
+    </a>
+  </div>
+</div>
