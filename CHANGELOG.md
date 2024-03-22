@@ -2,6 +2,7 @@
 
 - Improve performance of loading original events when resolve_link_tos: true option is provided
 - Adjust `partitions` table indexes
+- Implement admin web UI
 
 ## [0.10.2] - 2024-03-13
 
