@@ -4,7 +4,7 @@
     <td><%= event.stream_revision %></td>
     <td><%= event.stream.context %></td>
     <td><%= event.stream.stream_name %></td>
-    <td><%= event.stream.stream_id %></td>
+    <td><a href="<%= stream_path(event) %>"><%= event.stream.stream_id %></a></td>
     <td><%= event.type %></td>
     <td><%= event.created_at.strftime('%F %T') %></td>
     <td><%= event.id %></td>

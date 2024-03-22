@@ -29,10 +29,10 @@ module PgEventstore
 
       # @return [String]
       def first_page_link
-        encoded_params = Rack::Utils.build_nested_query(params.slice(*(params.keys - ['starting_id'])))
+        path = build_path(params.slice(*(params.keys - ['starting_id'])))
         <<~HTML
           <li class="page-item">
-            <a class="page-link" href="#{build_path(encoded_params)}" tabindex="-1">First</a>
+            <a class="page-link" href="#{path}" tabindex="-1">First</a>
           </li>
         HTML
       end
@@ -40,15 +40,13 @@ module PgEventstore
       # @param per_page [String] string representation of items per page. E.g. "10", "20", etc.
       # @return [String]
       def per_page_url(per_page)
-        encoded_params = Rack::Utils.build_nested_query(params.merge(per_page: per_page))
-        build_path(encoded_params)
+        build_path(params.merge(per_page: per_page))
       end
 
       # @param order [String] "asc"/"desc"
       # @return [String]
       def sort_url(order)
-        encoded_params = Rack::Utils.build_nested_query(params.merge(order: order))
-        build_path(encoded_params)
+        build_path(params.merge(order: order))
       end
 
       # @param number [Integer] total number of events by the current filter
@@ -77,6 +75,25 @@ module PgEventstore
         parts.join(delimiter)
       end
 
+      # @param event [PgEventstore::Event]
+      # @return [String]
+      def stream_path(event)
+        build_path(
+          {
+            filter: {
+              streams: [
+                {
+                  context: event.stream.context,
+                  stream_name: event.stream.stream_name,
+                  stream_id: event.stream.stream_id
+                }
+              ]
+            }
+          }
+        )
+
+      end
+
       private
 
       # @param starting_id [String, Integer, nil]
@@ -84,13 +101,13 @@ module PgEventstore
       def build_starting_id_link(starting_id)
         return 'javascript: void(0);' unless starting_id
 
-        encoded_params = Rack::Utils.build_nested_query(params.merge(starting_id: starting_id))
-        build_path(encoded_params)
+        build_path(params.merge(starting_id: starting_id))
       end
 
-      # @param encoded_params [String]
+      # @param params [Hash, Array]
       # @return [String]
-      def build_path(encoded_params)
+      def build_path(params)
+        encoded_params = Rack::Utils.build_nested_query(params)
         return request.path if encoded_params.empty?
 
         "#{request.path}?#{encoded_params}"
