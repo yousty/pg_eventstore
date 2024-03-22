@@ -1,8 +1,8 @@
 <script type="text/html" id="stream-filter-tmpl">
-  <%= erb :'partials/stream_filter', { layout: false }, { stream: {} } %>
+  <%= erb :'home/partials/stream_filter', { layout: false }, { stream: {} } %>
 </script>
 <script type="text/html" id="event-type-filter-tmpl">
-  <%= erb :'partials/event_filter', { layout: false }, { event_type: '' } %>
+  <%= erb :'home/partials/event_filter', { layout: false }, { event_type: '' } %>
 </script>
 
 <div class="right_col" role="main">
@@ -28,12 +28,12 @@
               <input type="hidden" name="per_page" value="<%= params[:per_page].to_i %>">
               <div class="stream-filters">
                 <% streams_filter&.each do |attrs| %>
-                  <%= erb :'partials/stream_filter', { layout: false }, { stream: attrs } %>
+                  <%= erb :'home/partials/stream_filter', { layout: false }, { stream: attrs } %>
                 <% end %>
               </div>
               <div class="event-filters">
                 <% events_filter&.each do |event_type| %>
-                  <%= erb :'partials/event_filter', { layout: false }, { event_type: event_type } %>
+                  <%= erb :'home/partials/event_filter', { layout: false }, { event_type: event_type } %>
                 <% end %>
               </div>
               <div class="ln_solid"></div>
@@ -71,7 +71,7 @@
               <div class="col-md-3 col-sm-12">
                 <h2>
                   Events
-                  <small><%= total_count(@collection.total_count) %></small>
+                  <small id="total-count"><%= total_count(@collection.total_count) %></small>
                 </h2>
                 <div class="clearfix"></div>
               </div>
@@ -89,13 +89,21 @@
                     <button type="submit" class="d-none"></button>
                   </div>
                 </form>
+                <div class="float-md-right mt-2 mr-2">
+                  <div class="form-group">
+                    <div class="checkbox">
+                      <label for="auto-refresh" class="control-label">
+                        Auto refresh
+                        <input type="checkbox" id="auto-refresh" value="true" autocomplete="off">
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="col-md-3 col-sm-12">
                 <nav aria-label="Page navigation">
-                  <ul class="pagination justify-content-md-end">
-                    <%= first_page_link %>
-                    <%= previous_page_link(@collection) %>
-                    <%= next_page_link(@collection) %>
+                  <ul class="pagination justify-content-md-end" id="pagination">
+                    <%= erb :'home/partials/pagination_links', { layout: false }, { collection: @collection } %>
                   </ul>
                 </nav>
                 <div class="clearfix"></div>
@@ -104,7 +112,7 @@
             </div>
           </div>
           <div class="x_content table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover" id="events-table">
               <thead>
               <tr>
                 <th>
@@ -126,28 +134,7 @@
               </tr>
               </thead>
               <tbody>
-              <% @collection.collection.each do |event| %>
-                <tr>
-                  <td><%= event.global_position %></td>
-                  <td><%= event.stream_revision %></td>
-                  <td><%= event.stream.context %></td>
-                  <td><%= event.stream.stream_name %></td>
-                  <td><%= event.stream.stream_id %></td>
-                  <td><%= event.type %></td>
-                  <td><%= event.created_at.strftime('%F %T') %></td>
-                  <td><%= event.id %></td>
-                  <td><a href="javascript: void(0);" class="d-inline-block text-nowrap toggle-event-data">JSON <i
-                    class="fa fa-eye"></i> </a></td>
-                </tr>
-                <tr class="event-payload d-none">
-                  <td colspan="8">
-                    <strong>Data:</strong>
-                    <pre><%= JSON.pretty_generate(event.data) %></pre>
-                    <strong>Metadata:</strong>
-                    <pre><%= JSON.pretty_generate(event.metadata) %></pre>
-                  </td>
-                </tr>
-              <% end %>
+                <%= erb :'home/partials/events', { layout: false }, { events: @collection.collection } %>
               </tbody>
             </table>
           </div>

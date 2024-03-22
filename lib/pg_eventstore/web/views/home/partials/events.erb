@@ -1,0 +1,22 @@
+<% events.each do |event| %>
+  <tr>
+    <td><%= event.global_position %></td>
+    <td><%= event.stream_revision %></td>
+    <td><%= event.stream.context %></td>
+    <td><%= event.stream.stream_name %></td>
+    <td><%= event.stream.stream_id %></td>
+    <td><%= event.type %></td>
+    <td><%= event.created_at.strftime('%F %T') %></td>
+    <td><%= event.id %></td>
+    <td><a href="javascript: void(0);" class="d-inline-block text-nowrap toggle-event-data">JSON <i
+      class="fa fa-eye"></i> </a></td>
+  </tr>
+  <tr class="event-payload d-none">
+    <td colspan="8">
+      <strong>Data:</strong>
+      <pre><%= JSON.pretty_generate(event.data) %></pre>
+      <strong>Metadata:</strong>
+      <pre><%= JSON.pretty_generate(event.metadata) %></pre>
+    </td>
+  </tr>
+<% end %>

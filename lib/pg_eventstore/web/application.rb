@@ -50,7 +50,17 @@ module PgEventstore
           order: Paginator::EventsCollection::SQL_DIRECTIONS[params[:order]],
           options: { filter: { event_types: events_filter, streams: streams_filter } }
         )
-        erb :'home/dashboard'
+
+        if request.xhr?
+          content_type 'application/json'
+          halt 200, {
+            events: erb(:'home/partials/events', { layout: false }, { events: @collection.collection }),
+            total_count: total_count(@collection.total_count),
+            pagination: erb(:'home/partials/pagination_links', { layout: false }, { collection: @collection })
+          }.to_json
+        else
+          erb :'home/dashboard'
+        end
       end
 
       post '/change_config' do
