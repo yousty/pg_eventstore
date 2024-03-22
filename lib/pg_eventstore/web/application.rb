@@ -31,6 +31,15 @@ module PgEventstore
         def current_config
           PgEventstore.available_configs.include?(session[:current_config]) ? session[:current_config] : :default
         end
+
+        # @param collection [PgEventstore::Paginator::BaseCollection]
+        # @return [void]
+        def paginated_json_response(collection)
+          halt 200, {
+            results: collection.collection,
+            pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id }
+          }.to_json
+        end
       end
 
       get '/' do
@@ -51,9 +60,7 @@ module PgEventstore
         redirect(url('/'))
       end
 
-      get '/stream_contexts_filtering' do
-        content_type 'application/json; charset="utf-8"'
-
+      get '/stream_contexts_filtering', provides: :json do
         collection = Paginator::StreamContextsCollection.new(
           current_config,
           starting_id: params[:starting_id],
@@ -61,15 +68,10 @@ module PgEventstore
           order: :asc,
           options: { query: params[:term] }
         )
-        halt 200, {
-          results: collection.collection,
-          pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id }
-        }.to_json
+        paginated_json_response(collection)
       end
 
-      get '/stream_names_filtering' do
-        content_type 'application/json; charset="utf-8"'
-
+      get '/stream_names_filtering', provides: :json do
         collection = Paginator::StreamNamesCollection.new(
           current_config,
           starting_id: params[:starting_id],
@@ -77,16 +79,10 @@ module PgEventstore
           order: :asc,
           options: { query: params[:term], context: params[:context] }
         )
-
-        halt 200, {
-          results: collection.collection,
-          pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id }
-        }.to_json
+        paginated_json_response(collection)
       end
 
-      get '/stream_ids_filtering' do
-        content_type 'application/json; charset="utf-8"'
-
+      get '/stream_ids_filtering', provides: :json do
         collection = Paginator::StreamIdsCollection.new(
           current_config,
           starting_id: params[:starting_id],
@@ -94,16 +90,10 @@ module PgEventstore
           order: :asc,
           options: { query: params[:term], context: params[:context], stream_name: params[:stream_name] }
         )
-
-        halt 200, {
-          results: collection.collection,
-          pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id }
-        }.to_json
+        paginated_json_response(collection)
       end
 
-      get '/event_types_filtering' do
-        content_type 'application/json; charset="utf-8"'
-
+      get '/event_types_filtering', provides: :json do
         collection = Paginator::EventTypesCollection.new(
           current_config,
           starting_id: params[:starting_id],
@@ -111,10 +101,7 @@ module PgEventstore
           order: :asc,
           options: { query: params[:term] }
         )
-        halt 200, {
-          results: collection.collection,
-          pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id }
-        }.to_json
+        paginated_json_response(collection)
       end
     end
   end
