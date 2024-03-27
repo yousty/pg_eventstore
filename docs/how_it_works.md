@@ -8,7 +8,7 @@ The database is designed specifically for Eventsourcing using Domain-Driven Desi
 - For each `Stream#stream_name` there is a subpartition of `contexts_` table. Those tables have `stream_names_` prefix.
 - For each `Event#type` there is a subpartition of `stream_names_` table. Those tables have `event_types_` prefix.
 
-To implement partitions - Declarative Partitioning is used. Partitioning means that you should not have any random values in the combination of `Stream#context`, `Stream#stream_name` and `Event#type`. A combination of those values must have low cardinality(low distinct values number) and must be pre-defined in your application. Otherwise it will lead to the performance degradation. More about PostgreSQL partitions is [here](https://www.postgresql.org/docs/current/ddl-partitioning.html),
+To implement partitions - Declarative Partitioning is used. Partitioning means that you should not have any random values in the combination of `Stream#context`, `Stream#stream_name` and `Event#type`. A combination of those values must have low cardinality(low distinct values number) and must be pre-defined in your application. Otherwise it will lead to the performance degradation. More about PostgreSQL partitions is [here](https://www.postgresql.org/docs/current/ddl-partitioning.html).
 
 So, let's say you want to publish next event:
 
@@ -35,6 +35,19 @@ end.to_a
 #    {"id"=>2, "context"=>"SomeCtx", "stream_name"=>"SomeStream", "event_type"=>nil, "table_name"=>"stream_names_ecb803"},
 #    {"id"=>3, "context"=>"SomeCtx", "stream_name"=>"SomeStream", "event_type"=>"SomethingChanged", "table_name"=>"event_types_aeadd5"}]
 ```
+
+### PostgreSQL settings
+
+The more partitions you have, the more locks are required for operations that affect multiple partitions. Especially it concerns the case when you are [reading events from "all" stream](reading_events.md#reading-from-the-all-stream) without providing any filters. It may lead to the next error:
+
+```
+ERROR:  out of shared memory (PG::OutOfMemory)
+HINT:  You might need to increase max_locks_per_transaction.
+```
+
+PostgreSQL suggests to increase the `max_locks_per_transaction`(the description of it is [here](https://www.postgresql.org/docs/current/runtime-config-locks.html)). The default value is `64`. The good value of this setting really depends on your queries, the number of concurrent transactions, the values of `shared_buffers` and `work_mem` settings. In case you have several thousands of partitions - you may want to set it to `128` or event to `256` from the start. On the other hand - you may want to increase it even earlier(e.g. when having several hundreds of partitions) in case you involve high number of partitions into a single transaction(for example, when using [#multiple](multiple_commands.md)).
+
+Conclusion: monitor db logs, monitor exceptions and adjust your db settings accordingly.
 
 ## Appending events and multiple commands
 
