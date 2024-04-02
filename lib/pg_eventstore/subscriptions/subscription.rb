@@ -63,8 +63,8 @@ module PgEventstore
     #     processor
     attribute(:last_chunk_greatest_position)
     # @!attribute locked_by
-    #   @return [String, nil] UUIDv4. The id of subscription manager which obtained the lock of the Subscription. _nil_
-    #     value means that the Subscription isn't locked yet by any subscription manager.
+    #   @return [Integer, nil] The id of subscription manager which obtained the lock of the Subscription. _nil_ value
+    #     means that the Subscription isn't locked yet by any subscription manager.
     attribute(:locked_by)
     # @!attribute created_at
     #   @return [Time]
@@ -80,7 +80,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [Hash]
     def update(attrs)
-      assign_attributes(subscription_queries.update(id, attrs))
+      assign_attributes(subscription_queries.update(id, attrs: attrs, locked_by: locked_by))
     end
 
     # @param attrs [Hash]
@@ -98,13 +98,6 @@ module PgEventstore
       self.locked_by = subscription_queries.lock!(id, lock_id, force)
       reset_runtime_attributes
       self
-    end
-
-    # Unlocks the Subscription.
-    # @return [void]
-    def unlock!
-      subscription_queries.unlock!(id, locked_by)
-      self.locked_by = nil
     end
 
     # Dup the current object without assigned connection

@@ -14,7 +14,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [Array<Hash>]
     def find_all(attrs)
-      builder = SQLBuilder.new.select('*').from('subscriptions_set')
+      builder = SQLBuilder.new.select('*').from('subscriptions_set').order('name ASC')
       attrs.each do |attr, val|
         builder.where("#{attr} = ?", val)
       end
@@ -25,13 +25,22 @@ module PgEventstore
       pg_result.to_a.map(&method(:deserialize))
     end
 
+    # @return [Array<String>]
+    def set_names
+      builder = SQLBuilder.new.select('name').from('subscriptions_set').group('name').order('name ASC')
+
+      connection.with do |conn|
+        conn.exec_params(*builder.to_exec_params)
+      end.map { |attrs| attrs['name'] }
+    end
+
     # The same as #find_all, but returns first result
     # @return [Hash, nil]
     def find_by(...)
       find_all(...).first
     end
 
-    # @param id [String] UUIDv4
+    # @param id [Integer]
     # @return [Hash]
     # @raise [PgEventstore::RecordNotFound]
     def find!(id)
@@ -52,7 +61,7 @@ module PgEventstore
       deserialize(pg_result.to_a.first)
     end
 
-    # @param id [String] UUIDv4
+    # @param id [Integer]
     # @param attrs [Hash]
     def update(id, attrs)
       attrs = { updated_at: Time.now.utc }.merge(attrs)
@@ -70,7 +79,7 @@ module PgEventstore
       deserialize(pg_result.to_a.first)
     end
 
-    # @return id [Integer]
+    # @param id [Integer]
     # @return [void]
     def delete(id)
       connection.with do |conn|
@@ -84,6 +93,10 @@ module PgEventstore
     # @return [Hash]
     def deserialize(hash)
       hash.transform_keys(&:to_sym)
+    end
+
+    def transaction_queries
+      TransactionQueries.new(connection)
     end
   end
 end

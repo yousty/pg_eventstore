@@ -12,6 +12,19 @@ module PgEventstore
     end
 
     # @param subscription_id [Integer]
+    # @param subscriptions_set_id [Integer]
+    # @param command_name [String]
+    # @return [Hash]
+    def find_or_create_by(subscription_id:, subscriptions_set_id:, command_name:)
+      transaction_queries.transaction do
+        find_by(subscription_id: subscription_id, command_name: command_name) ||
+          create_by(
+            subscription_id: subscription_id, subscriptions_set_id: subscriptions_set_id, command_name: command_name
+          )
+      end
+    end
+
+    # @param subscription_id [Integer]
     # @param command_name [String]
     # @return [Hash, nil]
     def find_by(subscription_id:, command_name:)
@@ -29,16 +42,17 @@ module PgEventstore
     end
 
     # @param subscription_id [Integer]
+    # @param subscriptions_set_id [Integer]
     # @param command_name [String]
     # @return [Hash]
-    def create_by(subscription_id:, command_name:)
+    def create_by(subscription_id:, subscriptions_set_id:, command_name:)
       sql = <<~SQL
-        INSERT INTO subscription_commands (name, subscription_id) 
-          VALUES ($1, $2)
+        INSERT INTO subscription_commands (name, subscription_id, subscriptions_set_id) 
+          VALUES ($1, $2, $3)
           RETURNING *
       SQL
       pg_result = connection.with do |conn|
-        conn.exec_params(sql, [command_name, subscription_id])
+        conn.exec_params(sql, [command_name, subscription_id, subscriptions_set_id])
       end
       deserialize(pg_result.to_a.first)
     end
@@ -71,6 +85,11 @@ module PgEventstore
     end
 
     private
+
+    # @return [PgEventstore::TransactionQueries]
+    def transaction_queries
+      TransactionQueries.new(connection)
+    end
 
     # @param hash [Hash]
     # @return [Hash]

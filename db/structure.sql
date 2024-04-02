@@ -137,6 +137,7 @@ CREATE TABLE public.subscription_commands (
     id bigint NOT NULL,
     name character varying NOT NULL,
     subscription_id bigint NOT NULL,
+    subscriptions_set_id bigint NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
@@ -182,7 +183,7 @@ CREATE TABLE public.subscriptions (
     chunk_query_interval real DEFAULT 1.0 NOT NULL,
     last_chunk_fed_at timestamp without time zone DEFAULT to_timestamp((0)::double precision) NOT NULL,
     last_chunk_greatest_position bigint,
-    locked_by uuid,
+    locked_by bigint,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
@@ -212,7 +213,7 @@ ALTER SEQUENCE public.subscriptions_id_seq OWNED BY public.subscriptions.id;
 --
 
 CREATE TABLE public.subscriptions_set (
-    id uuid DEFAULT public.gen_random_uuid() NOT NULL,
+    id bigint NOT NULL,
     name character varying NOT NULL,
     state character varying DEFAULT 'initial'::character varying NOT NULL,
     restart_count integer DEFAULT 0 NOT NULL,
@@ -233,7 +234,7 @@ CREATE TABLE public.subscriptions_set (
 CREATE TABLE public.subscriptions_set_commands (
     id bigint NOT NULL,
     name character varying NOT NULL,
-    subscriptions_set_id uuid NOT NULL,
+    subscriptions_set_id bigint NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
@@ -255,6 +256,25 @@ CREATE SEQUENCE public.subscriptions_set_commands_id_seq
 --
 
 ALTER SEQUENCE public.subscriptions_set_commands_id_seq OWNED BY public.subscriptions_set_commands.id;
+
+
+--
+-- Name: subscriptions_set_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.subscriptions_set_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: subscriptions_set_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.subscriptions_set_id_seq OWNED BY public.subscriptions_set.id;
 
 
 --
@@ -283,6 +303,13 @@ ALTER TABLE ONLY public.subscription_commands ALTER COLUMN id SET DEFAULT nextva
 --
 
 ALTER TABLE ONLY public.subscriptions ALTER COLUMN id SET DEFAULT nextval('public.subscriptions_id_seq'::regclass);
+
+
+--
+-- Name: subscriptions_set id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions_set ALTER COLUMN id SET DEFAULT nextval('public.subscriptions_set_id_seq'::regclass);
 
 
 --
@@ -425,6 +452,13 @@ CREATE UNIQUE INDEX idx_subscription_commands_subscription_id_and_name ON public
 
 
 --
+-- Name: idx_subscriptions_locked_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_subscriptions_locked_by ON public.subscriptions USING btree (locked_by);
+
+
+--
 -- Name: idx_subscriptions_set_and_name; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -440,11 +474,27 @@ ALTER TABLE ONLY public.subscription_commands
 
 
 --
+-- Name: subscription_commands subscription_commands_subscriptions_set_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_commands
+    ADD CONSTRAINT subscription_commands_subscriptions_set_fk FOREIGN KEY (subscriptions_set_id) REFERENCES public.subscriptions_set(id) ON DELETE CASCADE;
+
+
+--
 -- Name: subscriptions_set_commands subscriptions_set_commands_subscriptions_set_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.subscriptions_set_commands
     ADD CONSTRAINT subscriptions_set_commands_subscriptions_set_fk FOREIGN KEY (subscriptions_set_id) REFERENCES public.subscriptions_set(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subscriptions subscriptions_subscriptions_set_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_subscriptions_set_fk FOREIGN KEY (locked_by) REFERENCES public.subscriptions_set(id) ON DELETE SET NULL (locked_by);
 
 
 --

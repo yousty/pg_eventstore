@@ -12,7 +12,7 @@ module PgEventstore
       set :sessions, true
       set :session_secret, ENV.fetch('SECRET_KEY_BASE') { SecureRandom.hex(64) }
 
-      helpers(Paginator::Helpers) do
+      helpers(Paginator::Helpers, Subscriptions::Helpers) do
         # @return [Array<Hash>, nil]
         def streams_filter
           params in { filter: { streams: Array => streams } }
@@ -32,6 +32,11 @@ module PgEventstore
           PgEventstore.available_configs.include?(session[:current_config]) ? session[:current_config] : :default
         end
 
+        # @return [PgEventstore::Connection]
+        def connection
+          PgEventstore.connection(current_config)
+        end
+
         # @param collection [PgEventstore::Paginator::BaseCollection]
         # @return [void]
         def paginated_json_response(collection)
@@ -39,6 +44,12 @@ module PgEventstore
             results: collection.collection,
             pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id }
           }.to_json
+        end
+
+        def redirect_back_url(fallback_url:)
+          return fallback_url if request.referer.to_s.empty?
+
+          "#{request.referer}#{params[:hash]}"
         end
       end
 
@@ -61,6 +72,16 @@ module PgEventstore
         else
           erb :'home/dashboard'
         end
+      end
+
+      get '/subscriptions' do
+        @set_collection = Subscriptions::SetCollection.new(current_config)
+        @current_set = params[:set_name] || @set_collection.names.first
+        @association = Subscriptions::SubscriptionsToSetAssociation.new(
+          subscriptions_set: Subscriptions::SubscriptionsSet.new(current_config, @current_set).subscriptions_set,
+          subscriptions: Subscriptions::Subscriptions.new(current_config, @current_set).subscriptions
+        )
+        erb :'subscriptions/index'
       end
 
       post '/change_config' do
@@ -112,6 +133,45 @@ module PgEventstore
           options: { query: params[:term] }
         )
         paginated_json_response(collection)
+      end
+
+      post '/subscription_cmd/:set_id/:id/:cmd' do
+        puts SubscriptionCommandQueries.new(connection).find_or_create_by(
+          subscriptions_set_id: params[:set_id],
+          subscription_id: params[:id],
+          command_name: CommandHandlers::SubscriptionRunnersCommands::AVAILABLE_COMMANDS.fetch(params[:cmd].to_sym)
+        )
+
+        redirect redirect_back_url(fallback_url: url('/subscriptions'))
+      end
+
+      post '/subscriptions_set_cmd/:id/:cmd' do
+        SubscriptionsSetCommandQueries.new(connection).find_or_create_by(
+          subscriptions_set_id: params[:id],
+          command_name: CommandHandlers::SubscriptionFeederCommands::AVAILABLE_COMMANDS.fetch(params[:cmd].to_sym)
+        )
+
+        redirect redirect_back_url(fallback_url: url('/subscriptions'))
+      end
+
+      post '/delete_subscriptions_set/:id' do
+        SubscriptionsSetQueries.new(connection).delete(params[:id])
+
+        redirect redirect_back_url(fallback_url: url('/subscriptions'))
+      end
+
+      post '/delete_subscription/:id' do
+        SubscriptionQueries.new(connection).delete(params[:id])
+
+        redirect redirect_back_url(fallback_url: url('/subscriptions'))
+      end
+
+      post '/delete_all_subscriptions' do
+        params[:ids].each do |id|
+          SubscriptionQueries.new(connection).delete(id)
+        end
+
+        redirect redirect_back_url(fallback_url: url('/subscriptions'))
       end
     end
   end

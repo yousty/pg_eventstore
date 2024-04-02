@@ -22,7 +22,7 @@ module PgEventstore
     end
 
     # @!attribute id
-    #   @return [String] UUIDv4. It is used to lock the Subscription by updating Subscription#locked_by attribute
+    #   @return [Integer] It is used to lock the Subscription by updating Subscription#locked_by attribute
     attribute(:id)
     # @!attribute name
     #   @return [String] name of the set
@@ -85,6 +85,27 @@ module PgEventstore
     def reload
       assign_attributes(subscriptions_set_queries.find!(id))
       self
+    end
+
+    # @return [Integer]
+    def hash
+      id.hash
+    end
+
+    # @param another [Object]
+    # @return [Boolean]
+    def eql?(another)
+      return false unless another.is_a?(SubscriptionsSet)
+
+      hash == another.hash
+    end
+
+    # @param another [PgEventstore::SubscriptionsSet]
+    # @return [Boolean]
+    def ==(another)
+      return false unless another.is_a?(SubscriptionsSet)
+
+      id == another.id
     end
 
     private

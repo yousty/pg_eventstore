@@ -96,24 +96,24 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
       end
     end
 
-    context 'when "StopRunner" command is given' do
-      let(:command_name) { 'StopRunner' }
+    context 'when "Stop" command is given' do
+      let(:command_name) { 'Stop' }
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :stop_async }
       end
     end
 
-    context 'when "RestoreRunner" command is given' do
-      let(:command_name) { 'RestoreRunner' }
+    context 'when "Restore" command is given' do
+      let(:command_name) { 'Restore' }
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :restore }
       end
     end
 
-    context 'when "StartRunner" command is given' do
-      let(:command_name) { 'StartRunner' }
+    context 'when "Start" command is given' do
+      let(:command_name) { 'Start' }
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :start }
