@@ -449,12 +449,12 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     it 'locks first subscription' do
       expect { subject }.to change {
         subscription_runner1.subscription.reload.locked_by
-      }.to(match(EventHelpers::UUID_REGEXP))
+      }.to(kind_of(Integer))
     end
     it 'locks second subscription' do
       expect { subject }.to change {
         subscription_runner2.subscription.reload.locked_by
-      }.to(match(EventHelpers::UUID_REGEXP))
+      }.to(kind_of(Integer))
     end
     it 'starts first Subscription runner' do
       expect { subject }.to change { subscription_runner1.running? }.to(true)
@@ -470,7 +470,9 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       end
     end
     it 'starts CommandsHandler' do
-      subscription_cmd_queries.create_by(subscription_id: subscription_runner2.id, command_name: 'StopRunner')
+      subscription_cmd_queries.create(
+        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Stop'
+      )
       expect { subject; sleep 2 }.to change { subscription_runner2.state }.to('stopped')
     end
   end
@@ -605,6 +607,10 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         expect(events_receiver).not_to have_received(:call).with(a_hash_including('data' => { 'foo' => 'bar' }))
       end
     end
+    it 'updates SubscriptionsSet#updated_at' do
+      subject
+      expect { sleep 1 }.to change { instance.read_only_subscriptions_set.updated_at }
+    end
   end
 
   describe 'on after runner stopped' do
@@ -655,7 +661,71 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
     it 'stops CommandsHandler' do
       subject
-      subscription_cmd_queries.create_by(subscription_id: subscription_runner2.id, command_name: 'StartRunner')
+      subscription_cmd_queries.create(
+        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Start'
+      )
+      sleep 1.1
+      expect(subscription_runner2.state).to eq('stopped')
+    end
+  end
+
+  describe 'on after runner stopped when stopping via command' do
+    subject do
+      set_cmd_queries.create(
+        subscriptions_set_id: instance.id, command_name: 'Stop'
+      )
+      sleep PgEventstore::CommandsHandler::PULL_INTERVAL * 2
+    end
+
+    let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
+    let(:subscription_runner1) do
+      PgEventstore::SubscriptionRunner.new(
+        stats: PgEventstore::SubscriptionHandlerPerformance.new,
+        events_processor: PgEventstore::EventsProcessor.new(proc { }),
+        subscription: SubscriptionsHelper.create_with_connection(name: 'Foo')
+      )
+    end
+    let(:subscription_runner2) do
+      PgEventstore::SubscriptionRunner.new(
+        stats: PgEventstore::SubscriptionHandlerPerformance.new,
+        events_processor: PgEventstore::EventsProcessor.new(proc { }),
+        subscription: SubscriptionsHelper.create_with_connection(name: 'Bar')
+      )
+    end
+    let(:set_cmd_queries) { PgEventstore::SubscriptionsSetCommandQueries.new(PgEventstore.connection) }
+    let(:subscription_cmd_queries) { PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection) }
+
+    before do
+      instance.add(subscription_runner1)
+      instance.add(subscription_runner2)
+      allow(subscription_runner1).to receive(:stop_async).and_call_original
+      allow(subscription_runner2).to receive(:stop_async).and_call_original
+      instance.start
+    end
+
+    it 'deletes SubscriptionsSet' do
+      expect { subject }.to change { queries.find_all(name: set_name).size }.by(-1)
+    end
+    it 'unlocks first Subscription' do
+      expect { subject }.to change { subscription_runner1.subscription.reload.locked_by }.to(nil)
+    end
+    it 'unlocks second Subscription' do
+      expect { subject }.to change { subscription_runner2.subscription.reload.locked_by }.to(nil)
+    end
+    it 'stops SubscriptionRunner-s gracefully' do
+      subject
+      aggregate_failures do
+        expect(subscription_runner1).to have_received(:stop_async)
+        expect(subscription_runner2).to have_received(:stop_async)
+        expect(subscription_runner1.state).to eq('stopped')
+        expect(subscription_runner2.state).to eq('stopped')
+      end
+    end
+    it 'stops CommandsHandler' do
+      subject
+      subscription_cmd_queries.create(
+        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Start'
+      )
       sleep 1.1
       expect(subscription_runner2.state).to eq('stopped')
     end

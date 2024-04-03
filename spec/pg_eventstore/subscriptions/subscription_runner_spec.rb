@@ -347,4 +347,38 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       expect { subject }.to change { subscription.reload.state }.to('running')
     end
   end
+
+  describe 'on fed' do
+    subject { instance.feed(raw_events) }
+
+    let(:raw_events) { [{ 'global_position' => 2, 'global_position' => 3 }] }
+
+    before do
+      subscription.update(last_chunk_greatest_position: 1)
+    end
+
+    context 'when events are present' do
+      it 'updates subscription#last_chunk_fed_at' do
+        expect { subject }.to change {
+          subscription.reload.last_chunk_fed_at
+        }.to(be_between(Time.now.utc, Time.now.utc + 1))
+      end
+      it 'updates subscription#last_chunk_greatest_position' do
+        expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(3)
+      end
+    end
+
+    context 'when events are empty' do
+      let(:raw_events) { [] }
+
+      it 'updates subscription#last_chunk_fed_at' do
+        expect { subject }.to change {
+          subscription.reload.last_chunk_fed_at
+        }.to(be_between(Time.now.utc, Time.now.utc + 1))
+      end
+      it 'does not update subscription#last_chunk_greatest_position' do
+        expect { subject }.not_to change { subscription.reload.last_chunk_greatest_position }
+      end
+    end
+  end
 end

@@ -3,14 +3,23 @@
 RSpec.describe PgEventstore::SubscriptionCommandQueries do
   let(:instance) { described_class.new(PgEventstore.connection) }
   let(:subscription) { SubscriptionsHelper.create }
+  let(:subscriptions_set) { SubscriptionsSetHelper.create }
 
   describe '#find_by' do
-    subject { instance.find_by(subscription_id: subscription.id, command_name: command_name) }
+    subject do
+      instance.find_by(
+        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+      )
+    end
 
     let(:command_name) { 'DoSomething' }
 
     context 'when command exists' do
-      let!(:command) { instance.create_by(subscription_id: subscription.id, command_name: command_name) }
+      let!(:command) do
+        instance.create(
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+        )
+      end
 
       it 'returns it ' do
         is_expected.to eq(command)
@@ -22,29 +31,44 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
     end
 
     context 'when another command exists' do
-      let!(:command) { instance.create_by(subscription_id: subscription.id, command_name: 'SomeAnotherCommand') }
+      let!(:command) do
+        instance.create(
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id,
+          command_name: 'SomeAnotherCommand'
+        )
+      end
+
+      it { is_expected.to eq(nil) }
+    end
+
+    context 'when same command exists, but for different SubscriptionsSet' do
+      let!(:command) do
+        instance.create(
+          subscription_id: subscription.id, subscriptions_set_id: another_subscriptions_set.id,
+          command_name: command_name
+        )
+      end
+      let(:another_subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarSet') }
 
       it { is_expected.to eq(nil) }
     end
   end
 
-  describe '#create_by' do
-    subject { instance.create_by(subscription_id: subscription.id, command_name: command_name) }
+  describe '#create' do
+    subject do
+      instance.create(
+        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+      )
+    end
 
     let(:command_name) { 'DoSomething' }
 
-    context 'when command exists' do
-      let!(:command) { instance.create_by(subscription_id: subscription.id, command_name: command_name) }
-
-      it 'raises error' do
-        expect { subject }.to raise_error(PG::UniqueViolation)
-      end
-    end
-
-    context 'when command does not exist' do
-      it 'creates it' do
+    shared_examples 'creates a command' do
+      it 'creates new command' do
         expect { subject }.to change {
-          instance.find_by(subscription_id: subscription.id, command_name: command_name)
+          instance.find_by(
+            subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+          )
         }.to(a_hash_including(:id, :name, :subscription_id, :created_at))
       end
       it 'has correct attributes' do
@@ -57,20 +81,48 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
       end
     end
 
+    context 'when command exists' do
+      let!(:command) do
+        instance.create(
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+        )
+      end
+
+      it 'raises error' do
+        expect { subject }.to raise_error(PG::UniqueViolation)
+      end
+    end
+
+    context 'when command for the same subscription, but for the another subscriptions set exists' do
+      let!(:command) do
+        instance.create(
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set2.id, command_name: command_name
+        )
+      end
+      let(:subscriptions_set2) { SubscriptionsSetHelper.create(name: 'BarSet') }
+
+      it_behaves_like 'creates a command'
+    end
+
+    context 'when command does not exist' do
+      it_behaves_like 'creates a command'
+    end
+
     context 'when command with the same name exist, but for different Subscription' do
       let(:another_subscription) { SubscriptionsHelper.create(set: 'BarSet') }
-      let!(:command) { instance.create_by(subscription_id: another_subscription.id, command_name: command_name) }
-
-      it 'creates new command' do
-        expect { subject }.to change {
-          instance.find_by(subscription_id: subscription.id, command_name: command_name)
-        }.to(a_hash_including(:id, :name, :subscription_id, :created_at))
+      let!(:command) do
+        instance.create(
+          subscription_id: another_subscription.id, subscriptions_set_id: subscriptions_set.id,
+          command_name: command_name
+        )
       end
+
+      it_behaves_like 'creates a command'
     end
   end
 
   describe '#find_commands' do
-    subject { instance.find_commands(subscription_ids) }
+    subject { instance.find_commands(subscription_ids, subscriptions_set_id: subscriptions_set.id) }
 
     let(:subscription_ids) { [] }
 
@@ -81,11 +133,29 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
     context 'when subscription ids are present' do
       let(:subscription_ids) { [subscription.id, subscription3.id] }
 
+      let(:another_subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarSet') }
       let(:subscription2) { SubscriptionsHelper.create(set: 'Bar') }
       let(:subscription3) { SubscriptionsHelper.create(set: 'Baz') }
-      let!(:command1) { instance.create_by(subscription_id: subscription.id, command_name: 'Foo') }
-      let!(:command2) { instance.create_by(subscription_id: subscription2.id, command_name: 'Foo') }
-      let!(:command3) { instance.create_by(subscription_id: subscription3.id, command_name: 'Bar') }
+      let!(:command1) do
+        instance.create(
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: 'Foo'
+        )
+      end
+      let!(:command2) do
+        instance.create(
+          subscription_id: subscription2.id, subscriptions_set_id: subscriptions_set.id, command_name: 'Foo'
+        )
+      end
+      let!(:command3) do
+        instance.create(
+          subscription_id: subscription3.id, subscriptions_set_id: subscriptions_set.id, command_name: 'Bar'
+        )
+      end
+      let!(:command4) do
+        instance.create(
+          subscription_id: subscription3.id, subscriptions_set_id: another_subscriptions_set.id, command_name: 'Bar'
+        )
+      end
 
       it 'returns existing commands by the given subscription ids' do
         is_expected.to eq([command1, command3])
@@ -100,16 +170,65 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
 
     context 'when command exists' do
       let(:id) { command[:id] }
-      let!(:command) { instance.create_by(subscription_id: subscription.id, command_name: 'Foo') }
+      let!(:command) do
+        instance.create(
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: 'Foo'
+        )
+      end
 
       it 'deletes it' do
-        expect { subject }.to change { instance.find_by(subscription_id: subscription.id, command_name: 'Foo') }.to(nil)
+        expect { subject }.to change {
+          instance.find_by(
+            subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: 'Foo'
+          )
+        }.to(nil)
       end
     end
 
     context 'when command does not exist' do
       it 'does not thing' do
         expect { subject }.not_to raise_error
+      end
+    end
+  end
+
+  describe '#find_or_create_by' do
+    subject do
+      instance.find_or_create_by(
+        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+      )
+    end
+
+    let(:command_name) { 'FooCmd' }
+
+    describe 'when command does not exists' do
+      it 'creates it' do
+        expect { subject }.to change {
+          instance.find_by(
+            subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+          )
+        }.to(
+          a_hash_including(
+            subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, name: command_name
+          )
+        )
+      end
+    end
+
+    describe 'when command already exists' do
+      let!(:command) do
+        instance.create(
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+        )
+      end
+
+      it 'returns it' do
+        is_expected.to eq(command)
+      end
+      it 'does not create another command' do
+        expect { subject }.not_to change {
+          PgEventstore.connection.with { |c| c.exec('select count(*) from subscription_commands').to_a.first }
+        }
       end
     end
   end

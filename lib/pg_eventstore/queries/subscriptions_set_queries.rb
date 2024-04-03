@@ -14,7 +14,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [Array<Hash>]
     def find_all(attrs)
-      builder = SQLBuilder.new.select('*').from('subscriptions_set').order('name ASC')
+      builder = SQLBuilder.new.select('*').from('subscriptions_set').order('name ASC, id ASC')
       attrs.each do |attr, val|
         builder.where("#{attr} = ?", val)
       end
@@ -95,6 +95,7 @@ module PgEventstore
       hash.transform_keys(&:to_sym)
     end
 
+    # @return [PgEventstore::TransactionQueries]
     def transaction_queries
       TransactionQueries.new(connection)
     end

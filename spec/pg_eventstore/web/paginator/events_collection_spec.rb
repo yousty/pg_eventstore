@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe PgEventstore::Paginator::EventsCollection do
+RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
   let(:instance) do
     described_class.new(config_name, starting_id: starting_id, per_page: per_page, order: order, options: options)
   end

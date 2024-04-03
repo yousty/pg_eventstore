@@ -14,7 +14,7 @@ module PgEventstore
     # @return [Hash]
     def find_or_create_by(...)
       transaction_queries.transaction do
-        find_by(...) || create_by(...)
+        find_by(...) || create(...)
       end
     end
 
@@ -38,7 +38,7 @@ module PgEventstore
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
     # @return [Hash]
-    def create_by(subscriptions_set_id:, command_name:)
+    def create(subscriptions_set_id:, command_name:)
       sql = <<~SQL
         INSERT INTO subscriptions_set_commands (name, subscriptions_set_id) 
           VALUES ($1, $2)

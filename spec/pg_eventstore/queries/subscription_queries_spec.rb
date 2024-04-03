@@ -21,6 +21,38 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     end
   end
 
+  describe '#find_all' do
+    subject { instance.find_all(attrs) }
+
+    let(:attrs) { { set: 'FooSet' } }
+
+    context 'when there are matching subscriptions' do
+      let!(:subscription1) { SubscriptionsHelper.create(set: 'FooSet', name: 'Foo') }
+      let!(:subscription2) { SubscriptionsHelper.create(set: 'BarSet', name: 'Bar') }
+      let!(:subscription3) { SubscriptionsHelper.create(set: 'FooSet', name: 'Baz') }
+
+      it 'returns them' do
+        is_expected.to eq([subscription1.options_hash, subscription3.options_hash])
+      end
+    end
+
+    context 'when there are no matching subscriptions' do
+      it { is_expected.to eq([]) }
+    end
+  end
+
+  describe '#set_collection' do
+    subject { instance.set_collection }
+
+    let!(:subscription1) { SubscriptionsHelper.create(set: 'FooSet', name: 'Foo') }
+    let!(:subscription2) { SubscriptionsHelper.create(set: 'BarSet', name: 'Bar') }
+    let!(:subscription3) { SubscriptionsHelper.create(set: 'FooSet', name: 'Baz') }
+
+    it 'returns all set names' do
+      is_expected.to eq(['BarSet', 'FooSet'])
+    end
+  end
+
   describe '#find!' do
     subject { instance.find!(id) }
 
@@ -72,10 +104,11 @@ RSpec.describe PgEventstore::SubscriptionQueries do
   end
 
   describe '#update' do
-    subject { instance.update(id, attrs) }
+    subject { instance.update(id, attrs: attrs, locked_by: subscriptions_set.id) }
 
     let(:id) { subscription.id }
-    let(:subscription) { SubscriptionsHelper.create }
+    let(:subscription) { SubscriptionsHelper.create(locked_by: subscriptions_set.id) }
+    let(:subscriptions_set) { SubscriptionsSetHelper.create }
     let(:attrs) { { max_restarts_number: 123 } }
 
     context 'when subscription exists' do
@@ -91,11 +124,23 @@ RSpec.describe PgEventstore::SubscriptionQueries do
 
       context 'when subscription is updated by someone else' do
         before do
-          instance.update(id, { restart_count: 2 })
+          instance.update(id, attrs: { restart_count: 2 }, locked_by: subscriptions_set.id)
         end
 
         it 'returns those changes as well' do
           is_expected.to match(a_hash_including(id: id, max_restarts_number: 123, restart_count: 2))
+        end
+      end
+
+      context 'when subscription is force-locked by another SubscriptionsSet' do
+        let(:another_subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarSet') }
+
+        before do
+          instance.lock!(subscription.id, another_subscriptions_set.id, force: true)
+        end
+
+        it 'raises error' do
+          expect { subject }.to raise_error(PgEventstore::WrongLockIdError, /Could not update subscription/)
         end
       end
     end
@@ -213,11 +258,11 @@ RSpec.describe PgEventstore::SubscriptionQueries do
   describe '#lock!' do
     subject { instance.lock!(id, lock_id) }
 
-    let(:lock_id) { SecureRandom.uuid }
+    let(:lock_id) { SubscriptionsSetHelper.create.id }
     let(:id) { 123 }
 
     context 'when subscription exists' do
-      let(:subscription) { SubscriptionsHelper.create }
+      let(:subscription) { SubscriptionsHelper.create_with_connection }
       let(:id) { subscription.id }
 
       context 'when subscription is not locked' do
@@ -229,9 +274,26 @@ RSpec.describe PgEventstore::SubscriptionQueries do
         end
       end
 
-      context 'when subscription is locked' do
+      context 'when subscription is locked by the given SubscriptionsSet' do
         before do
-          instance.update(id, { locked_by: lock_id })
+          instance.update(id, attrs: { locked_by: lock_id }, locked_by: lock_id)
+        end
+
+        it 'returns the given lock id' do
+          is_expected.to eq(lock_id)
+        end
+        it 'does not update the subscription' do
+          expect { subject }.not_to change { subscription.reload.options_hash }
+        end
+      end
+
+      context 'when subscription is locked by another SubscriptionsSet' do
+        let(:another_subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarSet') }
+
+        before do
+          instance.update(
+            id, attrs: { locked_by: another_subscriptions_set.id }, locked_by: another_subscriptions_set.id
+          )
         end
 
         it 'raises error' do
@@ -240,7 +302,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
               PgEventstore::SubscriptionAlreadyLockedError,
               <<~TEXT.strip
                 Could not lock subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
-                name. It is already locked by #{lock_id.inspect} set.
+                name. It is already locked by ##{another_subscriptions_set.id.inspect} set.
               TEXT
             )
           )
@@ -255,57 +317,13 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     end
   end
 
-  describe '#unlock!' do
-    subject { instance.unlock!(id, lock_id) }
+  describe '#delete' do
+    subject { instance.delete(subscription.id) }
 
-    let(:lock_id) { SecureRandom.uuid }
-    let(:id) { 123 }
+    let(:subscription) { SubscriptionsHelper.create }
 
-    context 'when subscription exists' do
-      let(:subscription) { SubscriptionsHelper.create }
-      let(:id) { subscription.id }
-
-      context "when subscription's lock id does not match the given lock id" do
-        let(:another_lock_id) { SecureRandom.uuid }
-
-        before do
-          instance.update(id, { locked_by: another_lock_id })
-        end
-
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::SubscriptionUnlockError,
-              <<~TEXT.strip
-                Failed to unlock subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
-                name by #{lock_id.inspect} lock id. It is currently locked by #{another_lock_id.inspect} lock id.
-              TEXT
-            )
-          )
-        end
-      end
-
-      context "when subscription's lock id is nil" do
-        it 'raises error' do
-          expect { subject }.to raise_error(PgEventstore::SubscriptionUnlockError)
-        end
-      end
-
-      context "when subscription's lock id matches the given lock id" do
-        before do
-          instance.update(id, { locked_by: lock_id })
-        end
-
-        it 'unlocks the subscription' do
-          expect { subject }.to change { instance.find!(id)[:locked_by] }.from(lock_id).to(nil)
-        end
-      end
-    end
-
-    context 'when subscription does not exist' do
-      it 'raises error' do
-        expect { subject }.to raise_error(PgEventstore::RecordNotFound)
-      end
+    it 'deletes the given subscriptions' do
+      expect { subject }.to change { instance.find_by(id: subscription.id) }.to(nil)
     end
   end
 end

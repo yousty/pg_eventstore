@@ -7,15 +7,17 @@ module PgEventstore
 
       # @param config_name [Symbol]
       # @param runners [Array<PgEventstore::SubscriptionRunner>]
-      def initialize(config_name, runners)
+      # @param subscriptions_set_id [Integer]
+      def initialize(config_name, runners, subscriptions_set_id)
         @config_name = config_name
         @runners = runners
+        @subscriptions_set_id = subscriptions_set_id
       end
 
       # Look up commands for all given SubscriptionRunner-s and execute them
       # @return [void]
       def process
-        queries.find_commands(@runners.map(&:id)).each do |command|
+        queries.find_commands(@runners.map(&:id), subscriptions_set_id: @subscriptions_set_id).each do |command|
           unless AVAILABLE_COMMANDS.values.include?(command[:name])
             PgEventstore.logger&.warn(
               "#{self.class.name}: Don't know how to handle #{command[:name].inspect}. Details: #{command.inspect}."

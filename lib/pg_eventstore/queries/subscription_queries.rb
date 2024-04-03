@@ -34,7 +34,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [Array<Hash>]
     def find_all(attrs)
-      builder = find_by_attrs_builder(attrs).order('id ASC')
+      builder = find_by_attrs_builder(attrs)
       pg_result = connection.with do |conn|
         conn.exec_params(*builder.to_exec_params)
       end
@@ -122,9 +122,11 @@ module PgEventstore
     # @param force [Boolean] whether to lock the subscription despite on #locked_by value
     # @return [Integer] lock id
     # @raise [SubscriptionAlreadyLockedError] in case the Subscription is already locked
-    def lock!(id, lock_id, force = false)
+    def lock!(id, lock_id, force: false)
       transaction_queries.transaction do
         attrs = find!(id)
+        return lock_id if lock_id == attrs[:locked_by]
+
         if attrs[:locked_by] && !force
           raise SubscriptionAlreadyLockedError.new(attrs[:set], attrs[:name], attrs[:locked_by])
         end
@@ -180,7 +182,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [PgEventstore::SQLBuilder]
     def find_by_attrs_builder(attrs)
-      builder = SQLBuilder.new.select('*').from('subscriptions')
+      builder = SQLBuilder.new.select('*').from('subscriptions').order('id ASC')
       attrs.each do |attr, val|
         builder.where("#{attr} = ?", val)
       end

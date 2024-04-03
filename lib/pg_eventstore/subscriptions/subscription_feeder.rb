@@ -24,7 +24,6 @@ module PgEventstore
       @commands_handler = CommandsHandler.new(@config_name, self, @runners)
       @basic_runner = BasicRunner.new(0.2, 0)
       @force_lock = false
-      @mutex = Thread::Mutex.new
       @refreshed_at = Time.at(0)
       attach_runner_callbacks
     end
@@ -80,7 +79,7 @@ module PgEventstore
     # Locks all Subscriptions behind the current SubscriptionsSet
     # @return [void]
     def lock_all
-      @runners.each { |runner| runner.lock!(subscriptions_set.id, @force_lock) }
+      @runners.each { |runner| runner.lock!(subscriptions_set.id, force: @force_lock) }
     end
 
     # @return [PgEventstore::SubscriptionsSet]

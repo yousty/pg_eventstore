@@ -134,7 +134,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     context 'when there are more results than in current response' do
       before do
-        stub_const('PgEventstore::Paginator::StreamContextsCollection::PER_PAGE', 2)
+        stub_const('PgEventstore::Web::Paginator::StreamContextsCollection::PER_PAGE', 2)
       end
 
       it 'paginates it' do
@@ -196,7 +196,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     context 'when there are more results than in current response' do
       before do
-        stub_const('PgEventstore::Paginator::StreamNamesCollection::PER_PAGE', 2)
+        stub_const('PgEventstore::Web::Paginator::StreamNamesCollection::PER_PAGE', 2)
       end
 
       it 'paginates it' do
@@ -276,7 +276,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     context 'when there are more results than in current response' do
       before do
-        stub_const('PgEventstore::Paginator::StreamIdsCollection::PER_PAGE', 2)
+        stub_const('PgEventstore::Web::Paginator::StreamIdsCollection::PER_PAGE', 2)
       end
 
       it 'paginates it' do
@@ -353,7 +353,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     context 'when there are more results than in current response' do
       before do
-        stub_const('PgEventstore::Paginator::EventTypesCollection::PER_PAGE', 2)
+        stub_const('PgEventstore::Web::Paginator::EventTypesCollection::PER_PAGE', 2)
       end
 
       it 'paginates it' do

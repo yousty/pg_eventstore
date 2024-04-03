@@ -93,9 +93,9 @@ module PgEventstore
 
     # Locks the Subscription by the given lock id
     # @return [PgEventstore::Subscription]
-    def lock!(lock_id, force = false)
+    def lock!(lock_id, force: false)
       self.id = subscription_queries.find_or_create_by(set: set, name: name)[:id]
-      self.locked_by = subscription_queries.lock!(id, lock_id, force)
+      self.locked_by = subscription_queries.lock!(id, lock_id, force: force)
       reset_runtime_attributes
       self
     end
@@ -123,6 +123,8 @@ module PgEventstore
         chunk_query_interval: chunk_query_interval,
         last_chunk_fed_at: Time.at(0).utc,
         last_chunk_greatest_position: nil,
+        last_error: nil,
+        last_error_occurred_at: nil,
         time_between_restarts: time_between_restarts,
         state: RunnerState::STATES[:initial]
       )

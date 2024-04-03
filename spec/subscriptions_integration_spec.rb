@@ -295,8 +295,31 @@ RSpec.describe 'Subscriptions integration' do
     it 'processes events correctly' do
       subject
       sleep 1
-      #puts processed_events.map(&:id)
       expect(processed_events.map(&:id)).to eq([event1, event2, event1, event2].map(&:id))
+    end
+  end
+
+  describe 'updating subscription#updated_at every subscription_pull_interval' do
+    subject { manager.start }
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: 'Microservice 1 Subscriptions') }
+
+    before do
+      PgEventstore.config.subscription_pull_interval = 0.2
+      manager.subscribe('Subscription 1', handler: proc {})
+    end
+
+    after do
+      manager.stop
+      PgEventstore.send(:init_variables)
+    end
+
+    it 'updates Subscription#updated_at even without incoming events' do
+      subject
+      aggregate_failures do
+        expect { sleep 0.5 }.to change { manager.subscriptions.first.updated_at }
+        expect { sleep 0.5 }.to change { manager.subscriptions.first.updated_at }
+      end
     end
   end
 end

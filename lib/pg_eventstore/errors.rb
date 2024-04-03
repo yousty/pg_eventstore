@@ -151,7 +151,7 @@ module PgEventstore
     def user_friendly_message
       <<~TEXT.strip
         Could not lock subscription from #{set.inspect} set with #{name.inspect} name. It is already locked by \
-        #{lock_id.inspect} set.
+        ##{lock_id.inspect} set.
       TEXT
     end
   end
