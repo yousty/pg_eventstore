@@ -46,6 +46,8 @@ module PgEventstore
           }.to_json
         end
 
+        # @param fallback_url [String]
+        # @return [String]
         def redirect_back_url(fallback_url:)
           return fallback_url if request.referer.to_s.empty?
 
@@ -75,11 +77,11 @@ module PgEventstore
       end
 
       get '/subscriptions' do
-        @set_collection = Subscriptions::SetCollection.new(current_config)
+        @set_collection = Subscriptions::SetCollection.new(connection)
         @current_set = params[:set_name] || @set_collection.names.first
         @association = Subscriptions::SubscriptionsToSetAssociation.new(
-          subscriptions_set: Subscriptions::SubscriptionsSet.new(current_config, @current_set).subscriptions_set,
-          subscriptions: Subscriptions::Subscriptions.new(current_config, @current_set).subscriptions
+          subscriptions_set: Subscriptions::SubscriptionsSet.new(connection, @current_set).subscriptions_set,
+          subscriptions: Subscriptions::Subscriptions.new(connection, @current_set).subscriptions
         )
         erb :'subscriptions/index'
       end

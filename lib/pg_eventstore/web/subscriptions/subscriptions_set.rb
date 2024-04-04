@@ -4,10 +4,13 @@ module PgEventstore
   module Web
     module Subscriptions
       class SubscriptionsSet
-        # @param config [Symbol]
+        attr_reader :connection
+        private :connection
+
+        # @param connection [PgEventstore::Connection]
         # @param current_set [String, nil]
-        def initialize(config, current_set)
-          @config = config
+        def initialize(connection, current_set)
+          @connection = connection
           @current_set = current_set
         end
 
@@ -19,11 +22,6 @@ module PgEventstore
         end
 
         private
-
-        # @return [PgEventstore::Connection]
-        def connection
-          PgEventstore.connection(@config)
-        end
 
         # @return [PgEventstore::SubscriptionsSetQueries]
         def subscriptions_set_queries

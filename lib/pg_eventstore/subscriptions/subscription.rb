@@ -112,6 +112,27 @@ module PgEventstore
       self
     end
 
+    # @return [Integer]
+    def hash
+      id.hash
+    end
+
+    # @param another [Object]
+    # @return [Boolean]
+    def eql?(another)
+      return false unless another.is_a?(Subscription)
+
+      hash == another.hash
+    end
+
+    # @param another [PgEventstore::SubscriptionsSet]
+    # @return [Boolean]
+    def ==(another)
+      return false unless another.is_a?(Subscription)
+
+      id == another.id
+    end
+
     private
 
     def reset_runtime_attributes

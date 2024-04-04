@@ -385,4 +385,197 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       end
     end
   end
+
+  describe 'GET /subscriptions' do
+    subject { get '/subscriptions', params }
+
+    let(:params) { {} }
+
+    let!(:set1) { SubscriptionsSetHelper.create(name: 'FooSet') }
+    let!(:set2) { SubscriptionsSetHelper.create(name: 'BarSet') }
+
+    let!(:subscription1) { SubscriptionsHelper.create(locked_by: set2.id, set: set1.name, name: 'Sub1') }
+    let!(:subscription2) do
+      SubscriptionsHelper.create_with_connection(locked_by: set2.id, set: set2.name, name: 'Sub2')
+    end
+
+    context 'when no specific set is given' do
+      it 'displays subscriptions of first set which goes in alphabetic order' do
+        subject
+        expect(last_response.body).to include(subscription2.name)
+      end
+
+      context 'when subscription is not locked' do
+        before do
+          subscription2.locked_by = nil
+          subscription2.update(locked_by: nil)
+        end
+
+        it 'still displays it' do
+          subject
+          expect(last_response.body).to include(subscription2.name)
+        end
+      end
+    end
+
+    context 'when specific set is given' do
+      let(:params) { { set_name: 'FooSet' } }
+
+      it 'displays its subscriptions' do
+        subject
+        expect(last_response.body).to include(subscription1.name)
+      end
+    end
+  end
+
+  describe 'POST /subscription_cmd/:set_id/:id/:cmd' do
+    subject { post "/subscription_cmd/#{set.id}/#{subscription.id}/#{cmd}" }
+
+    let(:set) { SubscriptionsSetHelper.create }
+    let(:subscription) { SubscriptionsHelper.create }
+    let(:cmd) { 'Stop' }
+
+    let(:cmd_queries) { PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection) }
+
+    context 'when command is recognizable' do
+      it 'creates a command record' do
+        expect { subject }.to change {
+          cmd_queries.find_by(subscription_id: subscription.id, subscriptions_set_id: set.id, command_name: cmd)
+        }.to(a_hash_including(subscription_id: subscription.id, subscriptions_set_id: set.id, name: cmd))
+      end
+      it 'redirects to subscriptions page' do
+        subject
+        aggregate_failures do
+          expect(last_response).to be_redirect
+          expect(URI(last_response.location).path).to eq('/subscriptions')
+        end
+      end
+    end
+
+    context 'when command is not recognizable' do
+      let(:cmd) { 'Stopit!' }
+
+      it 'renders error' do
+        subject
+        expect(last_response.body).to include('KeyError')
+      end
+    end
+  end
+
+  describe 'POST /subscriptions_set_cmd/:id/:cmd' do
+    subject { post "/subscriptions_set_cmd/#{set.id}/#{cmd}" }
+
+    let(:set) { SubscriptionsSetHelper.create }
+    let(:cmd) { 'Stop' }
+
+    let(:cmd_queries) { PgEventstore::SubscriptionsSetCommandQueries.new(PgEventstore.connection) }
+
+    context 'when command is recognizable' do
+      it 'creates a command record' do
+        expect { subject }.to change {
+          cmd_queries.find_by(subscriptions_set_id: set.id, command_name: cmd)
+        }.to(a_hash_including(subscriptions_set_id: set.id, name: cmd))
+      end
+      it 'redirects to subscriptions page' do
+        subject
+        aggregate_failures do
+          expect(last_response).to be_redirect
+          expect(URI(last_response.location).path).to eq('/subscriptions')
+        end
+      end
+    end
+
+    context 'when command is not recognizable' do
+      let(:cmd) { 'Stopit!' }
+
+      it 'renders error' do
+        subject
+        expect(last_response.body).to include('KeyError')
+      end
+    end
+  end
+
+  describe 'POST /delete_subscriptions_set/:id' do
+    subject { post "/delete_subscriptions_set/#{set.id}" }
+
+    let(:set) { SubscriptionsSetHelper.create }
+
+    let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
+
+    context 'when SubscriptionsSet exists' do
+      it 'deletes it' do
+        expect { subject }.to change { queries.find_by(id: set.id) }.to(nil)
+      end
+      it 'redirects to subscriptions page' do
+        subject
+        aggregate_failures do
+          expect(last_response).to be_redirect
+          expect(URI(last_response.location).path).to eq('/subscriptions')
+        end
+      end
+    end
+
+    context 'when SubscriptionsSet does not exist' do
+      it 'redirects to subscriptions page' do
+        subject
+        aggregate_failures do
+          expect(last_response).to be_redirect
+          expect(URI(last_response.location).path).to eq('/subscriptions')
+        end
+      end
+    end
+  end
+
+  describe 'POST /delete_subscription/:id' do
+    subject { post "/delete_subscription/#{subscription.id}" }
+
+    let(:subscription) { SubscriptionsHelper.create }
+
+    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+
+    context 'when Subscription exists' do
+      it 'deletes it' do
+        expect { subject }.to change { queries.find_by(id: subscription.id) }.to(nil)
+      end
+      it 'redirects to subscriptions page' do
+        subject
+        aggregate_failures do
+          expect(last_response).to be_redirect
+          expect(URI(last_response.location).path).to eq('/subscriptions')
+        end
+      end
+    end
+
+    context 'when Subscription does not exist' do
+      it 'redirects to subscriptions page' do
+        subject
+        aggregate_failures do
+          expect(last_response).to be_redirect
+          expect(URI(last_response.location).path).to eq('/subscriptions')
+        end
+      end
+    end
+  end
+
+  describe 'POST /delete_all_subscriptions' do
+    subject { post '/delete_all_subscriptions', params }
+
+    let(:params) { { ids: [subscription1.id, subscription2.id] } }
+
+    let!(:subscription1) { SubscriptionsHelper.create(name: 'Sub1') }
+    let!(:subscription2) { SubscriptionsHelper.create(name: 'Sub2') }
+    let!(:subscription3) { SubscriptionsHelper.create(name: 'Sub3') }
+
+    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+
+    it 'deletes first subscription' do
+      expect { subject }.to change { queries.find_by(id: subscription1.id) }.to(nil)
+    end
+    it 'deletes second subscription' do
+      expect { subject }.to change { queries.find_by(id: subscription2.id) }.to(nil)
+    end
+    it 'does not delete third subscription' do
+      expect { subject }.not_to change { queries.find_by(id: subscription3.id) }
+    end
+  end
 end

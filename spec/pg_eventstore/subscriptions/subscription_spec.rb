@@ -237,4 +237,51 @@ RSpec.describe PgEventstore::Subscription do
     end
     it { is_expected.to eq(subscription) }
   end
+
+  describe '#==' do
+    subject { subscription1 == subscription2 }
+
+    let(:subscription1) { described_class.new(id: 1) }
+    let(:subscription2) { described_class.new(id: 1) }
+
+    context 'when ids matches' do
+      it { is_expected.to eq(true) }
+    end
+
+    context 'when ids does not match' do
+      let(:subscription2) { described_class.new(id: 2) }
+
+      it { is_expected.to eq(false) }
+    end
+
+    context 'when subscription2 is not a Subscription object' do
+      let(:subscription2) { Object.new }
+
+      it { is_expected.to eq(false) }
+    end
+  end
+
+  describe '#hash' do
+    let(:hash) { {} }
+    let(:subscription1) { described_class.new(id: 1) }
+    let(:subscription2) { described_class.new(id: 1) }
+
+    before do
+      hash[subscription1] = :foo
+    end
+
+    context 'when subscriptions are equal' do
+      it 'recognizes second subscription' do
+        expect(hash[subscription2]).to eq(:foo)
+      end
+    end
+
+    context 'when subscriptions differ' do
+      let(:subscription2) { described_class.new(id: 2) }
+
+      it 'does not recognize second subscription' do
+        expect(hash[subscription2]).to eq(nil)
+      end
+    end
+  end
 end

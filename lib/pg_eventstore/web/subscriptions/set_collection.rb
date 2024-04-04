@@ -4,22 +4,20 @@ module PgEventstore
   module Web
     module Subscriptions
       class SetCollection
-        # @param config [Symbol]
-        def initialize(config)
-          @config = config
+        attr_reader :connection
+        private :connection
+
+        # @param connection [PgEventstore::Connection]
+        def initialize(connection)
+          @connection = connection
         end
 
         # @return [Array<String>]
         def names
-          @set_collection ||= subscription_queries.set_collection | subscriptions_set_queries.set_names
+          @set_collection ||= (subscription_queries.set_collection | subscriptions_set_queries.set_names).sort
         end
 
         private
-
-        # @return [PgEventstore::Connection]
-        def connection
-          PgEventstore.connection(@config)
-        end
 
         # @return [PgEventstore::SubscriptionQueries]
         def subscription_queries
