@@ -261,6 +261,20 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     let(:lock_id) { SubscriptionsSetHelper.create.id }
     let(:id) { 123 }
 
+    shared_examples 'fails to lock' do
+      it 'raises error' do
+        expect { subject }.to(
+          raise_error(
+            PgEventstore::SubscriptionAlreadyLockedError,
+            <<~TEXT.strip
+              Could not lock subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
+              name. It is already locked by ##{subscriptions_set_id.inspect} set.
+            TEXT
+          )
+        )
+      end
+    end
+
     context 'when subscription exists' do
       let(:subscription) { SubscriptionsHelper.create_with_connection }
       let(:id) { subscription.id }
@@ -279,11 +293,8 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           instance.update(id, attrs: { locked_by: lock_id }, locked_by: lock_id)
         end
 
-        it 'returns the given lock id' do
-          is_expected.to eq(lock_id)
-        end
-        it 'does not update the subscription' do
-          expect { subject }.not_to change { subscription.reload.options_hash }
+        it_behaves_like 'fails to lock' do
+          let(:subscriptions_set_id) { lock_id }
         end
       end
 
@@ -296,16 +307,8 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           )
         end
 
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::SubscriptionAlreadyLockedError,
-              <<~TEXT.strip
-                Could not lock subscription from #{subscription.set.inspect} set with #{subscription.name.inspect} \
-                name. It is already locked by ##{another_subscriptions_set.id.inspect} set.
-              TEXT
-            )
-          )
+        it_behaves_like 'fails to lock' do
+          let(:subscriptions_set_id) { another_subscriptions_set.id }
         end
       end
     end

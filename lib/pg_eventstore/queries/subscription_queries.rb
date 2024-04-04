@@ -125,8 +125,9 @@ module PgEventstore
     def lock!(id, lock_id, force: false)
       transaction_queries.transaction do
         attrs = find!(id)
-        return lock_id if lock_id == attrs[:locked_by]
-
+        # We don't care who locked the Subscription - whether it is the same SubscriptionsSet or not - multiple locks
+        # must not happen even with the same SubscriptionsSet. We later assume this to reset Subscription's stats, for
+        # example.
         if attrs[:locked_by] && !force
           raise SubscriptionAlreadyLockedError.new(attrs[:set], attrs[:name], attrs[:locked_by])
         end
