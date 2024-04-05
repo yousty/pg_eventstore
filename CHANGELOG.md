@@ -1,8 +1,10 @@
 ## [Unreleased]
 
+## [1.0.0.rc1]
+
 - Improve performance of loading original events when resolve_link_tos: true option is provided
 - Adjust `partitions` table indexes
-- Implement admin web UI
+- Implement admin web UI. So far two pages were implemented - events search and subscriptions
 
 ## [0.10.2] - 2024-03-13
 
