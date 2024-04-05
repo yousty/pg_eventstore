@@ -9,6 +9,11 @@ require_relative 'web/paginator/stream_contexts_collection'
 require_relative 'web/paginator/stream_names_collection'
 require_relative 'web/paginator/stream_ids_collection'
 require_relative 'web/paginator/event_types_collection'
+require_relative 'web/subscriptions/set_collection'
+require_relative 'web/subscriptions/subscriptions'
+require_relative 'web/subscriptions/subscriptions_set'
+require_relative 'web/subscriptions/subscriptions_to_set_association'
+require_relative 'web/subscriptions/helpers'
 require_relative 'web/application'
 
 module PgEventstore

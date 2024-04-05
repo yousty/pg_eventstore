@@ -84,7 +84,16 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
     context 'when first runner does not have corresponding events' do
       let(:options1) { { filter: { event_types: ['Baz'] } } }
 
-      it_behaves_like 'does not feed first runner, feeds second runner'
+      it 'feeds first runner' do
+        subject
+        expect(runner1).to have_received(:feed).with([])
+      end
+      it 'feeds second runner' do
+        subject
+        expect(runner2).to(
+          have_received(:feed).with([a_hash_including('type' => 'Foo'), a_hash_including('type' => 'Bar')])
+        )
+      end
     end
   end
 end

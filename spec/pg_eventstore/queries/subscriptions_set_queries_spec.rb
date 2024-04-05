@@ -9,8 +9,8 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     let(:attrs) { { name: 'BarCtx' } }
 
     describe 'when SubscriptionsSets exists' do
-      let!(:subscriptions_set_1) { create_subscriptions_set(name: 'BarCtx') }
-      let!(:subscriptions_set_2) { create_subscriptions_set(name: 'BarCtx') }
+      let!(:subscriptions_set_1) { SubscriptionsSetHelper.create(name: 'BarCtx') }
+      let!(:subscriptions_set_2) { SubscriptionsSetHelper.create(name: 'BarCtx') }
 
       it 'returns array of their attributes attributes' do
         is_expected.to eq([subscriptions_set_1.options_hash, subscriptions_set_2.options_hash])
@@ -22,13 +22,25 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     end
   end
 
+  describe '#set_names' do
+    subject { instance.set_names }
+
+    let!(:subscriptions_set_1) { SubscriptionsSetHelper.create(name: 'FooCtx') }
+    let!(:subscriptions_set_2) { SubscriptionsSetHelper.create(name: 'BarCtx') }
+    let!(:subscriptions_set_3) { SubscriptionsSetHelper.create(name: 'BarCtx') }
+
+    it 'returns names of all sets' do
+      is_expected.to eq(['BarCtx', 'FooCtx'])
+    end
+  end
+
   describe '#find_by' do
     subject { instance.find_by(attrs) }
 
     let(:attrs) { { name: 'BarCtx' } }
 
     describe 'when SubscriptionsSet exists' do
-      let!(:subscriptions_set) { create_subscriptions_set(name: 'BarCtx') }
+      let!(:subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarCtx') }
 
       it 'returns its attributes' do
         is_expected.to eq(subscriptions_set.options_hash)
@@ -43,11 +55,11 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
   describe '#find!' do
     subject { instance.find!(id) }
 
-    let(:id) { SecureRandom.uuid }
+    let(:id) { 1 }
 
     describe 'when SubscriptionsSet exists' do
       let(:id) { subscriptions_set.id }
-      let!(:subscriptions_set) { PgEventstore::SubscriptionsSet.new(**instance.create(name: 'Foo')) }
+      let!(:subscriptions_set) { SubscriptionsSetHelper.create(name: 'Foo') }
 
       it 'returns its attributes' do
         is_expected.to eq(subscriptions_set.options_hash)
@@ -71,7 +83,7 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     let(:attrs) { { name: 'FooCtx' } }
 
     context 'when SubscriptionsSet with the given name already exists' do
-      let!(:subscriptions_set) { create_subscriptions_set(name: 'FooCtx') }
+      let!(:subscriptions_set) { SubscriptionsSetHelper.create(name: 'FooCtx') }
 
       it 'creates another one' do
         expect { subject }.to change { instance.find_all(attrs).size }.by(1)
@@ -79,7 +91,7 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
       it 'returns its attributes' do
         aggregate_failures do
           is_expected.to be_a(Hash)
-          expect(subject[:id]).to match(EventHelpers::UUID_REGEXP)
+          expect(subject[:id]).to be_an(Integer)
           expect(subject[:id]).not_to eq(subscriptions_set.id)
           expect(subject[:name]).to eq('FooCtx')
         end
@@ -93,7 +105,7 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
       it 'returns its attributes' do
         aggregate_failures do
           is_expected.to be_a(Hash)
-          expect(subject[:id]).to match(EventHelpers::UUID_REGEXP)
+          expect(subject[:id]).to be_an(Integer)
           expect(subject[:name]).to eq('FooCtx')
         end
       end
@@ -104,7 +116,7 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     subject { instance.update(id, attrs) }
 
     let(:id) { subscriptions_set.id }
-    let(:subscriptions_set) { create_subscriptions_set }
+    let(:subscriptions_set) { SubscriptionsSetHelper.create }
     let(:attrs) { { state: 'running' } }
 
     context 'when SubscriptionsSet exists' do
@@ -130,7 +142,7 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     end
 
     context 'when SubscriptionsSet does not exist' do
-      let(:subscriptions_set) { PgEventstore::SubscriptionsSet.new(id: SecureRandom.uuid) }
+      let(:subscriptions_set) { PgEventstore::SubscriptionsSet.new(id: 1) }
 
       it 'raises error' do
         expect { subject }.to(
@@ -146,11 +158,11 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
   describe '#delete' do
     subject { instance.delete(id) }
 
-    let(:id) { SecureRandom.uuid }
+    let(:id) { 1 }
 
     context 'when SubscriptionsSet exists' do
       let(:id) { subscriptions_set.id }
-      let!(:subscriptions_set) { create_subscriptions_set }
+      let!(:subscriptions_set) { SubscriptionsSetHelper.create }
 
       it 'deletes it' do
         expect { subject }.to change { instance.find_by(id: subscriptions_set.id) }.to(nil)

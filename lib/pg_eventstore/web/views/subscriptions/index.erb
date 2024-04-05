@@ -1,0 +1,220 @@
+<div class="right_col" role="main">
+  <div class="">
+    <div class="page-title">
+      <div class="title_left">
+        <h3>Subscriptions</h3>
+      </div>
+    </div>
+
+    <div class="clearfix"></div>
+
+    <ul class="nav nav-tabs bg-white">
+      <% @set_collection.names.each do |set_name| %>
+        <li class="nav-item">
+          <a class="nav-link <%= "active bg-dark text-white" if @current_set == set_name %>" href="<%= subscriptions_url(set_name: set_name) %>">
+            <%= set_name %>
+          </a>
+        </li>
+      <% end %>
+    </ul>
+
+    <div class="row">
+      <div class="col-md-12 col-sm-12">
+        <div class="x_panel">
+          <div class="x_title">
+            <h2><i class="fa fa-bars"></i> Tabs <small>Float left</small></h2>
+            <div class="clearfix"></div>
+          </div>
+          <div class="x_content">
+            <ul class="nav nav-tabs bar_tabs" role="tablist">
+              <% @association.association.each.with_index do |(subscriptions_set, _), index| %>
+                <li class="nav-item">
+                  <a class="nav-link set-tab <%= "active" if index.zero? %>" id="tab-<%= subscriptions_set.id || 'shutdown' %>" data-toggle="tab" href="#set-<%= subscriptions_set.id || 'shutdown' %>" role="tab" aria-controls="set-<%= subscriptions_set.id || 'shutdown' %>" aria-selected="true">
+                    <%= subscriptions_set.id.nil? ? "Shutdown" : "Set ##{subscriptions_set.id}" %>
+                  </a>
+                </li>
+              <% end %>
+            </ul>
+            <div class="tab-content">
+              <% @association.association.each.with_index do |(subscriptions_set, subscriptions), index| %>
+                <div class="table-responsive tab-pane fade show <%= "active" if index.zero? %>" id="set-<%= subscriptions_set.id || 'shutdown' %>" role="tabpanel" aria-labelledby="tab-<%= subscriptions_set.id || 'shutdown' %>">
+                  <% if subscriptions_set.id %>
+                    <div>
+                      <h2>Subscriptions Set</h2>
+                      <table class="table table-hover">
+                        <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>State</th>
+                          <th>Restarts count</th>
+                          <th>Max restarts number</th>
+                          <th>Time between restarts</th>
+                          <th>Last restarted at</th>
+                          <th>Last error</th>
+                          <th>Last error occurred at</th>
+                          <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><%= subscriptions_set.id %></td>
+                            <td><%= colored_state(subscriptions_set.state, subscriptions_set.updated_at) %></td>
+                            <td><%= subscriptions_set.restart_count %></td>
+                            <td><%= subscriptions_set.max_restarts_number %></td>
+                            <td><%= subscriptions_set.time_between_restarts %>s</td>
+                            <td><%= subscriptions_set.last_restarted_at %></td>
+                            <td>
+                              <% if subscriptions_set.last_error %>
+                                <a data-toggle="collapse" href="#last-set-error-<%= subscriptions_set.id %>" aria-controls="last-set-error-<%= subscriptions_set.id %>" role="button" aria-expanded="false" class="d-inline-block text-nowrap">
+                                  JSON <i class="fa fa-eye"></i>
+                                </a>
+                              <% end %>
+                            </td>
+                            <td><%= subscriptions_set.last_error_occurred_at %></td>
+                            <td>
+                              <% if subscriptions_set.state == PgEventstore::RunnerState::STATES[:dead] %>
+                                <a class="btn btn-success" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:Restore]) %>">
+                                  Restore
+                                </a>
+                              <% end %>
+                              <% if PgEventstore::RunnerState::STATES.values_at(:running, :dead).include?(subscriptions_set.state) %>
+                                <a class="btn btn-warning" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:Stop]) %>" data-toggle="tooltip" title="This action will delete Subscriptions Set and release all related Subscriptions.">
+                                  Stop
+                                </a>
+                              <% end %>
+                              <a class="btn btn-danger" data-method="post" href="<%= url("/delete_subscriptions_set/#{subscriptions_set.id}") %>" data-toggle="tooltip" title="Use this action only on stuck Subscriptions Set - to clean it up.">
+                                Delete
+                              </a>
+                            </td>
+                          </tr>
+                          <% if subscriptions_set.last_error %>
+                            <tr class="collapse" id="last-set-error-<%= subscriptions_set.id %>">
+                              <td colspan="9">
+                                <pre><%= JSON.pretty_generate(subscriptions_set.last_error) %></pre>
+                              </td>
+                            </tr>
+                          <% end %>
+                        </tbody>
+                      </table>
+                    </div>
+                  <% end %>
+                  <div>
+                    <div>
+                      <div class="float-left">
+                        <h2>Subscriptions list</h2>
+                      </div>
+                      <div class="float-right">
+                        <% if subscriptions_set.id %>
+                          <a class="btn btn-success" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:StartAll]) %>">
+                            Start All
+                          </a>
+                          <a class="btn btn-danger" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:StopAll]) %>">
+                            Stop All
+                          </a>
+                        <% else %>
+                          <a class="btn btn-danger" data-method="post" href="<%= delete_all_subscriptions_url(subscriptions.map(&:id)) %>" data-toggle="tooltip" title="Delete all Subscriptions, displayed on the current page.">
+                            Delete All
+                          </a>
+                        <% end %>
+                      </div>
+                    </div>
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Name</th>
+                          <th>Total processed events</th>
+                          <th>Options</th>
+                          <th>Current position</th>
+                          <th>Pull interval</th>
+                          <th>Last event arrived at</th>
+                          <th>State</th>
+                          <th>Performance</th>
+                          <th>Restarts count</th>
+                          <th>Max restarts number</th>
+                          <th>Time between restarts</th>
+                          <th>Last restarted at</th>
+                          <th>Last error</th>
+                          <th>Last error occurred at</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% subscriptions.each do |subscription| %>
+                          <tr>
+                            <td><%= subscription.id %></td>
+                            <td><%= subscription.name %></td>
+                            <td><%= subscription.total_processed_events %></td>
+                            <td>
+                              <a data-toggle="collapse" href="#options-<%= subscription.id %>" aria-controls="options-<%= subscription.id %>" role="button" aria-expanded="false" class="d-inline-block text-nowrap">
+                                JSON <i class="fa fa-eye"></i>
+                              </a>
+                            </td>
+                            <td><%= subscription.current_position %></td>
+                            <td><%= subscription.chunk_query_interval %>s</td>
+                            <td><%= subscription.last_chunk_fed_at %></td>
+                            <td><%= colored_state(subscription.state, subscription.updated_at) %></td>
+                            <td><%= subscription.average_event_processing_time %></td>
+                            <td><%= subscription.restart_count %></td>
+                            <td><%= subscription.max_restarts_number %></td>
+                            <td><%= subscription.time_between_restarts %>s</td>
+                            <td><%= subscription.last_restarted_at %></td>
+                            <td>
+                              <% if subscription.last_error %>
+                                <a data-toggle="collapse" href="#last-error-<%= subscription.id %>" aria-controls="last-error-<%= subscription.id %>" role="button" aria-expanded="false" class="d-inline-block text-nowrap">
+                                  JSON <i class="fa fa-eye"></i>
+                                </a>
+                              <% end %>
+                            </td>
+                            <td><%= subscription.last_error_occurred_at %></td>
+                            <td>
+                              <% if subscriptions_set.id %>
+                                <% if subscription.state == PgEventstore::RunnerState::STATES[:stopped] %>
+                                  <a class="btn btn-success" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscriptions_cmds[:Start]) %>">
+                                    Start
+                                  </a>
+                                <% end %>
+                                <% if PgEventstore::RunnerState::STATES.values_at(:running, :dead).include?(subscription.state) %>
+                                  <a class="btn btn-warning" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscriptions_cmds[:Stop]) %>">
+                                    Stop
+                                  </a>
+                                <% end %>
+                                <% if subscription.state == PgEventstore::RunnerState::STATES[:dead] %>
+                                  <a class="btn btn-success" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscriptions_cmds[:Restore]) %>">
+                                    Restore
+                                  </a>
+                                <% end %>
+                              <% end %>
+                              <% unless subscriptions_set.id %>
+                                <a class="btn btn-danger" data-method="post" href="<%= url("/delete_subscription/#{subscription.id}") %>" data-toggle="tooltip" title="You will lose the Subscription's position as well.">
+                                  Delete
+                                </a>
+                              <% end %>
+                            </td>
+                          </tr>
+                          <tr class="collapse" id="options-<%= subscription.id %>">
+                            <td colspan="16">
+                              <pre><%= JSON.pretty_generate(subscription.options) %></pre>
+                            </td>
+                          </tr>
+                          <% if subscription.last_error %>
+                            <tr class="collapse" id="last-error-<%= subscription.id %>">
+                              <td colspan="16">
+                                <pre><%= JSON.pretty_generate(subscription.last_error) %></pre>
+                              </td>
+                            </tr>
+                          <% end %>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</div>

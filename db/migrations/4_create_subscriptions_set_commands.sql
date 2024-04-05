@@ -2,7 +2,7 @@ CREATE TABLE public.subscriptions_set_commands
 (
     id                   bigserial                   NOT NULL,
     name                 character varying           NOT NULL,
-    subscriptions_set_id uuid                        NOT NULL,
+    subscriptions_set_id bigint                      NOT NULL,
     created_at           timestamp without time zone NOT NULL DEFAULT now()
 );
 

@@ -3,9 +3,10 @@
 module PgEventstore
   # This class is responsible for starting/stopping all SubscriptionRunners. The background runner of it is responsible
   # for events pulling and feeding those SubscriptionRunners.
-  # @!visibility private
   class SubscriptionFeeder
     extend Forwardable
+
+    HEARTBEAT_INTERVAL = 10 # seconds
 
     def_delegators :subscriptions_set, :id
     def_delegators :@basic_runner, :start, :stop, :restore, :state, :wait_for_finish, :stop_async
@@ -17,12 +18,13 @@ module PgEventstore
     def initialize(config_name:, set_name:, max_retries:, retries_interval:)
       @config_name = config_name
       @runners = []
-      @set_name = set_name
-      @max_retries = max_retries
-      @retries_interval = retries_interval
+      @subscriptions_set_attrs = {
+        name: set_name, max_restarts_number: max_retries, time_between_restarts: retries_interval
+      }
       @commands_handler = CommandsHandler.new(@config_name, self, @runners)
       @basic_runner = BasicRunner.new(0.2, 0)
       @force_lock = false
+      @refreshed_at = Time.at(0)
       attach_runner_callbacks
     end
 
@@ -77,18 +79,12 @@ module PgEventstore
     # Locks all Subscriptions behind the current SubscriptionsSet
     # @return [void]
     def lock_all
-      @runners.each { |runner| runner.lock!(subscriptions_set.id, @force_lock) }
-    end
-
-    # @return [void]
-    def unlock_all
-      @runners.each(&:unlock!)
+      @runners.each { |runner| runner.lock!(subscriptions_set.id, force: @force_lock) }
     end
 
     # @return [PgEventstore::SubscriptionsSet]
     def subscriptions_set
-      @subscriptions_set ||= SubscriptionsSet.using_connection(@config_name).
-        create(name: @set_name, max_restarts_number: @max_retries, time_between_restarts: @retries_interval)
+      @subscriptions_set ||= SubscriptionsSet.using_connection(@config_name).create(**@subscriptions_set_attrs)
     end
 
     # @return [PgEventstore::SubscriptionRunnersFeeder]
@@ -102,6 +98,7 @@ module PgEventstore
       @basic_runner.define_callback(:before_runner_started, :before, method(:before_runner_started))
       @basic_runner.define_callback(:after_runner_died, :before, method(:after_runner_died))
       @basic_runner.define_callback(:after_runner_died, :after, method(:restart_runner))
+      @basic_runner.define_callback(:process_async, :before, method(:ping_subscriptions_set))
       @basic_runner.define_callback(:process_async, :before, method(:process_async))
       @basic_runner.define_callback(:after_runner_stopped, :before, method(:after_runner_stopped))
       @basic_runner.define_callback(:before_runner_restored, :after, method(:update_runner_restarts))
@@ -142,12 +139,19 @@ module PgEventstore
     end
 
     # @return [void]
+    def ping_subscriptions_set
+      return unless subscriptions_set.updated_at > Time.now.utc - HEARTBEAT_INTERVAL
+
+      subscriptions_set.update(updated_at: Time.now.utc)
+      @refreshed_at = Time.now.utc
+    end
+
+    # @return [void]
     def after_runner_stopped
-      @commands_handler.stop
+      @runners.each(&:stop_async).each(&:wait_for_finish)
       @subscriptions_set&.delete
       @subscriptions_set = nil
-      @runners.each(&:stop_async).each(&:wait_for_finish)
-      unlock_all
+      @commands_handler.stop
     end
 
     # @return [void]

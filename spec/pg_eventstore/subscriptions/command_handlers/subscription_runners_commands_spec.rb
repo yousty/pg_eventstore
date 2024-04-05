@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
-  let(:instance) { described_class.new(config_name, runners) }
+  let(:instance) { described_class.new(config_name, runners, subscriptions_set.id) }
   let(:config_name) { :default }
+  let(:subscriptions_set) { SubscriptionsSetHelper.create }
   let(:runners) { [runner1, runner2] }
   let(:runner1) do
     PgEventstore::SubscriptionRunner.new(
@@ -35,26 +36,49 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
         end
       end
 
-      shared_examples 'command from another collection' do
+      shared_examples 'command from another set' do
         let!(:another_command) do
-          command_queries.create_by(
-            subscription_id: SubscriptionsHelper.create(name: 'Subscr3').id, command_name: command_name
+          command_queries.create(
+            subscription_id: runner1.id,
+            subscriptions_set_id: another_subscriptions_set.id,
+            command_name: 'FooCmd'
           )
+        end
+        let(:another_subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarSet') }
+
+        before do
+          PgEventstore.logger = Logger.new('/dev/null')
+          allow(PgEventstore.logger).to receive(:warn)
+        end
+
+        after do
+          PgEventstore.logger = nil
         end
 
         it 'does not delete it' do
           expect { subject }.not_to(
             change {
               command_queries.find_by(
-                subscription_id: another_command[:subscription_id], command_name: another_command[:name]
+                subscription_id: another_command[:subscription_id], subscriptions_set_id: another_subscriptions_set.id,
+                command_name: another_command[:name]
               )
             }
+          )
+        end
+        it 'does not try to perform it' do
+          subject
+          expect(PgEventstore.logger).not_to(
+            have_received(:warn).with(a_string_including("Don't know how to handle \"FooCmd\""))
           )
         end
       end
 
       context 'when command exists only for the second runner' do
-        let!(:command) { command_queries.create_by(subscription_id: runner2.id, command_name: command_name) }
+        let!(:command) do
+          command_queries.create(
+            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+          )
+        end
 
         it 'performs the command only for it' do
           subject
@@ -65,15 +89,25 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
         end
         it 'deletes the command' do
           expect { subject }.to change {
-            command_queries.find_by(subscription_id: runner2.id, command_name: command_name)
+            command_queries.find_by(
+              subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+            )
           }.to(nil)
         end
-        it_behaves_like 'command from another collection'
+        it_behaves_like 'command from another set'
       end
 
       context 'when commands exist for both runners' do
-        let!(:command1) { command_queries.create_by(subscription_id: runner1.id, command_name: command_name) }
-        let!(:command2) { command_queries.create_by(subscription_id: runner2.id, command_name: command_name) }
+        let!(:command1) do
+          command_queries.create(
+            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+          )
+        end
+        let!(:command2) do
+          command_queries.create(
+            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+          )
+        end
 
         it 'performs the command for both of them' do
           subject
@@ -84,36 +118,40 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
         end
         it 'deletes the command of first runner' do
           expect { subject }.to change {
-            command_queries.find_by(subscription_id: runner1.id, command_name: command_name)
+            command_queries.find_by(
+              subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+            )
           }.to(nil)
         end
         it 'deletes the command of second runner' do
           expect { subject }.to change {
-            command_queries.find_by(subscription_id: runner2.id, command_name: command_name)
+            command_queries.find_by(
+              subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+            )
           }.to(nil)
         end
-        it_behaves_like 'command from another collection'
+        it_behaves_like 'command from another set'
       end
     end
 
-    context 'when "StopRunner" command is given' do
-      let(:command_name) { 'StopRunner' }
+    context 'when "Stop" command is given' do
+      let(:command_name) { 'Stop' }
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :stop_async }
       end
     end
 
-    context 'when "RestoreRunner" command is given' do
-      let(:command_name) { 'RestoreRunner' }
+    context 'when "Restore" command is given' do
+      let(:command_name) { 'Restore' }
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :restore }
       end
     end
 
-    context 'when "StartRunner" command is given' do
-      let(:command_name) { 'StartRunner' }
+    context 'when "Start" command is given' do
+      let(:command_name) { 'Start' }
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :start }
@@ -121,11 +159,17 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
     end
 
     context 'when an unhandled command is given' do
-      let!(:command) { command_queries.create_by(subscription_id: runner1.id, command_name: "FooCmd") }
+      let!(:command) do
+        command_queries.create(
+          subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: "FooCmd"
+        )
+      end
 
       it 'deletes it' do
         expect { subject }.to change {
-          command_queries.find_by(subscription_id: runner1.id, command_name: "FooCmd")
+          command_queries.find_by(
+            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: "FooCmd"
+          )
         }.to(nil)
       end
 

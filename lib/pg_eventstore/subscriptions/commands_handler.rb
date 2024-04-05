@@ -11,6 +11,7 @@ module PgEventstore
     extend Forwardable
 
     RESTART_DELAY = 5 # seconds
+    PULL_INTERVAL = 1
 
     def_delegators :@basic_runner, :start, :stop, :state, :stop_async, :wait_for_finish
 
@@ -21,7 +22,7 @@ module PgEventstore
       @config_name = config_name
       @subscription_feeder = subscription_feeder
       @runners = runners
-      @basic_runner = BasicRunner.new(1, 0)
+      @basic_runner = BasicRunner.new(PULL_INTERVAL, 0)
       attach_runner_callbacks
     end
 
@@ -56,7 +57,7 @@ module PgEventstore
 
     # @return [PgEventstore::CommandHandlers::SubscriptionRunnersCommands]
     def subscription_runners_commands
-      CommandHandlers::SubscriptionRunnersCommands.new(@config_name, @runners)
+      CommandHandlers::SubscriptionRunnersCommands.new(@config_name, @runners, @subscription_feeder.id)
     end
   end
 end

@@ -80,7 +80,7 @@
                   <div class="form-group float-md-right">
                     <label class="control-label text-nowrap float-left mr-2" for="per_page_select">Per page</label>
                     <select class="page-link text-dark float-left" name="per_page" id="per_page_select">
-                      <% PgEventstore::Paginator::EventsCollection::PER_PAGE.keys.each do |per_page| %>
+                      <% PgEventstore::Web::Paginator::EventsCollection::PER_PAGE.keys.each do |per_page| %>
                         <option <%= 'selected="selected"' if params[:per_page] == per_page %> data-url="<%= per_page_url(per_page) %>">
                           <%= per_page %>
                         </option>

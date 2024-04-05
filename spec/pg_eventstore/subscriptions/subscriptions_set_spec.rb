@@ -71,7 +71,7 @@ RSpec.describe PgEventstore::SubscriptionsSet do
     end
 
     context 'when SubscriptionsSet does not exist' do
-      let(:subscriptions_set) { PgEventstore::SubscriptionsSet.using_connection(:default).new(id: SecureRandom.uuid) }
+      let(:subscriptions_set) { PgEventstore::SubscriptionsSet.using_connection(:default).new(id: 1) }
 
       it 'does nothing' do
         expect { subject }.not_to raise_error
@@ -118,5 +118,52 @@ RSpec.describe PgEventstore::SubscriptionsSet do
       expect { subject }.to change { subscriptions_set.name }.to('Bar')
     end
     it { is_expected.to eq(subscriptions_set) }
+  end
+
+  describe '#==' do
+    subject { set1 == set2 }
+
+    let(:set1) { described_class.new(id: 1) }
+    let(:set2) { described_class.new(id: 1) }
+
+    context 'when ids matches' do
+      it { is_expected.to eq(true) }
+    end
+
+    context 'when ids does not match' do
+      let(:set2) { described_class.new(id: 2) }
+
+      it { is_expected.to eq(false) }
+    end
+
+    context 'when set2 is not a SubscriptionsSet object' do
+      let(:set2) { Object.new }
+
+      it { is_expected.to eq(false) }
+    end
+  end
+
+  describe '#hash' do
+    let(:hash) { {} }
+    let(:set1) { described_class.new(id: 1) }
+    let(:set2) { described_class.new(id: 1) }
+
+    before do
+      hash[set1] = :foo
+    end
+
+    context 'when sets are equal' do
+      it 'recognizes second set' do
+        expect(hash[set2]).to eq(:foo)
+      end
+    end
+
+    context 'when sets differ' do
+      let(:set2) { described_class.new(id: 2) }
+
+      it 'does not recognize second set' do
+        expect(hash[set2]).to eq(nil)
+      end
+    end
   end
 end

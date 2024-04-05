@@ -63,8 +63,8 @@ module PgEventstore
     #     processor
     attribute(:last_chunk_greatest_position)
     # @!attribute locked_by
-    #   @return [String, nil] UUIDv4. The id of subscription manager which obtained the lock of the Subscription. _nil_
-    #     value means that the Subscription isn't locked yet by any subscription manager.
+    #   @return [Integer, nil] The id of subscription manager which obtained the lock of the Subscription. _nil_ value
+    #     means that the Subscription isn't locked yet by any subscription manager.
     attribute(:locked_by)
     # @!attribute created_at
     #   @return [Time]
@@ -80,7 +80,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [Hash]
     def update(attrs)
-      assign_attributes(subscription_queries.update(id, attrs))
+      assign_attributes(subscription_queries.update(id, attrs: attrs, locked_by: locked_by))
     end
 
     # @param attrs [Hash]
@@ -93,18 +93,11 @@ module PgEventstore
 
     # Locks the Subscription by the given lock id
     # @return [PgEventstore::Subscription]
-    def lock!(lock_id, force = false)
+    def lock!(lock_id, force: false)
       self.id = subscription_queries.find_or_create_by(set: set, name: name)[:id]
-      self.locked_by = subscription_queries.lock!(id, lock_id, force)
+      self.locked_by = subscription_queries.lock!(id, lock_id, force: force)
       reset_runtime_attributes
       self
-    end
-
-    # Unlocks the Subscription.
-    # @return [void]
-    def unlock!
-      subscription_queries.unlock!(id, locked_by)
-      self.locked_by = nil
     end
 
     # Dup the current object without assigned connection
@@ -119,6 +112,27 @@ module PgEventstore
       self
     end
 
+    # @return [Integer]
+    def hash
+      id.hash
+    end
+
+    # @param another [Object]
+    # @return [Boolean]
+    def eql?(another)
+      return false unless another.is_a?(Subscription)
+
+      hash == another.hash
+    end
+
+    # @param another [PgEventstore::SubscriptionsSet]
+    # @return [Boolean]
+    def ==(another)
+      return false unless another.is_a?(Subscription)
+
+      id == another.id
+    end
+
     private
 
     def reset_runtime_attributes
@@ -130,6 +144,8 @@ module PgEventstore
         chunk_query_interval: chunk_query_interval,
         last_chunk_fed_at: Time.at(0).utc,
         last_chunk_greatest_position: nil,
+        last_error: nil,
+        last_error_occurred_at: nil,
         time_between_restarts: time_between_restarts,
         state: RunnerState::STATES[:initial]
       )

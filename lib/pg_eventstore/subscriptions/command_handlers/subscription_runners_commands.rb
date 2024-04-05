@@ -3,20 +3,22 @@
 module PgEventstore
   module CommandHandlers
     class SubscriptionRunnersCommands
-      AVAILABLE_COMMANDS = %w[StopRunner RestoreRunner StartRunner].freeze
+      AVAILABLE_COMMANDS = %i[Start Stop Restore].to_h { [_1, _1.to_s] }.freeze
 
       # @param config_name [Symbol]
       # @param runners [Array<PgEventstore::SubscriptionRunner>]
-      def initialize(config_name, runners)
+      # @param subscriptions_set_id [Integer]
+      def initialize(config_name, runners, subscriptions_set_id)
         @config_name = config_name
         @runners = runners
+        @subscriptions_set_id = subscriptions_set_id
       end
 
       # Look up commands for all given SubscriptionRunner-s and execute them
       # @return [void]
       def process
-        queries.find_commands(@runners.map(&:id)).each do |command|
-          unless AVAILABLE_COMMANDS.include?(command[:name])
+        queries.find_commands(@runners.map(&:id), subscriptions_set_id: @subscriptions_set_id).each do |command|
+          unless AVAILABLE_COMMANDS.values.include?(command[:name])
             PgEventstore.logger&.warn(
               "#{self.class.name}: Don't know how to handle #{command[:name].inspect}. Details: #{command.inspect}."
             )
@@ -48,19 +50,19 @@ module PgEventstore
 
       # @param subscription_id [Integer]
       # @return [void]
-      def start_runner(subscription_id)
+      def start(subscription_id)
         find_subscription_runner(subscription_id)&.start
       end
 
       # @param subscription_id [Integer]
       # @return [void]
-      def restore_runner(subscription_id)
+      def restore(subscription_id)
         find_subscription_runner(subscription_id)&.restore
       end
 
       # @param subscription_id [Integer]
       # @return [void]
-      def stop_runner(subscription_id)
+      def stop(subscription_id)
         find_subscription_runner(subscription_id)&.stop_async
       end
     end

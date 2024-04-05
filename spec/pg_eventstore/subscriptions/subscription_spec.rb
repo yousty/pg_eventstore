@@ -44,7 +44,7 @@ RSpec.describe PgEventstore::Subscription do
 
     let(:subscription) { SubscriptionsHelper.create_with_connection }
     let(:attrs) do
-      { locked_by: SecureRandom.uuid, restart_count: 321, max_restarts_number: 123, time_between_restarts: 10 }
+      { restart_count: 321, max_restarts_number: 123, time_between_restarts: 10 }
     end
 
     it 'updates attributes of the given subscription' do
@@ -53,7 +53,6 @@ RSpec.describe PgEventstore::Subscription do
     it 'assigns those attributes after update' do
       subject
       aggregate_failures do
-        expect(subscription.locked_by).to eq(attrs[:locked_by])
         expect(subscription.restart_count).to eq(attrs[:restart_count])
         expect(subscription.max_restarts_number).to eq(attrs[:max_restarts_number])
         expect(subscription.time_between_restarts).to eq(attrs[:time_between_restarts])
@@ -90,7 +89,7 @@ RSpec.describe PgEventstore::Subscription do
     end
     let(:set) { 'FooSet' }
     let(:name) { 'MySubscription1' }
-    let(:lock_id) { SecureRandom.uuid }
+    let(:lock_id) { SubscriptionsSetHelper.create.id }
     let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
 
     context 'when Subscription does not exist' do
@@ -146,6 +145,8 @@ RSpec.describe PgEventstore::Subscription do
           last_restarted_at: Time.now.utc,
           last_chunk_fed_at: Time.now.utc,
           last_chunk_greatest_position: 1234,
+          last_error: { foo: :bar },
+          last_error_occurred_at: Time.now.utc,
           state: 'stopped'
         )
       end
@@ -163,6 +164,8 @@ RSpec.describe PgEventstore::Subscription do
               last_restarted_at: nil,
               last_chunk_fed_at: Time.at(0).utc,
               last_chunk_greatest_position: nil,
+              last_error: nil,
+              last_error_occurred_at: nil,
               state: 'initial',
               locked_by: lock_id
             )
@@ -180,8 +183,10 @@ RSpec.describe PgEventstore::Subscription do
       end
 
       context 'when it is locked' do
+        let(:another_subscriptions_set) { SubscriptionsSetHelper.create }
+
         before do
-          queries.update(existing_subscription.id, locked_by: SecureRandom.uuid)
+          queries.lock!(existing_subscription.id, another_subscriptions_set.id)
         end
 
         it 'raises error' do
@@ -189,44 +194,10 @@ RSpec.describe PgEventstore::Subscription do
         end
 
         context 'when "force" flag is true' do
-          subject { subscription.lock!(lock_id, true) }
+          subject { subscription.lock!(lock_id, force: true) }
 
           it_behaves_like 'updating of the subscription'
         end
-      end
-    end
-  end
-
-  describe '#unlock!' do
-    subject { subscription.unlock! }
-
-    let(:subscription) { SubscriptionsHelper.create_with_connection }
-
-    context 'when subscription is not locked' do
-      it 'does not change it' do
-        expect { subject }.not_to change { subscription.reload.options_hash }
-      end
-    end
-
-    context 'when subscription is locked' do
-      before do
-        subscription.update(locked_by: SecureRandom.uuid)
-      end
-
-      it 'unlocks it' do
-        expect { subject }.to change { subscription.reload.locked_by }.to(nil)
-      end
-    end
-
-    context 'when subscription is locked, by someone else' do
-      let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
-
-      before do
-        queries.update(subscription.id, { locked_by: SecureRandom.uuid })
-      end
-
-      it 'raises error' do
-        expect { subject }.to raise_error(PgEventstore::SubscriptionUnlockError)
       end
     end
   end
@@ -258,12 +229,59 @@ RSpec.describe PgEventstore::Subscription do
     let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
 
     before do
-      queries.update(subscription.id, { options: { resolve_link_tos: true } })
+      queries.update(subscription.id, attrs: { options: { resolve_link_tos: true } }, locked_by: nil)
     end
 
     it 'loads new record state from database' do
       expect { subject }.to change { subscription.options }.to(resolve_link_tos: true)
     end
     it { is_expected.to eq(subscription) }
+  end
+
+  describe '#==' do
+    subject { subscription1 == subscription2 }
+
+    let(:subscription1) { described_class.new(id: 1) }
+    let(:subscription2) { described_class.new(id: 1) }
+
+    context 'when ids matches' do
+      it { is_expected.to eq(true) }
+    end
+
+    context 'when ids does not match' do
+      let(:subscription2) { described_class.new(id: 2) }
+
+      it { is_expected.to eq(false) }
+    end
+
+    context 'when subscription2 is not a Subscription object' do
+      let(:subscription2) { Object.new }
+
+      it { is_expected.to eq(false) }
+    end
+  end
+
+  describe '#hash' do
+    let(:hash) { {} }
+    let(:subscription1) { described_class.new(id: 1) }
+    let(:subscription2) { described_class.new(id: 1) }
+
+    before do
+      hash[subscription1] = :foo
+    end
+
+    context 'when subscriptions are equal' do
+      it 'recognizes second subscription' do
+        expect(hash[subscription2]).to eq(:foo)
+      end
+    end
+
+    context 'when subscriptions differ' do
+      let(:subscription2) { described_class.new(id: 2) }
+
+      it 'does not recognize second subscription' do
+        expect(hash[subscription2]).to eq(nil)
+      end
+    end
   end
 end

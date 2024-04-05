@@ -11,6 +11,13 @@ module PgEventstore
       @connection = connection
     end
 
+    # @return [Hash]
+    def find_or_create_by(...)
+      transaction_queries.transaction do
+        find_by(...) || create(...)
+      end
+    end
+
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
     # @return [Hash, nil]
@@ -31,7 +38,7 @@ module PgEventstore
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
     # @return [Hash]
-    def create_by(subscriptions_set_id:, command_name:)
+    def create(subscriptions_set_id:, command_name:)
       sql = <<~SQL
         INSERT INTO subscriptions_set_commands (name, subscriptions_set_id) 
           VALUES ($1, $2)
@@ -71,6 +78,11 @@ module PgEventstore
     # @return [Hash]
     def deserialize(hash)
       hash.transform_keys(&:to_sym)
+    end
+
+    # @return [PgEventstore::TransactionQueries]
+    def transaction_queries
+      TransactionQueries.new(connection)
     end
   end
 end

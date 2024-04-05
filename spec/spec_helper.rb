@@ -66,7 +66,6 @@ RSpec.configure do |config|
   end
 
   config.include EventHelpers
-  config.include TestHelper
   config.include PartitionsHelper
   config.include Rack::Test::Methods, type: :request
   config.include RequestsHelper, type: :request

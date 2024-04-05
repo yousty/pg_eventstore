@@ -139,7 +139,7 @@ module PgEventstore
 
     # @param set [String] subscriptions set name
     # @param name [String] subscription's name
-    # @param lock_id [String] UUIDv4
+    # @param lock_id [Integer]
     def initialize(set, name, lock_id)
       @set = set
       @name = name
@@ -151,31 +151,29 @@ module PgEventstore
     def user_friendly_message
       <<~TEXT.strip
         Could not lock subscription from #{set.inspect} set with #{name.inspect} name. It is already locked by \
-        #{lock_id.inspect} set.
+        ##{lock_id.inspect} set.
       TEXT
     end
   end
 
-  class SubscriptionUnlockError < Error
-    attr_reader :set, :name, :expected_locked_by, :actual_locked_by
+  class WrongLockIdError < Error
+    attr_reader :set, :name, :lock_id
 
-    # @param set [String] subscription's set name
+    # @param set [String] subscriptions set name
     # @param name [String] subscription's name
-    # @param expected_locked_by [String] UUIDv4
-    # @param actual_locked_by [String, nil] UUIDv4
-    def initialize(set, name, expected_locked_by, actual_locked_by)
+    # @param lock_id [Integer]
+    def initialize(set, name, lock_id)
       @set = set
       @name = name
-      @expected_locked_by = expected_locked_by
-      @actual_locked_by = actual_locked_by
+      @lock_id = lock_id
       super(user_friendly_message)
     end
 
     # @return [String]
     def user_friendly_message
       <<~TEXT.strip
-        Failed to unlock subscription from #{set.inspect} set with #{name.inspect} name by \
-        #{expected_locked_by.inspect} lock id. It is currently locked by #{actual_locked_by.inspect} lock id.
+        Could not update subscription from #{set.inspect} set with #{name.inspect} name. It is locked by \
+        ##{lock_id.inspect} set suddenly.
       TEXT
     end
   end
