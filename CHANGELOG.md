@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.0.0.rc2]
+
+- Implement confirmation dialog for sensitive admin UI actions
+
 ## [1.0.0.rc1]
 
 - Improve performance of loading original events when resolve_link_tos: true option is provided
