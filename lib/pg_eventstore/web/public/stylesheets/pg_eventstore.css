@@ -3,3 +3,7 @@ tr.collapsing {
     transition: none;
     display: none;
 }
+
+#confirmation-modal .modal-body {
+    font-size: 1.2rem;
+}

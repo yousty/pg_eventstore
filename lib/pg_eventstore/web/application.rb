@@ -53,6 +53,13 @@ module PgEventstore
 
           "#{request.referer}#{params[:hash]}"
         end
+
+        # Shortcut to escape html
+        # @param text [String]
+        # @return [String]
+        def h(text)
+          Rack::Utils.escape_html(text)
+        end
       end
 
       get '/' do

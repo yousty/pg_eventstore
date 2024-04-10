@@ -21,10 +21,6 @@
     <div class="row">
       <div class="col-md-12 col-sm-12">
         <div class="x_panel">
-          <div class="x_title">
-            <h2><i class="fa fa-bars"></i> Tabs <small>Float left</small></h2>
-            <div class="clearfix"></div>
-          </div>
           <div class="x_content">
             <ul class="nav nav-tabs bar_tabs" role="tablist">
               <% @association.association.each.with_index do |(subscriptions_set, _), index| %>
@@ -78,11 +74,11 @@
                                 </a>
                               <% end %>
                               <% if PgEventstore::RunnerState::STATES.values_at(:running, :dead).include?(subscriptions_set.state) %>
-                                <a class="btn btn-warning" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:Stop]) %>" data-toggle="tooltip" title="This action will delete Subscriptions Set and release all related Subscriptions.">
+                                <a class="btn btn-warning" data-confirm="You are about to stop SubscriptionsSet#<%= subscriptions_set.id %>. This will also delete it and will result in stopping all related Subscriptions. Continue?" data-confirm-title="Stop SubscriptionsSet" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:Stop]) %>" data-toggle="tooltip" title="This action will delete Subscriptions Set and release all related Subscriptions.">
                                   Stop
                                 </a>
                               <% end %>
-                              <a class="btn btn-danger" data-method="post" href="<%= url("/delete_subscriptions_set/#{subscriptions_set.id}") %>" data-toggle="tooltip" title="Use this action only on stuck Subscriptions Set - to clean it up.">
+                              <a class="btn btn-danger" data-confirm="You are about to delete SubscriptionsSet#<%= subscriptions_set.id %>. Continue?" data-confirm-title="Delete SubscriptionsSet" data-method="post" href="<%= url("/delete_subscriptions_set/#{subscriptions_set.id}") %>" data-toggle="tooltip" title="Use this action only on stuck Subscriptions Set - to clean it up.">
                                 Delete
                               </a>
                             </td>
@@ -108,11 +104,11 @@
                           <a class="btn btn-success" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:StartAll]) %>">
                             Start All
                           </a>
-                          <a class="btn btn-danger" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:StopAll]) %>">
+                          <a class="btn btn-danger" data-confirm="You are about to stop all Subscriptions. Continue?" data-confirm-title="Stop all Subscriptions" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:StopAll]) %>">
                             Stop All
                           </a>
                         <% else %>
-                          <a class="btn btn-danger" data-method="post" href="<%= delete_all_subscriptions_url(subscriptions.map(&:id)) %>" data-toggle="tooltip" title="Delete all Subscriptions, displayed on the current page.">
+                          <a class="btn btn-danger" data-confirm="You are about to delete all Subscriptions, listed on the page. Continue?" data-confirm-title="Delete all Subscriptions" data-method="post" href="<%= delete_all_subscriptions_url(subscriptions.map(&:id)) %>" data-toggle="tooltip" title="Delete all Subscriptions, displayed on the current page.">
                             Delete All
                           </a>
                         <% end %>
@@ -154,7 +150,11 @@
                             <td><%= subscription.chunk_query_interval %>s</td>
                             <td><%= subscription.last_chunk_fed_at %></td>
                             <td><%= colored_state(subscription.state, subscription.updated_at) %></td>
-                            <td><%= subscription.average_event_processing_time %></td>
+                            <td>
+                              <% if subscription.average_event_processing_time %>
+                                <%= "#{(1 / subscription.average_event_processing_time).to_i}/s" %>
+                              <% end %>
+                            </td>
                             <td><%= subscription.restart_count %></td>
                             <td><%= subscription.max_restarts_number %></td>
                             <td><%= subscription.time_between_restarts %>s</td>
@@ -186,7 +186,7 @@
                                 <% end %>
                               <% end %>
                               <% unless subscriptions_set.id %>
-                                <a class="btn btn-danger" data-method="post" href="<%= url("/delete_subscription/#{subscription.id}") %>" data-toggle="tooltip" title="You will lose the Subscription's position as well.">
+                                <a class="btn btn-danger" data-confirm="You are about to delete <%= h subscription.name.inspect %> Subscription. Continue?" data-confirm-title="Delete Subscription" data-method="post" href="<%= url("/delete_subscription/#{subscription.id}") %>" data-toggle="tooltip" title="You will lose the Subscription's position as well.">
                                   Delete
                                 </a>
                               <% end %>
