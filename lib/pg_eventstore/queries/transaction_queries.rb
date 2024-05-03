@@ -3,6 +3,14 @@
 module PgEventstore
   # @!visibility private
   class TransactionQueries
+    ISOLATION_LEVELS = {
+      read_committed: 'READ COMMITTED',
+      repeatable_read: 'REPEATABLE READ',
+      serializable: 'SERIALIZABLE'
+    }.tap do |h|
+      h.default = h[:serializable]
+    end.freeze
+
     attr_reader :connection
     private :connection
 
@@ -11,15 +19,16 @@ module PgEventstore
       @connection = connection
     end
 
+    # @param level [Symbol] transaction isolation level
     # @return [void]
-    def transaction
+    def transaction(level = :serializable)
       connection.with do |conn|
         # We are inside a transaction already - no need to start another one
         if [PG::PQTRANS_ACTIVE, PG::PQTRANS_INTRANS].include?(conn.transaction_status)
           next yield
         end
 
-        pg_transaction(conn) do
+        pg_transaction(ISOLATION_LEVELS[level], conn) do
           yield
         end
       end
@@ -27,11 +36,12 @@ module PgEventstore
 
     private
 
+    # @param level [String] PostgreSQL transaction isolation level
     # @param pg_connection [PG::Connection]
     # @return [void]
-    def pg_transaction(pg_connection)
+    def pg_transaction(level, pg_connection)
       pg_connection.transaction do
-        pg_connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        pg_connection.exec("SET TRANSACTION ISOLATION LEVEL #{level}")
         yield
       end
     rescue PG::TRSerializationFailure, PG::TRDeadlockDetected

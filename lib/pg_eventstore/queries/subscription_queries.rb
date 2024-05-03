@@ -84,7 +84,7 @@ module PgEventstore
       end.join(', ')
       sql =
         "UPDATE subscriptions SET #{attrs_sql} WHERE id = $#{attrs.keys.size + 1} RETURNING *"
-      updated_attrs = transaction_queries.transaction do
+      updated_attrs = transaction_queries.transaction(:read_committed) do
         pg_result = connection.with do |conn|
           conn.exec_params(sql, [*attrs.values, id])
         end
