@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [1.0.0]
+
+- Improve performance of Subscription#update by relaxing transaction isolation level
+- Fix calculation of events number in the subscription's chunk
+
 ## [1.0.0.rc2]
 
 - Implement confirmation dialog for sensitive admin UI actions
