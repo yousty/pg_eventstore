@@ -6,20 +6,33 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="images/favicon.ico" type="image/ico"/>
+  <link rel="icon" href="<%= url("images/favicon.ico") %>" type="image/ico"/>
 
   <title>PG EventStore admin</title>
 
   <!-- Bootstrap -->
-  <link href="stylesheets/vendor/bootstrap.min.css" rel="stylesheet">
+  <link href="<%= url("stylesheets/vendor/bootstrap.min.css") %>" rel="stylesheet">
   <!-- Font Awesome -->
-  <link href="stylesheets/vendor/font-awesome.min.css" rel="stylesheet">
+  <style>
+      @font-face {
+          font-family: 'FontAwesome';
+          src: url('<%= url("fonts/vendor/fontawesome-webfont.eot?v=4.6.3") %>');
+          src: url('<%= url("fonts/vendor/fontawesome-webfont.eot?#iefix&v=4.6.3") %>') format('embedded-opentype'),
+               url('<%= url("fonts/vendor/fontawesome-webfont.woff2?v=4.6.3") %>') format('woff2'),
+               url('<%= url("fonts/vendor/fontawesome-webfont.woff?v=4.6.3") %>') format('woff'),
+               url('<%= url("fonts/vendor/fontawesome-webfont.ttf?v=4.6.3") %>') format('truetype'),
+               url('<%= url("fonts/vendor/fontawesome-webfont.svg?v=4.6.3#fontawesomeregular") %>') format('svg');
+          font-weight: normal;
+          font-style: normal;
+      }
+  </style>
+  <link href="<%= url("stylesheets/vendor/font-awesome.min.css") %>" rel="stylesheet">
 
   <!-- Custom Theme Style -->
-  <link href="stylesheets/vendor/gentelella.min.css" rel="stylesheet">
-  <link href="stylesheets/vendor/select2.min.css" rel="stylesheet">
-  <link href="stylesheets/vendor/select2-bootstrap4.min.css" rel="stylesheet">
-  <link href="stylesheets/pg_eventstore.css" rel="stylesheet">
+  <link href="<%= url("stylesheets/vendor/gentelella.min.css") %>" rel="stylesheet">
+  <link href="<%= url("stylesheets/vendor/select2.min.css") %>" rel="stylesheet">
+  <link href="<%= url("stylesheets/vendor/select2-bootstrap4.min.css") %>" rel="stylesheet">
+  <link href="<%= url("stylesheets/pg_eventstore.css") %>" rel="stylesheet">
 </head>
 
 <body class="nav-md">
@@ -121,15 +134,14 @@
 </div>
 
 <!-- jQuery -->
-<script src="javascripts/vendor/jquery.min.js"></script>
+<script src="<%= url("javascripts/vendor/jquery.min.js") %>"></script>
 <!-- Bootstrap -->
-<script src="javascripts/vendor/bootstrap.bundle.min.js"></script>
-<!--<script src="javascripts/jquery.autocomplete.min.js"></script>-->
-<script src="javascripts/vendor/select2.full.min.js"></script>
+<script src="<%= url("javascripts/vendor/bootstrap.bundle.min.js") %>"></script>
+<script src="<%= url("javascripts/vendor/select2.full.min.js") %>"></script>
 
 <!-- Custom Theme Scripts -->
-<script src="javascripts/gentelella.js"></script>
-<script src="javascripts/pg_eventstore.js"></script>
+<script src="<%= url("javascripts/gentelella.js") %>"></script>
+<script src="<%= url("javascripts/pg_eventstore.js") %>"></script>
 
 </body>
 </html>
