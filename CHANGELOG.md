@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.0.1]
+- Adjust assets urls to correctly act when mounting sinatra app under non-root url
+
 ## [1.0.0]
 
 - Improve performance of Subscription#update by relaxing transaction isolation level
