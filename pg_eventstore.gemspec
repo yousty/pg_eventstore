@@ -28,7 +28,7 @@ Gem::Specification.new do |spec|
       Rakefile benchmark/ .yardopts db/structure.sql config.ru
     ]
     `git ls-files -z`.split("\x0").reject do |f|
-      (File.expand_path(f) == __FILE__) || f.start_with?(*paths_to_exclude)
+      (File.expand_path(f) == __FILE__) || f.start_with?(*paths_to_exclude) || File.extname(f) == ".map"
     end
   end
   spec.bindir = "exe"
