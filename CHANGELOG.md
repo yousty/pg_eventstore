@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.0.2]
+- UI: Fix opening of SubscriptionsSet tab of non-existing SubscriptionsSet
+
 ## [1.0.1]
 - Adjust assets urls to correctly act when mounting sinatra app under non-root url
 
