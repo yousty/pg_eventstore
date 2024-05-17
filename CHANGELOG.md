@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.0.3]
+- Do no update `Subscription#last_chunk_fed_at` if the chunk is empty
+
 ## [1.0.2]
 - UI: Fix opening of SubscriptionsSet tab of non-existing SubscriptionsSet
 
