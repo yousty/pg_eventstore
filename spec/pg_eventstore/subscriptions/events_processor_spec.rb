@@ -40,12 +40,15 @@ RSpec.describe PgEventstore::EventsProcessor do
     context 'when no events are fed' do
       let(:raw_events) { [] }
 
-      it 'does not change the queue' do
-        expect { subject }.not_to change { instance.instance_variable_get(:@raw_events) }
+      it 'raises error' do
+        expect { subject }.to raise_error(PgEventstore::EmptyChunkFedError)
       end
-      it 'executes :feed action' do
-        subject
-        expect(global_position_receiver).to have_received(:call).with(nil)
+      it 'does not change the queue' do
+        expect { subject rescue nil }.not_to change { instance.instance_variable_get(:@raw_events) }
+      end
+      it 'does not execute :feed action' do
+        subject rescue nil
+        expect(global_position_receiver).not_to have_received(:call).with(nil)
       end
     end
 

@@ -329,4 +329,34 @@ RSpec.describe PgEventstore::SubscriptionQueries do
       expect { subject }.to change { instance.find_by(id: subscription.id) }.to(nil)
     end
   end
+
+  describe '#ping_all' do
+    subject { instance.ping_all(subscriptions_set1.id, [subscription1.id, subscription2.id]) }
+
+    let(:subscriptions_set1) { SubscriptionsSetHelper.create(name: 'Set1') }
+    let(:subscriptions_set2) { SubscriptionsSetHelper.create(name: 'Set2') }
+
+    let!(:subscription1) do
+      SubscriptionsHelper.create_with_connection(name: 'sub1', locked_by: subscriptions_set1.id)
+    end
+    let!(:subscription2) do
+      SubscriptionsHelper.create_with_connection(name: 'sub2', locked_by: subscriptions_set2.id)
+    end
+    let!(:subscription3) do
+      SubscriptionsHelper.create_with_connection(name: 'sub3', locked_by: subscriptions_set1.id)
+    end
+
+    it 'updates #updated_at of the given Subscription, locked by the given SubscriptionsSet' do
+      expect { subject }.to change { subscription1.reload.updated_at }
+    end
+    it 'does not update #updated_at of the Subscription, locked by another SubscriptionsSet' do
+      expect { subject }.not_to change { subscription2.reload.updated_at }
+    end
+    it 'does not update #updated_at of another Subscription from the same SubscriptionsSet' do
+      expect { subject }.not_to change { subscription3.reload.updated_at }
+    end
+    it 'returns id/Time association', timecop: true do
+      is_expected.to eq(subscription1.id => Time.now.utc.round(6))
+    end
+  end
 end

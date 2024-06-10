@@ -404,16 +404,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     context 'when events are empty' do
       let(:raw_events) { [] }
 
-      it 'updates subscription#updated_at' do
-        expect { subject }.to change {
-          subscription.reload.updated_at
-        }.to(be_between(Time.now.utc, Time.now.utc + 1))
-      end
-      it 'does not update subscription#last_chunk_fed_at' do
-        expect { subject }.not_to change { subscription.reload.last_chunk_fed_at }
-      end
-      it 'does not update subscription#last_chunk_greatest_position' do
-        expect { subject }.not_to change { subscription.reload.last_chunk_greatest_position }
+      it 'raises error' do
+        expect { subject }.to raise_error(PgEventstore::EmptyChunkFedError)
       end
     end
   end

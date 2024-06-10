@@ -17,8 +17,9 @@ module PgEventstore
 
       runners_query_options = runners.to_h { |runner| [runner.id, runner.next_chunk_query_opts] }
       grouped_events = subscription_queries.subscriptions_events(runners_query_options)
+
       runners.each do |runner|
-        runner.feed(grouped_events[runner.id] || [])
+        runner.feed(grouped_events[runner.id]) if grouped_events[runner.id]
       end
     end
 

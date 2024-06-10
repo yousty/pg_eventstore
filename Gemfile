@@ -22,3 +22,5 @@ gem 'niceql', '~> 0.5.1'
 gem 'puma', '~> 6.4', '>= 6.4.2'
 
 gem 'rack-test', '~> 2.1'
+
+gem 'timecop', '~> 0.9.9'

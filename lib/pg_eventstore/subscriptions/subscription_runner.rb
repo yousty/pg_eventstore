@@ -107,12 +107,9 @@ module PgEventstore
       @subscription.update(last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc)
     end
 
-    # @param global_position [Integer, nil]
+    # @param global_position [Integer]
     # @return [void]
     def update_subscription_chunk_stats(global_position)
-      # nil means subscriptions events query were executed, but there were no new events
-      return @subscription.update(updated_at: Time.now.utc) if global_position.nil?
-
       @subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: global_position)
     end
 

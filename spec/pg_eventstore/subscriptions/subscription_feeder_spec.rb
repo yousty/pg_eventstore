@@ -574,25 +574,35 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
   end
 
   describe 'processing async action' do
-    subject { PgEventstore.client.append_to_stream(stream, [event1, event2]) }
+    subject { instance.start }
 
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
     let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
     let(:event2) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar') }
 
-    let(:subscription_runner) do
+    let(:subscription_runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc { |raw_event| events_receiver.call(raw_event) }),
         subscription: SubscriptionsHelper.create_with_connection(options: { filter: { event_types: ['Bar'] } })
       )
     end
+    let(:subscription_runner2) do
+      PgEventstore::SubscriptionRunner.new(
+        stats: PgEventstore::SubscriptionHandlerPerformance.new,
+        events_processor: PgEventstore::EventsProcessor.new(proc { |raw_event| events_receiver.call(raw_event) }),
+        subscription: SubscriptionsHelper.create_with_connection(
+          name: 'sub2', options: { filter: { event_types: ['Baz'] } }
+        )
+      )
+    end
     let(:events_receiver) { double('Events receiver') }
 
     before do
       allow(events_receiver).to receive(:call)
-      instance.add(subscription_runner)
-      instance.start
+      instance.add(subscription_runner1)
+      instance.add(subscription_runner2)
+      stub_const("#{described_class}::HEARTBEAT_INTERVAL", 1.5)
     end
 
     after do
@@ -601,6 +611,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     it 'processes matching events' do
       subject
+      PgEventstore.client.append_to_stream(stream, [event1, event2])
       sleep 1.5 # Let everything to start and process events
       aggregate_failures do
         expect(events_receiver).to have_received(:call).with(a_hash_including('data' => { 'bar' => 'baz' }))
@@ -609,7 +620,24 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
     it 'updates SubscriptionsSet#updated_at' do
       subject
-      expect { sleep 1 }.to change { instance.read_only_subscriptions_set.updated_at }
+      expect { sleep 2 }.to change { instance.read_only_subscriptions_set.updated_at }
+    end
+    it 'does not update SubscriptionsSet#updated_at too often' do
+      subject
+      expect { sleep 0.5 }.not_to change { instance.read_only_subscriptions_set.updated_at }
+    end
+    it 'updates Subscription#updated_at of running Subscription' do
+      subject
+      expect { sleep 2 }.to change { subscription_runner1.subscription.updated_at }
+    end
+    it 'does not Subscription#updated_at of running Subscription too often' do
+      subject
+      expect { sleep 0.5 }.not_to change { subscription_runner1.subscription.updated_at }
+    end
+    it 'does not update Subscription#updated_at of stopped Subscription' do
+      subject
+      subscription_runner2.stop
+      expect { sleep 2 }.not_to change { subscription_runner2.subscription.updated_at }
     end
   end
 

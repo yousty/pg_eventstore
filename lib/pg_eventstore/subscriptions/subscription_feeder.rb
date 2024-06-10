@@ -24,7 +24,7 @@ module PgEventstore
       @commands_handler = CommandsHandler.new(@config_name, self, @runners)
       @basic_runner = BasicRunner.new(0.2, 0)
       @force_lock = false
-      @refreshed_at = Time.at(0)
+      @subscriptions_pinged_at = Time.at(0)
       attach_runner_callbacks
     end
 
@@ -100,6 +100,7 @@ module PgEventstore
       @basic_runner.define_callback(:after_runner_died, :after, method(:restart_runner))
       @basic_runner.define_callback(:process_async, :before, method(:ping_subscriptions_set))
       @basic_runner.define_callback(:process_async, :before, method(:process_async))
+      @basic_runner.define_callback(:process_async, :after, method(:ping_subscriptions))
       @basic_runner.define_callback(:after_runner_stopped, :before, method(:after_runner_stopped))
       @basic_runner.define_callback(:before_runner_restored, :after, method(:update_runner_restarts))
     end
@@ -140,10 +141,25 @@ module PgEventstore
 
     # @return [void]
     def ping_subscriptions_set
-      return unless subscriptions_set.updated_at > Time.now.utc - HEARTBEAT_INTERVAL
+      return if subscriptions_set.updated_at > Time.now.utc - HEARTBEAT_INTERVAL
 
       subscriptions_set.update(updated_at: Time.now.utc)
-      @refreshed_at = Time.now.utc
+    end
+
+    # @return [void]
+    def ping_subscriptions
+      return if @subscriptions_pinged_at > Time.now.utc - HEARTBEAT_INTERVAL
+
+      runners = @runners.select do |runner|
+        next false unless runner.running?
+
+        runner.subscription.updated_at < Time.now.utc - HEARTBEAT_INTERVAL
+      end
+      unless runners.empty?
+        Subscription.using_connection(@config_name).ping_all(subscriptions_set.id, runners.map(&:subscription))
+      end
+
+      @subscriptions_pinged_at = Time.now.utc
     end
 
     # @return [void]

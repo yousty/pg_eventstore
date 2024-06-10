@@ -203,4 +203,7 @@ module PgEventstore
       @event_types = event_types
     end
   end
+
+  class EmptyChunkFedError < Error
+  end
 end

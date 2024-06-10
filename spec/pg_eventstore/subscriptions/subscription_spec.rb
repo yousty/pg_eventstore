@@ -27,6 +27,30 @@ RSpec.describe PgEventstore::Subscription do
     it { is_expected.to have_attribute(:updated_at) }
   end
 
+  describe '.ping_all' do
+    subject do
+      described_class.
+        using_connection(:default).
+        ping_all(subscriptions_set.id, [subscription1, subscription2])
+    end
+
+    let(:subscriptions_set) { SubscriptionsSetHelper.create }
+
+    let!(:subscription1) do
+      SubscriptionsHelper.create_with_connection(name: 'sub1', locked_by: subscriptions_set.id)
+    end
+    let!(:subscription2) do
+      SubscriptionsHelper.create_with_connection(name: 'sub2', locked_by: subscriptions_set.id)
+    end
+
+    it 'updates #updated_at of the first Subscription' do
+      expect { subject }.to change { subscription1.updated_at }
+    end
+    it 'updates #updated_at of the second Subscription' do
+      expect { subject }.to change { subscription2.updated_at }
+    end
+  end
+
   describe '#options=' do
     subject { subscription.options = value }
 

@@ -101,6 +101,22 @@ module PgEventstore
       deserialize(updated_attrs)
     end
 
+    # @param subscriptions_set_id [Integer] SubscriptionsSet#id
+    # @param subscriptions_ids [Array<Integer>] Array of Subscription#id
+    # @return [Hash<Integer => Time>]
+    def ping_all(subscriptions_set_id, subscriptions_ids)
+      pg_result = connection.with do |conn|
+        sql = <<~SQL
+          UPDATE subscriptions SET updated_at = $1 WHERE locked_by = $2 AND id = ANY($3::int[])
+            RETURNING id, updated_at
+        SQL
+        conn.exec_params(sql, [Time.now.utc, subscriptions_set_id, subscriptions_ids])
+      end
+      pg_result.to_h do |attrs|
+        [attrs['id'], attrs['updated_at']]
+      end
+    end
+
     # @param query_options [Hash{Integer => Hash}] runner_id/query options association
     # @return [Hash{Integer => Hash}] runner_id/events association
     def subscriptions_events(query_options)

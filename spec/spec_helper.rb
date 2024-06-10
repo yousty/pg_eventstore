@@ -8,6 +8,7 @@ require 'redis'
 require 'logger'
 require 'pg_eventstore/web'
 require 'rack/test'
+require 'timecop'
 
 Dir[File.join(File.expand_path('.', __dir__), 'support/**/*.rb')].each { |f| require f }
 
@@ -63,6 +64,14 @@ RSpec.configure do |config|
       pg_conf.connection_pool_size = 20
     end
     PgEventstore::TestHelpers.clean_up_db
+  end
+
+  config.around(timecop: true) do |example|
+    if example.metadata[:timecop].is_a? Time
+      Timecop.freeze(example.metadata[:timecop]) { example.run }
+    else
+      Timecop.freeze { example.run }
+    end
   end
 
   config.include EventHelpers

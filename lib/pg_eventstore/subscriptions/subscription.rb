@@ -73,6 +73,25 @@ module PgEventstore
     #   @return [Time]
     attribute(:updated_at)
 
+    class << self
+      # @param subscriptions_set_id [Integer] SubscriptionsSet#id
+      # @param subscriptions [Array<PgEventstoreSubscription>]
+      # @return [void]
+      def ping_all(subscriptions_set_id, subscriptions)
+        result = subscription_queries.ping_all(subscriptions_set_id, subscriptions.map(&:id))
+        subscriptions.each do |subscription|
+          next unless result[subscription.id]
+
+          subscription.assign_attributes(updated_at: result[subscription.id])
+        end
+      end
+
+      # @return [PgEventstore::SubscriptionQueries]
+      def subscription_queries
+        SubscriptionQueries.new(connection)
+      end
+    end
+
     def options=(val)
       @options = Utils.deep_transform_keys(val, &:to_sym)
     end
@@ -135,6 +154,7 @@ module PgEventstore
 
     private
 
+    # @return [void]
     def reset_runtime_attributes
       update(
         options: options,
@@ -151,8 +171,9 @@ module PgEventstore
       )
     end
 
+    # @return [PgEventstore::SubscriptionQueries]
     def subscription_queries
-      SubscriptionQueries.new(self.class.connection)
+      self.class.subscription_queries
     end
   end
 end

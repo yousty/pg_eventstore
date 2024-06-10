@@ -20,6 +20,8 @@ module PgEventstore
     # @param raw_events [Array<Hash>]
     # @return [void]
     def feed(raw_events)
+      raise EmptyChunkFedError.new("Empty chunk was fed!") if raw_events.empty?
+
       callbacks.run_callbacks(:feed, global_position(raw_events.last))
       @raw_events.push(*raw_events)
     end
@@ -69,11 +71,9 @@ module PgEventstore
       callbacks.run_callbacks(:change_state, ...)
     end
 
-    # @param raw_event [Hash, nil]
-    # @return [Integer, nil]
+    # @param raw_event [Hash]
+    # @return [Integer]
     def global_position(raw_event)
-      return unless raw_event
-
       raw_event['link'] ? raw_event['link']['global_position'] : raw_event['global_position']
     end
   end
