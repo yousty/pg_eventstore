@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.0.4]
+- Fix bug which caused slow Subscriptions to stop processing new events
+- Optimize Subscriptions update queries
+
 ## [1.0.3]
 - Do no update `Subscription#last_chunk_fed_at` if the chunk is empty
 
