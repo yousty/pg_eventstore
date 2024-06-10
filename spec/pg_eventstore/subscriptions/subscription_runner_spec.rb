@@ -126,7 +126,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           end
         end
 
-        context 'when average exec time is too low' do
+        context 'when average exec time is too fast' do
           before do
             stats.track_exec_time { sleep 0.001 }
           end
@@ -142,6 +142,28 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
             it 'subtracts queue size from the final value' do
               is_expected.to include(max_count: described_class::MAX_EVENTS_PER_CHUNK - 2)
+            end
+          end
+        end
+
+        context 'when average exec time is too slow' do
+          let(:chunk_query_interval) { 0.5 }
+
+          before do
+            stats.track_exec_time { sleep 2 }
+          end
+
+          it 'falls back to the minimum acceptable limit' do
+            is_expected.to include(max_count: described_class::MIN_EVENTS_PER_CHUNK)
+          end
+
+          context 'when there are events left in the queue' do
+            before do
+              events_processor.feed([{ 'id' => 1 }, { 'id' => 3 }])
+            end
+
+            it 'falls back to 0' do
+              is_expected.to include(max_count: 0)
             end
           end
         end

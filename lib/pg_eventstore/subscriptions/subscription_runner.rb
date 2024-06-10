@@ -11,6 +11,7 @@ module PgEventstore
     extend Forwardable
 
     MAX_EVENTS_PER_CHUNK = 1_000
+    MIN_EVENTS_PER_CHUNK = 10
     INITIAL_EVENTS_PER_CHUNK = 10
 
     attr_reader :subscription
@@ -56,7 +57,10 @@ module PgEventstore
       return INITIAL_EVENTS_PER_CHUNK if @stats.average_event_processing_time.zero?
 
       events_per_chunk = (@subscription.chunk_query_interval / @stats.average_event_processing_time).round
-      [[events_per_chunk, MAX_EVENTS_PER_CHUNK].min - @events_processor.events_left_in_chunk, 0].max
+      events_to_fetch = [events_per_chunk, MAX_EVENTS_PER_CHUNK].min - @events_processor.events_left_in_chunk
+      return 0 if events_to_fetch < 0 # We still have a lot of events in the chunk - no need to fetch more
+
+      [events_to_fetch, MIN_EVENTS_PER_CHUNK].max
     end
 
     # @return [void]
