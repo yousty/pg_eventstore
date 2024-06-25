@@ -116,8 +116,3 @@ end
 
 Taking this into account you may want to increase `connection_pool_size` up to the number of your application's threads(
 or subscriptions).
-
-### Usage of external connection pooler
-
-`pg_eventstore` does not use any session-specific features of PostgreSQL. You can use any PostgreSQL connection pooler
-you like, such as [PgBouncer](https://www.pgbouncer.org/) for example. 
