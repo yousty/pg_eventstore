@@ -69,12 +69,12 @@
                             <td><%= subscriptions_set.last_error_occurred_at %></td>
                             <td>
                               <% if subscriptions_set.state == PgEventstore::RunnerState::STATES[:dead] %>
-                                <a class="btn btn-success" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:Restore]) %>">
+                                <a class="btn btn-success" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmd('Restore')) %>">
                                   Restore
                                 </a>
                               <% end %>
                               <% if PgEventstore::RunnerState::STATES.values_at(:running, :dead).include?(subscriptions_set.state) %>
-                                <a class="btn btn-warning" data-confirm="You are about to stop SubscriptionsSet#<%= subscriptions_set.id %>. This will also delete it and will result in stopping all related Subscriptions. Continue?" data-confirm-title="Stop SubscriptionsSet" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:Stop]) %>" data-toggle="tooltip" title="This action will delete Subscriptions Set and release all related Subscriptions.">
+                                <a class="btn btn-warning" data-confirm="You are about to stop SubscriptionsSet#<%= subscriptions_set.id %>. This will also delete it and will result in stopping all related Subscriptions. Continue?" data-confirm-title="Stop SubscriptionsSet" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmd('Stop')) %>" data-toggle="tooltip" title="This action will delete Subscriptions Set and release all related Subscriptions.">
                                   Stop
                                 </a>
                               <% end %>
@@ -101,10 +101,10 @@
                       </div>
                       <div class="float-right">
                         <% if subscriptions_set.id %>
-                          <a class="btn btn-success" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:StartAll]) %>">
+                          <a class="btn btn-success" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmd('StartAll')) %>">
                             Start All
                           </a>
-                          <a class="btn btn-danger" data-confirm="You are about to stop all Subscriptions. Continue?" data-confirm-title="Stop all Subscriptions" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmds[:StopAll]) %>">
+                          <a class="btn btn-danger" data-confirm="You are about to stop all Subscriptions. Continue?" data-confirm-title="Stop all Subscriptions" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmd('StopAll')) %>">
                             Stop All
                           </a>
                         <% else %>
@@ -170,17 +170,20 @@
                             <td>
                               <% if subscriptions_set.id %>
                                 <% if subscription.state == PgEventstore::RunnerState::STATES[:stopped] %>
-                                  <a class="btn btn-success" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscriptions_cmds[:Start]) %>">
+                                  <a class="btn btn-success" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscription_cmd('Start')) %>">
                                     Start
+                                  </a>
+                                  <a class="btn btn-warning" href="#" data-toggle="modal" data-target="#reset-position-modal" data-subscription-name="<%= h subscription.name %>" data-url="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscription_cmd('ResetPosition')) %>">
+                                    Reset position
                                   </a>
                                 <% end %>
                                 <% if PgEventstore::RunnerState::STATES.values_at(:running, :dead).include?(subscription.state) %>
-                                  <a class="btn btn-warning" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscriptions_cmds[:Stop]) %>">
+                                  <a class="btn btn-warning" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscription_cmd('Stop')) %>">
                                     Stop
                                   </a>
                                 <% end %>
                                 <% if subscription.state == PgEventstore::RunnerState::STATES[:dead] %>
-                                  <a class="btn btn-success" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscriptions_cmds[:Restore]) %>">
+                                  <a class="btn btn-success" data-method="post" href="<%= subscription_cmd_url(subscriptions_set.id, subscription.id, subscription_cmd('Restore')) %>">
                                     Restore
                                   </a>
                                 <% end %>
@@ -215,6 +218,35 @@
         </div>
       </div>
       <div class="clearfix"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="reset-position-modal" tabindex="-1" role="dialog" aria-labelledby="reset-position-modal" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"> Reset Subscription's position</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body font-weight-bold text-break">
+        <span>Reset position of</span><pre class="subscription-name"></pre><span>Subscription?</span>
+        <form id="reset-position-form" data-parsley-validate="" class="form-horizontal form-label-left" novalidate="" method="POST">
+          <div class="item form-group">
+            <label class="col-form-label col-md-3 col-sm-3 label-align" for="subscription-position">Position <span class="required">*</span>
+            </label>
+            <div class="col-md-6 col-sm-6 ">
+              <input type="number" id="subscription-position" name="data[position]" required="required" autocomplete="off" value="0" class="form-control">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary" form="reset-position-form">Reset</button>
+      </div>
     </div>
   </div>
 </div>

@@ -686,4 +686,37 @@ RSpec.describe PgEventstore::BasicRunner do
       expect(REDIS.get('foo')).to eq('bar')
     end
   end
+
+  describe '#withint_state' do
+    subject { instance.within_state(state, &blk) }
+
+    let(:blk) { proc { 123 } }
+    let(:state) { :running }
+
+    after do
+      instance.stop_async.wait_for_finish
+    end
+
+    context 'when runner is in the given state' do
+      before do
+        instance.start
+      end
+
+      it 'yields the given block' do
+        is_expected.to eq(123)
+      end
+    end
+
+    context 'when runner is not in the given state' do
+      it { is_expected.to eq(nil) }
+    end
+
+    context 'when state is unknown' do
+      let(:state) { :foo }
+
+      it 'raises error' do
+        expect { subject }.to raise_error(KeyError, 'key not found: :foo')
+      end
+    end
+  end
 end

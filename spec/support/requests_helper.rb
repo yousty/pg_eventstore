@@ -7,6 +7,10 @@ module RequestsHelper
     last_response.body.scan(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/i)
   end
 
+  def nokogiri_body
+    Nokogiri::HTML.parse(last_response.body)
+  end
+
   def parsed_body
     JSON.parse(last_response.body)
   rescue JSON::ParserError

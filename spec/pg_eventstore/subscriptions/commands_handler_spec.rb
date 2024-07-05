@@ -21,10 +21,12 @@ RSpec.describe PgEventstore::CommandsHandler do
     subject { instance.start }
 
     let!(:feeder_command) do
-      feeder_command_queries.create(subscriptions_set_id: feeder.id, command_name: 'StopAll')
+      feeder_command_queries.create(subscriptions_set_id: feeder.id, command_name: 'StopAll', data: {})
     end
     let!(:runner_command) do
-      runner_command_queries.create(subscription_id: runner.id, subscriptions_set_id: feeder.id, command_name: 'Stop')
+      runner_command_queries.create(
+        subscription_id: runner.id, subscriptions_set_id: feeder.id, command_name: 'Stop', data: {}
+      )
     end
 
     let(:feeder_command_queries) { PgEventstore::SubscriptionsSetCommandQueries.new(PgEventstore.connection) }

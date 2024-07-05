@@ -11,16 +11,19 @@ module PgEventstore
       @connection = connection
     end
 
-    # @return [Hash]
-    def find_or_create_by(...)
+    # @param subscriptions_set_id [Integer]
+    # @param command_name [String]
+    # @param data [Hash]
+    # @return [PgEventstore::SubscriptionFeederCommands::Abstract]
+    def find_or_create_by(subscriptions_set_id:, command_name:, data:)
       transaction_queries.transaction do
-        find_by(...) || create(...)
+        find_by(subscriptions_set_id:, command_name:) || create(subscriptions_set_id:, command_name:, data:)
       end
     end
 
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
-    # @return [Hash, nil]
+    # @return [PgEventstore::SubscriptionFeederCommands::Abstract, nil]
     def find_by(subscriptions_set_id:, command_name:)
       sql_builder =
         SQLBuilder.new.
@@ -37,21 +40,22 @@ module PgEventstore
 
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
-    # @return [Hash]
-    def create(subscriptions_set_id:, command_name:)
+    # @param data [Hash]
+    # @return [PgEventstore::SubscriptionFeederCommands::Abstract]
+    def create(subscriptions_set_id:, command_name:, data:)
       sql = <<~SQL
-        INSERT INTO subscriptions_set_commands (name, subscriptions_set_id) 
-          VALUES ($1, $2)
+        INSERT INTO subscriptions_set_commands (name, subscriptions_set_id, data) 
+          VALUES ($1, $2, $3)
           RETURNING *
       SQL
       pg_result = connection.with do |conn|
-        conn.exec_params(sql, [command_name, subscriptions_set_id])
+        conn.exec_params(sql, [command_name, subscriptions_set_id, data])
       end
       deserialize(pg_result.to_a.first)
     end
 
     # @param subscriptions_set_id [Integer]
-    # @return [Array<Hash>]
+    # @return [Array<PgEventstore::SubscriptionFeederCommands::Abstract>]
     def find_commands(subscriptions_set_id)
       sql_builder =
         SQLBuilder.new.select('*').
@@ -75,9 +79,10 @@ module PgEventstore
     private
 
     # @param hash [Hash]
-    # @return [Hash]
+    # @return [PgEventstore::SubscriptionFeederCommands::Base]
     def deserialize(hash)
-      hash.transform_keys(&:to_sym)
+      attrs = hash.transform_keys(&:to_sym)
+      SubscriptionFeederCommands.command_class(attrs[:name]).new(**attrs)
     end
 
     # @return [PgEventstore::TransactionQueries]

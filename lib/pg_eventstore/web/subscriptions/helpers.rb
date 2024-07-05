@@ -28,14 +28,36 @@ module PgEventstore
           url("/subscriptions_set_cmd/#{id}/#{cmd}")
         end
 
-        # @return [Hash{Symbol => String}]
-        def subscriptions_set_cmds
-          CommandHandlers::SubscriptionFeederCommands::AVAILABLE_COMMANDS
+        # @param cmd_name [String] command name
+        # @return [String] command name
+        def subscriptions_set_cmd(cmd_name)
+          validate_subscriptions_set_cmd(cmd_name)
+
+          cmd_name
         end
 
-        # @return [Hash{Symbol => String}]
-        def subscriptions_cmds
-          CommandHandlers::SubscriptionRunnersCommands::AVAILABLE_COMMANDS
+        # @param cmd_name [String]
+        # @return [void]
+        # @raise [RuntimeError] in case if command class is not found
+        def validate_subscriptions_set_cmd(cmd_name)
+          cmd_class = SubscriptionFeederCommands.command_class(cmd_name)
+          raise "SubscriptionsSet command #{cmd_name.inspect} does not exist" unless cmd_class.known_command?
+        end
+
+        # @param cmd_name [String] command name
+        # @return [String] command name
+        def subscription_cmd(cmd_name)
+          validate_subscription_cmd(cmd_name)
+
+          cmd_name
+        end
+
+        # @param cmd_name [String]
+        # @return [void]
+        # @raise [RuntimeError] in case if command class is not found
+        def validate_subscription_cmd(cmd_name)
+          cmd_class = SubscriptionRunnerCommands.command_class(cmd_name)
+          raise "Subscription command #{cmd_name.inspect} does not exist" unless cmd_class.known_command?
         end
 
         # @param state [String]

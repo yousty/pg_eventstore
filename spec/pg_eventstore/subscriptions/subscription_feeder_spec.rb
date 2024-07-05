@@ -471,7 +471,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
     it 'starts CommandsHandler' do
       subscription_cmd_queries.create(
-        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Stop'
+        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Stop', data: {}
       )
       expect { subject; sleep 2 }.to change { subscription_runner2.state }.to('stopped')
     end
@@ -690,7 +690,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     it 'stops CommandsHandler' do
       subject
       subscription_cmd_queries.create(
-        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Start'
+        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Start', data: {}
       )
       sleep 1.1
       expect(subscription_runner2.state).to eq('stopped')
@@ -700,7 +700,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
   describe 'on after runner stopped when stopping via command' do
     subject do
       set_cmd_queries.create(
-        subscriptions_set_id: instance.id, command_name: 'Stop'
+        subscriptions_set_id: instance.id, command_name: 'Stop', data: {}
       )
       sleep PgEventstore::CommandsHandler::PULL_INTERVAL * 2
     end
@@ -752,7 +752,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     it 'stops CommandsHandler' do
       subject
       subscription_cmd_queries.create(
-        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Start'
+        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Start', data: {}
       )
       sleep 1.1
       expect(subscription_runner2.state).to eq('stopped')

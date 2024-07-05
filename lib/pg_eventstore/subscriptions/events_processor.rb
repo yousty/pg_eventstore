@@ -7,7 +7,8 @@ module PgEventstore
     include Extensions::CallbacksExtension
     extend Forwardable
 
-    def_delegators :@basic_runner, :state, :start, :stop, :wait_for_finish, :stop_async, :restore, :running?
+    def_delegators :@basic_runner, :state, :start, :stop, :wait_for_finish, :stop_async, :restore, :running?,
+                   :within_state
 
     # @param handler [#call]
     def initialize(handler)
@@ -22,14 +23,21 @@ module PgEventstore
     def feed(raw_events)
       raise EmptyChunkFedError.new("Empty chunk was fed!") if raw_events.empty?
 
-      callbacks.run_callbacks(:feed, global_position(raw_events.last))
-      @raw_events.push(*raw_events)
+      within_state(:running) do
+        callbacks.run_callbacks(:feed, global_position(raw_events.last))
+        @raw_events.push(*raw_events)
+      end
     end
 
     # Number of unprocessed events which are currently in a queue
     # @return [Integer]
     def events_left_in_chunk
       @raw_events.size
+    end
+
+    # @return [void]
+    def clear_chunk
+      @raw_events.clear
     end
 
     private

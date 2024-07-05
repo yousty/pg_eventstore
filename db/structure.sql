@@ -138,7 +138,8 @@ CREATE TABLE public.subscription_commands (
     name character varying NOT NULL,
     subscription_id bigint NOT NULL,
     subscriptions_set_id bigint NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    data jsonb DEFAULT '{}'::jsonb
 );
 
 
@@ -235,7 +236,8 @@ CREATE TABLE public.subscriptions_set_commands (
     id bigint NOT NULL,
     name character varying NOT NULL,
     subscriptions_set_id bigint NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    data jsonb DEFAULT '{}'::jsonb
 );
 
 

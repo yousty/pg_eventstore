@@ -145,19 +145,25 @@ module PgEventstore
       end
 
       post '/subscription_cmd/:set_id/:id/:cmd' do
-        puts SubscriptionCommandQueries.new(connection).find_or_create_by(
+        validate_subscription_cmd(params[:cmd])
+        cmd_class = SubscriptionRunnerCommands.command_class(params[:cmd])
+        SubscriptionCommandQueries.new(connection).find_or_create_by(
           subscriptions_set_id: params[:set_id],
           subscription_id: params[:id],
-          command_name: CommandHandlers::SubscriptionRunnersCommands::AVAILABLE_COMMANDS.fetch(params[:cmd].to_sym)
+          command_name: cmd_class.new.name,
+          data: cmd_class.parse_data(Hash(params[:data]))
         )
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))
       end
 
       post '/subscriptions_set_cmd/:id/:cmd' do
+        validate_subscriptions_set_cmd(params[:cmd])
+        cmd_class = SubscriptionFeederCommands.command_class(params[:cmd])
         SubscriptionsSetCommandQueries.new(connection).find_or_create_by(
           subscriptions_set_id: params[:id],
-          command_name: CommandHandlers::SubscriptionFeederCommands::AVAILABLE_COMMANDS.fetch(params[:cmd].to_sym)
+          command_name: cmd_class.new.name,
+          data: cmd_class.parse_data(Hash(params[:data]))
         )
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))

@@ -11,7 +11,7 @@ module PgEventstore
     extend Forwardable
 
     RESTART_DELAY = 5 # seconds
-    PULL_INTERVAL = 1
+    PULL_INTERVAL = 1 # seconds
 
     def_delegators :@basic_runner, :start, :stop, :state, :stop_async, :wait_for_finish
 

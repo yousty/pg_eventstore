@@ -11,18 +11,22 @@ module PgEventstore
       @connection = connection
     end
 
-    # @see #find_by or #create for available arguments
-    # @return [Hash]
-    def find_or_create_by(...)
+    # @param subscription_id [Integer]
+    # @param subscriptions_set_id [Integer]
+    # @param command_name [String]
+    # @param data [Hash]
+    # @return [PgEventstore::SubscriptionRunnerCommands::Abstract]
+    def find_or_create_by(subscription_id:, subscriptions_set_id:, command_name:, data:)
       transaction_queries.transaction do
-        find_by(...) || create(...)
+        find_by(subscription_id:, subscriptions_set_id:, command_name:) ||
+          create(subscription_id:, subscriptions_set_id:, command_name:, data:)
       end
     end
 
     # @param subscription_id [Integer]
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
-    # @return [Hash, nil]
+    # @return [PgEventstore::SubscriptionRunnerCommands::Abstract, nil]
     def find_by(subscription_id:, subscriptions_set_id:, command_name:)
       sql_builder =
         SQLBuilder.new.
@@ -43,22 +47,23 @@ module PgEventstore
     # @param subscription_id [Integer]
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
-    # @return [Hash]
-    def create(subscription_id:, subscriptions_set_id:, command_name:)
+    # @param data [Hash]
+    # @return [PgEventstore::SubscriptionRunnerCommands::Abstract]
+    def create(subscription_id:, subscriptions_set_id:, command_name:, data:)
       sql = <<~SQL
-        INSERT INTO subscription_commands (name, subscription_id, subscriptions_set_id) 
-          VALUES ($1, $2, $3)
+        INSERT INTO subscription_commands (name, subscription_id, subscriptions_set_id, data) 
+          VALUES ($1, $2, $3, $4)
           RETURNING *
       SQL
       pg_result = connection.with do |conn|
-        conn.exec_params(sql, [command_name, subscription_id, subscriptions_set_id])
+        conn.exec_params(sql, [command_name, subscription_id, subscriptions_set_id, data])
       end
       deserialize(pg_result.to_a.first)
     end
 
     # @param subscription_ids [Array<Integer>]
     # @param subscriptions_set_id [Integer]
-    # @return [Array<Hash>]
+    # @return [Array<PgEventstore::SubscriptionRunnerCommands::Abstract>]
     def find_commands(subscription_ids, subscriptions_set_id:)
       return [] if subscription_ids.empty?
 
@@ -93,9 +98,10 @@ module PgEventstore
     end
 
     # @param hash [Hash]
-    # @return [Hash]
+    # @return [PgEventstore::SubscriptionRunnerCommands::Base]
     def deserialize(hash)
-      hash.transform_keys(&:to_sym)
+      attrs = hash.transform_keys(&:to_sym)
+      SubscriptionRunnerCommands.command_class(attrs[:name]).new(**attrs)
     end
   end
 end
