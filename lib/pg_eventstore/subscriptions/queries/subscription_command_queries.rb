@@ -18,8 +18,8 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionRunnerCommands::Abstract]
     def find_or_create_by(subscription_id:, subscriptions_set_id:, command_name:, data:)
       transaction_queries.transaction do
-        find_by(subscription_id:, subscriptions_set_id:, command_name:) ||
-          create(subscription_id:, subscriptions_set_id:, command_name:, data:)
+        find_by(subscription_id: subscription_id, subscriptions_set_id: subscriptions_set_id, command_name: command_name) ||
+          create(subscription_id: subscription_id, subscriptions_set_id: subscriptions_set_id, command_name: command_name, data: data)
       end
     end
 

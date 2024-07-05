@@ -62,7 +62,8 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
       context 'when command exists only for the second runner' do
         let!(:command) do
           command_queries.create(
-            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name, data:
+            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+            data: data
           )
         end
 
@@ -86,12 +87,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
       context 'when commands exist for both runners' do
         let!(:command1) do
           command_queries.create(
-            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name, data:
+            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+            data: data
           )
         end
         let!(:command2) do
           command_queries.create(
-            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name, data:
+            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+            data: data
           )
         end
 
