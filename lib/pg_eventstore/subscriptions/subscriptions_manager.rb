@@ -1,15 +1,23 @@
 # frozen_string_literal: true
 
 require 'forwardable'
+require_relative 'runner_state'
 require_relative 'basic_runner'
 require_relative 'subscription'
 require_relative 'events_processor'
 require_relative 'subscription_handler_performance'
 require_relative 'subscription_runner'
-require_relative 'runner_state'
 require_relative 'subscriptions_set'
 require_relative 'subscription_runners_feeder'
 require_relative 'subscription_feeder'
+require_relative 'extensions/command_class_lookup_extension'
+require_relative 'extensions/base_command_extension'
+require_relative 'subscription_feeder_commands'
+require_relative 'subscription_runner_commands'
+require_relative 'queries/subscription_command_queries'
+require_relative 'queries/subscription_queries'
+require_relative 'queries/subscriptions_set_command_queries'
+require_relative 'queries/subscriptions_set_queries'
 require_relative 'commands_handler'
 
 module PgEventstore

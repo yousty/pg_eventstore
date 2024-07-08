@@ -106,7 +106,13 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
           context 'when there are events left in the queue' do
             before do
+              instance.start
+              sleep 0.1
               events_processor.feed([{ 'id' => 1 }, { 'id' => 3 }])
+            end
+
+            after do
+              instance.stop_async.wait_for_finish
             end
 
             it 'subtracts queue size from the final value' do
@@ -117,8 +123,14 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
         context 'when there are a lot of events left in the chunk' do
           before do
+            instance.start
+            sleep 0.1
             stats.track_exec_time { sleep 0.2 }
             instance.feed(Array.new(100) { |i| { 'id' => i } })
+          end
+
+          after do
+            instance.stop_async.wait_for_finish
           end
 
           it 'falls back to 0' do
@@ -137,7 +149,13 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
           context 'when there are events left in the queue' do
             before do
+              instance.start
+              sleep 0.1
               events_processor.feed([{ 'id' => 1 }, { 'id' => 3 }])
+            end
+
+            after do
+              instance.stop_async.wait_for_finish
             end
 
             it 'subtracts queue size from the final value' do
@@ -159,7 +177,13 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
           context 'when there are events left in the queue' do
             before do
+              instance.start
+              sleep 0.1
               events_processor.feed([{ 'id' => 1 }, { 'id' => 3 }])
+            end
+
+            after do
+              instance.stop_async.wait_for_finish
             end
 
             it 'falls back to 0' do
@@ -236,7 +260,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'on error' do
-    subject { instance.start; sleep 0.2 }
+    subject { instance.feed([event]); sleep 0.5 }
 
     let(:handler) do
       should_raise = true
@@ -253,7 +277,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', time_between_restarts: 0) }
 
     before do
-      instance.feed([event])
+      instance.start
+      sleep 0.1
     end
 
     after do
@@ -341,7 +366,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'on restart' do
-    subject { instance.start; sleep 0.5 }
+    subject { instance.feed(['id' => SecureRandom.uuid, 'global_position' => 1]); sleep 0.5 }
 
     let(:handler) { proc { raise 'You rolled 1. Critical failure!' } }
     let(:subscription) do
@@ -352,7 +377,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     let(:max_restarts_number) { 3 }
 
     before do
-      instance.feed(['id' => SecureRandom.uuid, 'global_position' => 1])
+      instance.start
+      sleep 0.1
     end
 
     after do
@@ -388,6 +414,12 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
     before do
       subscription.update(last_chunk_greatest_position: 1)
+      instance.start
+      sleep 0.1
+    end
+
+    after do
+      instance.stop_async.wait_for_finish
     end
 
     context 'when events are present' do

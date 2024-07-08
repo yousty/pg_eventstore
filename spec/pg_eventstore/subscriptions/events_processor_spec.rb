@@ -22,42 +22,65 @@ RSpec.describe PgEventstore::EventsProcessor do
     let(:global_position_receiver) { double('Global position receiver') }
 
     before do
+      instance.start
+      # give runner time to try to consume first even and then get into sleep, so we can test changes in the chunk
+      sleep 0.1
       instance.feed([event_in_queue])
       allow(global_position_receiver).to receive(:call)
       instance.define_callback(:feed, :after, feed_callback)
     end
 
-    it 'adds the given events to the queue' do
-      expect { subject }.to change {
-        instance.instance_variable_get(:@raw_events)
-      }.from([event_in_queue]).to([event_in_queue, event1, event2])
-    end
-    it 'executes :feed action' do
-      subject
-      expect(global_position_receiver).to have_received(:call).with(3)
+    after do
+      instance.stop_async.wait_for_finish
     end
 
-    context 'when no events are fed' do
-      let(:raw_events) { [] }
-
-      it 'raises error' do
-        expect { subject }.to raise_error(PgEventstore::EmptyChunkFedError)
+    context 'when runner is running' do
+      it 'adds the given events to the queue' do
+        expect { subject }.to change {
+          instance.instance_variable_get(:@raw_events)
+        }.from([event_in_queue]).to([event_in_queue, event1, event2])
       end
+      it 'executes :feed action' do
+        subject
+        expect(global_position_receiver).to have_received(:call).with(3)
+      end
+
+      context 'when no events are fed' do
+        let(:raw_events) { [] }
+
+        it 'raises error' do
+          expect { subject }.to raise_error(PgEventstore::EmptyChunkFedError)
+        end
+        it 'does not change the queue' do
+          expect { subject rescue nil }.not_to change { instance.instance_variable_get(:@raw_events) }
+        end
+        it 'does not execute :feed action' do
+          subject rescue nil
+          expect(global_position_receiver).not_to have_received(:call).with(nil)
+        end
+      end
+
+      context 'when last event is a link event' do
+        let(:event2) { { 'id' => SecureRandom.uuid, 'global_position' => 3, 'link' => { 'global_position' => 5 } } }
+
+        it "passes link's global position into :feed action" do
+          subject
+          expect(global_position_receiver).to have_received(:call).with(5)
+        end
+      end
+    end
+
+    context 'when runner is not in the :running state' do
+      before do
+        instance.stop_async.wait_for_finish
+      end
+
       it 'does not change the queue' do
-        expect { subject rescue nil }.not_to change { instance.instance_variable_get(:@raw_events) }
+        expect { subject }.not_to change { instance.instance_variable_get(:@raw_events) }
       end
       it 'does not execute :feed action' do
-        subject rescue nil
-        expect(global_position_receiver).not_to have_received(:call).with(nil)
-      end
-    end
-
-    context 'when last event is a link event' do
-      let(:event2) { { 'id' => SecureRandom.uuid, 'global_position' => 3, 'link' => { 'global_position' => 5 } } }
-
-      it "passes link's global position into :feed action" do
         subject
-        expect(global_position_receiver).to have_received(:call).with(5)
+        expect(global_position_receiver).not_to have_received(:call).with(nil)
       end
     end
   end
@@ -66,11 +89,37 @@ RSpec.describe PgEventstore::EventsProcessor do
     subject { instance.events_left_in_chunk }
 
     before do
+      instance.start
+      # give runner time to try to consume first even and then get into sleep, so we can test changes in the chunk
+      sleep 0.1
       instance.feed([{ 'id' => SecureRandom.uuid, 'global_position' => 1 }])
+    end
+
+    after do
+      instance.stop_async.wait_for_finish
     end
 
     it "returns the size of raw events in the queue" do
       is_expected.to eq(1)
+    end
+  end
+
+  describe '#clear_chunk' do
+    subject { instance.clear_chunk }
+
+    before do
+      instance.start
+      # give runner time to try to consume first even and then get into sleep, so we can test changes in the chunk
+      sleep 0.1
+      instance.feed([{ foo: :bar }])
+    end
+
+    after do
+      instance.stop_async.wait_for_finish
+    end
+
+    it 'clears current chunk' do
+      expect { subject }.to change { instance.events_left_in_chunk }.from(1).to(0)
     end
   end
 

@@ -392,7 +392,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     let(:params) { {} }
 
     let!(:set1) { SubscriptionsSetHelper.create(name: 'FooSet') }
-    let!(:set2) { SubscriptionsSetHelper.create(name: 'BarSet') }
+    let!(:set2) { SubscriptionsSetHelper.create_with_connection(name: 'BarSet') }
 
     let!(:subscription1) { SubscriptionsHelper.create(locked_by: set2.id, set: set1.name, name: 'Sub1') }
     let!(:subscription2) do
@@ -426,6 +426,83 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         expect(last_response.body).to include(subscription1.name)
       end
     end
+
+    context 'when subscription is stopped' do
+      before do
+        subscription2.update(state: 'stopped')
+      end
+
+      it 'displays it' do
+        subject
+        start_btn = nokogiri_body.css(
+          "a[href='http://#{current_session.default_host}/subscription_cmd/#{set2.id}/#{subscription2.id}/Start']"
+        ).first
+        reset_position_btn = nokogiri_body.css(
+          "a[data-url='http://#{current_session.default_host}/subscription_cmd/#{set2.id}/#{subscription2.id}/ResetPosition']"
+        ).first
+        aggregate_failures do
+          expect(last_response.body).to include(subscription2.name)
+          expect(start_btn).not_to be_nil, "Start button must be present"
+          expect(reset_position_btn).not_to be_nil, "Reset position button must be present"
+        end
+      end
+    end
+
+    context 'when subscription is dead' do
+      before do
+        subscription2.update(state: 'dead')
+      end
+
+      it 'displays it' do
+        subject
+        stop_btn = nokogiri_body.css(
+          "a[href='http://#{current_session.default_host}/subscription_cmd/#{set2.id}/#{subscription2.id}/Stop']"
+        ).first
+        restore_btn = nokogiri_body.css(
+          "a[href='http://#{current_session.default_host}/subscription_cmd/#{set2.id}/#{subscription2.id}/Restore']"
+        ).first
+        aggregate_failures do
+          expect(last_response.body).to include(subscription2.name)
+          expect(stop_btn).not_to be_nil, "Stop button must be present"
+          expect(restore_btn).not_to be_nil, "Restore button must be present"
+        end
+      end
+    end
+
+    context 'when subscription is running' do
+      before do
+        subscription2.update(state: 'running')
+      end
+
+      it 'displays it' do
+        subject
+        stop_btn = nokogiri_body.css(
+          "a[href='http://#{current_session.default_host}/subscription_cmd/#{set2.id}/#{subscription2.id}/Stop']"
+        ).first
+        aggregate_failures do
+          expect(last_response.body).to include(subscription2.name)
+          expect(stop_btn).not_to be_nil, "Stop button must be present"
+        end
+      end
+    end
+
+    context 'when subscription is stopped and unlocked' do
+      before do
+        subscription2.update(state: 'stopped')
+        set2.delete
+      end
+
+      it 'displays it' do
+        subject
+        delete_btn = nokogiri_body.css(
+          "a[href='http://#{current_session.default_host}/delete_subscription/#{subscription2.id}']"
+        ).first
+        aggregate_failures do
+          expect(last_response.body).to include(subscription2.name)
+          expect(delete_btn).not_to be_nil, "Delete button must be present"
+        end
+      end
+    end
   end
 
   describe 'POST /subscription_cmd/:set_id/:id/:cmd' do
@@ -440,7 +517,9 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     context 'when command is recognizable' do
       it 'creates a command record' do
         expect { subject }.to change {
-          cmd_queries.find_by(subscription_id: subscription.id, subscriptions_set_id: set.id, command_name: cmd)
+          cmd_queries.find_by(
+            subscription_id: subscription.id, subscriptions_set_id: set.id, command_name: cmd
+          )&.options_hash
         }.to(a_hash_including(subscription_id: subscription.id, subscriptions_set_id: set.id, name: cmd))
       end
       it 'redirects to subscriptions page' do
@@ -457,7 +536,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
       it 'renders error' do
         subject
-        expect(last_response.body).to include('KeyError')
+        expect(last_response.body).to include("<h2>Subscription command &quot;#{cmd}&quot; does not exist</h2>")
       end
     end
   end
@@ -473,7 +552,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     context 'when command is recognizable' do
       it 'creates a command record' do
         expect { subject }.to change {
-          cmd_queries.find_by(subscriptions_set_id: set.id, command_name: cmd)
+          cmd_queries.find_by(subscriptions_set_id: set.id, command_name: cmd)&.options_hash
         }.to(a_hash_including(subscriptions_set_id: set.id, name: cmd))
       end
       it 'redirects to subscriptions page' do
@@ -490,7 +569,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
       it 'renders error' do
         subject
-        expect(last_response.body).to include('KeyError')
+        expect(last_response.body).to include("<h2>SubscriptionsSet command &quot;#{cmd}&quot; does not exist</h2>")
       end
     end
   end

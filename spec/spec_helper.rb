@@ -9,6 +9,7 @@ require 'logger'
 require 'pg_eventstore/web'
 require 'rack/test'
 require 'timecop'
+require 'nokogiri'
 
 Dir[File.join(File.expand_path('.', __dir__), 'support/**/*.rb')].each { |f| require f }
 

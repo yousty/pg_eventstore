@@ -41,34 +41,20 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
           command_queries.create(
             subscription_id: runner1.id,
             subscriptions_set_id: another_subscriptions_set.id,
-            command_name: 'FooCmd'
+            command_name: 'FooCmd',
+            data: {}
           )
         end
         let(:another_subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarSet') }
-
-        before do
-          PgEventstore.logger = Logger.new('/dev/null')
-          allow(PgEventstore.logger).to receive(:warn)
-        end
-
-        after do
-          PgEventstore.logger = nil
-        end
 
         it 'does not delete it' do
           expect { subject }.not_to(
             change {
               command_queries.find_by(
-                subscription_id: another_command[:subscription_id], subscriptions_set_id: another_subscriptions_set.id,
-                command_name: another_command[:name]
+                subscription_id: another_command.subscription_id, subscriptions_set_id: another_subscriptions_set.id,
+                command_name: another_command.name
               )
             }
-          )
-        end
-        it 'does not try to perform it' do
-          subject
-          expect(PgEventstore.logger).not_to(
-            have_received(:warn).with(a_string_including("Don't know how to handle \"FooCmd\""))
           )
         end
       end
@@ -76,7 +62,8 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
       context 'when command exists only for the second runner' do
         let!(:command) do
           command_queries.create(
-            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+            data: data
           )
         end
 
@@ -100,12 +87,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
       context 'when commands exist for both runners' do
         let!(:command1) do
           command_queries.create(
-            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+            data: data
           )
         end
         let!(:command2) do
           command_queries.create(
-            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+            data: data
           )
         end
 
@@ -139,6 +128,7 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :stop_async }
+        let(:data) { {} }
       end
     end
 
@@ -147,6 +137,7 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :restore }
+        let(:data) { {} }
       end
     end
 
@@ -155,13 +146,28 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
 
       it_behaves_like 'executes the command' do
         let(:command_method) { :start }
+        let(:data) { {} }
+      end
+    end
+
+    context 'when "ResetPosition" command is given' do
+      let(:command_name) { 'ResetPosition' }
+
+      before do
+        runners.each(&:start)
+        runners.each { |runner| runner.stop_async.wait_for_finish }
+      end
+
+      it_behaves_like 'executes the command' do
+        let(:command_method) { :clear_chunk }
+        let(:data) { { 'position' => 1 } }
       end
     end
 
     context 'when an unhandled command is given' do
       let!(:command) do
         command_queries.create(
-          subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: "FooCmd"
+          subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: "FooCmd", data: {}
         )
       end
 
@@ -171,24 +177,6 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
             subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: "FooCmd"
           )
         }.to(nil)
-      end
-
-      context 'when PgEventstore logger is set' do
-        before do
-          PgEventstore.logger = Logger.new(STDOUT)
-        end
-
-        after do
-          PgEventstore.logger = nil
-        end
-
-        it 'outputs warning' do
-          expect { subject }.to(
-            output(a_string_including(<<~TEXT)).to_stdout_from_any_process
-              #{described_class.name}: Don't know how to handle #{command[:name].inspect}. Details: #{command.inspect}.
-            TEXT
-          )
-        end
       end
     end
 

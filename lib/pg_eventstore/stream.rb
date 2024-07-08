@@ -72,6 +72,8 @@ module PgEventstore
       hash == another.hash
     end
 
+    # @param other_stream [Stream]
+    # @return [Boolean]
     def ==(other_stream)
       return false unless other_stream.is_a?(Stream)
 

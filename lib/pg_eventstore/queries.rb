@@ -5,10 +5,6 @@ require_relative 'query_builders/events_filtering_query'
 require_relative 'queries/transaction_queries'
 require_relative 'queries/event_queries'
 require_relative 'queries/partition_queries'
-require_relative 'queries/subscription_queries'
-require_relative 'queries/subscriptions_set_queries'
-require_relative 'queries/subscription_command_queries'
-require_relative 'queries/subscriptions_set_command_queries'
 require_relative 'queries/links_resolver'
 
 module PgEventstore
