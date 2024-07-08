@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [1.1.0]
+- Add "Reset position" button on Subscriptions Admin UI page
+
+**Note** This release includes a migration to support new functional. Please don't forget to run `rake pg_eventstore:migrate` to apply latest db changes.
+
 ## [1.0.4]
 - Fix bug which caused slow Subscriptions to stop processing new events
 - Optimize Subscriptions update queries
