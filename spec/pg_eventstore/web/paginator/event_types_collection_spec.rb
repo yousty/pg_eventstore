@@ -59,9 +59,17 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
           is_expected.to eq([{ 'event_type' => 'foo' }, { 'event_type' => 'fok' }])
         end
       end
+
+      context 'when query is upcased' do
+        let(:options) { { query: 'F' } }
+
+        it 'ignores case sensitivity' do
+          is_expected.to eq([{ 'event_type' => 'faz' }, { 'event_type' => 'fok' }])
+        end
+      end
     end
 
-    context 'when starting_id and query option are provided' do
+    context 'when starting_id and query option is provided' do
       let(:starting_id) { 'fok' }
       let(:options) { { query: 'f' } }
 

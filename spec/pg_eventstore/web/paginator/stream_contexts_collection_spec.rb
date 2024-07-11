@@ -61,6 +61,14 @@ RSpec.describe PgEventstore::Web::Paginator::StreamContextsCollection do
           is_expected.to eq([{ 'context' => 'FooCtx' }, { 'context' => 'FokCtx' }])
         end
       end
+
+      context 'when query is downcased' do
+        let(:options) { { query: 'f' } }
+
+        it 'ignores case sensitivity' do
+          is_expected.to eq([{ 'context' => 'FazCtx' }, { 'context' => 'FokCtx' }])
+        end
+      end
     end
 
     context 'when starting_id and query option are provided' do

@@ -73,6 +73,14 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
           is_expected.to eq([{ 'stream_name' => 'Foo' }, { 'stream_name' => 'Fok' }])
         end
       end
+
+      context 'when query is downcased' do
+        let(:options) { super().merge(query: 'f') }
+
+        it 'ignores case sensitivity' do
+          is_expected.to eq([{ 'stream_name' => 'Faz' }, { 'stream_name' => 'Fok' }])
+        end
+      end
     end
 
     context 'when starting_id and query option are provided' do

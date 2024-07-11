@@ -13,7 +13,7 @@ module PgEventstore
               sql_builder =
                 SQLBuilder.new.select('stream_name').from('partitions').
                   where('event_type is null and context = ?', options[:context]).
-                  where('stream_name like ?', "#{options[:query]}%")
+                  where('stream_name ilike ?', "#{options[:query]}%")
               sql_builder.where("stream_name #{direction_operator} ?", starting_id) if starting_id
               sql_builder.limit(per_page).order("stream_name #{order}")
               connection.with do |conn|
@@ -30,7 +30,7 @@ module PgEventstore
           sql_builder =
             SQLBuilder.new.select('stream_name').from('partitions').
               where("stream_name #{direction_operator} ?", starting_id).
-              where('stream_name like ?', "#{options[:query]}%").
+              where('stream_name ilike ?', "#{options[:query]}%").
               where('event_type is null and context = ?', options[:context]).
               limit(1).offset(per_page).order("stream_name #{order}")
 
