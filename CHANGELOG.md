@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.1.1]
+- Allow case insensitive search by context, stream name and event type in admin UI
+
 ## [1.1.0]
 - Add "Reset position" button on Subscriptions Admin UI page
 
