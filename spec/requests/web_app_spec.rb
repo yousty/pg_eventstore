@@ -95,14 +95,14 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
       it 'persists it in cookies' do
         subject
-        expect(last_response.headers['set-cookie']).to eq('current_config=some_config; httponly; SameSite=Lax')
+        expect(last_response.headers['set-cookie']).to eq('current_config=some_config; httponly; samesite=lax')
       end
     end
 
     context 'when config is not recognizable' do
       it 'sets it to :default' do
         subject
-        expect(last_response.headers['set-cookie']).to eq('current_config=default; httponly; SameSite=Lax')
+        expect(last_response.headers['set-cookie']).to eq('current_config=default; httponly; samesite=lax')
       end
     end
   end
