@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.1.3]
+- Fix issue with assets caching between different gem's versions
+
 ## [1.1.2]
 - Improve web app compatibility with rails
 
