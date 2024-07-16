@@ -63,6 +63,12 @@ module PgEventstore
         def h(text)
           Rack::Utils.escape_html(text)
         end
+
+        # @param path [String]
+        # @return [String]
+        def asset_url(path)
+          url("#{path}?v=#{PgEventstore::VERSION}")
+        end
       end
 
       get '/' do

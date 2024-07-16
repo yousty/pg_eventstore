@@ -6,12 +6,12 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="<%= url("images/favicon.ico") %>" type="image/ico"/>
+  <link rel="icon" href="<%= asset_url("images/favicon.ico") %>" type="image/ico"/>
 
   <title>PG EventStore admin</title>
 
   <!-- Bootstrap -->
-  <link href="<%= url("stylesheets/vendor/bootstrap.min.css") %>" rel="stylesheet">
+  <link href="<%= asset_url("stylesheets/vendor/bootstrap.min.css") %>" rel="stylesheet">
   <!-- Font Awesome -->
   <style>
       @font-face {
@@ -26,13 +26,13 @@
           font-style: normal;
       }
   </style>
-  <link href="<%= url("stylesheets/vendor/font-awesome.min.css") %>" rel="stylesheet">
+  <link href="<%= asset_url("stylesheets/vendor/font-awesome.min.css") %>" rel="stylesheet">
 
   <!-- Custom Theme Style -->
-  <link href="<%= url("stylesheets/vendor/gentelella.min.css") %>" rel="stylesheet">
-  <link href="<%= url("stylesheets/vendor/select2.min.css") %>" rel="stylesheet">
-  <link href="<%= url("stylesheets/vendor/select2-bootstrap4.min.css") %>" rel="stylesheet">
-  <link href="<%= url("stylesheets/pg_eventstore.css") %>" rel="stylesheet">
+  <link href="<%= asset_url("stylesheets/vendor/gentelella.min.css") %>" rel="stylesheet">
+  <link href="<%= asset_url("stylesheets/vendor/select2.min.css") %>" rel="stylesheet">
+  <link href="<%= asset_url("stylesheets/vendor/select2-bootstrap4.min.css") %>" rel="stylesheet">
+  <link href="<%= asset_url("stylesheets/pg_eventstore.css") %>" rel="stylesheet">
 </head>
 
 <body class="nav-md">
@@ -134,14 +134,14 @@
 </div>
 
 <!-- jQuery -->
-<script src="<%= url("javascripts/vendor/jquery.min.js") %>"></script>
+<script src="<%= asset_url("javascripts/vendor/jquery.min.js") %>"></script>
 <!-- Bootstrap -->
-<script src="<%= url("javascripts/vendor/bootstrap.bundle.min.js") %>"></script>
-<script src="<%= url("javascripts/vendor/select2.full.min.js") %>"></script>
+<script src="<%= asset_url("javascripts/vendor/bootstrap.bundle.min.js") %>"></script>
+<script src="<%= asset_url("javascripts/vendor/select2.full.min.js") %>"></script>
 
 <!-- Custom Theme Scripts -->
-<script src="<%= url("javascripts/gentelella.js") %>"></script>
-<script src="<%= url("javascripts/pg_eventstore.js") %>"></script>
+<script src="<%= asset_url("javascripts/gentelella.js") %>"></script>
+<script src="<%= asset_url("javascripts/pg_eventstore.js") %>"></script>
 
 </body>
 </html>
