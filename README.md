@@ -47,32 +47,7 @@ Documentation chapters:
 - [Subscriptions](docs/subscriptions.md)
 - [Writing middlewares](docs/writing_middleware.md)
 - [How to make multiple commands atomic](docs/multiple_commands.md)
-
-## Admin web UI
-
-`pg_eventstore` implements admin UI where you can browse various database objects. It is implemented as rack application. It doesn't have any authentication/authorization mechanism - it is your responsibility to take care of it.
-
-### Rails integration
-
-In your `config/routes.rb`:
-
-```ruby
-require 'pg_eventstore/web'
-
-mount PgEventstore::Web::Application, at: '/eventstore'
-```
-
-### Standalone application
-
-Create `config.ru` file and place next content in there:
-
-```ruby
-require 'pg_eventstore/web'
-
-run PgEventstore::Web::Application
-```
-
-Now you can use any web server to run it.
+- [Admin UI](docs/admin_ui.md)
 
 ## Development
 
@@ -84,6 +59,8 @@ After checking out the repo, run:
 Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`.
+
+To run admin UI web server - run `puma` in your terminal. By default it will start web server on `http://0.0.0.0:9292`.
 
 ### Benchmarks
 
