@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.1.2]
+- Improve web app compatibility with rails
+
 ## [1.1.1]
 - Allow case insensitive search by context, stream name and event type in admin UI
 
