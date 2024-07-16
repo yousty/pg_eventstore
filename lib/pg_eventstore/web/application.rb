@@ -9,8 +9,6 @@ module PgEventstore
       set :environment, -> { (ENV['RACK_ENV'] || ENV['RAILS_ENV'] || ENV['APP_ENV'])&.to_sym || :development }
       set :logging, -> { environment == :development || environment == :test }
       set :erb, layout: :'layouts/application'
-      set :sessions, true
-      set :session_secret, ENV.fetch('SECRET_KEY_BASE') { SecureRandom.hex(64) }
 
       helpers(Paginator::Helpers, Subscriptions::Helpers) do
         # @return [Array<Hash>, nil]
@@ -29,7 +27,12 @@ module PgEventstore
 
         # @return [Symbol]
         def current_config
-          PgEventstore.available_configs.include?(session[:current_config]) ? session[:current_config] : :default
+          config = request.cookies['current_config']&.to_s&.to_sym
+          PgEventstore.available_configs.include?(config) ? config : :default
+        end
+
+        def current_config=(val)
+          response.set_cookie('current_config', { value: val.to_s, http_only: true, same_site: :lax })
         end
 
         # @return [PgEventstore::Connection]
@@ -96,8 +99,8 @@ module PgEventstore
       post '/change_config' do
         config = params[:config]&.to_sym
         config = :default unless PgEventstore.available_configs.include?(config)
-        session[:current_config] = config
-        redirect(url('/'))
+        self.current_config = config
+        redirect(redirect_back_url(fallback_url: '/'))
       end
 
       get '/stream_contexts_filtering', provides: :json do
