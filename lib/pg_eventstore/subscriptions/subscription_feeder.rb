@@ -6,6 +6,7 @@ module PgEventstore
   class SubscriptionFeeder
     extend Forwardable
 
+    # @return [Integer] number of seconds between heartbeat updates
     HEARTBEAT_INTERVAL = 10 # seconds
 
     def_delegators :subscriptions_set, :id
@@ -30,6 +31,7 @@ module PgEventstore
 
     # Adds SubscriptionRunner to the set
     # @param runner [PgEventstore::SubscriptionRunner]
+    # @return [PgEventstore::SubscriptionRunner]
     def add(runner)
       assert_proper_state!
       @runners.push(runner)
@@ -56,6 +58,7 @@ module PgEventstore
 
     # Sets the force_lock flash to true. If set - all related Subscriptions will ignore their lock state and will be
     # locked by the new SubscriptionsSet.
+    # @return [void]
     def force_lock!
       @force_lock = true
     end
@@ -170,6 +173,7 @@ module PgEventstore
       @commands_handler.stop
     end
 
+    # @param state [String]
     # @return [void]
     def update_subscriptions_set_state(state)
       subscriptions_set.update(state: state)

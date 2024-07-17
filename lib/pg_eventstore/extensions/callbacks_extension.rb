@@ -52,6 +52,7 @@ module PgEventstore
         end
       end
 
+      # @return [void]
       def define_callback(...)
         callbacks.define_callback(...)
       end

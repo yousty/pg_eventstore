@@ -10,10 +10,15 @@ module PgEventstore
   class SubscriptionRunner
     extend Forwardable
 
+    # @return [Integer]
     MAX_EVENTS_PER_CHUNK = 1_000
+    # @return [Integer]
     MIN_EVENTS_PER_CHUNK = 10
+    # @return [Integer]
     INITIAL_EVENTS_PER_CHUNK = 10
 
+    # @!attribute subscription
+    #   @return [PgEventstore::Subscription]
     attr_reader :subscription
 
     def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore, :state, :running?,

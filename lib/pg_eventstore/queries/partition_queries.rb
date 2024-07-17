@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class PartitionQueries
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
     attr_reader :connection
     private :connection
 
@@ -69,6 +71,7 @@ module PgEventstore
     end
 
     # @param stream [PgEventstore::Stream]
+    # @param event_type [String]
     # @param stream_name_partition_name [String]
     # @return [Hash] partition attributes
     def create_event_type_partition(stream, event_type, stream_name_partition_name)
@@ -185,6 +188,9 @@ module PgEventstore
       "stream_names_#{Digest::MD5.hexdigest("#{stream.context}-#{stream.stream_name}")[0..5]}"
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @param event_type [String]
+    # @return [String]
     def event_type_partition_name(stream, event_type)
       "event_types_#{Digest::MD5.hexdigest("#{stream.context}-#{stream.stream_name}-#{event_type}")[0..5]}"
     end

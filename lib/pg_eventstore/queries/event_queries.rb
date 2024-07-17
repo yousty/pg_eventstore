@@ -3,7 +3,15 @@
 module PgEventstore
   # @!visibility private
   class EventQueries
-    attr_reader :connection, :serializer, :deserializer
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
+    attr_reader :connection
+    # @!attribute serializer
+    #   @return [PgEventstore::EventSerializer]
+    attr_reader :serializer
+    # @!attribute deserializer
+    #   @return [PgEventstore::EventDeserializer]
+    attr_reader :deserializer
     private :connection, :serializer, :deserializer
 
     # @param connection [PgEventstore::Connection]

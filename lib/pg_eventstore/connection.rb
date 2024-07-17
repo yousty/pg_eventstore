@@ -38,7 +38,15 @@ module PgEventstore
       end
     end
 
-    attr_reader :uri, :pool_size, :pool_timeout
+    # @!attribute uri
+    #   @return [String]
+    attr_reader :uri
+    # @!attribute pool_size
+    #   @return [Integer]
+    attr_reader :pool_size
+    # @!attribute pool_timeout
+    #   @return [Integer]
+    attr_reader :pool_timeout
     private :uri, :pool_size, :pool_timeout
 
     # @param uri [String] PostgreSQL connection URI.

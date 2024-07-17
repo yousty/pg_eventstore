@@ -4,6 +4,7 @@ module PgEventstore
   class Event
     include Extensions::OptionsExtension
 
+    # @return [String] a type of link event
     LINK_TYPE = '$>'
 
     # @!attribute id
@@ -44,7 +45,7 @@ module PgEventstore
     attribute(:created_at)
 
     # Implements comparison of `PgEventstore::Event`-s. Two events matches if all of their attributes matches
-    # @param other [Object, EventStoreClient::DeserializedEvent]
+    # @param other [Object, PgEventstore::Event]
     # @return [Boolean]
     def ==(other)
       return false unless other.is_a?(PgEventstore::Event)

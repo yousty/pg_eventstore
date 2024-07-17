@@ -22,6 +22,8 @@ module PgEventstore
   end
 
   class StreamNotFoundError < Error
+    # @!attribute stream
+    #   @return [PgEventstore::Stream]
     attr_reader :stream
 
     # @param stream [PgEventstore::Stream]
@@ -32,6 +34,8 @@ module PgEventstore
   end
 
   class SystemStreamError < Error
+    # @!attribute stream
+    #   @return [PgEventstore::Stream]
     attr_reader :stream
 
     # @param stream [PgEventstore::Stream]
@@ -42,7 +46,15 @@ module PgEventstore
   end
 
   class WrongExpectedRevisionError < Error
-    attr_reader :stream, :revision, :expected_revision
+    # @!attribute stream
+    #   @return [PgEventstore::Stream]
+    attr_reader :stream
+    # @!attribute revision
+    #   @return [Integer]
+    attr_reader :revision
+    # @!attribute expected_revision
+    #   @return [Integer, Symbol]
+    attr_reader :expected_revision
 
     # @param revision [Integer]
     # @param expected_revision [Integer, Symbol]
@@ -96,29 +108,13 @@ module PgEventstore
     end
   end
 
-  class StreamDeletionError < Error
-    attr_reader :stream_name, :details
-
-    # @param stream_name [String]
-    # @param details [String]
-    def initialize(stream_name, details:)
-      @stream_name = stream_name
-      @details = details
-      super(user_friendly_message)
-    end
-
-    # @return [String]
-    def user_friendly_message
-      <<~TEXT.strip
-        Could not delete #{stream_name.inspect} stream. It seems that a stream with that \
-        name does not exist, has already been deleted or its state does not match the \
-        provided :expected_revision option. Please check #details for more info.
-      TEXT
-    end
-  end
-
   class RecordNotFound < Error
-    attr_reader :table_name, :id
+    # @!attribute table_name
+    #   @return [String]
+    attr_reader :table_name
+    # @!attribute id
+    #   @return [Integer, String]
+    attr_reader :id
 
     # @param table_name [String]
     # @param id [Integer, String]
@@ -135,7 +131,15 @@ module PgEventstore
   end
 
   class SubscriptionAlreadyLockedError < Error
-    attr_reader :set, :name, :lock_id
+    # @!attribute set
+    #   @return [String]
+    attr_reader :set
+    # @!attribute name
+    #   @return [String]
+    attr_reader :name
+    # @!attribute lock_id
+    #   @return [Integer]
+    attr_reader :lock_id
 
     # @param set [String] subscriptions set name
     # @param name [String] subscription's name
@@ -157,7 +161,15 @@ module PgEventstore
   end
 
   class WrongLockIdError < Error
-    attr_reader :set, :name, :lock_id
+    # @!attribute set
+    #   @return [String]
+    attr_reader :set
+    # @!attribute name
+    #   @return [String]
+    attr_reader :name
+    # @!attribute lock_id
+    #   @return [Integer]
+    attr_reader :lock_id
 
     # @param set [String] subscriptions set name
     # @param name [String] subscription's name
@@ -179,6 +191,8 @@ module PgEventstore
   end
 
   class NotPersistedEventError < Error
+    # @!attribute event
+    #   @return [PgEventstore::Event]
     attr_reader :event
 
     # @param event [PgEventstore::Event]
@@ -194,7 +208,12 @@ module PgEventstore
   end
 
   class MissingPartitions < Error
-    attr_reader :stream, :event_types
+    # @!attribute stream
+    #   @return [PgEventstore::Stream]
+    attr_reader :stream
+    # @!attribute event_types
+    #   @return [Array<String>]
+    attr_reader :event_types
 
     # @param stream [PgEventstore::Stream]
     # @param event_types [Array<String>]

@@ -111,6 +111,8 @@ module PgEventstore
     end
 
     # Locks the Subscription by the given lock id
+    # @return lock_id [Integer] SubscriptionsSet#id
+    # @param force [Boolean]
     # @return [PgEventstore::Subscription]
     def lock!(lock_id, force: false)
       self.id = subscription_queries.find_or_create_by(set: set, name: name)[:id]

@@ -4,9 +4,10 @@ module PgEventstore
   module Web
     module Paginator
       class StreamIdsCollection < BaseCollection
+        # @return [Integer]
         PER_PAGE = 10
 
-        # @return [Array<Hash>]
+        # @return [Array<Hash<String => String>>]
         def collection
           @_collection ||=
             begin

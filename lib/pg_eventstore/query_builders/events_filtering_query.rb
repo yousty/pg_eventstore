@@ -4,7 +4,9 @@ module PgEventstore
   module QueryBuilders
     # @!visibility private
     class EventsFiltering
+      # @return [Integer]
       DEFAULT_LIMIT = 1_000
+      # @return [Hash<String => String, Symbol => String>]
       SQL_DIRECTIONS = {
         'asc' => 'ASC',
         'desc' => 'DESC',
@@ -15,6 +17,7 @@ module PgEventstore
       }.tap do |directions|
         directions.default = 'ASC'
       end.freeze
+      # @return [Array<Symbol>]
       SUBSCRIPTIONS_OPTIONS = %i[from_position resolve_link_tos filter max_count].freeze
 
       class << self

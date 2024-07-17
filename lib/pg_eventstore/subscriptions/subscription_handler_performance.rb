@@ -9,6 +9,7 @@ module PgEventstore
   class SubscriptionHandlerPerformance
     extend Forwardable
 
+    # @return [Integer] the number of measurements to keep
     TIMINGS_TO_KEEP = 100
 
     def_delegators :@lock, :synchronize

@@ -4,6 +4,8 @@ module PgEventstore
   module Web
     module Subscriptions
       class Subscriptions
+        # @!attribute connection
+        #   @return [PgEventstore::Connection]
         attr_reader :connection
         private :connection
 

@@ -18,6 +18,8 @@ require_relative 'pg_eventstore/subscriptions/subscriptions_manager'
 
 module PgEventstore
   class << self
+    # @!attribute mutex
+    #   @return [Thread::Mutex]
     attr_reader :mutex
     private :mutex
 
@@ -87,10 +89,13 @@ module PgEventstore
       Client.new(config(name))
     end
 
+    # @return [Logger, nil]
     def logger
       @logger
     end
 
+    # @param logger [Logger, nil]
+    # @return [Logger, nil]
     def logger=(logger)
       @logger = logger
     end

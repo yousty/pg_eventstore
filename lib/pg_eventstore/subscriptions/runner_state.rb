@@ -6,6 +6,7 @@ module PgEventstore
   class RunnerState
     include Extensions::CallbacksExtension
 
+    # @return [Hash<Symbol => String>]
     STATES = %i(initial running halting stopped dead).to_h { [_1, _1.to_s.freeze] }.freeze
 
     def initialize

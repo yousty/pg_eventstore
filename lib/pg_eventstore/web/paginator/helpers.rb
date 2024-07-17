@@ -98,7 +98,7 @@ module PgEventstore
         private
 
         # @param starting_id [String, Integer, nil]
-        # @param [String, nil]
+        # @return [String]
         def build_starting_id_link(starting_id)
           return 'javascript: void(0);' unless starting_id
 

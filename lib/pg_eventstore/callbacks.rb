@@ -97,12 +97,14 @@ module PgEventstore
 
     private
 
+    # @return [void]
     def run_before_callbacks(action, *args, **kwargs)
       @callbacks[action][:before]&.each do |callback|
         callback.call(*args, **kwargs)
       end
     end
 
+    # @return [Object] the result of the passed block
     def run_around_callbacks(action, *args, **kwargs, &blk)
       result = nil
       stack = [proc { result = yield if block_given? }]
@@ -113,6 +115,7 @@ module PgEventstore
       result
     end
 
+    # @return [void]
     def run_after_callbacks(action, *args, **kwargs)
       @callbacks[action][:after]&.each do |callback|
         callback.call(*args, **kwargs)

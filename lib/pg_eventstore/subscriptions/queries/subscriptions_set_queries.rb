@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class SubscriptionsSetQueries
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
     attr_reader :connection
     private :connection
 
@@ -63,6 +65,7 @@ module PgEventstore
 
     # @param id [Integer]
     # @param attrs [Hash]
+    # @return [Hash]
     def update(id, attrs)
       attrs = { updated_at: Time.now.utc }.merge(attrs)
       attrs_sql = attrs.keys.map.with_index(1) do |attr, index|

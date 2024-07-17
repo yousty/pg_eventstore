@@ -219,10 +219,12 @@ module PgEventstore
     end
 
     # Delegates :change_state action to the runner
+    # @return [void]
     def delegate_change_state_cbx
       @state.define_callback(:change_state, :before, method(:change_state))
     end
 
+    # @return [void]
     def change_state(...)
       callbacks.run_callbacks(:change_state, ...)
     end

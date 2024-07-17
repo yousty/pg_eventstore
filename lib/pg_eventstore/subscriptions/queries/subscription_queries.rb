@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class SubscriptionQueries
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
     attr_reader :connection
     private :connection
 

@@ -25,6 +25,8 @@ module PgEventstore
   class SubscriptionsManager
     extend Forwardable
 
+    # @!attribute config
+    #   @return [PgEventstore::Config]
     attr_reader :config
     private :config
 
