@@ -15,11 +15,8 @@ module PgEventstore
       # _@param_ `another`
       def ==: (Object another) -> bool
 
-      # sord omit - no YARD type given for "**options", using untyped
       def initialize: (**untyped options) -> void
 
-      # Construct a hash from options, where key is the option's name and the value is option's
-      # value
       def options_hash: () -> ::Hash[untyped, untyped]
 
       # _@param_ `opt_name`

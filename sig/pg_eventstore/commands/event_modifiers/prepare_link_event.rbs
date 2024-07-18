@@ -15,12 +15,8 @@ module PgEventstore
         # _@return_ — partition id
         def partition_id: (PgEventstore::Event event) -> Integer
 
-        # sord omit - no YARD type given for :partition_queries, using untyped
-        # Returns the value of attribute partition_queries.
         attr_reader partition_queries: PgEventstore::PartitionQueries
 
-        # sord omit - no YARD type given for :partitions, using untyped
-        # Returns the value of attribute partitions.
         attr_reader partitions: Hash[untyped, untyped]
       end
     end

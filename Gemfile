@@ -23,6 +23,12 @@ gem 'puma', '~> 6.4', '>= 6.4.2'
 
 gem 'rack-test', '~> 2.1'
 
+gem 'rack', '~> 3.1', '>= 3.1.7'
+
+gem 'rackup', '~> 2.1'
+
 gem 'timecop', '~> 0.9.9'
 
 gem 'nokogiri', '~> 1.16', '>= 1.16.6'
+
+gem 'rbs', '~> 3.5', '>= 3.5.2'

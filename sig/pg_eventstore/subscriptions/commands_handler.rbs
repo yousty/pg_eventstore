@@ -11,10 +11,8 @@ module PgEventstore
     # _@param_ `runners`
     def initialize: (Symbol config_name, PgEventstore::SubscriptionFeeder subscription_feeder, ::Array[PgEventstore::SubscriptionRunner] runners) -> void
 
-    # sord omit - no YARD return type given, using untyped
     def attach_runner_callbacks: () -> untyped
 
-    # sord omit - no YARD return type given, using untyped
     def process_async: () -> untyped
 
     # _@param_ `error`

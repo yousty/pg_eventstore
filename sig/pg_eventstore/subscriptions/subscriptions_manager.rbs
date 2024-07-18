@@ -46,7 +46,6 @@ module PgEventstore
 
     def subscriptions_set: () -> PgEventstore::SubscriptionsSet?
 
-    # sord duck - #call looks like a duck type, replacing with untyped
     # _@param_ `middlewares`
     #
     # _@param_ `handler`

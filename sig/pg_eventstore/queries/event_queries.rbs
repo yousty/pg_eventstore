@@ -31,7 +31,6 @@ module PgEventstore
     # _@param_ `events`
     def prepared_statements: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> ::Array[(::Array[String] | ::Array[Object])]
 
-    # sord warn - PgEventstore::EventsFilteringQuery wasn't able to be resolved to a constant in this project
     # _@param_ `stream`
     #
     # _@param_ `options`

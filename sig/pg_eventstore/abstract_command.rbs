@@ -3,7 +3,6 @@ module PgEventstore
     # _@param_ `queries`
     def initialize: (PgEventstore::Queries queries) -> void
 
-    # sord omit - no YARD return type given, using untyped
     def call: () -> untyped
 
     # Returns the value of attribute queries.

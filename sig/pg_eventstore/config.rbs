@@ -21,8 +21,6 @@ module PgEventstore
     # _@param_ `options`
     def init_default_values: (::Hash[untyped, untyped] options) -> void
 
-    # sord omit - no YARD type given for :name, using untyped
-    # Returns the value of attribute name.
     attr_reader name: untyped
 
     attr_accessor pg_uri: String
