@@ -105,7 +105,7 @@ module PgEventstore
     end
 
     # @param middlewares [Array, nil]
-    # @return [Array<Object<#serialize, #deserialize>>]
+    # @return [Array<PgEventstore::Middleware>]
     def select_middlewares(middlewares = nil)
       return config.middlewares.values unless middlewares
 

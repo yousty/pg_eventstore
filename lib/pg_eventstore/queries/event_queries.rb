@@ -130,7 +130,7 @@ module PgEventstore
 
     # @param stream [PgEventstore::Stream]
     # @param options [Hash]
-    # @return [PgEventstore::EventsFilteringQuery]
+    # @return [PgEventstore::EventsFiltering]
     def events_filtering(stream, options)
       return QueryBuilders::EventsFiltering.all_stream_filtering(options) if stream.all_stream?
 

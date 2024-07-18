@@ -75,7 +75,7 @@ module PgEventstore
 
     class << self
       # @param subscriptions_set_id [Integer] SubscriptionsSet#id
-      # @param subscriptions [Array<PgEventstoreSubscription>]
+      # @param subscriptions [Array<PgEventstore::Subscription>]
       # @return [void]
       def ping_all(subscriptions_set_id, subscriptions)
         result = subscription_queries.ping_all(subscriptions_set_id, subscriptions.map(&:id))
@@ -111,7 +111,7 @@ module PgEventstore
     end
 
     # Locks the Subscription by the given lock id
-    # @return lock_id [Integer] SubscriptionsSet#id
+    # @param lock_id [Integer] SubscriptionsSet#id
     # @param force [Boolean]
     # @return [PgEventstore::Subscription]
     def lock!(lock_id, force: false)
