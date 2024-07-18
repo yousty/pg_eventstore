@@ -1,0 +1,62 @@
+module PgEventstore
+  module QueryBuilders
+    # @!visibility private
+    class EventsFiltering
+      DEFAULT_LIMIT: Integer
+      SQL_DIRECTIONS: Hash[String | Symbol, String]
+      SUBSCRIPTIONS_OPTIONS: ::Array[Symbol]
+
+      # _@param_ `options`
+      def self.subscriptions_events_filtering: (::Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
+
+      # _@param_ `options`
+      def self.all_stream_filtering: (::Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
+
+      # _@param_ `stream`
+      #
+      # _@param_ `options`
+      def self.specific_stream_filtering: (PgEventstore::Stream stream, ::Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
+
+      def initialize: () -> void
+
+      # _@param_ `context`
+      #
+      # _@param_ `stream_name`
+      #
+      # _@param_ `stream_id`
+      def add_stream_attrs: (?context: String?, ?stream_name: String?, ?stream_id: String?) -> void
+
+      # _@param_ `event_types`
+      def add_event_types: (::Array[String]? event_types) -> void
+
+      # _@param_ `revision`
+      #
+      # _@param_ `direction`
+      def add_revision: (Integer? revision, (String | Symbol)? direction) -> void
+
+      # _@param_ `position`
+      #
+      # _@param_ `direction`
+      def add_global_position: (Integer? position, (String | Symbol)? direction) -> void
+
+      # _@param_ `direction`
+      def add_stream_direction: ((String | Symbol)? direction) -> void
+
+      # _@param_ `direction`
+      def add_all_stream_direction: ((String | Symbol)? direction) -> void
+
+      # _@param_ `limit`
+      def add_limit: (Integer? limit) -> void
+
+      def to_sql_builder: () -> PgEventstore::SQLBuilder
+
+      def to_exec_params: () -> ::Array[untyped]
+
+      # _@param_ `stream_attrs`
+      def correct_stream_filter?: (::Hash[untyped, untyped] stream_attrs) -> bool
+
+      # _@param_ `direction`
+      def direction_operator: ((String | Symbol)? direction) -> String
+    end
+  end
+end

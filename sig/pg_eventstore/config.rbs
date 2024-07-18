@@ -1,0 +1,53 @@
+module PgEventstore
+  class Config
+    include PgEventstore::Extensions::OptionsExtension
+
+    # _@param_ `name` — config's name. Its value matches the appropriate key in PgEventstore.config hash
+    def initialize: (name: Symbol, **untyped options) -> void
+
+    def connection_options: () -> ::Hash[untyped, untyped]
+
+    def options_hash: () -> ::Hash[untyped, untyped]
+
+    # _@param_ `opt_name`
+    def readonly!: (Symbol opt_name) -> bool
+
+    # _@param_ `opt_name`
+    def readonly?: (Symbol opt_name) -> bool
+
+    # _@param_ `opt_name`
+    def readonly_error: (Symbol opt_name) -> void
+
+    # _@param_ `options`
+    def init_default_values: (::Hash[untyped, untyped] options) -> void
+
+    # sord omit - no YARD type given for :name, using untyped
+    # Returns the value of attribute name.
+    attr_reader name: untyped
+
+    attr_accessor pg_uri: String
+
+    # _@return_ — Number of events to return in one response when reading from a stream
+    attr_accessor max_count: Integer
+
+    attr_accessor middlewares: ::Hash[Symbol, PgEventstore::Middleware]
+
+    attr_accessor event_class_resolver: _EventClassResolver
+
+    attr_accessor connection_pool_size: Integer
+
+    attr_accessor connection_pool_timeout: Integer
+
+    attr_accessor subscription_pull_interval: Float
+
+    attr_accessor subscription_max_retries: Integer
+
+    attr_accessor subscription_retries_interval: Integer
+
+    attr_accessor subscription_restart_terminator: _RestartTerminator?
+
+    attr_accessor subscriptions_set_max_retries: Integer
+
+    attr_accessor subscriptions_set_retries_interval: Integer
+  end
+end

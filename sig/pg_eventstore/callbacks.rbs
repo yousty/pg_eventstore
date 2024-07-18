@@ -1,0 +1,21 @@
+module PgEventstore
+  class Callbacks
+    def initialize: () -> void
+
+    # _@param_ `action` — an object, that represents your action. In most cases you want to use a symbol there
+    #
+    # _@param_ `filter` — callback filter. Supported values are :before, :after and :around
+    #
+    # _@param_ `callback`
+    def define_callback: (untyped action, Symbol filter, _Callback callback) -> void
+
+    # _@param_ `action` — an action to run
+    def run_callbacks: (untyped action, *untyped args, **untyped kwargs) -> untyped
+
+    def run_before_callbacks: (untyped action, *untyped args, **untyped kwargs) -> void
+
+    def run_around_callbacks: (untyped action, *untyped args, **untyped kwargs) -> untyped
+
+    def run_after_callbacks: (untyped action, *untyped args, **untyped kwargs) -> void
+  end
+end

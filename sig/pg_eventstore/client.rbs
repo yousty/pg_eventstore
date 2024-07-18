@@ -1,0 +1,67 @@
+module PgEventstore
+  class Client
+    # _@param_ `config`
+    def initialize: (PgEventstore::Config config) -> void
+
+    # _@param_ `stream`
+    #
+    # _@param_ `events_or_event`
+    #
+    # _@param_ `options`
+    #
+    # _@param_ `middlewares` — provide a list of middleware names to override a config's middlewares
+    def append_to_stream: (
+        PgEventstore::Stream stream,
+        (PgEventstore::Event | ::Array[PgEventstore::Event]) events_or_event,
+        ?options: ::Hash[untyped, untyped],
+        ?middlewares: ::Array[untyped]?
+      ) -> (PgEventstore::Event | ::Array[PgEventstore::Event])
+
+    def multiple: () { () -> untyped } -> untyped
+
+    # _@param_ `stream`
+    #
+    # _@param_ `options` — request options
+    #
+    # _@param_ `middlewares` — provide a list of middleware names to override a config's middlewares
+    def read: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[PgEventstore::Middleware]?) -> ::Array[PgEventstore::Event]
+
+    # _@param_ `stream`
+    #
+    # _@param_ `options` — request options
+    #
+    # _@param_ `middlewares`
+    #
+    # _@return_ — enumerator will yield PgEventstore::Event
+    def read_paginated: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[PgEventstore::Middleware]?) -> ::Enumerator[Array[PgEventstore::Event], Array[Array[PgEventstore::Event]]]
+
+    # _@param_ `stream`
+    #
+    # _@param_ `events_or_event`
+    #
+    # _@param_ `options`
+    #
+    # _@param_ `middlewares` — provide a list of middleware names to use. Defaults to empty array, meaning no middlewares will be applied to the "link" event
+    def link_to: (
+        PgEventstore::Stream stream,
+        (PgEventstore::Event | ::Array[PgEventstore::Event]) events_or_event,
+        ?options: ::Hash[untyped, untyped],
+        ?middlewares: ::Array[PgEventstore::Middleware]
+      ) -> (PgEventstore::Event | ::Array[PgEventstore::Event])
+
+    # _@param_ `middlewares`
+    def middlewares: (?::Array[PgEventstore::Middleware]? middlewares) -> ::Array[PgEventstore::Middleware]
+
+    def connection: () -> PgEventstore::Connection
+
+    def partition_queries: () -> PgEventstore::PartitionQueries
+
+    def transaction_queries: () -> PgEventstore::TransactionQueries
+
+    # _@param_ `middlewares`
+    def event_queries: (::Array[PgEventstore::Middleware] middlewares) -> PgEventstore::EventQueries
+
+    # Returns the value of attribute config.
+    attr_accessor config: PgEventstore::Config
+  end
+end

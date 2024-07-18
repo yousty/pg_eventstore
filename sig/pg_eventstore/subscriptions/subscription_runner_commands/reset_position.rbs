@@ -1,0 +1,11 @@
+module PgEventstore
+  module SubscriptionRunnerCommands
+    class ResetPosition < PgEventstore::SubscriptionRunnerCommands::Base
+      # _@param_ `data`
+      def self.parse_data: (::Hash[untyped, untyped] data) -> ::Hash[untyped, untyped]
+
+      # _@param_ `subscription_runner`
+      def exec_cmd: (PgEventstore::SubscriptionRunner subscription_runner) -> void
+    end
+  end
+end

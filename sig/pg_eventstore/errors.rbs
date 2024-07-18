@@ -1,0 +1,116 @@
+module PgEventstore
+  class Error < StandardError
+    def as_json: () -> ::Hash[untyped, untyped]
+
+    def to_h: () -> ::Hash[untyped, untyped]
+  end
+
+  class StreamNotFoundError < PgEventstore::Error
+    # _@param_ `stream`
+    def initialize: (PgEventstore::Stream stream) -> void
+
+    # Returns the value of attribute stream.
+    attr_accessor stream: PgEventstore::Stream
+  end
+
+  class SystemStreamError < PgEventstore::Error
+    # _@param_ `stream`
+    def initialize: (PgEventstore::Stream stream) -> void
+
+    attr_accessor stream: PgEventstore::Stream
+  end
+
+  class WrongExpectedRevisionError < PgEventstore::Error
+    # _@param_ `revision`
+    #
+    # _@param_ `expected_revision`
+    #
+    # _@param_ `stream`
+    def initialize: (revision: Integer, expected_revision: (Integer | Symbol), stream: PgEventstore::Stream) -> void
+
+    def user_friendly_message: () -> String
+
+    def expected_stream_exists: () -> String
+
+    def expected_no_stream: () -> String
+
+    def current_no_stream: () -> String
+
+    def unmatched_stream_revision: () -> String
+
+    def stream_descr: () -> String
+
+    attr_accessor stream: PgEventstore::Stream
+
+    attr_accessor revision: Integer
+
+    attr_accessor expected_revision: (Integer | Symbol)
+  end
+
+  class RecordNotFound < PgEventstore::Error
+    # _@param_ `table_name`
+    #
+    # _@param_ `id`
+    def initialize: (String table_name, (Integer | String) id) -> void
+
+    def user_friendly_message: () -> String
+
+    attr_accessor table_name: String
+
+    attr_accessor id: (Integer | String)
+  end
+
+  class SubscriptionAlreadyLockedError < PgEventstore::Error
+    # _@param_ `set` — subscriptions set name
+    #
+    # _@param_ `name` — subscription's name
+    #
+    # _@param_ `lock_id`
+    def initialize: (String set, String name, Integer lock_id) -> void
+
+    def user_friendly_message: () -> String
+
+    attr_accessor set: String
+
+    attr_accessor name: String
+
+    attr_accessor lock_id: Integer
+  end
+
+  class WrongLockIdError < PgEventstore::Error
+    # _@param_ `set` — subscriptions set name
+    #
+    # _@param_ `name` — subscription's name
+    #
+    # _@param_ `lock_id`
+    def initialize: (String set, String name, Integer lock_id) -> void
+
+    def user_friendly_message: () -> String
+
+    attr_accessor set: String
+
+    attr_accessor name: String
+
+    attr_accessor lock_id: Integer
+  end
+
+  class NotPersistedEventError < PgEventstore::Error
+    # _@param_ `event`
+    def initialize: (PgEventstore::Event event) -> void
+
+    def user_friendly_message: () -> String
+
+    attr_accessor event: PgEventstore::Event
+  end
+
+  class MissingPartitions < PgEventstore::Error
+    # _@param_ `stream`
+    #
+    # _@param_ `event_types`
+    def initialize: (PgEventstore::Stream stream, ::Array[String] event_types) -> void
+
+    attr_accessor stream: PgEventstore::Stream
+
+    attr_accessor event_types: ::Array[String]
+  end
+end

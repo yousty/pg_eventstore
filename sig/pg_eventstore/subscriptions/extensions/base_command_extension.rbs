@@ -1,0 +1,20 @@
+module PgEventstore
+  module Extensions
+    module BaseCommandExtension
+      def self.included: (untyped klass) -> untyped
+
+      def hash: () -> Integer
+
+      # _@param_ `another`
+      def eql?: (Object another) -> bool
+
+      # _@param_ `another`
+      def ==: (Object another) -> bool
+
+      module ClassMethods
+        # _@param_ `data`
+        def parse_data: (::Hash[untyped, untyped] data) -> ::Hash[untyped, untyped]
+      end
+    end
+  end
+end

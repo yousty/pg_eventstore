@@ -1,0 +1,55 @@
+module PgEventstore
+  class SubscriptionRunner
+    extend Forwardable
+    MAX_EVENTS_PER_CHUNK: Integer
+    MIN_EVENTS_PER_CHUNK: Integer
+    INITIAL_EVENTS_PER_CHUNK: Integer
+
+    # _@param_ `stats`
+    #
+    # _@param_ `events_processor`
+    #
+    # _@param_ `subscription`
+    #
+    # _@param_ `restart_terminator`
+    def initialize: (
+        stats: PgEventstore::SubscriptionHandlerPerformance,
+        events_processor: PgEventstore::EventsProcessor,
+        subscription: PgEventstore::Subscription,
+        ?restart_terminator: _RestartTerminator?
+      ) -> void
+
+    def next_chunk_query_opts: () -> ::Hash[untyped, untyped]
+
+    def time_to_feed?: () -> bool
+
+    def next_chunk_global_position: () -> Integer
+
+    def estimate_events_number: () -> Integer
+
+    def attach_callbacks: () -> void
+
+    # _@param_ `action`
+    def track_exec_time: (Proc action) -> void
+
+    # _@param_ `current_position`
+    def update_subscription_stats: (Integer current_position) -> void
+
+    # _@param_ `state`
+    def update_subscription_state: (String state) -> void
+
+    def update_subscription_restarts: () -> void
+
+    # _@param_ `error`
+    def update_subscription_error: (StandardError error) -> void
+
+    # _@param_ `global_position`
+    def update_subscription_chunk_stats: (Integer global_position) -> void
+
+    # _@param_ `_error`
+    def restart_subscription: (StandardError _error) -> void
+
+    # Returns the value of attribute subscription.
+    attr_accessor subscription: PgEventstore::Subscription
+  end
+end

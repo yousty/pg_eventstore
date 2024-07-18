@@ -1,0 +1,9 @@
+module PgEventstore
+  module Middleware
+    # _@param_ `event`
+    def serialize: (PgEventstore::Event event) -> void
+
+    # _@param_ `event`
+    def deserialize: (PgEventstore::Event event) -> void
+  end
+end

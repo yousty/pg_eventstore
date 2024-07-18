@@ -1,0 +1,74 @@
+module PgEventstore
+  class SQLBuilder
+    def initialize: () -> void
+
+    # _@param_ `sql`
+    def select: (String sql) -> self
+
+    def unselect: () -> self
+
+    # _@param_ `sql`
+    #
+    # _@param_ `arguments` — positional values
+    def where: (String sql, *::Array[untyped] arguments) -> self
+
+    # _@param_ `sql`
+    #
+    # _@param_ `arguments` — positional values
+    def where_or: (String sql, *Object arguments) -> self
+
+    # _@param_ `table_name`
+    def from: (String table_name) -> self
+
+    # _@param_ `sql`
+    #
+    # _@param_ `arguments`
+    def join: (String sql, *Object arguments) -> self
+
+    # _@param_ `sql`
+    def order: (String sql) -> self
+
+    def remove_order: () -> self
+
+    # _@param_ `limit`
+    def limit: (Integer limit) -> self
+
+    def remove_limit: () -> self
+
+    # _@param_ `offset`
+    def offset: (Integer offset) -> self
+
+    # _@param_ `another_builder`
+    def union: (PgEventstore::SQLBuilder another_builder) -> self
+
+    # _@param_ `sql`
+    def group: (String sql) -> self
+
+    def remove_group: () -> self
+
+    def to_exec_params: () -> ::Array[(String | ::Array[Object])]
+
+    def positional_values: () -> ::Array[Object]
+
+    # _@param_ `val`
+    def positional_values_size=: (Integer val) -> Integer
+
+    def _to_exec_params: () -> ::Array[(String | ::Array[Object])]
+
+    def single_query_sql: () -> String
+
+    def union_query_sql: () -> String
+
+    def select_sql: () -> String
+
+    # _@param_ `join_pattern` — "OR"/"AND"
+    def where_sql: (String join_pattern) -> String
+
+    def join_sql: () -> String
+
+    def order_sql: () -> String
+
+    # _@param_ `sql`
+    def extract_positional_args: (String sql, *untyped arguments) -> String
+  end
+end

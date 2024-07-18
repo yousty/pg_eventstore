@@ -1,0 +1,6 @@
+module PgEventstore
+  class EventClassResolver
+    # _@param_ `event_type`
+    def call: (String event_type) -> singleton(Class)
+  end
+end

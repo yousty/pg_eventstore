@@ -1,0 +1,34 @@
+module PgEventstore
+  class EventsProcessor
+    include PgEventstore::Extensions::CallbacksExtension
+    extend Forwardable
+
+    # _@param_ `handler`
+    def initialize: (_SubscriptionHandler handler) -> void
+
+    # _@param_ `raw_events`
+    def feed: (::Array[::Hash[untyped, untyped]] raw_events) -> void
+
+    def events_left_in_chunk: () -> Integer
+
+    def clear_chunk: () -> void
+
+    # _@param_ `raw_event`
+    def process_event: (::Hash[untyped, untyped] raw_event) -> void
+
+    def attach_runner_callbacks: () -> void
+
+    def process_async: () -> void
+
+    def after_runner_died: () -> void
+
+    def before_runner_restored: () -> void
+
+    def change_state: () -> void
+
+    # _@param_ `raw_event`
+    def global_position: (::Hash[untyped, untyped] raw_event) -> Integer
+
+    def define_callback: () -> void
+  end
+end

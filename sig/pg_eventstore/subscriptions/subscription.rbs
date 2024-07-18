@@ -1,0 +1,94 @@
+module PgEventstore
+  class Subscription
+    include PgEventstore::Extensions::UsingConnectionExtension
+    include PgEventstore::Extensions::OptionsExtension
+
+    # _@param_ `subscriptions_set_id` — SubscriptionsSet#id
+    #
+    # _@param_ `subscriptions`
+    def self.ping_all: (Integer subscriptions_set_id, ::Array[PgEventstore::Subscription] subscriptions) -> void
+
+    def self.subscription_queries: () -> PgEventstore::SubscriptionQueries
+
+    # _@param_ `attrs`
+    def update: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]
+
+    # _@param_ `attrs`
+    def assign_attributes: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]
+
+    # _@param_ `lock_id`
+    #
+    # _@param_ `force`
+    def lock!: (Integer lock_id, ?force: bool) -> PgEventstore::Subscription
+
+    def dup: () -> PgEventstore::Subscription
+
+    def reload: () -> PgEventstore::Subscription
+
+    def hash: () -> Integer
+
+    # _@param_ `another`
+    def eql?: (Object another) -> bool
+
+    # _@param_ `another`
+    def ==: (PgEventstore::SubscriptionsSet another) -> bool
+
+    def reset_runtime_attributes: () -> void
+
+    def subscription_queries: () -> PgEventstore::SubscriptionQueries
+
+    def initialize: (**untyped options) -> void
+
+    def options_hash: () -> ::Hash[untyped, untyped]
+
+    # _@param_ `opt_name`
+    def readonly!: (Symbol opt_name) -> bool
+
+    # _@param_ `opt_name`
+    def readonly?: (Symbol opt_name) -> bool
+
+    # _@param_ `opt_name`
+    def readonly_error: (Symbol opt_name) -> void
+
+    # _@param_ `options`
+    def init_default_values: (::Hash[untyped, untyped] options) -> void
+
+    attr_accessor id: Integer
+
+    attr_accessor set: String
+
+    attr_accessor name: String
+
+    attr_accessor total_processed_events: Integer
+
+    attr_accessor options: ::Hash[untyped, untyped]
+
+    attr_accessor current_position: Integer?
+
+    attr_accessor state: String?
+
+    attr_accessor average_event_processing_time: Float?
+
+    attr_accessor restart_count: Integer
+
+    attr_accessor max_restarts_number: Integer
+
+    attr_accessor time_between_restarts: Integer
+
+    attr_accessor last_restarted_at: Time?
+
+    attr_accessor last_error: Hash[untyped, untyped]?
+
+    attr_accessor last_error_occurred_at: Time?
+
+    attr_accessor chunk_query_interval: Time
+
+    attr_accessor last_chunk_greatest_position: Integer?
+
+    attr_accessor locked_by: Integer?
+
+    attr_accessor created_at: Time
+
+    attr_accessor updated_at: Time
+  end
+end

@@ -1,0 +1,23 @@
+module PgEventstore
+  class Queries
+    include PgEventstore::Extensions::OptionsExtension
+
+    def initialize: (**untyped options) -> void
+
+    def options_hash: () -> ::Hash[untyped, untyped]
+
+    def readonly!: (Symbol opt_name) -> bool
+
+    def readonly?: (Symbol opt_name) -> bool
+
+    def readonly_error: (Symbol opt_name) -> void
+
+    def init_default_values: (::Hash[untyped, untyped] options) -> void
+
+    attr_accessor events: PgEventstore::EventQueries?
+
+    attr_accessor partitions: PgEventstore::PartitionQueries?
+
+    attr_accessor transactions: PgEventstore::TransactionQueries?
+  end
+end

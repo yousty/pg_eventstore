@@ -1,0 +1,3 @@
+module PgEventstore
+  VERSION: String
+end

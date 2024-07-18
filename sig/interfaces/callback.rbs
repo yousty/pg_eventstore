@@ -1,0 +1,3 @@
+interface _Callback
+  def call: (*untyped args, **untyped kwargs) -> untyped
+end

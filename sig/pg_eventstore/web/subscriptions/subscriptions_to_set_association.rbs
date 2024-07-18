@@ -1,0 +1,18 @@
+module PgEventstore
+  module Web
+    module Subscriptions
+      class SubscriptionsToSetAssociation
+        # _@param_ `subscriptions_set`
+        #
+        # _@param_ `subscriptions`
+        def initialize: (subscriptions_set: ::Array[PgEventstore::SubscriptionsSet], subscriptions: ::Array[PgEventstore::Subscription]) -> void
+
+        def association: () -> ::Hash[PgEventstore::SubscriptionsSet, ::Array[PgEventstore::Subscription]]
+
+        attr_accessor subscriptions_set: ::Array[PgEventstore::SubscriptionsSet]
+
+        attr_accessor subscriptions: ::Array[PgEventstore::Subscription]
+      end
+    end
+  end
+end

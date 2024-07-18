@@ -1,0 +1,13 @@
+module PgEventstore
+  class PgConnection < PG::Connection
+    def exec: (untyped sql) -> untyped
+
+    def exec_params: (untyped sql, untyped params) -> untyped
+
+    def log: (untyped sql, untyped params) -> untyped
+
+    def encode_value: (untyped value) -> untyped
+
+    def normalize_value: (untyped value) -> untyped
+  end
+end

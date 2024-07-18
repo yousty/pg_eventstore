@@ -1,0 +1,64 @@
+module PgEventstore
+  class SubscriptionFeeder
+    extend Forwardable
+    HEARTBEAT_INTERVAL: Integer
+
+    # _@param_ `config_name`
+    #
+    # _@param_ `set_name`
+    #
+    # _@param_ `max_retries` — max number of retries of failed SubscriptionsSet
+    #
+    # _@param_ `retries_interval` — a delay between retries of failed SubscriptionsSet
+    def initialize: (
+        config_name: Symbol,
+        set_name: String,
+        max_retries: Integer,
+        retries_interval: Integer
+      ) -> void
+
+    # _@param_ `runner`
+    def add: (PgEventstore::SubscriptionRunner runner) -> PgEventstore::SubscriptionRunner
+
+    def start_all: () -> void
+
+    def stop_all: () -> void
+
+    def force_lock!: () -> void
+
+    def read_only_subscriptions: () -> ::Array[PgEventstore::Subscription]
+
+    def read_only_subscriptions_set: () -> PgEventstore::SubscriptionsSet?
+
+    def lock_all: () -> void
+
+    def subscriptions_set: () -> PgEventstore::SubscriptionsSet
+
+    def feeder: () -> PgEventstore::SubscriptionRunnersFeeder
+
+    def attach_runner_callbacks: () -> void
+
+    def before_runner_started: () -> void
+
+    # _@param_ `error`
+    def after_runner_died: (StandardError error) -> void
+
+    # _@param_ `_error`
+    def restart_runner: (StandardError _error) -> void
+
+    def update_runner_restarts: () -> void
+
+    def process_async: () -> void
+
+    def ping_subscriptions_set: () -> void
+
+    def ping_subscriptions: () -> void
+
+    def after_runner_stopped: () -> void
+
+    # _@param_ `state`
+    def update_subscriptions_set_state: (String state) -> void
+
+    def assert_proper_state!: () -> void
+  end
+end

@@ -1,0 +1,38 @@
+module PgEventstore
+  module Web
+    module Paginator
+      module Helpers
+        # _@param_ `collection`
+        def previous_page_link: (PgEventstore::Web::Paginator::BaseCollection collection) -> String
+
+        # _@param_ `collection`
+        def next_page_link: (PgEventstore::Web::Paginator::BaseCollection collection) -> String
+
+        def first_page_link: () -> String
+
+        # _@param_ `per_page` — string representation of items per page. E.g. "10", "20", etc.
+        def per_page_url: (String per_page) -> String
+
+        # _@param_ `order` — "asc"/"desc"
+        def sort_url: (String order) -> String
+
+        # _@param_ `number` — total number of events by the current filter
+        def total_count: (Integer number) -> String
+
+        # _@param_ `number`
+        #
+        # _@param_ `delimiter`
+        def number_with_delimiter: (Integer number, ?delimiter: String) -> String
+
+        # _@param_ `event`
+        def stream_path: (PgEventstore::Event event) -> String
+
+        # _@param_ `starting_id`
+        def build_starting_id_link: ((String | Integer)? starting_id) -> String
+
+        # _@param_ `params`
+        def build_path: ((::Hash[untyped, untyped] | ::Array[untyped]) params) -> String
+      end
+    end
+  end
+end

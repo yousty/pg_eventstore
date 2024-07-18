@@ -1,0 +1,3 @@
+interface _EventClassResolver
+  def call: (String event_type) -> singleton(Class)
+end

@@ -1,0 +1,51 @@
+module PgEventstore
+  class EventQueries
+    # _@param_ `connection`
+    #
+    # _@param_ `serializer`
+    #
+    # _@param_ `deserializer`
+    def initialize: (PgEventstore::Connection connection, PgEventstore::EventSerializer serializer, PgEventstore::EventDeserializer deserializer) -> void
+
+    # _@param_ `event`
+    def event_exists?: (PgEventstore::Event event) -> bool
+
+    # _@param_ `events`
+    def ids_from_db: (::Array[PgEventstore::Event] events) -> ::Array[Integer]
+
+    # _@param_ `stream`
+    def stream_revision: (PgEventstore::Stream stream) -> Integer?
+
+    # _@param_ `stream`
+    #
+    # _@param_ `options`
+    def stream_events: (PgEventstore::Stream stream, ::Hash[untyped, untyped] options) -> ::Array[PgEventstore::Event]
+
+    # _@param_ `stream`
+    #
+    # _@param_ `events`
+    def insert: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> PgEventstore::Event
+
+    # _@param_ `stream`
+    #
+    # _@param_ `events`
+    def prepared_statements: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> ::Array[(::Array[String] | ::Array[Object])]
+
+    # sord warn - PgEventstore::EventsFilteringQuery wasn't able to be resolved to a constant in this project
+    # _@param_ `stream`
+    #
+    # _@param_ `options`
+    def events_filtering: (PgEventstore::Stream stream, ::Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
+
+    def links_resolver: () -> PgEventstore::LinksResolver
+
+    # Returns the value of attribute connection.
+    attr_accessor connection: PgEventstore::Connection
+
+    # Returns the value of attribute serializer.
+    attr_accessor serializer: PgEventstore::EventSerializer
+
+    # Returns the value of attribute deserializer.
+    attr_accessor deserializer: PgEventstore::EventDeserializer
+  end
+end

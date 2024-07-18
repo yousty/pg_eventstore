@@ -1,0 +1,50 @@
+module PgEventstore
+  module SubscriptionRunnerCommands
+    class Base
+      include PgEventstore::Extensions::OptionsExtension
+      include PgEventstore::Extensions::BaseCommandExtension
+
+      # _@param_ `subscription_runner`
+      def exec_cmd: (PgEventstore::SubscriptionRunner subscription_runner) -> void
+
+      def hash: () -> Integer
+
+      # _@param_ `another`
+      def eql?: (Object another) -> bool
+
+      # _@param_ `another`
+      def ==: (Object another) -> bool
+
+      # sord omit - no YARD type given for "**options", using untyped
+      def initialize: (**untyped options) -> void
+
+      # Construct a hash from options, where key is the option's name and the value is option's
+      # value
+      def options_hash: () -> ::Hash[untyped, untyped]
+
+      # _@param_ `opt_name`
+      def readonly!: (Symbol opt_name) -> bool
+
+      # _@param_ `opt_name`
+      def readonly?: (Symbol opt_name) -> bool
+
+      # _@param_ `opt_name`
+      def readonly_error: (Symbol opt_name) -> void
+
+      # _@param_ `options`
+      def init_default_values: (::Hash[untyped, untyped] options) -> void
+
+      attr_accessor id: Integer
+
+      attr_accessor name: String
+
+      attr_accessor subscription_id: Integer
+
+      attr_accessor subscriptions_set_id: Integer
+
+      attr_accessor data: ::Hash[untyped, untyped]
+
+      attr_accessor created_at: Time
+    end
+  end
+end

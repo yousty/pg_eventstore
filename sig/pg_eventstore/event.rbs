@@ -1,0 +1,46 @@
+module PgEventstore
+  class Event
+    include PgEventstore::Extensions::OptionsExtension
+    LINK_TYPE: String
+
+    def ==: ((Object | PgEventstore::Event) other) -> bool
+
+    def link?: () -> bool
+
+    def system?: () -> bool
+
+    def initialize: (**untyped options) -> void
+
+    def options_hash: () -> ::Hash[untyped, untyped]
+
+    def readonly!: (Symbol opt_name) -> bool
+
+    def readonly?: (Symbol opt_name) -> bool
+
+    def readonly_error: (Symbol opt_name) -> void
+
+    def init_default_values: (::Hash[untyped, untyped] options) -> void
+
+    attr_accessor id: String
+
+    attr_accessor type: String
+
+    attr_accessor global_position: Integer
+
+    attr_accessor stream: PgEventstore::Stream?
+
+    attr_accessor stream_revision: Integer
+
+    attr_accessor data: ::Hash[untyped, untyped]
+
+    attr_accessor metadata: ::Hash[untyped, untyped]
+
+    attr_accessor link_id: String?
+
+    attr_accessor link_partition_id: Integer?
+
+    attr_accessor link: PgEventstore::Event?
+
+    attr_accessor created_at: Time?
+  end
+end

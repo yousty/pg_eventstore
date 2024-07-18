@@ -1,0 +1,38 @@
+module PgEventstore
+  class BasicRunner
+    include PgEventstore::Extensions::CallbacksExtension
+    extend Forwardable
+
+    # _@param_ `run_interval` — seconds. Determines how often to run async task. Async task is determined by :after_runner_stopped callback
+    #
+    # _@param_ `async_shutdown_time` — seconds. Determines how long to wait for the async shutdown to wait for the runner to finish.
+    def initialize: ((Integer | Float) run_interval, (Integer | Float) async_shutdown_time) -> void
+
+    def start: () -> self
+
+    def stop: () -> self
+
+    def stop_async: () -> self
+
+    def restore: () -> self
+
+    def wait_for_finish: () -> self
+
+    def state: () -> String
+
+    # _@param_ `state`
+    #
+    # _@return_ — a result of evaluating of passed block
+    def within_state: (Symbol state) -> Object
+
+    def synchronize: () { () -> untyped } -> untyped
+
+    def _start: () -> void
+
+    def delegate_change_state_cbx: () -> void
+
+    def change_state: () -> void
+
+    def define_callback: () -> void
+  end
+end

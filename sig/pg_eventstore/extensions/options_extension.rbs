@@ -1,0 +1,37 @@
+module PgEventstore
+  module Extensions
+    module OptionsExtension
+      def self.included: (untyped klass) -> untyped
+
+      def initialize: (**untyped options) -> void
+
+      # Construct a hash from options, where key is the option's name and the value is option's
+      # value
+      def options_hash: () -> ::Hash[untyped, untyped]
+
+      # _@param_ `opt_name`
+      def readonly!: (Symbol opt_name) -> bool
+
+      # _@param_ `opt_name`
+      def readonly?: (Symbol opt_name) -> bool
+
+      # _@param_ `opt_name`
+      def readonly_error: (Symbol opt_name) -> void
+
+      # _@param_ `options`
+      def init_default_values: (::Hash[untyped, untyped] options) -> void
+
+      module ClassMethods
+        # _@param_ `opt_name` — option name
+        #
+        # _@param_ `blk` — provide define value using block. It will be later evaluated in the context of your object to determine the default value of the option
+        def option: (Symbol opt_name) -> Symbol
+
+        def inherited: (untyped klass) -> untyped
+
+        # _@param_ `method_name`
+        def warn_already_defined: (Symbol method_name) -> void
+      end
+    end
+  end
+end

@@ -1,0 +1,13 @@
+module PgEventstore
+  class EventSerializer
+    # _@param_ `middlewares`
+    def initialize: (::Array[PgEventstore::Middleware] middlewares) -> void
+
+    # _@param_ `event`
+    def serialize: (PgEventstore::Event event) -> PgEventstore::Event
+
+    def without_middlewares: () -> PgEventstore::EventSerializer
+
+    attr_accessor middlewares: ::Array[PgEventstore::Middleware]
+  end
+end

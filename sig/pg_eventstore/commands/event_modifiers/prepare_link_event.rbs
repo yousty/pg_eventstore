@@ -1,0 +1,28 @@
+module PgEventstore
+  module Commands
+    module EventModifiers
+      class PrepareLinkEvent
+        # _@param_ `partition_queries`
+        def initialize: (PgEventstore::PartitionQueries partition_queries) -> void
+
+        # _@param_ `event`
+        #
+        # _@param_ `revision`
+        def call: (PgEventstore::Event event, Integer revision) -> PgEventstore::Event
+
+        # _@param_ `event` — persisted event
+        #
+        # _@return_ — partition id
+        def partition_id: (PgEventstore::Event event) -> Integer
+
+        # sord omit - no YARD type given for :partition_queries, using untyped
+        # Returns the value of attribute partition_queries.
+        attr_reader partition_queries: PgEventstore::PartitionQueries
+
+        # sord omit - no YARD type given for :partitions, using untyped
+        # Returns the value of attribute partitions.
+        attr_reader partitions: Hash[untyped, untyped]
+      end
+    end
+  end
+end

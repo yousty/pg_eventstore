@@ -1,0 +1,42 @@
+module PgEventstore
+  # _@param_ `name` — a name to assign to a config
+  #
+  # _@return_ — a result of the given block
+  def self.configure: (?name: Symbol) { (PgEventstore::Config) -> untyped } -> Object
+
+  def self.available_configs: () -> ::Array[Symbol]
+
+  # _@param_ `name`
+  def self.config: (?Symbol name) -> PgEventstore::Config
+
+  # _@param_ `name`
+  def self.connection: (?Symbol name) -> PgEventstore::Connection
+
+  # _@param_ `config_name`
+  #
+  # _@param_ `subscription_set`
+  #
+  # _@param_ `max_retries` — max number of retries of failed SubscriptionsSet
+  #
+  # _@param_ `retries_interval` — a delay between retries of failed SubscriptionsSet
+  def self.subscriptions_manager: (
+      ?Symbol config_name,
+      subscription_set: String,
+      ?max_retries: Integer?,
+      ?retries_interval: Integer?
+    ) -> PgEventstore::SubscriptionsManager
+
+  # _@param_ `name`
+  def self.client: (?Symbol name) -> PgEventstore::Client
+
+  def self.logger: () -> Logger?
+
+  # _@param_ `logger`
+  def self.logger=: (Logger? logger) -> Logger?
+
+  def self.init_variables: () -> void
+
+  def self.mutex: () -> Thread::Mutex
+
+  def self.mutex=: (Thread::Mutex value) -> Thread::Mutex
+end
