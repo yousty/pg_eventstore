@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+RBS_TEST_TARGET='PgEventstore::*' RBS_TEST_OPT='-r forwardable -I sig' RUBYOPT='-rbundler/setup -rrbs/test/setup' \
+  RBS_TEST_DOUBLE_SUITE='rspec' bundle exec rspec "$@"

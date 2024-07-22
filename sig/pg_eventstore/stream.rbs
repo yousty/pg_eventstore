@@ -29,7 +29,7 @@ module PgEventstore
     def eql?: (untyped another) -> bool
 
     # _@param_ `other_stream`
-    def ==: (Stream other_stream) -> bool
+    def ==: (untyped other_stream) -> bool
 
     attr_accessor context: String
 

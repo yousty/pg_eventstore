@@ -10,7 +10,7 @@ module PgEventstore
     # _@param_ `sql`
     #
     # _@param_ `arguments` — positional values
-    def where: (String sql, *::Array[untyped] arguments) -> self
+    def where: (String sql, *untyped arguments) -> self
 
     # _@param_ `sql`
     #

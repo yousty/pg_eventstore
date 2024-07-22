@@ -25,7 +25,7 @@ module PgEventstore
     # _@param_ `attrs`
     #
     # _@param_ `locked_by`
-    def update: (Integer id, attrs: ::Hash[untyped, untyped], locked_by: Integer) -> ::Hash[untyped, untyped]
+    def update: (Integer id, attrs: ::Hash[untyped, untyped], locked_by: Integer?) -> ::Hash[untyped, untyped]
 
     # _@param_ `subscriptions_set_id` — SubscriptionsSet#id
     #
@@ -35,7 +35,7 @@ module PgEventstore
     # _@param_ `query_options` — runner_id/query options association
     #
     # _@return_ — runner_id/events association
-    def subscriptions_events: (::Hash[Integer, ::Hash[untyped, untyped]] query_options) -> ::Hash[Integer, ::Hash[untyped, untyped]]
+    def subscriptions_events: (::Hash[Integer, ::Hash[untyped, untyped]] query_options) -> ::Hash[Integer, Array[::Hash[untyped, untyped]]]
 
     # _@param_ `id` — subscription's id
     #

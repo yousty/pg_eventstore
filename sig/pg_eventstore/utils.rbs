@@ -1,7 +1,7 @@
 module PgEventstore
   class Utils
     # _@param_ `object`
-    def self.deep_transform_keys: (untyped object) -> Object
+    def self.deep_transform_keys: (untyped object) { (untyped key) -> untyped } -> Object
 
     # _@param_ `object`
     def self.deep_dup: (untyped object) -> Object

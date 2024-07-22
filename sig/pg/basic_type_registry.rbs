@@ -1,0 +1,21 @@
+module PG
+  class BasicTypeRegistry
+    public
+
+    def alias_type: (untyped format, untyped new, untyped old) -> untyped
+
+    def coders_for: (untyped format, untyped direction) -> untyped
+
+    alias define_default_types register_default_types
+
+    def register_coder: (untyped coder) -> untyped
+
+    def register_default_types: () -> untyped
+
+    def register_type: (untyped format, untyped name, untyped encoder_class, untyped decoder_class) -> untyped
+
+    private
+
+    def initialize: () -> void
+  end
+end

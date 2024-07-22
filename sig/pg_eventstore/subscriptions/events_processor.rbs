@@ -4,7 +4,7 @@ module PgEventstore
     extend Forwardable
 
     # _@param_ `handler`
-    def initialize: (_SubscriptionHandler handler) -> void
+    %a{rbs:test:skip} def initialize: (_SubscriptionHandler handler) -> void
 
     # _@param_ `raw_events`
     def feed: (::Array[::Hash[untyped, untyped]] raw_events) -> void
@@ -20,11 +20,11 @@ module PgEventstore
 
     def process_async: () -> void
 
-    def after_runner_died: () -> void
+    def after_runner_died: (StandardError error) -> void
 
     def before_runner_restored: () -> void
 
-    def change_state: () -> void
+    def change_state: (*untyped args, **untyped kwargs) -> void
 
     # _@param_ `raw_event`
     def global_position: (::Hash[untyped, untyped] raw_event) -> Integer

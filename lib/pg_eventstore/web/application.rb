@@ -157,8 +157,8 @@ module PgEventstore
         validate_subscription_cmd(params[:cmd])
         cmd_class = SubscriptionRunnerCommands.command_class(params[:cmd])
         SubscriptionCommandQueries.new(connection).find_or_create_by(
-          subscriptions_set_id: params[:set_id],
-          subscription_id: params[:id],
+          subscriptions_set_id: Integer(params[:set_id]),
+          subscription_id: Integer(params[:id]),
           command_name: cmd_class.new.name,
           data: cmd_class.parse_data(Hash(params[:data]))
         )
@@ -170,7 +170,7 @@ module PgEventstore
         validate_subscriptions_set_cmd(params[:cmd])
         cmd_class = SubscriptionFeederCommands.command_class(params[:cmd])
         SubscriptionsSetCommandQueries.new(connection).find_or_create_by(
-          subscriptions_set_id: params[:id],
+          subscriptions_set_id: Integer(params[:id]),
           command_name: cmd_class.new.name,
           data: cmd_class.parse_data(Hash(params[:data]))
         )
@@ -179,20 +179,20 @@ module PgEventstore
       end
 
       post '/delete_subscriptions_set/:id' do
-        SubscriptionsSetQueries.new(connection).delete(params[:id])
+        SubscriptionsSetQueries.new(connection).delete(Integer(params[:id]))
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))
       end
 
       post '/delete_subscription/:id' do
-        SubscriptionQueries.new(connection).delete(params[:id])
+        SubscriptionQueries.new(connection).delete(Integer(params[:id]))
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))
       end
 
       post '/delete_all_subscriptions' do
         params[:ids].each do |id|
-          SubscriptionQueries.new(connection).delete(id)
+          SubscriptionQueries.new(connection).delete(Integer(id))
         end
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))

@@ -75,7 +75,7 @@ module PgEventstore
 
     # @param id [Integer]
     # @param attrs [Hash]
-    # @param locked_by [Integer]
+    # @param locked_by [Integer, nil]
     # @return [Hash]
     # @raise [PgEventstore::RecordNotFound]
     # @raise [PgEventstore::WrongLockIdError]
@@ -120,7 +120,7 @@ module PgEventstore
     end
 
     # @param query_options [Hash{Integer => Hash}] runner_id/query options association
-    # @return [Hash{Integer => Hash}] runner_id/events association
+    # @return [Hash{Integer => Array<Hash>}] runner_id/events association
     def subscriptions_events(query_options)
       return {} if query_options.empty?
 

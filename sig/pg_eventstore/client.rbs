@@ -24,7 +24,7 @@ module PgEventstore
     # _@param_ `options` — request options
     #
     # _@param_ `middlewares` — provide a list of middleware names to override a config's middlewares
-    def read: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[PgEventstore::Middleware]?) -> ::Array[PgEventstore::Event]
+    def read: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[::Symbol]?) -> ::Array[PgEventstore::Event]
 
     # _@param_ `stream`
     #
@@ -33,7 +33,7 @@ module PgEventstore
     # _@param_ `middlewares`
     #
     # _@return_ — enumerator will yield PgEventstore::Event
-    def read_paginated: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[PgEventstore::Middleware]?) -> ::Enumerator[Array[PgEventstore::Event], Array[Array[PgEventstore::Event]]]
+    def read_paginated: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[::Symbol]?) -> ::Enumerator[Array[PgEventstore::Event], void]
 
     # _@param_ `stream`
     #
@@ -46,11 +46,11 @@ module PgEventstore
         PgEventstore::Stream stream,
         (PgEventstore::Event | ::Array[PgEventstore::Event]) events_or_event,
         ?options: ::Hash[untyped, untyped],
-        ?middlewares: ::Array[PgEventstore::Middleware]
+        ?middlewares: ::Array[::Symbol]
       ) -> (PgEventstore::Event | ::Array[PgEventstore::Event])
 
     # _@param_ `middlewares`
-    def middlewares: (?::Array[PgEventstore::Middleware]? middlewares) -> ::Array[PgEventstore::Middleware]
+    def middlewares: (?::Array[::Symbol]? middlewares) -> ::Array[PgEventstore::Middleware]
 
     def connection: () -> PgEventstore::Connection
 

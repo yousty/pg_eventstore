@@ -7,7 +7,7 @@ RSpec.describe PgEventstore::EventSerializer do
   describe '#serialize' do
     subject { instance.serialize(event) }
 
-    let(:event) { PgEventstore::Event.new(type: :foo) }
+    let(:event) { PgEventstore::Event.new(type: 'foo') }
 
     context 'when no middlewares are given' do
       it 'returns an event as is' do
@@ -19,6 +19,8 @@ RSpec.describe PgEventstore::EventSerializer do
       let(:middlewares) { [DummyMiddleware.new, another_middleware.new] }
       let(:another_middleware) do
         Class.new do
+          include PgEventstore::Middleware
+
           def serialize(event)
             event.metadata['foo'] = 'bar'
           end

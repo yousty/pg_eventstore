@@ -9,7 +9,7 @@ module PgEventstore
     def set_names: () -> ::Array[String]
 
     # The same as #find_all, but returns first result
-    def find_by: () -> ::Hash[untyped, untyped]?
+    def find_by: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]?
 
     # _@param_ `id`
     def find!: (Integer id) -> ::Hash[untyped, untyped]

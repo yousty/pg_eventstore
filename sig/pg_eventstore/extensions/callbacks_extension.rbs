@@ -3,10 +3,10 @@ module PgEventstore
     module CallbacksExtension
       def self.included: (untyped klass) -> untyped
 
-      def define_callback: () -> void
+      def define_callback: (*untyped) -> void
 
       module InitCallbacks
-        def initialize: () -> void
+        def initialize: (*untyped, **untyped) ?{ (*untyped, **untyped) -> untyped } -> void
       end
 
       module ClassMethods

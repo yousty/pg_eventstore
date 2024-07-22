@@ -2,7 +2,7 @@
 
 module PgEventstore
   class EventClassResolver
-    # @param event_type [String]
+    # @param event_type [String, nil]
     # @return [Class]
     def call(event_type)
       Object.const_get(event_type)

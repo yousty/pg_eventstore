@@ -30,7 +30,7 @@ module PgEventstore
     def attach_callbacks: () -> void
 
     # _@param_ `action`
-    def track_exec_time: (Proc action) -> void
+    def track_exec_time: (Proc action, *untyped args) -> void
 
     # _@param_ `current_position`
     def update_subscription_stats: (Integer current_position) -> void

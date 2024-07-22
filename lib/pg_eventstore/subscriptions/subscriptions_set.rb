@@ -22,38 +22,38 @@ module PgEventstore
     end
 
     # @!attribute id
-    #   @return [Integer] It is used to lock the Subscription by updating Subscription#locked_by attribute
+    #   @return [Integer, nil] It is used to lock the Subscription by updating Subscription#locked_by attribute
     attribute(:id)
     # @!attribute name
-    #   @return [String] name of the set
+    #   @return [String, nil] name of the set
     attribute(:name)
     # @!attribute state
-    #   @return [String]
+    #   @return [String, nil]
     attribute(:state)
     # @!attribute restart_count
-    #   @return [Integer] the number of SubscriptionsSet's restarts after its failure
+    #   @return [Integer, nil] the number of SubscriptionsSet's restarts after its failure
     attribute(:restart_count)
     # @!attribute max_restarts_number
-    #   @return [Integer] maximum number of times the SubscriptionsSet can be restarted
+    #   @return [Integer, nil] maximum number of times the SubscriptionsSet can be restarted
     attribute(:max_restarts_number)
     # @!attribute time_between_restarts
-    #   @return [Integer] interval in seconds between retries of failed SubscriptionsSet
+    #   @return [Integer, nil] interval in seconds between retries of failed SubscriptionsSet
     attribute(:time_between_restarts)
     # @!attribute last_restarted_at
     #   @return [Time, nil] last time the SubscriptionsSet was restarted
     attribute(:last_restarted_at)
     # @!attribute last_error
-    #   @return [Hash{'class' => String, 'message' => String, 'backtrace' => Array<String>}, nil] the information about
+    #   @return [Hash, nil] the information about
     #     last error caused when pulling Subscriptions events.
     attribute(:last_error)
     # @!attribute last_error_occurred_at
     #   @return [Time, nil] the time when the last error occurred
     attribute(:last_error_occurred_at)
     # @!attribute created_at
-    #   @return [Time]
+    #   @return [Time, nil]
     attribute(:created_at)
     # @!attribute updated_at
-    #   @return [Time]
+    #   @return [Time, nil]
     attribute(:updated_at)
 
     # @param attrs [Hash]
@@ -100,7 +100,7 @@ module PgEventstore
       hash == another.hash
     end
 
-    # @param another [PgEventstore::SubscriptionsSet]
+    # @param another [Object]
     # @return [Boolean]
     def ==(another)
       return false unless another.is_a?(SubscriptionsSet)

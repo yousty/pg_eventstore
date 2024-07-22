@@ -26,7 +26,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [PgEventstore::Event]
     def deserialize(attrs)
-      event = event_class_resolver.call(attrs['type']).new(**attrs.transform_keys(&:to_sym))
+      event = event_class_resolver.call(attrs['type']).new(**attrs.except('link').transform_keys(&:to_sym))
       middlewares.each do |middleware|
         middleware.deserialize(event)
       end

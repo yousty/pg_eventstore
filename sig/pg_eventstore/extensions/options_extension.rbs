@@ -25,7 +25,7 @@ module PgEventstore
         # _@param_ `opt_name` — option name
         #
         # _@param_ `blk` — provide define value using block. It will be later evaluated in the context of your object to determine the default value of the option
-        def option: (Symbol opt_name) -> Symbol
+        def option: (Symbol opt_name) ?{ () -> untyped } -> Symbol
 
         def inherited: (untyped klass) -> untyped
 

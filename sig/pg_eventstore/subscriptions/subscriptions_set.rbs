@@ -24,10 +24,10 @@ module PgEventstore
     def hash: () -> Integer
 
     # _@param_ `another`
-    def eql?: (Object another) -> bool
+    def eql?: (untyped another) -> bool
 
     # _@param_ `another`
-    def ==: (PgEventstore::SubscriptionsSet another) -> bool
+    def ==: (untyped another) -> bool
 
     def subscriptions_set_queries: () -> PgEventstore::SubscriptionsSetQueries
 
@@ -47,17 +47,17 @@ module PgEventstore
     # _@param_ `options`
     def init_default_values: (::Hash[untyped, untyped] options) -> void
 
-    attr_accessor id: Integer
+    attr_accessor id: Integer?
 
-    attr_accessor name: String
+    attr_accessor name: String?
 
-    attr_accessor state: String
+    attr_accessor state: String?
 
-    attr_accessor restart_count: Integer
+    attr_accessor restart_count: Integer?
 
-    attr_accessor max_restarts_number: Integer
+    attr_accessor max_restarts_number: Integer?
 
-    attr_accessor time_between_restarts: Integer
+    attr_accessor time_between_restarts: Integer?
 
     attr_accessor last_restarted_at: Time?
 
@@ -65,8 +65,8 @@ module PgEventstore
 
     attr_accessor last_error_occurred_at: Time?
 
-    attr_accessor created_at: Time
+    attr_accessor created_at: Time?
 
-    attr_accessor updated_at: Time
+    attr_accessor updated_at: Time?
   end
 end

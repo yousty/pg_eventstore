@@ -36,7 +36,7 @@ module PgEventstore
 
     attr_accessor connection_pool_timeout: Integer
 
-    attr_accessor subscription_pull_interval: Float
+    attr_accessor subscription_pull_interval: Float | Integer
 
     attr_accessor subscription_max_retries: Integer
 

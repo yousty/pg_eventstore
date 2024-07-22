@@ -211,8 +211,10 @@ RSpec.describe PgEventstore::Commands::Append do
         let(:middleware) do
           Class.new do
             class << self
+              include PgEventstore::Middleware
+
               def serialize(event)
-                event.link_id = -1
+                event.link_id = SecureRandom.uuid
               end
             end
           end
@@ -228,6 +230,8 @@ RSpec.describe PgEventstore::Commands::Append do
         let(:middleware) do
           Class.new do
             class << self
+              include PgEventstore::Middleware
+
               def serialize(event)
                 event.link_partition_id = -1
               end
@@ -245,6 +249,8 @@ RSpec.describe PgEventstore::Commands::Append do
         let(:middleware) do
           Class.new do
             class << self
+              include PgEventstore::Middleware
+
               def serialize(event)
                 event.stream_revision = -1
               end

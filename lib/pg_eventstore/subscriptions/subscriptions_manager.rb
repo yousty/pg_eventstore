@@ -57,10 +57,10 @@ module PgEventstore
     # @option options [Hash] :filter provide it to filter events. It works the same way as a :filter option of
     #   {PgEventstore::Client#read} method. Filtering by both - event types and streams are available.
     # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
-    # @param pull_interval [Integer] an interval in seconds to determine how often to query new events of the given
-    #   subscription.
+    # @param pull_interval [Integer, Float] an interval in seconds to determine how often to query new events of the
+    #   given subscription.
     # @param max_retries [Integer] max number of retries of failed Subscription
-    # @param retries_interval [Float] a delay between retries of failed Subscription
+    # @param retries_interval [Integer, Float] a delay between retries of failed Subscription
     # @param restart_terminator [#call, nil] a callable object which, when called - accepts PgEventstore::Subscription
     #   object to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
     # @return [void]

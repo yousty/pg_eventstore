@@ -21,15 +21,15 @@ module PgEventstore
 
     def init_default_values: (::Hash[untyped, untyped] options) -> void
 
-    attr_accessor id: String
+    attr_accessor id: String?
 
     attr_accessor type: String
 
-    attr_accessor global_position: Integer
+    attr_accessor global_position: Integer?
 
     attr_accessor stream: PgEventstore::Stream?
 
-    attr_accessor stream_revision: Integer
+    attr_accessor stream_revision: Integer?
 
     attr_accessor data: ::Hash[untyped, untyped]
 

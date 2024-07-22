@@ -47,7 +47,7 @@ RSpec.describe PgEventstore::Event do
   describe '#link?' do
     subject { instance.link? }
 
-    let(:instance) { described_class.new(link_id: 1) }
+    let(:instance) { described_class.new(link_id: SecureRandom.uuid) }
 
     context 'when #link_id is present' do
       it { is_expected.to eq(true) }

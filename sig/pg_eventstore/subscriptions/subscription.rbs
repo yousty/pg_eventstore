@@ -28,10 +28,10 @@ module PgEventstore
     def hash: () -> Integer
 
     # _@param_ `another`
-    def eql?: (Object another) -> bool
+    def eql?: (untyped another) -> bool
 
     # _@param_ `another`
-    def ==: (PgEventstore::SubscriptionsSet another) -> bool
+    def ==: (untyped another) -> bool
 
     def reset_runtime_attributes: () -> void
 
@@ -53,15 +53,15 @@ module PgEventstore
     # _@param_ `options`
     def init_default_values: (::Hash[untyped, untyped] options) -> void
 
-    attr_accessor id: Integer
+    attr_accessor id: Integer?
 
-    attr_accessor set: String
+    attr_accessor set: String?
 
-    attr_accessor name: String
+    attr_accessor name: String?
 
-    attr_accessor total_processed_events: Integer
+    attr_accessor total_processed_events: Integer?
 
-    attr_accessor options: ::Hash[untyped, untyped]
+    attr_accessor options: ::Hash[untyped, untyped]?
 
     attr_accessor current_position: Integer?
 
@@ -69,11 +69,11 @@ module PgEventstore
 
     attr_accessor average_event_processing_time: Float?
 
-    attr_accessor restart_count: Integer
+    attr_accessor restart_count: Integer?
 
-    attr_accessor max_restarts_number: Integer
+    attr_accessor max_restarts_number: Integer?
 
-    attr_accessor time_between_restarts: Integer
+    attr_accessor time_between_restarts: Integer?
 
     attr_accessor last_restarted_at: Time?
 
@@ -81,14 +81,16 @@ module PgEventstore
 
     attr_accessor last_error_occurred_at: Time?
 
-    attr_accessor chunk_query_interval: Time
+    attr_accessor chunk_query_interval: Integer? | Float?
+
+    attr_accessor last_chunk_fed_at: Time?
 
     attr_accessor last_chunk_greatest_position: Integer?
 
     attr_accessor locked_by: Integer?
 
-    attr_accessor created_at: Time
+    attr_accessor created_at: Time?
 
-    attr_accessor updated_at: Time
+    attr_accessor updated_at: Time?
   end
 end

@@ -6,7 +6,7 @@ module PgEventstore
     # _@param_ `run_interval` — seconds. Determines how often to run async task. Async task is determined by :after_runner_stopped callback
     #
     # _@param_ `async_shutdown_time` — seconds. Determines how long to wait for the async shutdown to wait for the runner to finish.
-    def initialize: ((Integer | Float) run_interval, (Integer | Float) async_shutdown_time) -> void
+    %a{rbs:test:skip} def initialize: ((Integer | Float) run_interval, (Integer | Float) async_shutdown_time) -> void
 
     def start: () -> self
 
@@ -21,9 +21,7 @@ module PgEventstore
     def state: () -> String
 
     # _@param_ `state`
-    #
-    # _@return_ — a result of evaluating of passed block
-    def within_state: (Symbol state) -> Object
+    def within_state: (Symbol state) { () -> untyped } -> untyped
 
     def synchronize: () { () -> untyped } -> untyped
 
@@ -31,7 +29,8 @@ module PgEventstore
 
     def delegate_change_state_cbx: () -> void
 
-    def change_state: () -> void
+    # _@param_ `state`
+    def change_state: (String state) -> void
 
     def define_callback: () -> void
   end

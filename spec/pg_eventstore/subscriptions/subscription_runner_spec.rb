@@ -108,7 +108,9 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             before do
               instance.start
               sleep 0.1
-              events_processor.feed([{ 'id' => 1 }, { 'id' => 3 }])
+              events_processor.feed(
+                [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
+              )
             end
 
             after do
@@ -126,7 +128,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             instance.start
             sleep 0.1
             stats.track_exec_time { sleep 0.2 }
-            instance.feed(Array.new(100) { |i| { 'id' => i } })
+            instance.feed(Array.new(100) { |i| { 'id' => i, 'global_position' => i } })
           end
 
           after do
@@ -151,7 +153,9 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             before do
               instance.start
               sleep 0.1
-              events_processor.feed([{ 'id' => 1 }, { 'id' => 3 }])
+              events_processor.feed(
+                [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
+              )
             end
 
             after do
@@ -179,7 +183,9 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             before do
               instance.start
               sleep 0.1
-              events_processor.feed([{ 'id' => 1 }, { 'id' => 3 }])
+              events_processor.feed(
+                [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
+              )
             end
 
             after do
@@ -410,7 +416,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   describe 'on fed' do
     subject { instance.feed(raw_events) }
 
-    let(:raw_events) { [{ 'global_position' => 2, 'global_position' => 3 }] }
+    let(:raw_events) { [{ 'global_position' => 2 }, { 'global_position' => 3 }] }
 
     before do
       subscription.update(last_chunk_greatest_position: 1)

@@ -40,7 +40,7 @@ module PgEventstore
     # Takes an array of potentially persisted events and loads their ids from db. Those ids can be later used to check
     # whether events are actually existing events.
     # @param events [Array<PgEventstore::Event>]
-    # @return [Array<Integer>]
+    # @return [Array<String>]
     def ids_from_db(events)
       sql_builder = SQLBuilder.new.from('events').select('id')
       partition_attrs = events.map { |event| [event.stream&.context, event.stream&.stream_name, event.type] }.uniq
@@ -80,7 +80,7 @@ module PgEventstore
 
     # @param stream [PgEventstore::Stream]
     # @param events [Array<PgEventstore::Event>]
-    # @return [PgEventstore::Event]
+    # @return [Array<PgEventstore::Event>]
     def insert(stream, events)
       sql_rows_for_insert, values = prepared_statements(stream, events)
       columns = %w[id data metadata stream_revision link_id link_partition_id type context stream_name stream_id]

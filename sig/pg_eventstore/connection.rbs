@@ -1,5 +1,8 @@
 module PgEventstore
   class Connection
+    module Ruby30Patch
+    end
+
     include PgEventstore::Connection::Ruby30Patch
 
     # _@param_ `uri` — PostgreSQL connection URI. Example: "postgresql://postgres:postgres@localhost:5432/eventstore"
@@ -11,7 +14,7 @@ module PgEventstore
 
     def with: () { (PG::Connection connection) -> untyped } -> untyped
 
-    def init_pool: () -> ConnectionPool
+    def init_pool: () -> ConnectionPool[untyped]
 
     def pg_type_registry: () -> PG::BasicTypeRegistry
 

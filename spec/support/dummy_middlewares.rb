@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class DummyMiddleware
+  include PgEventstore::Middleware
+
   ENCR_SECRET = 'secret'
   DECR_SECRET = '123456'
 
@@ -18,6 +20,8 @@ class DummyMiddleware
 end
 
 class Dummy2Middleware
+  include PgEventstore::Middleware
+
   ENCR_SECRET = 'terces'
   DECR_SECRET = '654321'
 

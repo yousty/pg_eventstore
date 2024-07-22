@@ -36,9 +36,9 @@ module PgEventstore
         handler: _SubscriptionHandler,
         ?options: ::Hash[untyped, untyped],
         ?middlewares: ::Array[Symbol]?,
-        ?pull_interval: Integer,
+        ?pull_interval: Integer | Float,
         ?max_retries: Integer,
-        ?retries_interval: Float,
+        ?retries_interval: Integer | Float,
         ?restart_terminator: _RestartTerminator?
       ) -> void
 
@@ -52,7 +52,7 @@ module PgEventstore
     def create_event_handler: (::Array[Symbol]? middlewares, untyped handler) -> Proc
 
     # _@param_ `middlewares`
-    def select_middlewares: (?::Array[PgEventstore::Middleware]? middlewares) -> ::Array[PgEventstore::Middleware]
+    def select_middlewares: (?::Array[Symbol]? middlewares) -> ::Array[PgEventstore::Middleware]
 
     # Returns the value of attribute config.
     attr_accessor config: PgEventstore::Config

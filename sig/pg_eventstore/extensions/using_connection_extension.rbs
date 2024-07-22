@@ -7,7 +7,7 @@ module PgEventstore
         def connection: () -> PgEventstore::Connection
 
         # _@param_ `config_name`
-        def using_connection: (Symbol config_name) -> singleton(PgEventstore::Subscription)
+        def using_connection: (Symbol config_name) -> Class
       end
     end
   end

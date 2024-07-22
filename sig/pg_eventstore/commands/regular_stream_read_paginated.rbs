@@ -4,7 +4,7 @@ module PgEventstore
       # _@param_ `stream`
       #
       # _@param_ `options`
-      def call: (PgEventstore::Stream stream, ?options: Hash[untyped, untyped]) -> ::Enumerator[Array[PgEventstore::Event], Array[Array[PgEventstore::Event]]]
+      %a{rbs:test:skip} def call: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped]) -> ::Enumerator[Array[PgEventstore::Event], void]
 
       # _@param_ `stream`
       #

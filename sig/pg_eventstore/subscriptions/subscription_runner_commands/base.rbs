@@ -31,17 +31,17 @@ module PgEventstore
       # _@param_ `options`
       def init_default_values: (::Hash[untyped, untyped] options) -> void
 
-      attr_accessor id: Integer
+      attr_accessor id: Integer?
 
       attr_accessor name: String
 
-      attr_accessor subscription_id: Integer
+      attr_accessor subscription_id: Integer?
 
-      attr_accessor subscriptions_set_id: Integer
+      attr_accessor subscriptions_set_id: Integer?
 
       attr_accessor data: ::Hash[untyped, untyped]
 
-      attr_accessor created_at: Time
+      attr_accessor created_at: Time?
     end
   end
 end

@@ -11,7 +11,7 @@ module PgEventstore
     def event_exists?: (PgEventstore::Event event) -> bool
 
     # _@param_ `events`
-    def ids_from_db: (::Array[PgEventstore::Event] events) -> ::Array[Integer]
+    def ids_from_db: (::Array[PgEventstore::Event] events) -> ::Array[String]
 
     # _@param_ `stream`
     def stream_revision: (PgEventstore::Stream stream) -> Integer?
@@ -24,7 +24,7 @@ module PgEventstore
     # _@param_ `stream`
     #
     # _@param_ `events`
-    def insert: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> PgEventstore::Event
+    def insert: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> ::Array[PgEventstore::Event]
 
     # _@param_ `stream`
     #

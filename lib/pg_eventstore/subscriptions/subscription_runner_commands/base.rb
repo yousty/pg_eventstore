@@ -8,22 +8,22 @@ module PgEventstore
       include Extensions::BaseCommandExtension
 
       # @!attribute id
-      #   @return [Integer]
+      #   @return [Integer, nil]
       attribute(:id)
       # @!attribute name
       #   @return [String]
       attribute(:name) { self.class.name.split('::').last }
       # @!attribute subscription_id
-      #   @return [Integer]
+      #   @return [Integer, nil]
       attribute(:subscription_id)
       # @!attribute subscriptions_set_id
-      #   @return [Integer]
+      #   @return [Integer, nil]
       attribute(:subscriptions_set_id)
       # @!attribute data
       #   @return [Hash]
       attribute(:data) { {} }
       # @!attribute created_at
-      #   @return [Time]
+      #   @return [Time, nil]
       attribute(:created_at)
 
       # @param subscription_runner [PgEventstore::SubscriptionRunner]
