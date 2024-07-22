@@ -25,7 +25,7 @@ jobs:
       run: |
         sleep 10
         ./bin/setup_db
-        bundle exec rspec
+        ./bin/rspec
   push:
     needs: build
     name: Publish to RubyGems
