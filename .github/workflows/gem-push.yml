@@ -24,8 +24,8 @@ jobs:
     - name: Run tests
       run: |
         sleep 10
-        ./bin/setup_db
         rbs collection install
+        ./bin/setup_db
         ./bin/rspec
   push:
     needs: build

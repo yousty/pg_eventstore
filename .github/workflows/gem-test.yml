@@ -26,6 +26,6 @@ jobs:
       - name: Run tests
         run: |
           sleep 10
-          ./bin/setup_db
           rbs collection install
+          ./bin/setup_db
           TEST_COVERAGE=true ./bin/rspec
