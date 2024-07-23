@@ -55,7 +55,7 @@ After checking out the repo, run:
 - `bundle` to install dependencies
 - `docker compose up` to start dev/test services
 - `bin/setup_db` to create/re-create development and test databases, tables and related objects
-- `rbs collection install` to install external rbs definitions
+- `bundle exec rbs collection install` to install external rbs definitions
 
 Then, run `bin/rspec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
