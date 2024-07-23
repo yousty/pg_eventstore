@@ -61,7 +61,7 @@ module PgEventstore
 
     attr_accessor last_restarted_at: Time?
 
-    attr_accessor last_error: Hash[untyped, untyped]?
+    attr_accessor last_error: { 'class' => String, 'message' => String, 'backtrace' => Array[String] }?
 
     attr_accessor last_error_occurred_at: Time?
 

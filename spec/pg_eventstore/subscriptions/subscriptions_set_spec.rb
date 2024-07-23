@@ -83,7 +83,12 @@ RSpec.describe PgEventstore::SubscriptionsSet do
     subject { subscriptions_set.dup }
 
     let(:subscriptions_set) do
-      PgEventstore::SubscriptionsSet.new(**queries.create(name: 'Foo', last_error: { backtrace: ['/path/to/file'] }))
+      PgEventstore::SubscriptionsSet.new(
+        **queries.create(
+          name: 'Foo',
+          last_error: { 'class' => 'StandardError', 'message' => 'Oops', 'backtrace' => ['1.rb'] }
+        )
+      )
     end
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
 
