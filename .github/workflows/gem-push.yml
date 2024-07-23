@@ -25,6 +25,7 @@ jobs:
       run: |
         sleep 10
         ./bin/setup_db
+        rbs collection install
         ./bin/rspec
   push:
     needs: build
