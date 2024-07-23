@@ -23,7 +23,7 @@ jobs:
       run: docker compose up --detach
     - name: Install rbs collection
       run: |
-        rbs collection install
+        bundle exec rbs collection install
     - name: Run tests
       run: |
         sleep 10
