@@ -1,0 +1,12 @@
+module PgEventstore
+  module Commands
+    module EventModifiers
+      class PrepareRegularEvent
+        # _@param_ `event`
+        #
+        # _@param_ `revision`
+        def call: (PgEventstore::Event event, Integer revision) -> PgEventstore::Event
+      end
+    end
+  end
+end

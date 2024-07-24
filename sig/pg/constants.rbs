@@ -1,0 +1,153 @@
+module PG
+  module Constants
+    CONNECTION_AUTH_OK: ::Integer
+
+    CONNECTION_AWAITING_RESPONSE: ::Integer
+
+    CONNECTION_BAD: ::Integer
+
+    CONNECTION_CHECK_STANDBY: ::Integer
+
+    CONNECTION_CHECK_TARGET: ::Integer
+
+    CONNECTION_CHECK_WRITABLE: ::Integer
+
+    CONNECTION_CONSUME: ::Integer
+
+    CONNECTION_GSS_STARTUP: ::Integer
+
+    CONNECTION_MADE: ::Integer
+
+    CONNECTION_NEEDED: ::Integer
+
+    CONNECTION_OK: ::Integer
+
+    CONNECTION_SETENV: ::Integer
+
+    CONNECTION_SSL_STARTUP: ::Integer
+
+    CONNECTION_STARTED: ::Integer
+
+    DEF_PGPORT: ::Integer
+
+    INVALID_OID: ::Integer
+
+    INV_READ: ::Integer
+
+    INV_WRITE: ::Integer
+
+    InvalidOid: ::Integer
+
+    PGRES_BAD_RESPONSE: ::Integer
+
+    PGRES_COMMAND_OK: ::Integer
+
+    PGRES_COPY_BOTH: ::Integer
+
+    PGRES_COPY_IN: ::Integer
+
+    PGRES_COPY_OUT: ::Integer
+
+    PGRES_EMPTY_QUERY: ::Integer
+
+    PGRES_FATAL_ERROR: ::Integer
+
+    PGRES_NONFATAL_ERROR: ::Integer
+
+    PGRES_PIPELINE_ABORTED: ::Integer
+
+    PGRES_PIPELINE_SYNC: ::Integer
+
+    PGRES_POLLING_FAILED: ::Integer
+
+    PGRES_POLLING_OK: ::Integer
+
+    PGRES_POLLING_READING: ::Integer
+
+    PGRES_POLLING_WRITING: ::Integer
+
+    PGRES_SINGLE_TUPLE: ::Integer
+
+    PGRES_TUPLES_OK: ::Integer
+
+    PG_DIAG_COLUMN_NAME: ::Integer
+
+    PG_DIAG_CONSTRAINT_NAME: ::Integer
+
+    PG_DIAG_CONTEXT: ::Integer
+
+    PG_DIAG_DATATYPE_NAME: ::Integer
+
+    PG_DIAG_INTERNAL_POSITION: ::Integer
+
+    PG_DIAG_INTERNAL_QUERY: ::Integer
+
+    PG_DIAG_MESSAGE_DETAIL: ::Integer
+
+    PG_DIAG_MESSAGE_HINT: ::Integer
+
+    PG_DIAG_MESSAGE_PRIMARY: ::Integer
+
+    PG_DIAG_SCHEMA_NAME: ::Integer
+
+    PG_DIAG_SEVERITY: ::Integer
+
+    PG_DIAG_SEVERITY_NONLOCALIZED: ::Integer
+
+    PG_DIAG_SOURCE_FILE: ::Integer
+
+    PG_DIAG_SOURCE_FUNCTION: ::Integer
+
+    PG_DIAG_SOURCE_LINE: ::Integer
+
+    PG_DIAG_SQLSTATE: ::Integer
+
+    PG_DIAG_STATEMENT_POSITION: ::Integer
+
+    PG_DIAG_TABLE_NAME: ::Integer
+
+    PQERRORS_DEFAULT: ::Integer
+
+    PQERRORS_SQLSTATE: ::Integer
+
+    PQERRORS_TERSE: ::Integer
+
+    PQERRORS_VERBOSE: ::Integer
+
+    PQPING_NO_ATTEMPT: ::Integer
+
+    PQPING_NO_RESPONSE: ::Integer
+
+    PQPING_OK: ::Integer
+
+    PQPING_REJECT: ::Integer
+
+    PQSHOW_CONTEXT_ALWAYS: ::Integer
+
+    PQSHOW_CONTEXT_ERRORS: ::Integer
+
+    PQSHOW_CONTEXT_NEVER: ::Integer
+
+    PQTRANS_ACTIVE: ::Integer
+
+    PQTRANS_IDLE: ::Integer
+
+    PQTRANS_INERROR: ::Integer
+
+    PQTRANS_INTRANS: ::Integer
+
+    PQTRANS_UNKNOWN: ::Integer
+
+    PQ_PIPELINE_ABORTED: ::Integer
+
+    PQ_PIPELINE_OFF: ::Integer
+
+    PQ_PIPELINE_ON: ::Integer
+
+    SEEK_CUR: ::Integer
+
+    SEEK_END: ::Integer
+
+    SEEK_SET: ::Integer
+  end
+end

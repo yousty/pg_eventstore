@@ -1,0 +1,51 @@
+module PgEventstore
+  module Web
+    module Paginator
+      class BaseCollection
+        # _@param_ `config_name`
+        #
+        # _@param_ `starting_id`
+        #
+        # _@param_ `per_page`
+        #
+        # _@param_ `order` — :asc or :desc
+        #
+        # _@param_ `options` — additional options to filter the collection
+        def initialize: (
+            Symbol config_name,
+            starting_id: (String | Integer)?,
+            per_page: Integer,
+            order: Symbol,
+            ?options: ::Hash[untyped, untyped]
+          ) -> void
+
+        def collection: () -> ::Array[untyped]
+
+        def count: () -> Integer
+
+        def next_page_starting_id: () -> (String | Integer)?
+
+        def prev_page_starting_id: () -> (String | Integer)?
+
+        def total_count: () -> Integer
+
+        def connection: () -> PgEventstore::Connection
+
+        # Returns the value of attribute config_name.
+        attr_accessor config_name: Symbol
+
+        # Returns the value of attribute starting_id.
+        attr_accessor starting_id: (String | Integer)?
+
+        # Returns the value of attribute per_page.
+        attr_accessor per_page: Integer
+
+        # Returns the value of attribute order.
+        attr_accessor order: Symbol
+
+        # Returns the value of attribute options.
+        attr_accessor options: ::Hash[untyped, untyped]
+      end
+    end
+  end
+end

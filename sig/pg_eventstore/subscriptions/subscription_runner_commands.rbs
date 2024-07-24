@@ -1,0 +1,8 @@
+module PgEventstore
+  module SubscriptionRunnerCommands
+    extend PgEventstore::Extensions::CommandClassLookupExtension
+
+    # _@param_ `cmd_name`
+    def self.command_class: ((String | Symbol) cmd_name) -> Class
+  end
+end

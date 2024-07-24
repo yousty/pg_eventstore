@@ -1,0 +1,3 @@
+interface _RestartTerminator
+  def call: (PgEventstore::Subscription subscription) -> boolish
+end

@@ -1,0 +1,8 @@
+module PgEventstore
+  module SubscriptionRunnerCommands
+    class Stop < PgEventstore::SubscriptionRunnerCommands::Base
+      # _@param_ `subscription_runner`
+      def exec_cmd: (PgEventstore::SubscriptionRunner subscription_runner) -> void
+    end
+  end
+end

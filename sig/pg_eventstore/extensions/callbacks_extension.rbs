@@ -1,0 +1,23 @@
+module PgEventstore
+  module Extensions
+    module CallbacksExtension
+      def self.included: (untyped klass) -> untyped
+
+      def define_callback: (*untyped) -> void
+
+      module InitCallbacks
+        def initialize: (*untyped, **untyped) ?{ (*untyped, **untyped) -> untyped } -> void
+      end
+
+      module ClassMethods
+        # _@param_ `action`
+        #
+        # _@param_ `method_name`
+        def has_callbacks: ((String | Symbol) action, Symbol method_name) -> void
+
+        # _@param_ `method_name`
+        def visibility_method: (Symbol method_name) -> Symbol
+      end
+    end
+  end
+end

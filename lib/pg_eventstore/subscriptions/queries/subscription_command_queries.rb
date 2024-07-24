@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class SubscriptionCommandQueries
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
     attr_reader :connection
     private :connection
 
@@ -15,7 +17,7 @@ module PgEventstore
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
     # @param data [Hash]
-    # @return [PgEventstore::SubscriptionRunnerCommands::Abstract]
+    # @return [PgEventstore::SubscriptionRunnerCommands::Base]
     def find_or_create_by(subscription_id:, subscriptions_set_id:, command_name:, data:)
       transaction_queries.transaction do
         find_by(subscription_id: subscription_id, subscriptions_set_id: subscriptions_set_id, command_name: command_name) ||
@@ -26,7 +28,7 @@ module PgEventstore
     # @param subscription_id [Integer]
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
-    # @return [PgEventstore::SubscriptionRunnerCommands::Abstract, nil]
+    # @return [PgEventstore::SubscriptionRunnerCommands::Base, nil]
     def find_by(subscription_id:, subscriptions_set_id:, command_name:)
       sql_builder =
         SQLBuilder.new.
@@ -48,7 +50,7 @@ module PgEventstore
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
     # @param data [Hash]
-    # @return [PgEventstore::SubscriptionRunnerCommands::Abstract]
+    # @return [PgEventstore::SubscriptionRunnerCommands::Base]
     def create(subscription_id:, subscriptions_set_id:, command_name:, data:)
       sql = <<~SQL
         INSERT INTO subscription_commands (name, subscription_id, subscriptions_set_id, data) 
@@ -63,7 +65,7 @@ module PgEventstore
 
     # @param subscription_ids [Array<Integer>]
     # @param subscriptions_set_id [Integer]
-    # @return [Array<PgEventstore::SubscriptionRunnerCommands::Abstract>]
+    # @return [Array<PgEventstore::SubscriptionRunnerCommands::Base>]
     def find_commands(subscription_ids, subscriptions_set_id:)
       return [] if subscription_ids.empty?
 

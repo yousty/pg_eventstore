@@ -1,0 +1,407 @@
+module PG
+  class Connection
+    include PG::Constants
+
+    def self.async_api=: (untyped enable) -> untyped
+
+    alias self.async_connect self.new
+
+    alias self.async_ping self.ping
+
+    def self.async_send_api=: (untyped enable) -> untyped
+
+    def self.conndefaults: () -> untyped
+
+    def self.conndefaults_hash: () -> untyped
+
+    alias self.connect self.new
+
+    def self.connect_hash_to_string: (untyped hash) -> untyped
+
+    def self.connect_start: (*untyped) -> untyped
+
+    def self.conninfo_parse: (untyped) -> untyped
+
+    def self.encrypt_password: (untyped, untyped) -> untyped
+
+    alias self.escape self.escape_string
+
+    def self.escape_bytea: (untyped) -> untyped
+
+    def self.escape_string: (untyped) -> untyped
+
+    def self.isthreadsafe: () -> untyped
+
+    def self.new: (*untyped args) ?{ (untyped) -> untyped } -> untyped
+
+    alias self.open self.new
+
+    def self.parse_connect_args: (*untyped args) -> untyped
+
+    def self.ping: (*untyped args) -> untyped
+
+    def self.quote_connstr: (untyped value) -> untyped
+
+    def self.quote_ident: (untyped) -> untyped
+
+    alias self.setdb self.new
+
+    alias self.setdblogin self.new
+
+    def self.sync_connect: (*untyped) -> untyped
+
+    def self.sync_ping: (*untyped) -> untyped
+
+    def self.unescape_bytea: (untyped) -> untyped
+
+    public
+
+    alias async_cancel cancel
+
+    alias async_describe_portal describe_portal
+
+    alias async_describe_prepared describe_prepared
+
+    alias async_encrypt_password encrypt_password
+
+    alias async_exec exec
+
+    alias async_exec_params exec_params
+
+    alias async_exec_prepared exec_prepared
+
+    alias async_flush flush
+
+    alias async_get_copy_data get_copy_data
+
+    alias async_get_last_result get_last_result
+
+    alias async_get_result get_result
+
+    alias async_isnonblocking isnonblocking
+
+    alias async_prepare prepare
+
+    alias async_put_copy_data put_copy_data
+
+    alias async_put_copy_end put_copy_end
+
+    alias async_query exec
+
+    alias async_reset reset
+
+    alias async_set_client_encoding set_client_encoding
+
+    alias async_setnonblocking setnonblocking
+
+    def backend_key: () -> untyped
+
+    def backend_pid: () -> untyped
+
+    def block: (*untyped) -> untyped
+
+    def cancel: () -> untyped
+
+    def check_socket: () -> untyped
+
+    alias client_encoding= set_client_encoding
+
+    alias close finish
+
+    def conndefaults: () -> untyped
+
+    def conndefaults_hash: () -> untyped
+
+    def connect_poll: () -> untyped
+
+    def connection_needs_password: () -> untyped
+
+    def connection_used_password: () -> untyped
+
+    def conninfo: () -> untyped
+
+    def conninfo_hash: () -> untyped
+
+    def consume_input: () -> untyped
+
+    def copy_data: (untyped sql, ?untyped coder) { (untyped) -> untyped } -> untyped
+
+    def db: () -> untyped
+
+    def decoder_for_get_copy_data: () -> untyped
+
+    def decoder_for_get_copy_data=: (untyped) -> untyped
+
+    def describe_portal: (untyped) -> untyped
+
+    def describe_prepared: (untyped) -> untyped
+
+    def discard_results: () -> untyped
+
+    def encoder_for_put_copy_data: () -> untyped
+
+    def encoder_for_put_copy_data=: (untyped) -> untyped
+
+    def encrypt_password: (untyped password, untyped username, ?untyped algorithm) -> untyped
+
+    def enter_pipeline_mode: () -> untyped
+
+    def error_message: () -> untyped
+
+    alias escape escape_string
+
+    def escape_bytea: (untyped) -> untyped
+
+    def escape_identifier: (untyped) -> untyped
+
+    def escape_literal: (untyped) -> untyped
+
+    def escape_string: (untyped) -> untyped
+
+    def exec: (*untyped) -> untyped
+
+    def exec_params: (*untyped) -> untyped
+
+    def exec_prepared: (*untyped) -> untyped
+
+    def exit_pipeline_mode: () -> untyped
+
+    def external_encoding: () -> untyped
+
+    def field_name_type: () -> untyped
+
+    def field_name_type=: (untyped) -> untyped
+
+    def finish: () -> untyped
+
+    def finished?: () -> untyped
+
+    def flush: () -> untyped
+
+    def get_client_encoding: () -> untyped
+
+    def get_copy_data: (?untyped async, ?untyped decoder) -> untyped
+
+    def get_last_result: () -> untyped
+
+    def get_result: () -> untyped
+
+    def host: () -> untyped
+
+    def hostaddr: () -> untyped
+
+    def inspect: () -> untyped
+
+    def internal_encoding: () -> untyped
+
+    def internal_encoding=: (untyped) -> untyped
+
+    def is_busy: () -> untyped
+
+    def isnonblocking: () -> untyped
+
+    def lo_close: (untyped) -> untyped
+
+    def lo_creat: (*untyped) -> untyped
+
+    def lo_create: (untyped) -> untyped
+
+    def lo_export: (untyped, untyped) -> untyped
+
+    def lo_import: (untyped) -> untyped
+
+    def lo_lseek: (untyped, untyped, untyped) -> untyped
+
+    def lo_open: (*untyped) -> untyped
+
+    def lo_read: (untyped, untyped) -> untyped
+
+    alias lo_seek lo_lseek
+
+    def lo_tell: (untyped) -> untyped
+
+    def lo_truncate: (untyped, untyped) -> untyped
+
+    def lo_unlink: (untyped) -> untyped
+
+    def lo_write: (untyped, untyped) -> untyped
+
+    alias loclose lo_close
+
+    alias locreat lo_creat
+
+    alias locreate lo_create
+
+    alias loexport lo_export
+
+    alias loimport lo_import
+
+    alias lolseek lo_lseek
+
+    alias loopen lo_open
+
+    alias loread lo_read
+
+    alias loseek lo_lseek
+
+    alias lotell lo_tell
+
+    alias lotruncate lo_truncate
+
+    alias lounlink lo_unlink
+
+    alias lowrite lo_write
+
+    def make_empty_pgresult: (untyped) -> untyped
+
+    alias nonblocking? isnonblocking
+
+    def notifies: () -> untyped
+
+    alias notifies_wait wait_for_notify
+
+    def options: () -> untyped
+
+    def parameter_status: (untyped) -> untyped
+
+    def pass: () -> untyped
+
+    def pipeline_status: () -> untyped
+
+    def pipeline_sync: () -> untyped
+
+    def port: () -> untyped
+
+    def prepare: (*untyped) -> untyped
+
+    def protocol_version: () -> untyped
+
+    def put_copy_data: (untyped buffer, ?untyped encoder) -> untyped
+
+    def put_copy_end: (*untyped args) -> untyped
+
+    alias query exec
+
+    def quote_ident: (untyped) -> untyped
+
+    def reset: () -> untyped
+
+    def reset_poll: () -> untyped
+
+    def reset_start: () -> untyped
+
+    def send_describe_portal: (untyped) -> untyped
+
+    def send_describe_prepared: (untyped) -> untyped
+
+    def send_flush_request: () -> untyped
+
+    def send_prepare: (*untyped) -> untyped
+
+    def send_query: (*untyped) -> untyped
+
+    def send_query_params: (*untyped) -> untyped
+
+    def send_query_prepared: (*untyped) -> untyped
+
+    def server_version: () -> untyped
+
+    def set_client_encoding: (untyped) -> untyped
+
+    def set_default_encoding: () -> untyped
+
+    def set_error_context_visibility: (untyped) -> untyped
+
+    def set_error_verbosity: (untyped) -> untyped
+
+    def set_notice_processor: () -> untyped
+
+    def set_notice_receiver: () -> untyped
+
+    def set_single_row_mode: () -> untyped
+
+    def setnonblocking: (untyped enabled) -> untyped
+
+    def socket: () -> untyped
+
+    def socket_io: () -> untyped
+
+    def ssl_attribute: (untyped) -> untyped
+
+    def ssl_attribute_names: () -> untyped
+
+    def ssl_attributes: () -> untyped
+
+    def ssl_in_use?: () -> untyped
+
+    def status: () -> untyped
+
+    def sync_cancel: () -> untyped
+
+    def sync_describe_portal: (untyped) -> untyped
+
+    def sync_describe_prepared: (untyped) -> untyped
+
+    def sync_encrypt_password: (*untyped) -> untyped
+
+    def sync_exec: (*untyped) -> untyped
+
+    def sync_exec_params: (*untyped) -> untyped
+
+    def sync_exec_prepared: (*untyped) -> untyped
+
+    def sync_flush: () -> untyped
+
+    def sync_get_copy_data: (*untyped) -> untyped
+
+    def sync_get_last_result: () -> untyped
+
+    def sync_get_result: () -> untyped
+
+    def sync_isnonblocking: () -> untyped
+
+    def sync_prepare: (*untyped) -> untyped
+
+    def sync_put_copy_data: (*untyped) -> untyped
+
+    def sync_put_copy_end: (*untyped) -> untyped
+
+    def sync_reset: () -> untyped
+
+    def sync_set_client_encoding: (untyped) -> untyped
+
+    def sync_setnonblocking: (untyped) -> untyped
+
+    def trace: (untyped) -> untyped
+
+    def transaction: () { (untyped) -> untyped } -> untyped
+
+    def transaction_status: () -> untyped
+
+    def tty: () -> untyped
+
+    def type_map_for_queries: () -> untyped
+
+    def type_map_for_queries=: (untyped) -> untyped
+
+    def type_map_for_results: () -> untyped
+
+    def type_map_for_results=: (untyped) -> untyped
+
+    def unescape_bytea: (untyped) -> untyped
+
+    def untrace: () -> untyped
+
+    def user: () -> untyped
+
+    def wait_for_notify: (*untyped) -> untyped
+
+    private
+
+    def async_connect_or_reset: (untyped poll_meth) -> untyped
+
+    def flush_data=: (untyped) -> untyped
+
+    def reset_start2: (untyped) -> untyped
+  end
+end

@@ -30,7 +30,7 @@ module PgEventstore
     #   @return [Integer] Time in seconds to wait for the connection in pool to be released
     option(:connection_pool_timeout) { 5 }
     # @!attribute subscription_pull_interval
-    #   @return [Float] How often Subscription should pull new events, seconds
+    #   @return [Float, Integer] How often Subscription should pull new events, seconds
     option(:subscription_pull_interval) { 1.0 }
     # @!attribute subscription_max_retries
     #   @return [Integer] max number of retries of failed Subscription

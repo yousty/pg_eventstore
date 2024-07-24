@@ -7,6 +7,8 @@ require_relative 'queries'
 
 module PgEventstore
   class Client
+    # @!attribute config
+    #   @return [PgEventstore::Config]
     attr_reader :config
     private :config
 
@@ -111,7 +113,10 @@ module PgEventstore
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
-    # @see {#read} for available params
+    # @see {#read} for the detailed docs
+    # @param stream [PgEventstore::Stream]
+    # @param options [Hash] request options
+    # @param middlewares [Array, nil]
     # @return [Enumerator] enumerator will yield PgEventstore::Event
     def read_paginated(stream, options: {}, middlewares: nil)
       cmd_class = stream.system? ? Commands::SystemStreamReadPaginated : Commands::RegularStreamReadPaginated

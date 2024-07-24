@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class EventSerializer
+    # @!attribute middlewares
+    #   @return [Array<#deserialize, #serialize>]
     attr_reader :middlewares
 
     # @param middlewares [Array<#deserialize, #serialize>]

@@ -1,0 +1,32 @@
+module PgEventstore
+  module Commands
+    class RegularStreamReadPaginated < PgEventstore::AbstractCommand
+      # _@param_ `stream`
+      #
+      # _@param_ `options`
+      %a{rbs:test:skip} def call: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped]) -> ::Enumerator[Array[PgEventstore::Event], void]
+
+      # _@param_ `stream`
+      #
+      # _@param_ `options`
+      def calc_initial_revision: (PgEventstore::Stream stream, ::Hash[untyped, untyped] options) -> Integer
+
+      # _@param_ `events`
+      #
+      # _@param_ `max_count`
+      def end_reached?: (::Array[PgEventstore::Event] events, Integer max_count) -> bool
+
+      # _@param_ `events`
+      #
+      # _@param_ `revision`
+      #
+      # _@param_ `direction`
+      def calc_next_revision: (::Array[PgEventstore::Event] events, Integer revision, (String | Symbol)? direction) -> Integer
+
+      # _@param_ `direction`
+      def forwards?: ((String | Symbol)? direction) -> bool
+
+      def read_cmd: () -> PgEventstore::Commands::Read
+    end
+  end
+end

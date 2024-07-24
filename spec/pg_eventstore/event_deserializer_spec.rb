@@ -34,6 +34,8 @@ RSpec.describe PgEventstore::EventDeserializer do
       let(:middlewares) { [DummyMiddleware.new, another_middleware.new] }
       let(:another_middleware) do
         Class.new do
+          include PgEventstore::Middleware
+
           def deserialize(event)
             event.metadata['foo'] = 'bar'
           end
@@ -65,7 +67,10 @@ RSpec.describe PgEventstore::EventDeserializer do
     subject { instance.deserialize(attrs) }
 
     let(:attrs) do
-      { 'id' => 123, 'context' => 'MyAwesomeCtx', 'stream_name' => 'Foo', 'stream_id' => 'Bar', 'type' => 'Foo' }
+      {
+        'id' => SecureRandom.uuid, 'context' => 'MyAwesomeCtx', 'stream_name' => 'Foo', 'stream_id' => 'Bar',
+        'type' => 'Foo'
+      }
     end
 
     shared_examples 'attributes deserialization' do
@@ -86,6 +91,8 @@ RSpec.describe PgEventstore::EventDeserializer do
       let(:middlewares) { [DummyMiddleware.new, another_middleware.new] }
       let(:another_middleware) do
         Class.new do
+          include PgEventstore::Middleware
+
           def deserialize(event)
             event.metadata['foo'] = 'bar'
           end
@@ -103,7 +110,7 @@ RSpec.describe PgEventstore::EventDeserializer do
       end
       let(:link_attrs) do
         {
-          'id' => 124, 'link_id' => 123, 'type' => PgEventstore::Event::LINK_TYPE,
+          'id' => SecureRandom.uuid, 'link_id' => SecureRandom.uuid, 'type' => PgEventstore::Event::LINK_TYPE,
           'context' => 'MyAwesomeCtx', 'stream_name' => 'Bar', 'stream_id' => 'Baz'
         }
       end

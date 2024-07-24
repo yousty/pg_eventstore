@@ -1,0 +1,25 @@
+module PgEventstore
+  class CommandsHandler
+    extend Forwardable
+    RESTART_DELAY: Integer
+    PULL_INTERVAL: Integer
+
+    # _@param_ `config_name`
+    #
+    # _@param_ `subscription_feeder`
+    #
+    # _@param_ `runners`
+    def initialize: (Symbol config_name, PgEventstore::SubscriptionFeeder subscription_feeder, ::Array[PgEventstore::SubscriptionRunner] runners) -> void
+
+    def attach_runner_callbacks: () -> untyped
+
+    def process_async: () -> untyped
+
+    # _@param_ `error`
+    def after_runner_died: (StandardError error) -> void
+
+    def subscription_feeder_commands: () -> PgEventstore::CommandHandlers::SubscriptionFeederCommands
+
+    def subscription_runners_commands: () -> PgEventstore::CommandHandlers::SubscriptionRunnersCommands
+  end
+end

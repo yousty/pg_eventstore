@@ -1,0 +1,8 @@
+module PgEventstore
+  module Extensions
+    module CommandClassLookupExtension
+      # _@param_ `cmd_name`
+      def command_class: ((String | Symbol) cmd_name) -> Class
+    end
+  end
+end

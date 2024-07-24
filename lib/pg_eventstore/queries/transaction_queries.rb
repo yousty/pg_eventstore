@@ -3,6 +3,7 @@
 module PgEventstore
   # @!visibility private
   class TransactionQueries
+    # @return [Hash<Symbol => String>] symbol to transaction isolation level association
     ISOLATION_LEVELS = {
       read_committed: 'READ COMMITTED',
       repeatable_read: 'REPEATABLE READ',
@@ -11,6 +12,8 @@ module PgEventstore
       h.default = h[:serializable]
     end.freeze
 
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
     attr_reader :connection
     private :connection
 
@@ -57,6 +60,7 @@ module PgEventstore
       retry
     end
 
+    # @return [PgEventstore::PartitionQueries]
     def partition_queries
       PartitionQueries.new(connection)
     end

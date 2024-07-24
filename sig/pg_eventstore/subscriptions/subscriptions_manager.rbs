@@ -1,0 +1,60 @@
+module PgEventstore
+  class SubscriptionsManager
+    extend Forwardable
+
+    # _@param_ `config`
+    #
+    # _@param_ `set_name`
+    #
+    # _@param_ `max_retries` — max number of retries of failed SubscriptionsSet
+    #
+    # _@param_ `retries_interval` — a delay between retries of failed SubscriptionsSet
+    def initialize: (
+        config: PgEventstore::Config,
+        set_name: String,
+        ?max_retries: Integer?,
+        ?retries_interval: Integer?
+      ) -> void
+
+    # _@param_ `subscription_name` — subscription's name
+    #
+    # _@param_ `handler` — subscription's handler
+    #
+    # _@param_ `options` — request options
+    #
+    # _@param_ `middlewares` — provide a list of middleware names to override a config's middlewares
+    #
+    # _@param_ `pull_interval` — an interval in seconds to determine how often to query new events of the given subscription.
+    #
+    # _@param_ `max_retries` — max number of retries of failed Subscription
+    #
+    # _@param_ `retries_interval` — a delay between retries of failed Subscription
+    #
+    # _@param_ `restart_terminator` — a callable object which, when called - accepts PgEventstore::Subscription object to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
+    def subscribe: (
+        String subscription_name,
+        handler: _SubscriptionHandler,
+        ?options: ::Hash[untyped, untyped],
+        ?middlewares: ::Array[Symbol]?,
+        ?pull_interval: Integer | Float,
+        ?max_retries: Integer,
+        ?retries_interval: Integer | Float,
+        ?restart_terminator: _RestartTerminator?
+      ) -> void
+
+    def subscriptions: () -> ::Array[PgEventstore::Subscription]
+
+    def subscriptions_set: () -> PgEventstore::SubscriptionsSet?
+
+    # _@param_ `middlewares`
+    #
+    # _@param_ `handler`
+    def create_event_handler: (::Array[Symbol]? middlewares, untyped handler) -> Proc
+
+    # _@param_ `middlewares`
+    def select_middlewares: (?::Array[Symbol]? middlewares) -> ::Array[PgEventstore::Middleware]
+
+    # Returns the value of attribute config.
+    attr_accessor config: PgEventstore::Config
+  end
+end

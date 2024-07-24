@@ -3,7 +3,12 @@
 module PgEventstore
   # @!visibility private
   class EventDeserializer
-    attr_reader :middlewares, :event_class_resolver
+    # @!attribute middlewares
+    #   @return [Array<#deserialize, #serialize>]
+    attr_reader :middlewares
+    # @!attribute event_class_resolver
+    #   @return [#call]
+    attr_reader :event_class_resolver
 
     # @param middlewares [Array<Object<#deserialize, #serialize>>]
     # @param event_class_resolver [#call]
@@ -13,6 +18,7 @@ module PgEventstore
     end
 
     # @param raw_events [Array<Hash>]
+    # @return [Array<PgEventstore::Event>]
     def deserialize_many(raw_events)
       raw_events.map(&method(:deserialize))
     end
@@ -20,7 +26,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [PgEventstore::Event]
     def deserialize(attrs)
-      event = event_class_resolver.call(attrs['type']).new(**attrs.transform_keys(&:to_sym))
+      event = event_class_resolver.call(attrs['type']).new(**attrs.except('link').transform_keys(&:to_sym))
       middlewares.each do |middleware|
         middleware.deserialize(event)
       end

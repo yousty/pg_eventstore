@@ -1,0 +1,56 @@
+module PgEventstore
+  class SubscriptionCommandQueries
+    # _@param_ `connection`
+    def initialize: (PgEventstore::Connection connection) -> void
+
+    # _@param_ `subscription_id`
+    #
+    # _@param_ `subscriptions_set_id`
+    #
+    # _@param_ `command_name`
+    #
+    # _@param_ `data`
+    def find_or_create_by: (
+        subscription_id: Integer,
+        subscriptions_set_id: Integer,
+        command_name: String,
+        data: ::Hash[untyped, untyped]
+      ) -> PgEventstore::SubscriptionRunnerCommands::Base
+
+    # _@param_ `subscription_id`
+    #
+    # _@param_ `subscriptions_set_id`
+    #
+    # _@param_ `command_name`
+    def find_by: (subscription_id: Integer, subscriptions_set_id: Integer, command_name: String) -> PgEventstore::SubscriptionRunnerCommands::Base?
+
+    # _@param_ `subscription_id`
+    #
+    # _@param_ `subscriptions_set_id`
+    #
+    # _@param_ `command_name`
+    #
+    # _@param_ `data`
+    def create: (
+        subscription_id: Integer,
+        subscriptions_set_id: Integer,
+        command_name: String,
+        data: ::Hash[untyped, untyped]
+      ) -> PgEventstore::SubscriptionRunnerCommands::Base
+
+    # _@param_ `subscription_ids`
+    #
+    # _@param_ `subscriptions_set_id`
+    def find_commands: (::Array[Integer] subscription_ids, subscriptions_set_id: Integer) -> ::Array[PgEventstore::SubscriptionRunnerCommands::Base]
+
+    # _@param_ `id`
+    def delete: (Integer id) -> void
+
+    def transaction_queries: () -> PgEventstore::TransactionQueries
+
+    # _@param_ `hash`
+    def deserialize: (::Hash[untyped, untyped] hash) -> PgEventstore::SubscriptionRunnerCommands::Base
+
+    attr_accessor connection: PgEventstore::Connection
+  end
+end

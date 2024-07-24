@@ -111,7 +111,7 @@ RSpec.describe PgEventstore::EventsProcessor do
       instance.start
       # give runner time to try to consume first even and then get into sleep, so we can test changes in the chunk
       sleep 0.1
-      instance.feed([{ foo: :bar }])
+      instance.feed([{ 'id' => SecureRandom.uuid, 'global_position' => 1 }])
     end
 
     after do

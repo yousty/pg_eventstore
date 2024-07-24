@@ -19,13 +19,13 @@ module PgEventstore
     end
 
     # @param sql [String]
-    # @return self
+    # @return [self]
     def select(sql)
       @select_values.push(sql)
       self
     end
 
-    # @return self
+    # @return [self]
     def unselect
       @select_values.clear
       self
@@ -33,7 +33,7 @@ module PgEventstore
 
     # @param sql [String]
     # @param arguments [Array] positional values
-    # @return self
+    # @return [self]
     def where(sql, *arguments)
       @where_values['AND'].push([sql, arguments])
       self
@@ -41,14 +41,14 @@ module PgEventstore
 
     # @param sql [String]
     # @param arguments [Object] positional values
-    # @return self
+    # @return [self]
     def where_or(sql, *arguments)
       @where_values['OR'].push([sql, arguments])
       self
     end
 
     # @param table_name [String]
-    # @return self
+    # @return [self]
     def from(table_name)
       @from_value = table_name
       self
@@ -56,38 +56,40 @@ module PgEventstore
 
     # @param sql [String]
     # @param arguments [Object]
-    # @return self
+    # @return [self]
     def join(sql, *arguments)
       @join_values.push([sql, arguments])
       self
     end
 
     # @param sql [String]
-    # @return self
+    # @return [self]
     def order(sql)
       @order_values.push(sql)
       self
     end
 
+    # @return [self]
     def remove_order
       @order_values.clear
       self
     end
 
     # @param limit [Integer]
-    # @return self
+    # @return [self]
     def limit(limit)
       @limit_value = limit.to_i
       self
     end
 
+    # @return [self]
     def remove_limit
       @limit_value = nil
       self
     end
 
     # @param offset [Integer]
-    # @return self
+    # @return [self]
     def offset(offset)
       @offset_value = offset.to_i
       self
@@ -101,17 +103,19 @@ module PgEventstore
     end
 
     # @param sql [String]
-    # @return self
+    # @return [self]
     def group(sql)
       @group_values.push(sql)
       self
     end
 
+    # @return [self]
     def remove_group
       @group_values.clear
       self
     end
 
+    # @return [Array<String, Array<Object>>]
     def to_exec_params
       @positional_values.clear
       @positional_values_size = 0
@@ -125,10 +129,13 @@ module PgEventstore
       @positional_values
     end
 
+    # @param val [Integer]
+    # @return [Integer]
     def positional_values_size=(val)
       @positional_values_size = val
     end
 
+    # @return [Array<String, Array<Object>>]
     def _to_exec_params
       return [single_query_sql, @positional_values] if @union_values.empty?
 
@@ -188,6 +195,7 @@ module PgEventstore
     end
 
     # Replaces "?" signs in the given string with positional variables and memorize positional values they refer to.
+    # @param sql [String]
     # @return [String]
     def extract_positional_args(sql, *arguments)
       sql.gsub("?").each_with_index do |_, index|

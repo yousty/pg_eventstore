@@ -24,8 +24,8 @@ RSpec.describe PgEventstore::EventClassResolver do
       it { is_expected.to eq(PgEventstore::Event) }
     end
 
-    context 'when event type is something else' do
-      let(:event_type) { Object.new }
+    context 'when event type can not be resolved' do
+      let(:event_type) { 'SomethingFoo' }
 
       it { is_expected.to eq(PgEventstore::Event) }
     end

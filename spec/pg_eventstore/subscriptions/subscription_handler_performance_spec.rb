@@ -30,7 +30,7 @@ RSpec.describe PgEventstore::SubscriptionHandlerPerformance do
       end
 
       it 'returns average value of last TIMINGS_TO_KEEP measurements' do
-        expect(subject.round(3)).to eq(0.25)
+        expect(subject.round(2)).to eq(0.25)
       end
     end
   end

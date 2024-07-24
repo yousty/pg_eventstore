@@ -1,0 +1,45 @@
+module PgEventstore
+  module SubscriptionFeederCommands
+    class Base
+      include PgEventstore::Extensions::OptionsExtension
+      include PgEventstore::Extensions::BaseCommandExtension
+
+      # _@param_ `subscription_feeder`
+      def exec_cmd: (PgEventstore::SubscriptionFeeder subscription_feeder) -> void
+
+      def hash: () -> Integer
+
+      # _@param_ `another`
+      def eql?: (Object another) -> bool
+
+      # _@param_ `another`
+      def ==: (Object another) -> bool
+
+      def initialize: (**untyped options) -> void
+
+      def options_hash: () -> ::Hash[untyped, untyped]
+
+      # _@param_ `opt_name`
+      def readonly!: (Symbol opt_name) -> bool
+
+      # _@param_ `opt_name`
+      def readonly?: (Symbol opt_name) -> bool
+
+      # _@param_ `opt_name`
+      def readonly_error: (Symbol opt_name) -> void
+
+      # _@param_ `options`
+      def init_default_values: (::Hash[untyped, untyped] options) -> void
+
+      attr_accessor id: Integer?
+
+      attr_accessor name: String
+
+      attr_accessor subscriptions_set_id: Integer?
+
+      attr_accessor data: ::Hash[untyped, untyped]
+
+      attr_accessor created_at: Time?
+    end
+  end
+end

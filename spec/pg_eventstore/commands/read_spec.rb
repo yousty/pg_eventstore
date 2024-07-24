@@ -27,10 +27,10 @@ RSpec.describe PgEventstore::Commands::Read do
       PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '1234')
     end
     let(:stream) { events_stream1 }
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
-    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
 
     before do
       PgEventstore.client.append_to_stream(events_stream1, [event1, event2, event3])
@@ -164,11 +164,11 @@ RSpec.describe PgEventstore::Commands::Read do
       PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream1', stream_id: '1235')
     end
     let(:stream) { events_stream1 }
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
-    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
 
     before do
       PgEventstore.client.append_to_stream(events_stream1, event1)
@@ -379,11 +379,11 @@ RSpec.describe PgEventstore::Commands::Read do
       PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '123')
     end
     let(:stream) { events_stream1 }
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
-    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
 
     before do
       PgEventstore.client.append_to_stream(events_stream1, [event1, event2])
@@ -421,11 +421,11 @@ RSpec.describe PgEventstore::Commands::Read do
       PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: '124')
     end
     let(:stream) { events_stream1 }
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
-    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
 
     before do
       PgEventstore.client.append_to_stream(events_stream1, [event1, event2])
@@ -459,11 +459,11 @@ RSpec.describe PgEventstore::Commands::Read do
       PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream2', stream_id: '123')
     end
     let(:stream) { events_stream2 }
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
-    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
 
     before do
       PgEventstore.client.append_to_stream(events_stream1, [event1, event2])

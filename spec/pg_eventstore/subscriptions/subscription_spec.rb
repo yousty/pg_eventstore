@@ -169,7 +169,7 @@ RSpec.describe PgEventstore::Subscription do
           last_restarted_at: Time.now.utc,
           last_chunk_fed_at: Time.now.utc,
           last_chunk_greatest_position: 1234,
-          last_error: { foo: :bar },
+          last_error: { 'class' => 'StandardError', 'message' => 'Oops', 'backtrace' => ['1.rb'] },
           last_error_occurred_at: Time.now.utc,
           state: 'stopped'
         )

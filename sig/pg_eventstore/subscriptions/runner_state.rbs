@@ -1,0 +1,16 @@
+module PgEventstore
+  class RunnerState
+    include PgEventstore::Extensions::CallbacksExtension
+    STATES: ::Hash[Symbol, String]
+
+    %a{rbs:test:skip} def initialize: () -> void
+
+    # _@return_ — string representation of the state
+    def to_s: () -> String
+
+    # _@param_ `state`
+    def set_state: (String state) -> String
+
+    def define_callback: () -> void
+  end
+end

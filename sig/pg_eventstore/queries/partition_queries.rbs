@@ -1,0 +1,74 @@
+module PgEventstore
+  class PartitionQueries
+    # _@param_ `connection`
+    def initialize: (PgEventstore::Connection connection) -> void
+
+    # _@param_ `stream`
+    #
+    # _@return_ — partition attributes
+    def create_context_partition: (PgEventstore::Stream stream) -> ::Hash[untyped, untyped]
+
+    # _@param_ `stream`
+    #
+    # _@param_ `context_partition_name`
+    #
+    # _@return_ — partition attributes
+    def create_stream_name_partition: (PgEventstore::Stream stream, String context_partition_name) -> ::Hash[untyped, untyped]
+
+    # _@param_ `stream`
+    #
+    # _@param_ `event_type`
+    #
+    # _@param_ `stream_name_partition_name`
+    #
+    # _@return_ — partition attributes
+    def create_event_type_partition: (PgEventstore::Stream stream, String event_type, String stream_name_partition_name) -> ::Hash[untyped, untyped]
+
+    # _@param_ `stream`
+    #
+    # _@param_ `event_type`
+    def partition_required?: (PgEventstore::Stream stream, String event_type) -> bool
+
+    # _@param_ `stream`
+    #
+    # _@param_ `event_type`
+    def create_partitions: (PgEventstore::Stream stream, String event_type) -> void
+
+    # _@param_ `stream`
+    #
+    # _@return_ — partition attributes
+    def context_partition: (PgEventstore::Stream stream) -> ::Hash[untyped, untyped]?
+
+    # _@param_ `stream`
+    #
+    # _@return_ — partition attributes
+    def stream_name_partition: (PgEventstore::Stream stream) -> ::Hash[untyped, untyped]?
+
+    # _@param_ `stream`
+    #
+    # _@param_ `event_type`
+    #
+    # _@return_ — partition attributes
+    def event_type_partition: (PgEventstore::Stream stream, String event_type) -> ::Hash[untyped, untyped]?
+
+    # _@param_ `table_name`
+    def partition_name_taken?: (String table_name) -> bool
+
+    # _@param_ `ids`
+    def find_by_ids: (::Array[Integer] ids) -> ::Array[::Hash[untyped, untyped]]
+
+    # _@param_ `stream`
+    def context_partition_name: (PgEventstore::Stream stream) -> String
+
+    # _@param_ `stream`
+    def stream_name_partition_name: (PgEventstore::Stream stream) -> String
+
+    # _@param_ `stream`
+    #
+    # _@param_ `event_type`
+    def event_type_partition_name: (PgEventstore::Stream stream, String event_type) -> String
+
+    # Returns the value of attribute connection.
+    attr_accessor connection: PgEventstore::Connection
+  end
+end

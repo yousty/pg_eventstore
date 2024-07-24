@@ -4,17 +4,19 @@ module PgEventstore
   module Web
     module Paginator
       class EventsCollection < BaseCollection
+        # @return [Hash<String => Symbol>] SQL directions, string-to-symbol mapping
         SQL_DIRECTIONS = {
           'asc' => :asc,
           'desc' => :desc
         }.tap do |directions|
           directions.default = :desc
         end.freeze
+        # @return [Hash<String => Integer>] per page limits, string to Integer mapping
         PER_PAGE = %w[10 20 50 100 1000].to_h { [_1, _1.to_i] }.tap do |per_page|
           per_page.default = 10
         end.freeze
-        # Max number of events after which we don't perform the exact count and keep the estimate count instead because of
-        # the potential performance degradation.
+        # @return [Integer] max number of events after which we don't perform the exact count and keep the estimate
+        #   count instead because of the potential performance degradation.
         MAX_NUMBER_TO_COUNT = 10_000
 
         # @return [Array<PgEventstore::Event>]
@@ -68,8 +70,8 @@ module PgEventstore
 
         private
 
-        # @param event [PgEventstore::Eventg]
-        # @return [integer, nil]
+        # @param event [PgEventstore::Event]
+        # @return [Integer, nil]
         def event_global_position(event)
           event&.link&.global_position || event&.global_position
         end
@@ -93,6 +95,7 @@ module PgEventstore
           end.to_a.first['count_all']
         end
 
+        # @param sql_builder [PgEventstore::SQLBuilder]
         # @return [Integer, nil]
         def global_position(sql_builder)
           connection.with do |conn|

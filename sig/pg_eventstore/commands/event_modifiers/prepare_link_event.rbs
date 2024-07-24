@@ -1,0 +1,24 @@
+module PgEventstore
+  module Commands
+    module EventModifiers
+      class PrepareLinkEvent
+        # _@param_ `partition_queries`
+        def initialize: (PgEventstore::PartitionQueries partition_queries) -> void
+
+        # _@param_ `event`
+        #
+        # _@param_ `revision`
+        def call: (PgEventstore::Event event, Integer revision) -> PgEventstore::Event
+
+        # _@param_ `event` — persisted event
+        #
+        # _@return_ — partition id
+        def partition_id: (PgEventstore::Event event) -> Integer
+
+        attr_reader partition_queries: PgEventstore::PartitionQueries
+
+        attr_reader partitions: Hash[untyped, untyped]
+      end
+    end
+  end
+end

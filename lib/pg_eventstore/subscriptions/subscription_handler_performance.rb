@@ -9,6 +9,7 @@ module PgEventstore
   class SubscriptionHandlerPerformance
     extend Forwardable
 
+    # @return [Integer] the number of measurements to keep
     TIMINGS_TO_KEEP = 100
 
     def_delegators :@lock, :synchronize
@@ -33,7 +34,7 @@ module PgEventstore
     # The average time required to process an event.
     # @return [Float]
     def average_event_processing_time
-      synchronize { @timings.size.zero? ? 0 : @timings.sum / @timings.size }
+      synchronize { @timings.size.zero? ? 0.0 : @timings.sum / @timings.size }
     end
   end
 end

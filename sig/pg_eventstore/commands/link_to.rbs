@@ -1,0 +1,17 @@
+module PgEventstore
+  module Commands
+    class LinkTo < PgEventstore::AbstractCommand
+      # _@param_ `stream`
+      #
+      # _@param_ `events`
+      #
+      # _@param_ `options`
+      #
+      # _@return_ — persisted events
+      def call: (PgEventstore::Stream stream, *PgEventstore::Event events, ?options: ::Hash[untyped, untyped]) -> ::Array[PgEventstore::Event]
+
+      # _@param_ `events`
+      def check_events_presence: (::Array[PgEventstore::Event] events) -> void
+    end
+  end
+end

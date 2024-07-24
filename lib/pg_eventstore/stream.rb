@@ -4,7 +4,9 @@ require 'digest/md5'
 
 module PgEventstore
   class Stream
+    # @return [String] a stream prefix of the system stream
     SYSTEM_STREAM_PREFIX = '$'
+    # @return [Integer]
     NON_EXISTING_STREAM_REVISION = -1
 
     class << self
@@ -18,7 +20,15 @@ module PgEventstore
       end
     end
 
-    attr_reader :context, :stream_name, :stream_id
+    # @!attribute context
+    #   @return [String]
+    attr_reader :context
+    # @!attribute stream_name
+    #   @return [String]
+    attr_reader :stream_name
+    # @!attribute stream_id
+    #   @return [String]
+    attr_reader :stream_id
 
     # @param context [String]
     # @param stream_name [String]
@@ -47,6 +57,7 @@ module PgEventstore
     alias to_a deconstruct
 
     # @param keys [Array<Symbol>, nil]
+    # @return [Hash<Symbol => String>]
     def deconstruct_keys(keys)
       hash = { context: context, stream_name: stream_name, stream_id: stream_id }
       return hash unless keys
@@ -72,7 +83,7 @@ module PgEventstore
       hash == another.hash
     end
 
-    # @param other_stream [Stream]
+    # @param other_stream [Object]
     # @return [Boolean]
     def ==(other_stream)
       return false unless other_stream.is_a?(Stream)

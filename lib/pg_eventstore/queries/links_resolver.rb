@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class LinksResolver
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
     attr_reader :connection
     private :connection
 
@@ -46,6 +48,7 @@ module PgEventstore
       end.to_a
     end
 
+    # @return [PgEventstore::PartitionQueries]
     def partition_queries
       PartitionQueries.new(connection)
     end

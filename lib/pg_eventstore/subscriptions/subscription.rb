@@ -7,20 +7,20 @@ module PgEventstore
     include Extensions::OptionsExtension
 
     # @!attribute id
-    #   @return [Integer]
+    #   @return [Integer, nil]
     attribute(:id)
     # @!attribute set
-    #   @return [String] Subscription's set. Subscription should have unique pair of set and name.
+    #   @return [String, nil] Subscription's set. Subscription should have unique pair of set and name.
     attribute(:set)
     # @!attribute name
-    #   @return [String] Subscription's name. Subscription should have unique pair of set and name.
+    #   @return [String, nil] Subscription's name. Subscription should have unique pair of set and name.
     attribute(:name)
     # @!attribute total_processed_events
-    #   @return [Integer] total number of events, processed by this subscription
+    #   @return [Integer, nil] total number of events, processed by this subscription
     attribute(:total_processed_events)
     # @!attribute options
-    #   @return [Hash] subscription's options to be used to query events. See {SubscriptionManager#subscribe} for the
-    #     list of available options
+    #   @return [Hash, nil] subscription's options to be used to query events. See {SubscriptionManager#subscribe} for
+    #     the list of available options
     attribute(:options)
     # @!attribute current_position
     #   @return [Integer, nil] current Subscription's position. It is updated automatically each time an event is processed
@@ -34,29 +34,29 @@ module PgEventstore
     #     processed by the Subscription per second.
     attribute(:average_event_processing_time)
     # @!attribute restart_count
-    #   @return [Integer] the number of Subscription's restarts after its failure
+    #   @return [Integer, nil] the number of Subscription's restarts after its failure
     attribute(:restart_count)
     # @!attribute max_restarts_number
-    #   @return [Integer] maximum number of times the Subscription can be restarted
+    #   @return [Integer, nil] maximum number of times the Subscription can be restarted
     attribute(:max_restarts_number)
     # @!attribute time_between_restarts
-    #   @return [Integer] interval in seconds between retries of failed Subscription
+    #   @return [Integer, nil] interval in seconds between retries of failed Subscription
     attribute(:time_between_restarts)
     # @!attribute last_restarted_at
     #   @return [Time, nil] last time the Subscription was restarted
     attribute(:last_restarted_at)
     # @!attribute last_error
-    #   @return [Hash{'class' => String, 'message' => String, 'backtrace' => Array<String>}, nil] the information about
+    #   @return [Hash, nil] the information about
     #     last error caused when processing events by the Subscription.
     attribute(:last_error)
     # @!attribute last_error_occurred_at
     #   @return [Time, nil] the time when the last error occurred
     attribute(:last_error_occurred_at)
     # @!attribute chunk_query_interval
-    #   @return [Float] determines how often to pull events for the given Subscription in seconds
+    #   @return [Integer, Float, nil] determines how often to pull events for the given Subscription in seconds
     attribute(:chunk_query_interval)
-    # @!attribute chunk_query_interval
-    #   @return [Time] shows the time when last time events were fed to the event's processor
+    # @!attribute last_chunk_fed_at
+    #   @return [Time, nil] shows the time when last time events were fed to the event's processor
     attribute(:last_chunk_fed_at)
     # @!attribute last_chunk_greatest_position
     #   @return [Integer, nil] shows the greatest global_position of the last event in the last chunk fed to the event's
@@ -67,15 +67,15 @@ module PgEventstore
     #     means that the Subscription isn't locked yet by any subscription manager.
     attribute(:locked_by)
     # @!attribute created_at
-    #   @return [Time]
+    #   @return [Time, nil]
     attribute(:created_at)
     # @!attribute updated_at
-    #   @return [Time]
+    #   @return [Time, nil]
     attribute(:updated_at)
 
     class << self
       # @param subscriptions_set_id [Integer] SubscriptionsSet#id
-      # @param subscriptions [Array<PgEventstoreSubscription>]
+      # @param subscriptions [Array<PgEventstore::Subscription>]
       # @return [void]
       def ping_all(subscriptions_set_id, subscriptions)
         result = subscription_queries.ping_all(subscriptions_set_id, subscriptions.map(&:id))
@@ -111,6 +111,8 @@ module PgEventstore
     end
 
     # Locks the Subscription by the given lock id
+    # @param lock_id [Integer] SubscriptionsSet#id
+    # @param force [Boolean]
     # @return [PgEventstore::Subscription]
     def lock!(lock_id, force: false)
       self.id = subscription_queries.find_or_create_by(set: set, name: name)[:id]
@@ -144,7 +146,7 @@ module PgEventstore
       hash == another.hash
     end
 
-    # @param another [PgEventstore::SubscriptionsSet]
+    # @param another [Object]
     # @return [Boolean]
     def ==(another)
       return false unless another.is_a?(Subscription)

@@ -23,8 +23,11 @@ jobs:
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
       - name: Run PostgreSQL
         run: docker compose up --detach
+      - name: Install rbs collection
+        run: |
+          bundle exec rbs collection install
       - name: Run tests
         run: |
           sleep 10
           ./bin/setup_db
-          TEST_COVERAGE=true bundle exec rspec
+          TEST_COVERAGE=true ./bin/rspec

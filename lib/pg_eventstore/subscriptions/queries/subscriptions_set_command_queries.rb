@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class SubscriptionsSetCommandQueries
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
     attr_reader :connection
     private :connection
 
@@ -14,7 +16,7 @@ module PgEventstore
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
     # @param data [Hash]
-    # @return [PgEventstore::SubscriptionFeederCommands::Abstract]
+    # @return [PgEventstore::SubscriptionFeederCommands::Base]
     def find_or_create_by(subscriptions_set_id:, command_name:, data:)
       transaction_queries.transaction do
         find_by(subscriptions_set_id: subscriptions_set_id, command_name: command_name) ||
@@ -24,7 +26,7 @@ module PgEventstore
 
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
-    # @return [PgEventstore::SubscriptionFeederCommands::Abstract, nil]
+    # @return [PgEventstore::SubscriptionFeederCommands::Base, nil]
     def find_by(subscriptions_set_id:, command_name:)
       sql_builder =
         SQLBuilder.new.
@@ -42,7 +44,7 @@ module PgEventstore
     # @param subscriptions_set_id [Integer]
     # @param command_name [String]
     # @param data [Hash]
-    # @return [PgEventstore::SubscriptionFeederCommands::Abstract]
+    # @return [PgEventstore::SubscriptionFeederCommands::Base]
     def create(subscriptions_set_id:, command_name:, data:)
       sql = <<~SQL
         INSERT INTO subscriptions_set_commands (name, subscriptions_set_id, data) 
@@ -56,7 +58,7 @@ module PgEventstore
     end
 
     # @param subscriptions_set_id [Integer]
-    # @return [Array<PgEventstore::SubscriptionFeederCommands::Abstract>]
+    # @return [Array<PgEventstore::SubscriptionFeederCommands::Base>]
     def find_commands(subscriptions_set_id)
       sql_builder =
         SQLBuilder.new.select('*').

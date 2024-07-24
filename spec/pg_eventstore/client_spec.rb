@@ -5,6 +5,8 @@ RSpec.describe PgEventstore::Client do
   let(:config) { PgEventstore.config }
   let(:middleware) do
     Class.new do
+      include PgEventstore::Middleware
+
       def initialize(value)
         @value = value
       end
@@ -34,7 +36,7 @@ RSpec.describe PgEventstore::Client do
   describe '#append_to_stream' do
     subject { instance.append_to_stream(stream, events_or_event) }
 
-    let(:events_or_event) { PgEventstore::Event.new(type: :foo) }
+    let(:events_or_event) { PgEventstore::Event.new(type: 'foo') }
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
 
     context 'when single event is given' do
@@ -59,7 +61,7 @@ RSpec.describe PgEventstore::Client do
     end
 
     context 'when array of events is given' do
-      let(:events_or_event) { [PgEventstore::Event.new(type: :foo)] }
+      let(:events_or_event) { [PgEventstore::Event.new(type: 'foo')] }
 
       it 'returns an array of persisted events' do
         aggregate_failures do
@@ -80,8 +82,8 @@ RSpec.describe PgEventstore::Client do
     let(:stream) { stream1 }
 
     before do
-      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new(type: :foo))
-      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new(type: :bar))
+      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new(type: 'foo'))
+      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new(type: 'bar'))
     end
 
     context 'when reading from the specific stream' do
@@ -139,8 +141,8 @@ RSpec.describe PgEventstore::Client do
     let(:events_stream2) do
       PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '1234')
     end
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
 
     it 'processes the given commands' do
       subject
@@ -151,7 +153,7 @@ RSpec.describe PgEventstore::Client do
   describe '#link_to' do
     subject { instance.link_to(projection_stream, events_or_event) }
 
-    let(:persisted_event) { PgEventstore.client.append_to_stream(events_stream, PgEventstore::Event.new(type: :foo)) }
+    let(:persisted_event) { PgEventstore.client.append_to_stream(events_stream, PgEventstore::Event.new(type: 'foo')) }
     let(:events_stream) { PgEventstore::Stream.new(context: 'MyCtx', stream_name: 'Foo', stream_id: 'bar') }
     let(:projection_stream) { PgEventstore::Stream.new(context: 'MyCtx', stream_name: 'MyProjection', stream_id: '1') }
 

@@ -1,0 +1,3 @@
+interface _EventModifier
+  def call: (PgEventstore::Event event, Integer revision) -> PgEventstore::Event
+end

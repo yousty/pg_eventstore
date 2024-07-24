@@ -53,10 +53,11 @@ Documentation chapters:
 
 After checking out the repo, run:
 - `bundle` to install dependencies
-- `docker-compose up` to start dev/test services
-- `bin/setup_db` to create/re-create development and test databases, tables and related objects 
+- `docker compose up` to start dev/test services
+- `bin/setup_db` to create/re-create development and test databases, tables and related objects
+- `bundle exec rbs collection install` to install external rbs definitions
 
-Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Then, run `bin/rspec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`.
 

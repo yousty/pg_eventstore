@@ -1,0 +1,36 @@
+module PgEventstore
+  class SubscriptionsSetQueries
+    # _@param_ `connection`
+    def initialize: (PgEventstore::Connection connection) -> void
+
+    # _@param_ `attrs`
+    def find_all: (::Hash[untyped, untyped] attrs) -> ::Array[::Hash[untyped, untyped]]
+
+    def set_names: () -> ::Array[String]
+
+    # The same as #find_all, but returns first result
+    def find_by: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]?
+
+    # _@param_ `id`
+    def find!: (Integer id) -> ::Hash[untyped, untyped]
+
+    # _@param_ `attrs`
+    def create: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]
+
+    # _@param_ `id`
+    #
+    # _@param_ `attrs`
+    def update: (Integer id, ::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]
+
+    # _@param_ `id`
+    def delete: (Integer id) -> void
+
+    # _@param_ `hash`
+    def deserialize: (::Hash[untyped, untyped] hash) -> ::Hash[untyped, untyped]
+
+    def transaction_queries: () -> PgEventstore::TransactionQueries
+
+    # Returns the value of attribute connection.
+    attr_accessor connection: PgEventstore::Connection
+  end
+end

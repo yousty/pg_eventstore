@@ -81,7 +81,8 @@ module PgEventstore
         end
       end
 
-      ReadonlyAttributeError = Class.new(StandardError)
+      class ReadonlyAttributeError < StandardError
+      end
 
       def self.included(klass)
         klass.singleton_class.attr_accessor(:options)
@@ -122,6 +123,7 @@ module PgEventstore
       private
 
       # @param opt_name [Symbol]
+      # @return [void]
       # @raise [PgEventstore::Extensions::OptionsExtension::ReadOnlyError]
       def readonly_error(opt_name)
         raise(

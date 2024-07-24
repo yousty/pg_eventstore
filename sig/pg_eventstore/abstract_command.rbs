@@ -1,0 +1,11 @@
+module PgEventstore
+  class AbstractCommand
+    # _@param_ `queries`
+    def initialize: (PgEventstore::Queries queries) -> void
+
+    def call: () -> untyped
+
+    # Returns the value of attribute queries.
+    attr_accessor queries: PgEventstore::Queries
+  end
+end

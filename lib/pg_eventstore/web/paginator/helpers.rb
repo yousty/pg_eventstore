@@ -4,7 +4,7 @@ module PgEventstore
   module Web
     module Paginator
       module Helpers
-        # @param collection [PgEventstore::Paginator::BaseCollection]
+        # @param collection [PgEventstore::Web::Paginator::BaseCollection]
         # @return [String]
         def previous_page_link(collection)
           id = collection.prev_page_starting_id
@@ -16,7 +16,7 @@ module PgEventstore
         HTML
         end
 
-        # @param collection [PgEventstore::Paginator::BaseCollection]
+        # @param collection [PgEventstore::Web::Paginator::BaseCollection]
         # @return [String]
         def next_page_link(collection)
           id = collection.next_page_starting_id
@@ -98,7 +98,7 @@ module PgEventstore
         private
 
         # @param starting_id [String, Integer, nil]
-        # @param [String, nil]
+        # @return [String]
         def build_starting_id_link(starting_id)
           return 'javascript: void(0);' unless starting_id
 

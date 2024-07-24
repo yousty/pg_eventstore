@@ -1,0 +1,15 @@
+module PgEventstore
+  module Web
+    module Paginator
+      class StreamNamesCollection < PgEventstore::Web::Paginator::BaseCollection
+        PER_PAGE: Integer
+
+        def collection: () -> ::Array[::Hash[String, String]]
+
+        def next_page_starting_id: () -> String?
+
+        def direction_operator: () -> String
+      end
+    end
+  end
+end

@@ -1,0 +1,16 @@
+module PgEventstore
+  module CommandHandlers
+    class SubscriptionFeederCommands
+      # _@param_ `config_name`
+      #
+      # _@param_ `subscription_feeder`
+      def initialize: (Symbol config_name, PgEventstore::SubscriptionFeeder subscription_feeder) -> void
+
+      def process: () -> void
+
+      def queries: () -> PgEventstore::SubscriptionsSetCommandQueries
+
+      def connection: () -> PgEventstore::Connection
+    end
+  end
+end

@@ -4,7 +4,12 @@ module PgEventstore
   module Web
     module Subscriptions
       class SubscriptionsToSetAssociation
-        attr_reader :subscriptions_set, :subscriptions
+        # @!attribute subscriptions_set
+        #   @return [Array<PgEventstore::SubscriptionsSet>]
+        attr_reader :subscriptions_set
+        # @!attribute subscriptions
+        #   @return [Array<PgEventstore::Subscription>]
+        attr_reader :subscriptions
 
         # @param subscriptions_set [Array<PgEventstore::SubscriptionsSet>]
         # @param subscriptions [Array<PgEventstore::Subscription>]

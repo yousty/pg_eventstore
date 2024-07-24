@@ -1,0 +1,72 @@
+module PgEventstore
+  class SubscriptionsSet
+    include PgEventstore::Extensions::UsingConnectionExtension
+    include PgEventstore::Extensions::OptionsExtension
+
+    # _@param_ `attrs`
+    def self.create: (::Hash[untyped, untyped] attrs) -> PgEventstore::SubscriptionsSet
+
+    def self.subscriptions_set_queries: () -> PgEventstore::SubscriptionsSetQueries
+
+    # _@param_ `attrs`
+    def assign_attributes: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]
+
+    # _@param_ `attrs`
+    def update: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]
+
+    def delete: () -> void
+
+    # Dup the current object without assigned connection
+    def dup: () -> PgEventstore::SubscriptionsSet
+
+    def reload: () -> PgEventstore::SubscriptionsSet
+
+    def hash: () -> Integer
+
+    # _@param_ `another`
+    def eql?: (untyped another) -> bool
+
+    # _@param_ `another`
+    def ==: (untyped another) -> bool
+
+    def subscriptions_set_queries: () -> PgEventstore::SubscriptionsSetQueries
+
+    def initialize: (**untyped options) -> void
+
+    def options_hash: () -> ::Hash[untyped, untyped]
+
+    # _@param_ `opt_name`
+    def readonly!: (Symbol opt_name) -> bool
+
+    # _@param_ `opt_name`
+    def readonly?: (Symbol opt_name) -> bool
+
+    # _@param_ `opt_name`
+    def readonly_error: (Symbol opt_name) -> void
+
+    # _@param_ `options`
+    def init_default_values: (::Hash[untyped, untyped] options) -> void
+
+    attr_accessor id: Integer?
+
+    attr_accessor name: String?
+
+    attr_accessor state: String?
+
+    attr_accessor restart_count: Integer?
+
+    attr_accessor max_restarts_number: Integer?
+
+    attr_accessor time_between_restarts: Integer?
+
+    attr_accessor last_restarted_at: Time?
+
+    attr_accessor last_error: { 'class' => String, 'message' => String, 'backtrace' => Array[String] }?
+
+    attr_accessor last_error_occurred_at: Time?
+
+    attr_accessor created_at: Time?
+
+    attr_accessor updated_at: Time?
+  end
+end

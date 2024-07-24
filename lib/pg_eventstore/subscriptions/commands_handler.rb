@@ -10,13 +10,15 @@ module PgEventstore
   class CommandsHandler
     extend Forwardable
 
-    RESTART_DELAY = 5 # seconds
-    PULL_INTERVAL = 1 # seconds
+    # @return [Integer] the delay in seconds between runner restarts
+    RESTART_DELAY = 5
+    # @return [Integer] seconds, how often to check for new commands
+    PULL_INTERVAL = 1
 
     def_delegators :@basic_runner, :start, :stop, :state, :stop_async, :wait_for_finish
 
     # @param config_name [Symbol]
-    # @param subscription_feeder [PgEventstore::SUbscriptionFeeder]
+    # @param subscription_feeder [PgEventstore::SubscriptionFeeder]
     # @param runners [Array<PgEventstore::SubscriptionRunner>]
     def initialize(config_name, subscription_feeder, runners)
       @config_name = config_name

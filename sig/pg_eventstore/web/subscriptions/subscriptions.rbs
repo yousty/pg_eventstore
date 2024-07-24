@@ -1,0 +1,18 @@
+module PgEventstore
+  module Web
+    module Subscriptions
+      class Subscriptions
+        # _@param_ `connection`
+        #
+        # _@param_ `current_set`
+        def initialize: (PgEventstore::Connection connection, String current_set) -> void
+
+        def subscriptions: () -> ::Array[PgEventstore::Subscription]
+
+        def subscription_queries: () -> PgEventstore::SubscriptionQueries
+
+        attr_accessor connection: PgEventstore::Connection
+      end
+    end
+  end
+end

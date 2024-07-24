@@ -1,0 +1,48 @@
+module PgEventstore
+  module Web
+    module Subscriptions
+      module Helpers
+        # _@param_ `set_name`
+        def subscriptions_url: (?set_name: String?) -> String
+
+        # _@param_ `set_id`
+        #
+        # _@param_ `id`
+        #
+        # _@param_ `cmd`
+        def subscription_cmd_url: (Integer set_id, Integer id, String cmd) -> String
+
+        # _@param_ `id`
+        #
+        # _@param_ `cmd`
+        def subscriptions_set_cmd_url: (Integer id, String cmd) -> String
+
+        # _@param_ `cmd_name` — command name
+        #
+        # _@return_ — command name
+        def subscriptions_set_cmd: (String cmd_name) -> String
+
+        # _@param_ `cmd_name`
+        def validate_subscriptions_set_cmd: (String cmd_name) -> void
+
+        # _@param_ `cmd_name` — command name
+        #
+        # _@return_ — command name
+        def subscription_cmd: (String cmd_name) -> String
+
+        # _@param_ `cmd_name`
+        def validate_subscription_cmd: (String cmd_name) -> void
+
+        # _@param_ `state`
+        #
+        # _@param_ `updated_at`
+        #
+        # _@return_ — html status
+        def colored_state: (String state, Time updated_at) -> String
+
+        # _@param_ `ids`
+        def delete_all_subscriptions_url: (::Array[Integer] ids) -> String
+      end
+    end
+  end
+end

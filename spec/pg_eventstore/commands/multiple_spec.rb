@@ -22,10 +22,10 @@ RSpec.describe PgEventstore::Commands::Multiple do
     let(:events_stream2) do
       PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '1234')
     end
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :foo) }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :bar) }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
-    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: :baz) }
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
 
     it 'appends given events' do
       subject
@@ -36,11 +36,11 @@ RSpec.describe PgEventstore::Commands::Multiple do
   end
 
   describe 'multiple commands consistency' do
-    let(:event1) { PgEventstore::Event.new(type: :foo, data: { event: 'event-1' }) }
-    let(:event2) { PgEventstore::Event.new(type: :bar, data: { event: 'event-2' }) }
-    let(:event3) { PgEventstore::Event.new(type: :baz, data: { event: 'event-3' }) }
-    let(:event4) { PgEventstore::Event.new(type: :baz, data: { event: 'event-4' }) }
-    let(:event5) { PgEventstore::Event.new(type: :bar, data: { event: 'event-5' }) }
+    let(:event1) { PgEventstore::Event.new(type: 'foo', data: { event: 'event-1' }) }
+    let(:event2) { PgEventstore::Event.new(type: 'bar', data: { event: 'event-2' }) }
+    let(:event3) { PgEventstore::Event.new(type: 'baz', data: { event: 'event-3' }) }
+    let(:event4) { PgEventstore::Event.new(type: 'baz', data: { event: 'event-4' }) }
+    let(:event5) { PgEventstore::Event.new(type: 'bar', data: { event: 'event-5' }) }
     let(:events_stream1) do
       PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: 'stream-1')
     end

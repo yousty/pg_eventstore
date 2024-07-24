@@ -1,0 +1,14 @@
+module PgEventstore
+  module Extensions
+    module UsingConnectionExtension
+      def self.included: (untyped klass) -> untyped
+
+      module ClassMethods
+        def connection: () -> PgEventstore::Connection
+
+        # _@param_ `config_name`
+        def using_connection: (Symbol config_name) -> Class
+      end
+    end
+  end
+end

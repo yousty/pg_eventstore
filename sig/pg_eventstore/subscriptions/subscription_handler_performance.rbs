@@ -1,0 +1,12 @@
+module PgEventstore
+  class SubscriptionHandlerPerformance
+    extend Forwardable
+    TIMINGS_TO_KEEP: Integer
+
+    def initialize: () -> void
+
+    def track_exec_time: () { () -> untyped } -> untyped
+
+    def average_event_processing_time: () -> Float
+  end
+end

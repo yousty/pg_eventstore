@@ -1,0 +1,20 @@
+module PgEventstore
+  class Utils
+    # _@param_ `object`
+    def self.deep_transform_keys: (untyped object) { (untyped key) -> untyped } -> Object
+
+    # _@param_ `object`
+    def self.deep_dup: (untyped object) -> Object
+
+    # _@param_ `array`
+    #
+    # _@return_ — positional variables, based on array size. Example: "$1, $2, $3"
+    def self.positional_vars: (::Array[untyped] array) -> String
+
+    # _@param_ `error`
+    def self.error_info: (StandardError error) -> ::Hash[untyped, untyped]
+
+    # _@param_ `str`
+    def self.underscore_str: (String str) -> String
+  end
+end

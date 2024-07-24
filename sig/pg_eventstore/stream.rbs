@@ -1,0 +1,40 @@
+module PgEventstore
+  class Stream
+    SYSTEM_STREAM_PREFIX: String
+    NON_EXISTING_STREAM_REVISION: Integer
+
+    def self.all_stream: () -> PgEventstore::Stream
+
+    # _@param_ `context`
+    #
+    # _@param_ `stream_name`
+    #
+    # _@param_ `stream_id`
+    def initialize: (context: String, stream_name: String, stream_id: String) -> void
+
+    def all_stream?: () -> bool
+
+    def system?: () -> bool
+
+    def deconstruct: () -> ::Array[untyped]
+
+    # _@param_ `keys`
+    def deconstruct_keys: (::Array[Symbol]? keys) -> ::Hash[Symbol, String]
+
+    def to_hash: () -> ::Hash[untyped, untyped]
+
+    def hash: () -> Integer
+
+    # _@param_ `another`
+    def eql?: (untyped another) -> bool
+
+    # _@param_ `other_stream`
+    def ==: (untyped other_stream) -> bool
+
+    attr_accessor context: String
+
+    attr_accessor stream_name: String
+
+    attr_accessor stream_id: String
+  end
+end

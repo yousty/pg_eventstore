@@ -18,6 +18,8 @@ require_relative 'pg_eventstore/subscriptions/subscriptions_manager'
 
 module PgEventstore
   class << self
+    # @!attribute mutex
+    #   @return [Thread::Mutex]
     attr_reader :mutex
     private :mutex
 
@@ -71,7 +73,7 @@ module PgEventstore
     # @param subscription_set [String]
     # @param max_retries [Integer, nil] max number of retries of failed SubscriptionsSet
     # @param retries_interval [Integer, nil] a delay between retries of failed SubscriptionsSet
-    # @return [PgEventstore::SubscriptionManager]
+    # @return [PgEventstore::SubscriptionsManager]
     def subscriptions_manager(config_name = :default, subscription_set:, max_retries: nil, retries_interval: nil)
       SubscriptionsManager.new(
         config: config(config_name),
@@ -87,10 +89,13 @@ module PgEventstore
       Client.new(config(name))
     end
 
+    # @return [Logger, nil]
     def logger
       @logger
     end
 
+    # @param logger [Logger, nil]
+    # @return [Logger, nil]
     def logger=(logger)
       @logger = logger
     end

@@ -3,7 +3,15 @@
 module PgEventstore
   # @!visibility private
   class EventQueries
-    attr_reader :connection, :serializer, :deserializer
+    # @!attribute connection
+    #   @return [PgEventstore::Connection]
+    attr_reader :connection
+    # @!attribute serializer
+    #   @return [PgEventstore::EventSerializer]
+    attr_reader :serializer
+    # @!attribute deserializer
+    #   @return [PgEventstore::EventDeserializer]
+    attr_reader :deserializer
     private :connection, :serializer, :deserializer
 
     # @param connection [PgEventstore::Connection]
@@ -32,7 +40,7 @@ module PgEventstore
     # Takes an array of potentially persisted events and loads their ids from db. Those ids can be later used to check
     # whether events are actually existing events.
     # @param events [Array<PgEventstore::Event>]
-    # @return [Array<Integer>]
+    # @return [Array<String>]
     def ids_from_db(events)
       sql_builder = SQLBuilder.new.from('events').select('id')
       partition_attrs = events.map { |event| [event.stream&.context, event.stream&.stream_name, event.type] }.uniq
@@ -72,7 +80,7 @@ module PgEventstore
 
     # @param stream [PgEventstore::Stream]
     # @param events [Array<PgEventstore::Event>]
-    # @return [PgEventstore::Event]
+    # @return [Array<PgEventstore::Event>]
     def insert(stream, events)
       sql_rows_for_insert, values = prepared_statements(stream, events)
       columns = %w[id data metadata stream_revision link_id link_partition_id type context stream_name stream_id]
@@ -122,7 +130,7 @@ module PgEventstore
 
     # @param stream [PgEventstore::Stream]
     # @param options [Hash]
-    # @return [PgEventstore::EventsFilteringQuery]
+    # @return [PgEventstore::EventsFiltering]
     def events_filtering(stream, options)
       return QueryBuilders::EventsFiltering.all_stream_filtering(options) if stream.all_stream?
 

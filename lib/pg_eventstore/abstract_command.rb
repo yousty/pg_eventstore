@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class AbstractCommand
+    # @!attribute queries
+    #   @return [PgEventstore::Queries]
     attr_reader :queries
     private :queries
 
