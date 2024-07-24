@@ -1,3 +1,3 @@
 interface _SubscriptionHandler
-  def call: (PgEventstore::Event event) -> untyped
+  def call: (PgEventstore::Event event) -> void
 end
