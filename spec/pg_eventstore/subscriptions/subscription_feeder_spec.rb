@@ -415,18 +415,23 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     subject { instance.start }
 
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
+    let(:subscription_queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+
+    let(:subscription1) { SubscriptionsHelper.init_with_connection(name: 'Foo', set: set_name) }
+    let(:subscription2) { SubscriptionsHelper.init_with_connection(name: 'Bar', set: set_name) }
+
     let(:subscription_runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc { }),
-        subscription: SubscriptionsHelper.create_with_connection(name: 'Foo')
+        subscription: subscription1
       )
     end
     let(:subscription_runner2) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc { }),
-        subscription: SubscriptionsHelper.create_with_connection(name: 'Bar')
+        subscription: subscription2
       )
     end
     let(:subscription_cmd_queries) { PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection) }
@@ -448,12 +453,12 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
     it 'locks first subscription' do
       expect { subject }.to change {
-        subscription_runner1.subscription.reload.locked_by
+        subscription_queries.find_by(name: subscription1.name, set: set_name)&.dig(:locked_by)
       }.to(kind_of(Integer))
     end
     it 'locks second subscription' do
       expect { subject }.to change {
-        subscription_runner2.subscription.reload.locked_by
+        subscription_queries.find_by(name: subscription2.name, set: set_name)&.dig(:locked_by)
       }.to(kind_of(Integer))
     end
     it 'starts first Subscription runner' do
@@ -465,15 +470,37 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     it 'locks subscriptions with the related SubscriptionsSet' do
       subject
       aggregate_failures do
-        expect(subscription_runner1.subscription.reload.locked_by).to eq(queries.find_by(name: set_name)[:id])
-        expect(subscription_runner2.subscription.reload.locked_by).to eq(queries.find_by(name: set_name)[:id])
+        expect(subscription1.reload.locked_by).to eq(queries.find_by(name: set_name)[:id])
+        expect(subscription2.reload.locked_by).to eq(queries.find_by(name: set_name)[:id])
       end
     end
+
     it 'starts CommandsHandler' do
+      id = subscription_queries.create(set: set_name, name: subscription2.name)[:id]
       subscription_cmd_queries.create(
-        subscription_id: subscription_runner2.id, subscriptions_set_id: instance.id, command_name: 'Stop', data: {}
+        subscription_id: id, subscriptions_set_id: instance.id, command_name: 'Stop', data: {}
       )
       expect { subject; sleep 2 }.to change { subscription_runner2.state }.to('stopped')
+    end
+
+    context 'when second Subscription is already locked' do
+      let(:subscriptions_set_id) { queries.create(name: set_name)[:id] }
+
+      before do
+        subscription_queries.create(set: subscription2.set, name: subscription2.name, locked_by: subscriptions_set_id)
+      end
+
+      it 'raises error' do
+        expect { subject }.to raise_error(PgEventstore::SubscriptionAlreadyLockedError)
+      end
+      it 'does not leave stale SubscriptionsSet records' do
+        expect {
+          begin
+            subject
+          rescue PgEventstore::SubscriptionAlreadyLockedError
+          end
+        }.not_to change { queries.find_all(name: set_name).size }
+      end
     end
   end
 

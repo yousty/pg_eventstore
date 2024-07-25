@@ -54,6 +54,8 @@ module PgEventstore
     # _@param_ `middlewares`
     def select_middlewares: (?::Array[Symbol]? middlewares) -> ::Array[PgEventstore::Middleware]
 
+    def start: () -> PgEventstore::BasicRunner?
+
     # Returns the value of attribute config.
     attr_accessor config: PgEventstore::Config
   end

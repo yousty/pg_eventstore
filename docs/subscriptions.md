@@ -47,9 +47,23 @@ After you added all necessary subscriptions, it is time to start them:
 
 ```ruby
 subscriptions_manager.start
+# => PgEventstore::BasicRunner
 ```
 
-After calling `#start` all subscriptions are locked behind the given subscription set and can't be locked by any other subscription set. This measure is needed to prevent running the same subscription under the same subscription set using different processes/subscription managers. Such situation will lead to a malformed subscription state and will break its position, meaning the same event will be processed several times.
+After calling `#start` all subscriptions are locked behind the given subscriptions set and can't be locked by any other subscriptions set. This measure is needed to prevent running the same subscription under the same subscription set using different processes/subscription managers. Such situation will lead to a malformed subscription state and will break its position, meaning the same event will be processed several times. In real world the lock attempt may still happen. This can be common scenario when using kubernetes which rolls out new deployment before shutting down old one. In this case `#start` will return `nil`. You can use this behavior to properly handle such cases. Example:
+
+```ruby
+timeout = 20 # 20 seconds
+deadline = Time.now + timeout
+loop do
+  break if subscriptions_manager.start
+  if Time.now > deadline
+    puts "Failed to acquire subscriptions lock within #{timeout} seconds. Exiting now."
+    exit
+  end
+  sleep 2
+end
+```
 
 To "unlock" the subscription you should gracefully stop the subscription manager:
 
@@ -86,7 +100,16 @@ subscriptions_manager.subscribe(
   }
 )
 subscriptions_manager.force_lock! if ENV['FORCE_LOCK'] == 'true'
-subscriptions_manager.start
+timeout = 20 # 20 seconds
+deadline = Time.now + timeout
+loop do
+  break if subscriptions_manager.start
+  if Time.now > deadline
+    puts "Failed to acquire subscriptions lock within #{timeout} seconds. Exiting now."
+    exit
+  end
+  sleep 2
+end
 
 Kernel.trap('TERM') do
   puts "Received TERM signal. Stopping Subscriptions Manager and exiting..."

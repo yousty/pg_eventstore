@@ -30,7 +30,7 @@ module PgEventstore
     attr_reader :config
     private :config
 
-    def_delegators :@subscription_feeder, :start, :stop, :force_lock!
+    def_delegators :@subscription_feeder, :stop, :force_lock!
 
     # @param config [PgEventstore::Config]
     # @param set_name [String]
@@ -92,6 +92,14 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionsSet, nil]
     def subscriptions_set
       @subscription_feeder.read_only_subscriptions_set
+    end
+
+    # @return [PgEventstore::BasicRunner, nil]
+    def start
+      @subscription_feeder.start
+    rescue PgEventstore::SubscriptionAlreadyLockedError => e
+      PgEventstore.logger&.warn(e.message)
+      nil
     end
 
     private

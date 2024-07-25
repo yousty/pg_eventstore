@@ -113,6 +113,10 @@ module PgEventstore
       lock_all
       @runners.each(&:start)
       @commands_handler.start
+    rescue PgEventstore::SubscriptionAlreadyLockedError
+      @subscriptions_set&.delete
+      @subscriptions_set = nil
+      raise
     end
 
     # @param error [StandardError]
