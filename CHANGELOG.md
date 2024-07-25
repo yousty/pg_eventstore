@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.1.5]
+- Review the way to handle SubscriptionAlreadyLockedError error. This removes noise when attempting to lock an already locked subscription. 
+
 ## [1.1.4]
 - Add rbs signatures
 
