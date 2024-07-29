@@ -1,5 +1,31 @@
 ## [Unreleased]
 
+## [1.2.0]
+- Implement `failed_subscription_notifier` subscription hook.
+
+Now you are able to define a function that is called when subscription fails and no longer can be automatically restarted because it hit max number of retries. You can define the hook globally in the config and per subscription. Examples:
+
+```ruby
+PgEventstore.configure do |config|
+  config.failed_subscription_notifier = proc { |sub, error| puts "Subscription: #{sub.inspect}, error: #{error.inspect}" }
+end
+
+subscriptions_manager = PgEventstore.subscriptions_manager(subscription_set: 'MyApp')
+# Overrides config.failed_subscription_notifier function
+subscriptions_manager.subscribe(
+  'My Subscription 1',
+  handler: Handler.new('My Subscription 1'),
+  options: { filter: { event_types: ['Foo'] } },
+  failed_subscription_notifier: proc { |_subscription, err| p err }
+)
+# Uses config.failed_subscription_notifier function
+subscriptions_manager.subscribe(
+  'My Subscription 2',
+  handler: Handler.new('My Subscription 2'),
+  options: { filter: { event_types: ['Bar'] } }
+)
+```
+
 ## [1.1.5]
 - Review the way to handle SubscriptionAlreadyLockedError error. This removes noise when attempting to lock an already locked subscription. 
 
