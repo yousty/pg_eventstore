@@ -151,7 +151,7 @@ You will then see the output of your subscription handlers. To gracefully stop t
 
 ## Overriding Subscription config values
 
-You can override `subscription_pull_interval`, `subscription_max_retries`, `subscription_retries_interval` and `subscription_restart_terminator` config values (see [**Configuration**](configuration.md) chapter for details) for the specific subscription by providing the corresponding arguments. Example:
+You can override `subscription_pull_interval`, `subscription_max_retries`, `subscription_retries_interval`, `subscription_restart_terminator` and `failed_subscription_notifier` config values (see [**Configuration**](configuration.md) chapter for details) for the specific subscription by providing the corresponding arguments. Example:
 
 ```ruby
 subscriptions_manager.subscribe(
@@ -164,7 +164,9 @@ subscriptions_manager.subscribe(
   # overrides config.subscription_retries_interval
   retries_interval: 2,
   # overrides config.subscription_restart_terminator
-  restart_terminator: proc { |subscription| subscription.last_error['class'] == 'NoMethodError' }, 
+  restart_terminator: proc { |subscription| subscription.last_error['class'] == 'NoMethodError' },
+  # overrides config.failed_subscription_notifier
+  failed_subscription_notifier: proc { |_subscription, err| p err }
 )
 ```
 
