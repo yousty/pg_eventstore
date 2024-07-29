@@ -1,0 +1,3 @@
+interface _FailedSubscriptionNotifier
+  def call: (PgEventstore::Subscription subscription, StandardError error) -> void
+end

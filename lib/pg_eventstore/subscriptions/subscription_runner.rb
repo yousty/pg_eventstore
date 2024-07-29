@@ -29,11 +29,14 @@ module PgEventstore
     # @param events_processor [PgEventstore::EventsProcessor]
     # @param subscription [PgEventstore::Subscription]
     # @param restart_terminator [#call, nil]
-    def initialize(stats:, events_processor:, subscription:, restart_terminator: nil)
+    # @param failed_subscription_notifier [#call, nil]
+    def initialize(stats:, events_processor:, subscription:, restart_terminator: nil,
+                   failed_subscription_notifier: nil)
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
       @restart_terminator = restart_terminator
+      @failed_subscription_notifier = failed_subscription_notifier
 
       attach_callbacks
     end
@@ -119,11 +122,13 @@ module PgEventstore
       @subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: global_position)
     end
 
-    # @param _error [StandardError]
+    # @param error [StandardError]
     # @return [void]
-    def restart_subscription(_error)
+    def restart_subscription(error)
       return if @restart_terminator&.call(@subscription.dup)
-      return if @subscription.restart_count >= @subscription.max_restarts_number
+      if @subscription.restart_count >= @subscription.max_restarts_number
+        return @failed_subscription_notifier&.call(@subscription.dup, error)
+      end
 
       Thread.new do
         sleep @subscription.time_between_restarts

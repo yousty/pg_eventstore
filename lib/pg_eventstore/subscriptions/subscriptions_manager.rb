@@ -61,14 +61,19 @@ module PgEventstore
     #   given subscription.
     # @param max_retries [Integer] max number of retries of failed Subscription
     # @param retries_interval [Integer, Float] a delay between retries of failed Subscription
-    # @param restart_terminator [#call, nil] a callable object which, when called - accepts PgEventstore::Subscription
-    #   object to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
+    # @param restart_terminator [#call, nil] a callable object which is invoked with PgEventstore::Subscription instance
+    #   to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
+    # @param failed_subscription_notifier [#call, nil] a callable object which is invoked with
+    #   PgEventstore::Subscription instance and error instance after the related subscription died due to error and no
+    #   longer can be automatically restarted due to max retries number reached. You can use this hook to send a
+    #   notification about failed subscription.
     # @return [void]
     def subscribe(subscription_name, handler:, options: {}, middlewares: nil,
                   pull_interval: config.subscription_pull_interval,
                   max_retries: config.subscription_max_retries,
                   retries_interval: config.subscription_retries_interval,
-                  restart_terminator: config.subscription_restart_terminator)
+                  restart_terminator: config.subscription_restart_terminator,
+                  failed_subscription_notifier: config.failed_subscription_notifier)
       subscription = Subscription.using_connection(config.name).new(
         set: @set_name, name: subscription_name, options: options, chunk_query_interval: pull_interval,
         max_restarts_number: max_retries, time_between_restarts: retries_interval
@@ -77,7 +82,8 @@ module PgEventstore
         stats: SubscriptionHandlerPerformance.new,
         events_processor: EventsProcessor.new(create_event_handler(middlewares, handler)),
         subscription: subscription,
-        restart_terminator: restart_terminator
+        restart_terminator: restart_terminator,
+        failed_subscription_notifier: failed_subscription_notifier
       )
 
       @subscription_feeder.add(runner)

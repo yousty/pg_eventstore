@@ -48,6 +48,10 @@ module PgEventstore
     # @!attribute subscriptions_set_retries_interval
     #   @return [Integer] interval in seconds between retries of failed SubscriptionsSet
     option(:subscriptions_set_retries_interval) { 1 }
+    # @!attribute failed_subscription_notifier
+    #   @return [#call, nil] provide callable object that accepts Subscription instance and error. It is useful when you
+    #     want to be get notified when your Subscription fails and no longer can be restarted
+    option(:failed_subscription_notifier)
 
     # @param name [Symbol] config's name. Its value matches the appropriate key in PgEventstore.config hash
     def initialize(name:, **options)

@@ -270,14 +270,16 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
     let(:handler) do
       should_raise = true
+      error = self.error
       proc do |event|
         if should_raise
           should_raise = false
-          raise 'You rolled 1. Critical failure!'
+          raise error
         end
         processed_events.push(event)
       end
     end
+    let(:error) { StandardError.new('You rolled 1. Critical failure!') }
     let(:processed_events) { [] }
     let(:event) { { 'id' => SecureRandom.uuid, 'global_position' => 1 } }
     let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', time_between_restarts: 0) }
@@ -294,7 +296,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     it 'updates Subscription#last_error' do
       expect { subject }.to change {
         subscription.reload.last_error
-      }.to(a_hash_including('class' => 'RuntimeError', 'message' => 'You rolled 1. Critical failure!'))
+      }.to(a_hash_including('class' => 'StandardError', 'message' => 'You rolled 1. Critical failure!'))
     end
     it 'updates Subscription#last_error_occurred_at' do
       expect { subject }.to change {
@@ -366,6 +368,49 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             subject
             expect(instance.state).to eq('dead')
           end
+        end
+      end
+    end
+
+    context 'when failed_subscription_notifier is defined' do
+      let(:instance) do
+        PgEventstore::SubscriptionRunner.new(
+          stats: stats,
+          events_processor: events_processor,
+          subscription: subscription,
+          failed_subscription_notifier: failed_subscription_notifier
+        )
+      end
+      let(:failed_subscription_notifier) { proc { |sub, error| notifier.call(sub, error) } }
+      let(:notifier) { double('Subscription notifier') }
+
+      before do
+        allow(notifier).to receive(:call)
+      end
+
+      context 'when Subscription can be restarted' do
+        it 'restarts EventsProcessor' do
+          subject
+          expect(instance.state).to eq('running')
+        end
+        it 'does not call failed subscription notifier' do
+          subject
+          expect(notifier).not_to have_received(:call)
+        end
+      end
+
+      context 'when Subscription can no longer be restarted' do
+        before do
+          subscription.update(max_restarts_number: 0)
+        end
+
+        it 'does not restart EventsProcessor' do
+          subject
+          expect(instance.state).to eq('dead')
+        end
+        it 'calls failed subscription notifier' do
+          subject
+          expect(notifier).to have_received(:call).with(subscription, error)
         end
       end
     end

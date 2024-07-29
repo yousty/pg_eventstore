@@ -30,7 +30,9 @@ module PgEventstore
     #
     # _@param_ `retries_interval` — a delay between retries of failed Subscription
     #
-    # _@param_ `restart_terminator` — a callable object which, when called - accepts PgEventstore::Subscription object to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
+    # _@param_ `restart_terminator` — a callable object which is invoked with PgEventstore::Subscription instance to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
+    #
+    # _@param_ `failed_subscription_notifier` - a callable object which is invoked with PgEventstore::Subscription instance and error instance after the related subscription died due to error and no longer can be automatically restarted due to max retries number reached. You can use this hook to send a notification about failed subscription.
     def subscribe: (
         String subscription_name,
         handler: _SubscriptionHandler,
@@ -39,7 +41,8 @@ module PgEventstore
         ?pull_interval: Integer | Float,
         ?max_retries: Integer,
         ?retries_interval: Integer | Float,
-        ?restart_terminator: _RestartTerminator?
+        ?restart_terminator: _RestartTerminator?,
+        ?failed_subscription_notifier: _FailedSubscriptionNotifier?
       ) -> void
 
     def subscriptions: () -> ::Array[PgEventstore::Subscription]

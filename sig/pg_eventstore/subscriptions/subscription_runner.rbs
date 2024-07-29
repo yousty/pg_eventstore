@@ -12,11 +12,14 @@ module PgEventstore
     # _@param_ `subscription`
     #
     # _@param_ `restart_terminator`
+    #
+    # _@param_ `failed_subscription_notifier`
     def initialize: (
         stats: PgEventstore::SubscriptionHandlerPerformance,
         events_processor: PgEventstore::EventsProcessor,
         subscription: PgEventstore::Subscription,
-        ?restart_terminator: _RestartTerminator?
+        ?restart_terminator: _RestartTerminator?,
+        ?failed_subscription_notifier: _FailedSubscriptionNotifier?
       ) -> void
 
     def next_chunk_query_opts: () -> ::Hash[untyped, untyped]
@@ -47,7 +50,7 @@ module PgEventstore
     def update_subscription_chunk_stats: (Integer global_position) -> void
 
     # _@param_ `_error`
-    def restart_subscription: (StandardError _error) -> void
+    def restart_subscription: (StandardError error) -> void
 
     # Returns the value of attribute subscription.
     attr_accessor subscription: PgEventstore::Subscription
