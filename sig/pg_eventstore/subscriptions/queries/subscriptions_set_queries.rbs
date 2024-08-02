@@ -11,6 +11,8 @@ module PgEventstore
     # The same as #find_all, but returns first result
     def find_by: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]?
 
+    def find_all_by_subscription_state: (name: String?, state: String) -> ::Array[::Hash[untyped, untyped]]
+
     # _@param_ `id`
     def find!: (Integer id) -> ::Hash[untyped, untyped]
 

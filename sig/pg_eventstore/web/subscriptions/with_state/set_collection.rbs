@@ -1,0 +1,21 @@
+module PgEventstore
+  module Web
+    module Subscriptions
+      module WithState
+        class SetCollection
+          @state: String
+
+          attr_reader connection: PgEventstore::Connection
+
+          def initialize: (PgEventstore::Connection connection, state: String) -> void
+          
+          def names: -> Array[String]
+
+          private
+
+          def subscription_queries: -> PgEventstore::SubscriptionQueries
+        end
+      end
+    end
+  end
+end

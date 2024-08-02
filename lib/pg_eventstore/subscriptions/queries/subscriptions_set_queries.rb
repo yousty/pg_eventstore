@@ -27,6 +27,21 @@ module PgEventstore
       pg_result.to_a.map(&method(:deserialize))
     end
 
+    # @param name [String, nil]
+    # @param state [String]
+    # @return [Array<Hash>]
+    def find_all_by_subscription_state(name:, state:)
+      builder = SQLBuilder.new.select('subscriptions_set.*').from('subscriptions_set')
+      builder.join('JOIN subscriptions ON subscriptions.locked_by = subscriptions_set.id')
+      builder.order('subscriptions_set.name ASC, subscriptions_set.id ASC')
+      builder.where('subscriptions_set.name = ? and subscriptions.state = ?', name, state)
+      builder.group('subscriptions_set.id')
+      pg_result = connection.with do |conn|
+        conn.exec_params(*builder.to_exec_params)
+      end
+      pg_result.to_a.map(&method(:deserialize))
+    end
+
     # @return [Array<String>]
     def set_names
       builder = SQLBuilder.new.select('name').from('subscriptions_set').group('name').order('name ASC')

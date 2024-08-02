@@ -5,6 +5,10 @@ module PgEventstore
         # _@param_ `set_name`
         def subscriptions_url: (?set_name: String?) -> String
 
+        def subscriptions_state_url: (state: String, **untyped params) -> String
+
+        def subscriptions_state: -> String?
+
         # _@param_ `set_id`
         #
         # _@param_ `id`

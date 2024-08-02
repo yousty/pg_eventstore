@@ -4,6 +4,18 @@
       <div class="title_left">
         <h3>Subscriptions</h3>
       </div>
+      <div class="title_right">
+        <div class="col-md-5 col-sm-5 form-group pull-right top_search">
+          <div class="input-group">
+            <select class="form-control" id="subscriptions-state" autocomplete="off">
+              <option value="" data-url="<%= subscriptions_url %>" <% unless subscriptions_state %> selected <% end %>>All</option>
+              <% PgEventstore::RunnerState::STATES.values.each do |state| %>
+                <option value="<%= state %>" <% if state == subscriptions_state %> selected <% end %> data-url="<%= subscriptions_state_url(state: state) %>"><%= state.capitalize %></option>
+              <% end %>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="clearfix"></div>
@@ -11,7 +23,7 @@
     <ul class="nav nav-tabs bg-white">
       <% @set_collection.names.each do |set_name| %>
         <li class="nav-item">
-          <a class="nav-link <%= "active bg-dark text-white" if @current_set == set_name %>" href="<%= subscriptions_url(set_name: set_name) %>">
+          <a class="nav-link <%= "active bg-dark text-white" if @current_set == set_name %>" href="<%= subscriptions_state ? subscriptions_state_url(state: subscriptions_state, set_name: set_name) : subscriptions_url(set_name: set_name) %>">
             <%= set_name %>
           </a>
         </li>

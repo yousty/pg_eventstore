@@ -1,0 +1,23 @@
+module PgEventstore
+  module Web
+    module Subscriptions
+      module WithState
+        class SubscriptionsSet
+          @current_set: String?
+
+          @state: String
+
+          attr_reader connection: PgEventstore::Connection
+
+          def initialize: (PgEventstore::Connection connection, String? current_set, state: String) -> untyped
+
+          def subscriptions_set: -> Array[PgEventstore::SubscriptionsSet]
+
+          private
+
+          def subscriptions_set_queries: -> PgEventstore::SubscriptionsSetQueries
+        end
+      end
+    end
+  end
+end

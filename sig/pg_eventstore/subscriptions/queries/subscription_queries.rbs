@@ -12,7 +12,7 @@ module PgEventstore
     # _@param_ `attrs`
     def find_all: (::Hash[untyped, untyped] attrs) -> ::Array[::Hash[untyped, untyped]]
 
-    def set_collection: () -> ::Array[String]
+    def set_collection: (?String? state) -> ::Array[String]
 
     # _@param_ `id`
     def find!: (Integer id) -> ::Hash[untyped, untyped]

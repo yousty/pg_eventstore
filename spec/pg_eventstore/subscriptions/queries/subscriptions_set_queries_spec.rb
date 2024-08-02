@@ -22,6 +22,45 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     end
   end
 
+  describe '#find_all_by_subscription_state' do
+    subject { instance.find_all_by_subscription_state(name: name, state: state) }
+
+    let(:name) { 'BarCtx' }
+    let(:state) { 'running' }
+
+    let!(:subscriptions_set1) { SubscriptionsSetHelper.create(name: name) }
+
+    context 'when SubscriptionsSet with the given name does not have subscriptions' do
+      it { is_expected.to eq([]) }
+    end
+
+    context 'when SubscriptionsSet with the given name have subscriptions with another state' do
+      let!(:subscription1) do
+        SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: 'stopped', name: 'Sub1')
+      end
+      let!(:subscription2) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: 'dead', name: 'Sub2') }
+
+      it { is_expected.to eq([]) }
+    end
+
+    context 'when SubscriptionsSet with the given name have subscriptions with the given state' do
+      let!(:subscription1) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: state, name: 'Sub1') }
+      let!(:subscription2) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: state, name: 'Sub2') }
+
+      it { is_expected.to eq([subscriptions_set1.options_hash]) }
+    end
+
+    context 'when another SubscriptionsSet with the same name with suitable subscriptions exists' do
+      let!(:subscriptions_set2) { SubscriptionsSetHelper.create(name: name) }
+
+      let!(:subscription1) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: state, name: 'Sub1') }
+      let!(:subscription2) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: state, name: 'Sub2') }
+      let!(:subscription3) { SubscriptionsHelper.create(locked_by: subscriptions_set2.id, state: state, name: 'Sub3') }
+
+      it { is_expected.to match_array([subscriptions_set1.options_hash, subscriptions_set2.options_hash]) }
+    end
+  end
+
   describe '#set_names' do
     subject { instance.set_names }
 

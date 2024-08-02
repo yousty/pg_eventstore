@@ -45,10 +45,13 @@ module PgEventstore
       pg_result.map(&method(:deserialize))
     end
 
+    # @param state [String, nil]
     # @return [Array<String>]
-    def set_collection
+    def set_collection(state = nil)
+      builder = SQLBuilder.new.from('subscriptions').select('set').group('set').order('set ASC')
+      builder.where('state = ?', state) if state
       connection.with do |conn|
-        conn.exec('SELECT set FROM subscriptions GROUP BY set ORDER BY set ASC')
+        conn.exec_params(*builder.to_exec_params)
       end.map { |attrs| attrs['set'] }
     end
 

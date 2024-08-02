@@ -13,6 +13,21 @@ module PgEventstore
           url("/subscriptions?#{encoded_params}")
         end
 
+        # @param state [String]
+        # @return [String]
+        def subscriptions_state_url(state:, **params)
+          params = params.compact
+          return url("/subscriptions/#{state}") if params.empty?
+
+          encoded_params = Rack::Utils.build_nested_query(params)
+          url("/subscriptions/#{state}?#{encoded_params}")
+        end
+
+        # @return [String, nil]
+        def subscriptions_state
+          params[:state] if PgEventstore::RunnerState::STATES.include?(params[:state])
+        end
+
         # @param set_id [Integer]
         # @param id [Integer]
         # @param cmd [String]

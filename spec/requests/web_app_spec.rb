@@ -394,7 +394,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     let!(:set1) { SubscriptionsSetHelper.create(name: 'FooSet') }
     let!(:set2) { SubscriptionsSetHelper.create_with_connection(name: 'BarSet') }
 
-    let!(:subscription1) { SubscriptionsHelper.create(locked_by: set2.id, set: set1.name, name: 'Sub1') }
+    let!(:subscription1) { SubscriptionsHelper.create(locked_by: set1.id, set: set1.name, name: 'Sub1') }
     let!(:subscription2) do
       SubscriptionsHelper.create_with_connection(locked_by: set2.id, set: set2.name, name: 'Sub2')
     end
@@ -402,7 +402,17 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     context 'when no specific set is given' do
       it 'displays subscriptions of first set which goes in alphabetic order' do
         subject
-        expect(last_response.body).to include(subscription2.name)
+        aggregate_failures do
+          expect(last_response.body).not_to include(subscription1.name)
+          expect(last_response.body).to include(subscription2.name)
+        end
+      end
+      it 'displays all sets' do
+        subject
+        aggregate_failures do
+          expect(last_response.body).to include(set1.name)
+          expect(last_response.body).to include(set2.name)
+        end
       end
 
       context 'when subscription is not locked' do
@@ -501,6 +511,36 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
           expect(last_response.body).to include(subscription2.name)
           expect(delete_btn).not_to be_nil, "Delete button must be present"
         end
+      end
+    end
+  end
+
+  describe 'GET /subscriptions/:state' do
+    subject { get "/subscriptions/#{state}", params }
+
+    let(:params) { {} }
+    let(:state) { 'running' }
+
+    let!(:set1) { SubscriptionsSetHelper.create(name: 'FooSet') }
+    let!(:set2) { SubscriptionsSetHelper.create(name: 'BarSet') }
+
+    let!(:subscription1) { SubscriptionsHelper.create(locked_by: set2.id, set: set1.name, name: 'Sub1') }
+    let!(:subscription2) do
+      SubscriptionsHelper.create(locked_by: set2.id, set: set2.name, name: 'Sub2', state: state)
+    end
+
+    it 'displays subscriptions with the given state only' do
+      subject
+      aggregate_failures do
+        expect(last_response.body).not_to include(subscription1.name)
+        expect(last_response.body).to include(subscription2.name)
+      end
+    end
+    it 'it displays sets which relates to the subscriptions with the given state' do
+      subject
+      aggregate_failures do
+        expect(last_response.body).not_to include(set1.name)
+        expect(last_response.body).to include(set2.name)
       end
     end
   end

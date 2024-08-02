@@ -44,12 +44,20 @@ RSpec.describe PgEventstore::SubscriptionQueries do
   describe '#set_collection' do
     subject { instance.set_collection }
 
-    let!(:subscription1) { SubscriptionsHelper.create(set: 'FooSet', name: 'Foo') }
-    let!(:subscription2) { SubscriptionsHelper.create(set: 'BarSet', name: 'Bar') }
-    let!(:subscription3) { SubscriptionsHelper.create(set: 'FooSet', name: 'Baz') }
+    let!(:subscription1) { SubscriptionsHelper.create(set: 'FooSet', name: 'Foo', state: 'running') }
+    let!(:subscription2) { SubscriptionsHelper.create(set: 'BarSet', name: 'Bar', state: 'stopped') }
+    let!(:subscription3) { SubscriptionsHelper.create(set: 'FooSet', name: 'Baz', state: 'dead') }
 
     it 'returns all set names' do
       is_expected.to eq(['BarSet', 'FooSet'])
+    end
+
+    context 'when state is provided' do
+      subject { instance.set_collection('stopped') }
+
+      it 'returns set names of subscriptions with the given state' do
+        is_expected.to eq(['BarSet'])
+      end
     end
   end
 

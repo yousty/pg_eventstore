@@ -102,6 +102,22 @@ module PgEventstore
         erb :'subscriptions/index'
       end
 
+      get '/subscriptions/:state' do
+        @set_collection = Subscriptions::WithState::SetCollection.new(connection, state: params[:state])
+        @current_set = params[:set_name] || @set_collection.names.first
+        subscriptions_set = Subscriptions::WithState::SubscriptionsSet.new(
+          connection, @current_set, state: params[:state]
+        ).subscriptions_set
+        subscriptions = Subscriptions::WithState::Subscriptions.new(
+          connection, @current_set, state: params[:state]
+        ).subscriptions
+        @association = Subscriptions::SubscriptionsToSetAssociation.new(
+          subscriptions_set: subscriptions_set,
+          subscriptions: subscriptions
+        )
+        erb :'subscriptions/index'
+      end
+
       post '/change_config' do
         config = params[:config]&.to_sym
         config = :default unless PgEventstore.available_configs.include?(config)
