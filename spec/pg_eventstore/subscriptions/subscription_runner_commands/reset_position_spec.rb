@@ -48,7 +48,9 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
     let(:position) { 123 }
     let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
     let(:events_processor) { PgEventstore::EventsProcessor.new(handler) }
-    let(:subscription) { SubscriptionsHelper.create_with_connection(last_chunk_greatest_position: 321) }
+    let(:subscription) do
+      SubscriptionsHelper.create_with_connection(last_chunk_greatest_position: 321, total_processed_events: 120)
+    end
     let(:handler) { proc {} }
 
     before do
@@ -64,6 +66,9 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
     end
     it "resets subscription#last_chunk_greatest_position" do
       expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(nil)
+    end
+    it "resets subscription#total_processed_events" do
+      expect { subject }.to change { subscription.reload.total_processed_events }.to(0)
     end
     it "resets current runner's chunk" do
       expect { subject }.to change { events_processor.events_left_in_chunk }.from(1).to(0)
