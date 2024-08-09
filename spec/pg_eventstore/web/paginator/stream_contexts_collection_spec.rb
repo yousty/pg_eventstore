@@ -69,6 +69,14 @@ RSpec.describe PgEventstore::Web::Paginator::StreamContextsCollection do
           is_expected.to eq([{ 'context' => 'FazCtx' }, { 'context' => 'FokCtx' }])
         end
       end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:options) { { query: 'zCtx' } }
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq([{ 'context' => 'BazCtx' }, { 'context' => 'FazCtx' }])
+        end
+      end
     end
 
     context 'when starting_id and query option are provided' do
@@ -153,6 +161,14 @@ RSpec.describe PgEventstore::Web::Paginator::StreamContextsCollection do
 
         it { is_expected.to eq(nil) }
       end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:options) { { query: 'a' } }
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq('FazCtx')
+        end
+      end
     end
 
     context 'when starting_id and query option are provided' do
@@ -176,6 +192,15 @@ RSpec.describe PgEventstore::Web::Paginator::StreamContextsCollection do
         let(:starting_id) { 'FokCtx' }
 
         it { is_expected.to eq(nil) }
+      end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:starting_id) { 'BarCtx' }
+        let(:options) { { query: 'a' } }
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq('FazCtx')
+        end
       end
     end
   end

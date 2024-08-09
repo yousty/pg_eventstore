@@ -67,6 +67,14 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
           is_expected.to eq([{ 'event_type' => 'faz' }, { 'event_type' => 'fok' }])
         end
       end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:options) { { query: 'az' } }
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq([{ 'event_type' => 'baz' }, { 'event_type' => 'faz' }])
+        end
+      end
     end
 
     context 'when starting_id and query option is provided' do
@@ -149,6 +157,14 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
 
         it { is_expected.to eq(nil) }
       end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:options) { { query: 'a' } }
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq('faz')
+        end
+      end
     end
 
     context 'when starting_id and query option are provided' do
@@ -172,6 +188,25 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
         let(:starting_id) { 'fok' }
 
         it { is_expected.to eq(nil) }
+      end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:starting_id) { 'bar' }
+        let(:options) { { query: 'a' } }
+
+        let!(:events) do
+          events = [
+            PgEventstore::Event.new(type: 'faz'),
+            PgEventstore::Event.new(type: 'bar'),
+            PgEventstore::Event.new(type: 'baz'),
+            PgEventstore::Event.new(type: 'baf'),
+          ]
+          PgEventstore.client.append_to_stream(stream, events)
+        end
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq('faz')
+        end
       end
     end
   end

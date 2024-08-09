@@ -81,6 +81,14 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
           is_expected.to eq([{ 'stream_name' => 'Faz' }, { 'stream_name' => 'Fok' }])
         end
       end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:options) { super().merge(query: 'az') }
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq([{ 'stream_name' => 'Baz' }, { 'stream_name' => 'Faz' }])
+        end
+      end
     end
 
     context 'when starting_id and query option are provided' do
@@ -104,18 +112,20 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
   describe '#next_page_starting_id' do
     subject { instance.next_page_starting_id }
 
-    let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
-    let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fok', stream_id: '1') }
-    let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Faz', stream_id: '1') }
-    let(:stream4) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
-    let(:stream5) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1') }
+    let(:streams) do
+      [
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fok', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Faz', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1')
+      ]
+    end
 
     before do
-      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream5, PgEventstore::Event.new)
+      streams.each do |stream|
+        PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
+      end
     end
 
     it 'returns starting id of next page' do
@@ -177,6 +187,14 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
 
         it { is_expected.to eq(nil) }
       end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:options) { super().merge(query: 'a') }
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq('Faz')
+        end
+      end
     end
 
     context 'when starting_id and query option are provided' do
@@ -200,6 +218,24 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
         let(:starting_id) { 'Fok' }
 
         it { is_expected.to eq(nil) }
+      end
+
+      context 'when query matches a substring in the middle of the word' do
+        let(:options) { super().merge(query: 'a') }
+        let(:starting_id) { 'Bar' }
+
+        let(:streams) do
+          [
+            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baf', stream_id: '1'),
+            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Faz', stream_id: '1'),
+            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1'),
+            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1')
+          ]
+        end
+
+        it 'recognizes results with the given substring' do
+          is_expected.to eq('Faz')
+        end
       end
     end
   end
