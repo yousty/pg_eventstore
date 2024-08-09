@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [1.3.0]
+- Add ability to filter subscriptions by state in admin UI
+- Reset error-related subscription's attributes on subscription restore
+- Reset total processed events number when user changes subscription's position
+- Allow to search event type, stream context and stream name by substring in web UI
+- Relax sinatra version requirement to v3+
+
 ## [1.2.0]
 - Implement `failed_subscription_notifier` subscription hook.
 
