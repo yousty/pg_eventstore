@@ -37,5 +37,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "pg", "~> 1.5"
   spec.add_dependency "connection_pool", "~> 2.4"
-  spec.add_dependency "sinatra", "~> 4.0"
+  spec.add_dependency "sinatra", ">= 3", '< 5'
 end
