@@ -25,7 +25,7 @@ module PgEventstore
 
         # @return [String, nil]
         def subscriptions_state
-          params[:state] if PgEventstore::RunnerState::STATES.include?(params[:state])
+          params[:state] if PgEventstore::RunnerState::STATES.values.include?(params[:state])
         end
 
         # @param set_id [Integer]
