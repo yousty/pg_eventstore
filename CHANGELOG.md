@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.3.2]
+- Fix UI when switching subscription status
+
 ## [1.3.1]
 - Swap "Search" button and "Add filter" button on Dashboard page
 
