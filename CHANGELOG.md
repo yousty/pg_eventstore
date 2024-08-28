@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.3.1]
+- Swap "Search" button and "Add filter" button on Dashboard page
+
 ## [1.3.0]
 - Add ability to filter subscriptions by state in admin UI
 - Reset error-related subscription's attributes on subscription restore
