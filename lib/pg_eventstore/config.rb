@@ -34,7 +34,7 @@ module PgEventstore
     option(:subscription_pull_interval) { 1.0 }
     # @!attribute subscription_max_retries
     #   @return [Integer] max number of retries of failed Subscription
-    option(:subscription_max_retries) { 100 }
+    option(:subscription_max_retries) { 5 }
     # @!attribute subscription_retries_interval
     #   @return [Integer] interval in seconds between retries of failed Subscription
     option(:subscription_retries_interval) { 1 }
