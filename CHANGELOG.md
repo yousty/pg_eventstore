@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.3.3]
+- Adjust default value of `subscription_max_retries` setting
+
 ## [1.3.2]
 - Fix UI when switching subscription status
 
