@@ -6,6 +6,112 @@ module PgEventstore
   class SubscriptionFeeder
     extend Forwardable
 
+    class RunnersToSetAssociation
+      attr_reader :runners
+
+      def initialize(config_name, subscriptions_set_attrs)
+        @config_name = config_name
+        @subscriptions_set_attrs = subscriptions_set_attrs
+        @runners = []
+        @subscriptions_set = nil
+        @subscriptions_pinged_at = Time.at(0)
+        @force_lock = false
+      end
+
+      # Locks all Subscriptions behind the current SubscriptionsSet
+      # @return [void]
+      def lock_all
+        @runners.each { |runner| runner.lock!(subscriptions_set.id, force: @force_lock) }
+      rescue PgEventstore::SubscriptionAlreadyLockedError
+        @subscriptions_set&.delete
+        @subscriptions_set = nil
+        raise
+      end
+
+      # @return [void]
+      def ping_subscriptions
+        return if @subscriptions_pinged_at > Time.now.utc - SubscriptionFeeder::HEARTBEAT_INTERVAL
+
+        runners = @runners.select do |runner|
+          next false unless runner.running?
+
+          runner.subscription.updated_at < Time.now.utc - SubscriptionFeeder::HEARTBEAT_INTERVAL
+        end
+        unless runners.empty?
+          Subscription.using_connection(@config_name).ping_all(subscriptions_set.id, runners.map(&:subscription))
+        end
+
+        @subscriptions_pinged_at = Time.now.utc
+      end
+
+      def start_runners
+        @runners.each(&:start)
+      end
+
+      def stop_runners
+        @runners.each(&:stop_async)
+      end
+
+      # @return [PgEventstore::SubscriptionsSet]
+      def subscriptions_set
+        @subscriptions_set ||= SubscriptionsSet.using_connection(@config_name).create(**@subscriptions_set_attrs)
+      end
+
+      # Sets the force_lock flash to true. If set - all related Subscriptions will ignore their lock state and will be
+      # locked by the new SubscriptionsSet.
+      # @return [void]
+      def force_lock!
+        @force_lock = true
+      end
+    end
+
+    class Callbacks
+      class << self
+        def update_subscriptions_set_state(association, state, *)
+          association.subscriptions_set.update(state: state)
+        end
+
+        def lock_subscriptions(association, *)
+          association.lock_all
+        end
+
+        def start_runners(association, *)
+          association.start_runners
+        end
+
+        def start_cmds_handler(cmds_handler, *)
+          cmds_handler.start
+        end
+
+        def persist_error_info(association, error, *)
+          association.subscriptions_set.update(last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc)
+        end
+
+        def restart_runner(association, basic_runner, *)
+          return if association.subscriptions_set.restart_count >= association.subscriptions_set.max_restarts_number
+
+          Thread.new do
+            sleep association.subscriptions_set.time_between_restarts
+            basic_runner.restore
+          end
+        end
+
+        def ping_subscriptions_set(association, *)
+          return if association.subscriptions_set.updated_at > Time.now.utc - RunnersToSetAssociation::HEARTBEAT_INTERVAL
+
+          association.subscriptions_set.update(updated_at: Time.now.utc)
+        end
+
+        def feed_runners(association, config_name, *)
+          SubscriptionRunnersFeeder.new(config_name).feed(association.runners)
+        end
+
+        def ping_subscriptions(association, *)
+          association.ping_subscriptions
+        end
+      end
+    end
+
     # @return [Integer] number of seconds between heartbeat updates
     HEARTBEAT_INTERVAL = 10 # seconds
 
@@ -19,13 +125,12 @@ module PgEventstore
     def initialize(config_name:, set_name:, max_retries:, retries_interval:)
       @config_name = config_name
       @runners = []
-      @subscriptions_set_attrs = {
-        name: set_name, max_restarts_number: max_retries, time_between_restarts: retries_interval
-      }
       @commands_handler = CommandsHandler.new(@config_name, self, @runners)
       @basic_runner = BasicRunner.new(0.2, 0)
-      @force_lock = false
-      @subscriptions_pinged_at = Time.at(0)
+      @association = RunnersToSetAssociation.new(
+        config_name,
+        { name: set_name, max_restarts_number: max_retries, time_between_restarts: retries_interval }
+      )
       attach_runner_callbacks
     end
 
@@ -56,13 +161,6 @@ module PgEventstore
       self
     end
 
-    # Sets the force_lock flash to true. If set - all related Subscriptions will ignore their lock state and will be
-    # locked by the new SubscriptionsSet.
-    # @return [void]
-    def force_lock!
-      @force_lock = true
-    end
-
     # Produces a copy of currently running Subscriptions. This is needed, because original Subscriptions objects are
     # dangerous to use - users may incidentally break their state.
     # @return [Array<PgEventstore::Subscription>]
@@ -79,94 +177,46 @@ module PgEventstore
 
     private
 
-    # Locks all Subscriptions behind the current SubscriptionsSet
-    # @return [void]
-    def lock_all
-      @runners.each { |runner| runner.lock!(subscriptions_set.id, force: @force_lock) }
-    end
-
-    # @return [PgEventstore::SubscriptionsSet]
-    def subscriptions_set
-      @subscriptions_set ||= SubscriptionsSet.using_connection(@config_name).create(**@subscriptions_set_attrs)
-    end
-
-    # @return [PgEventstore::SubscriptionRunnersFeeder]
-    def feeder
-      SubscriptionRunnersFeeder.new(@config_name)
-    end
-
     # @return [void]
     def attach_runner_callbacks
-      @basic_runner.define_callback(:change_state, :after, method(:update_subscriptions_set_state))
-      @basic_runner.define_callback(:before_runner_started, :before, method(:before_runner_started))
-      @basic_runner.define_callback(:after_runner_died, :before, method(:after_runner_died))
-      @basic_runner.define_callback(:after_runner_died, :after, method(:restart_runner))
-      @basic_runner.define_callback(:process_async, :before, method(:ping_subscriptions_set))
-      @basic_runner.define_callback(:process_async, :before, method(:process_async))
-      @basic_runner.define_callback(:process_async, :after, method(:ping_subscriptions))
+      @basic_runner.define_callback(
+        :change_state, :after, Callbacks.method(:update_subscriptions_set_state).curry(3).call(@association)
+      )
+
+      @basic_runner.define_callback(
+        :before_runner_started, :before, Callbacks.method(:lock_subscriptions).curry(2).call(@association)
+      )
+      @basic_runner.define_callback(
+        :before_runner_started, :before, Callbacks.method(:start_runners).curry(2).call(@association)
+      )
+      @basic_runner.define_callback(
+        :before_runner_started, :before, Callbacks.method(:start_cmds_handler).curry(2).call(@commands_handler)
+      )
+
+      @basic_runner.define_callback(
+        :after_runner_died, :before, Callbacks.method(:persist_error_info).curry(3).call(@association)
+      )
+      @basic_runner.define_callback(
+        :after_runner_died, :before, Callbacks.method(:restart_runner).curry(3).call(@association, @basic_runner)
+      )
+
+      @basic_runner.define_callback(
+        :process_async, :before, Callbacks.method(:ping_subscriptions_set).curry(2).call(@association)
+      )
+      @basic_runner.define_callback(
+        :process_async, :before, Callbacks.method(:feed_runners).curry(3).call(@association, @config_name)
+      )
+      @basic_runner.define_callback(
+        :process_async, :after, Callbacks.method(:ping_subscriptions).curry(2).call(@association)
+      )
+
       @basic_runner.define_callback(:after_runner_stopped, :before, method(:after_runner_stopped))
       @basic_runner.define_callback(:before_runner_restored, :after, method(:update_runner_restarts))
     end
 
     # @return [void]
-    def before_runner_started
-      lock_all
-      @runners.each(&:start)
-      @commands_handler.start
-    rescue PgEventstore::SubscriptionAlreadyLockedError
-      @subscriptions_set&.delete
-      @subscriptions_set = nil
-      raise
-    end
-
-    # @param error [StandardError]
-    # @return [void]
-    def after_runner_died(error)
-      subscriptions_set.update(last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc)
-    end
-
-    # @param _error [StandardError]
-    # @return [void]
-    def restart_runner(_error)
-      return if subscriptions_set.restart_count >= subscriptions_set.max_restarts_number
-
-      Thread.new do
-        sleep subscriptions_set.time_between_restarts
-        restore
-      end
-    end
-
-    # @return [void]
     def update_runner_restarts
       subscriptions_set.update(last_restarted_at: Time.now.utc, restart_count: subscriptions_set.restart_count + 1)
-    end
-
-    # @return [void]
-    def process_async
-      feeder.feed(@runners)
-    end
-
-    # @return [void]
-    def ping_subscriptions_set
-      return if subscriptions_set.updated_at > Time.now.utc - HEARTBEAT_INTERVAL
-
-      subscriptions_set.update(updated_at: Time.now.utc)
-    end
-
-    # @return [void]
-    def ping_subscriptions
-      return if @subscriptions_pinged_at > Time.now.utc - HEARTBEAT_INTERVAL
-
-      runners = @runners.select do |runner|
-        next false unless runner.running?
-
-        runner.subscription.updated_at < Time.now.utc - HEARTBEAT_INTERVAL
-      end
-      unless runners.empty?
-        Subscription.using_connection(@config_name).ping_all(subscriptions_set.id, runners.map(&:subscription))
-      end
-
-      @subscriptions_pinged_at = Time.now.utc
     end
 
     # @return [void]
