@@ -6,30 +6,23 @@ module PgEventstore
     class RegularStreamReadPaginated < AbstractCommand
       # @see PgEventstore::Commands::Read for docs
       def call(stream, options: {})
-        revision = calc_initial_revision(stream, options)
         Enumerator.new do |yielder|
+          next_revision = nil
           loop do
-            events = read_cmd.call(stream, options: options.merge(from_revision: revision))
+            options = options.merge(from_revision: next_revision) if next_revision
+            events = read_cmd.call(stream, options: options)
             yielder << events if events.any?
-            raise StopIteration if end_reached?(events, options[:max_count])
+            if end_reached?(events, options[:max_count] || QueryBuilders::EventsFiltering::DEFAULT_LIMIT)
+              raise StopIteration
+            end
 
-            revision = calc_next_revision(events, revision, options[:direction])
-            raise StopIteration if revision.negative?
+            next_revision = calc_next_revision(events, options[:direction])
+            raise StopIteration if next_revision.negative?
           end
         end
       end
 
       private
-
-      # @param stream [PgEventstore::Stream]
-      # @param options [Hash]
-      # @return [Integer]
-      def calc_initial_revision(stream, options)
-        return options[:from_revision] if options[:from_revision]
-        return 0 if forwards?(options[:direction])
-
-        read_cmd.call(stream, options: options.merge(max_count: 1)).first.stream_revision
-      end
 
       # @param events [Array<PgEventstore::Event>]
       # @param max_count [Integer]
@@ -39,13 +32,12 @@ module PgEventstore
       end
 
       # @param events [Array<PgEventstore::Event>]
-      # @param revision [Integer]
       # @param direction [String, Symbol, nil]
       # @return [Integer]
-      def calc_next_revision(events, revision, direction)
-        return revision + events.size if forwards?(direction)
+      def calc_next_revision(events, direction)
+        return events.last.stream_revision + 1 if forwards?(direction)
 
-        revision - events.size
+        events.last.stream_revision - 1
       end
 
       # @param direction [String, Symbol, nil]

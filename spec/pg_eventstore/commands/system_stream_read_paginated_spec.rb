@@ -71,49 +71,59 @@ RSpec.describe PgEventstore::Commands::SystemStreamReadPaginated do
 
     it { is_expected.to be_a(Enumerator) }
 
-    context 'when :direction is "Forwards"' do
-      it 'returns events in the correct order' do
-        aggregate_failures do
-          expect(subject.next.map(&:id)).to eq([event1.id, event2.id])
-          expect(subject.next.map(&:id)).to eq([event4.id])
-          expect { subject.next }.to raise_error(StopIteration)
+    context 'when there are events matching a filter' do
+      context 'when :direction is "Forwards"' do
+        it 'returns events in the correct order' do
+          aggregate_failures do
+            expect(subject.next.map(&:id)).to eq([event1.id, event2.id])
+            expect(subject.next.map(&:id)).to eq([event4.id])
+            expect { subject.next }.to raise_error(StopIteration)
+          end
+        end
+        it_behaves_like 'fast execution'
+
+        context 'when :from_position option is given' do
+          let(:options) { super().merge(from_position: PgEventstore.client.read(stream1).last.global_position) }
+
+          it 'returns events starting from the given revision' do
+            aggregate_failures do
+              expect(subject.next.map(&:id)).to eq([event2.id, event4.id])
+              expect { subject.next }.to raise_error(StopIteration)
+            end
+          end
         end
       end
-      it_behaves_like 'fast execution'
 
-      context 'when :from_position option is given' do
-        let(:options) { super().merge(from_position: PgEventstore.client.read(stream1).last.global_position) }
+      context 'when :direction options is "Backwards"' do
+        let(:options) { super().merge(direction: 'Backwards') }
 
-        it 'returns events starting from the given revision' do
+        it 'returns events in the correct order' do
           aggregate_failures do
-            expect(subject.next.map(&:id)).to eq([event2.id, event4.id])
+            expect(subject.next.map(&:id)).to eq([event4.id, event2.id])
+            expect(subject.next.map(&:id)).to eq([event1.id])
             expect { subject.next }.to raise_error(StopIteration)
+          end
+        end
+        it_behaves_like 'fast execution'
+
+        context 'when :from_position option is given' do
+          let(:options) { super().merge(from_position: PgEventstore.client.read(stream1).last.global_position) }
+
+          it 'returns events starting from the given revision' do
+            aggregate_failures do
+              expect(subject.next.map(&:id)).to eq([event2.id, event1.id])
+              expect { subject.next }.to raise_error(StopIteration)
+            end
           end
         end
       end
     end
 
-    context 'when :direction options is "Backwards"' do
-      let(:options) { super().merge(direction: 'Backwards') }
+    context 'when there are no events matching the filter' do
+      let(:options) { { filter: { streams: [{ context: 'NonExistingCtx' }] } } }
 
-      it 'returns events in the correct order' do
-        aggregate_failures do
-          expect(subject.next.map(&:id)).to eq([event4.id, event2.id])
-          expect(subject.next.map(&:id)).to eq([event1.id])
-          expect { subject.next }.to raise_error(StopIteration)
-        end
-      end
-      it_behaves_like 'fast execution'
-
-      context 'when :from_position option is given' do
-        let(:options) { super().merge(from_position: PgEventstore.client.read(stream1).last.global_position) }
-
-        it 'returns events starting from the given revision' do
-          aggregate_failures do
-            expect(subject.next.map(&:id)).to eq([event2.id, event1.id])
-            expect { subject.next }.to raise_error(StopIteration)
-          end
-        end
+      it 'returns an empty array' do
+        expect(subject.to_a).to eq([])
       end
     end
   end

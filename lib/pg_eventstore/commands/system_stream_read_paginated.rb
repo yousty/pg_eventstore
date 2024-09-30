@@ -6,30 +6,23 @@ module PgEventstore
     class SystemStreamReadPaginated < AbstractCommand
       # @see PgEventstore::Commands::Read for docs
       def call(stream, options: {})
-        position = calc_initial_position(stream, options)
         Enumerator.new do |yielder|
+          next_position = nil
           loop do
-            events = read_cmd.call(stream, options: options.merge(from_position: position))
+            options = options.merge(from_position: next_position) if next_position
+            events = read_cmd.call(stream, options: options)
             yielder << events if events.any?
-            raise StopIteration if end_reached?(events, options[:max_count])
+            if end_reached?(events, options[:max_count] || QueryBuilders::EventsFiltering::DEFAULT_LIMIT)
+              raise StopIteration
+            end
 
-            position = calc_next_position(events, options[:direction])
-            raise StopIteration if position <= 0
+            next_position = calc_next_position(events, options[:direction])
+            raise StopIteration if next_position <= 0
           end
         end
       end
 
       private
-
-      # @param stream [PgEventstore::Stream]
-      # @param options [Hash]
-      # @return [Integer]
-      def calc_initial_position(stream, options)
-        return options[:from_position] if options[:from_position]
-        return 1 if forwards?(options[:direction])
-
-        read_cmd.call(stream, options: options.merge(max_count: 1)).first.global_position
-      end
 
       # @param events [Array<PgEventstore::Event>]
       # @param max_count [Integer]
