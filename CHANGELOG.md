@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.3.4]
+- Fix `NoMethodError` error in `Client#read_paginated` when stream does not exist or when there are no events matching the given filter
+
 ## [1.3.3]
 - Adjust default value of `subscription_max_retries` setting
 
