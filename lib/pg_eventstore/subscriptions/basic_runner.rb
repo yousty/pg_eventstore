@@ -83,8 +83,8 @@ module PgEventstore
 
     # @param run_interval [Integer, Float] seconds. Determines how often to run async task. Async task is determined by
     #   :after_runner_stopped callback
-    # @param async_shutdown_time [Integer, Float] seconds. Determines how long to wait for the async shutdown to wait
-    #   for the runner to finish.
+    # @param async_shutdown_time [Integer, Float] seconds. Determines how long to wait before force-shutdown the runner.
+    #   It is only meaningful for the #stop_async
     def initialize(run_interval, async_shutdown_time)
       @run_interval = run_interval
       @async_shutdown_time = async_shutdown_time

@@ -42,7 +42,8 @@ module PgEventstore
         ?max_retries: Integer,
         ?retries_interval: Integer | Float,
         ?restart_terminator: _RestartTerminator?,
-        ?failed_subscription_notifier: _FailedSubscriptionNotifier?
+        ?failed_subscription_notifier: _FailedSubscriptionNotifier?,
+        ?graceful_shutdown_timeout: Integer | Float,
       ) -> void
 
     def subscriptions: () -> ::Array[PgEventstore::Subscription]

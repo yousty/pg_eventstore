@@ -5,7 +5,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     PgEventstore::SubscriptionRunner.new(stats: stats, events_processor: events_processor, subscription: subscription)
   end
   let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
-  let(:events_processor) { PgEventstore::EventsProcessor.new(handler) }
+  let(:events_processor) { PgEventstore::EventsProcessor.new(handler, graceful_shutdown_timeout: 5) }
   let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo') }
   let(:handler) { proc { } }
 

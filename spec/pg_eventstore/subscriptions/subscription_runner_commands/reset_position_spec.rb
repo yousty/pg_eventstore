@@ -47,7 +47,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
 
     let(:position) { 123 }
     let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
-    let(:events_processor) { PgEventstore::EventsProcessor.new(handler) }
+    let(:events_processor) { PgEventstore::EventsProcessor.new(handler, graceful_shutdown_timeout: 5) }
     let(:subscription) do
       SubscriptionsHelper.create_with_connection(last_chunk_greatest_position: 321, total_processed_events: 120)
     end

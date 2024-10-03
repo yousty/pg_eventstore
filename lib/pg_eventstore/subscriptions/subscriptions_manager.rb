@@ -67,20 +67,25 @@ module PgEventstore
     #   PgEventstore::Subscription instance and error instance after the related subscription died due to error and no
     #   longer can be automatically restarted due to max retries number reached. You can use this hook to send a
     #   notification about failed subscription.
+    # @param graceful_shutdown_timeout [integer, Float] the number of seconds to wait until force-shutdown the
+    #   subscription during the stop process
     # @return [void]
     def subscribe(subscription_name, handler:, options: {}, middlewares: nil,
                   pull_interval: config.subscription_pull_interval,
                   max_retries: config.subscription_max_retries,
                   retries_interval: config.subscription_retries_interval,
                   restart_terminator: config.subscription_restart_terminator,
-                  failed_subscription_notifier: config.failed_subscription_notifier)
+                  failed_subscription_notifier: config.failed_subscription_notifier,
+                  graceful_shutdown_timeout: config.subscription_graceful_shutdown_timeout)
       subscription = Subscription.using_connection(config.name).new(
         set: @set_name, name: subscription_name, options: options, chunk_query_interval: pull_interval,
         max_restarts_number: max_retries, time_between_restarts: retries_interval
       )
       runner = SubscriptionRunner.new(
         stats: SubscriptionHandlerPerformance.new,
-        events_processor: EventsProcessor.new(create_event_handler(middlewares, handler)),
+        events_processor: EventsProcessor.new(
+          create_event_handler(middlewares, handler), graceful_shutdown_timeout: graceful_shutdown_timeout
+        ),
         subscription: subscription,
         restart_terminator: restart_terminator,
         failed_subscription_notifier: failed_subscription_notifier

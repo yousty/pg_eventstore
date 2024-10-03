@@ -52,6 +52,9 @@ module PgEventstore
     #   @return [#call, nil] provide callable object that accepts Subscription instance and error. It is useful when you
     #     want to be get notified when your Subscription fails and no longer can be restarted
     option(:failed_subscription_notifier)
+    # @!attribute subscription_graceful_shutdown_timeout
+    #   @return [Integer] the number of seconds to wait until force-shutdown the subscription during the stop process
+    option(:subscription_graceful_shutdown_timeout) { 15 }
 
     # @param name [Symbol] config's name. Its value matches the appropriate key in PgEventstore.config hash
     def initialize(name:, **options)

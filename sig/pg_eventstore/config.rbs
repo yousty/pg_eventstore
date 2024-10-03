@@ -49,5 +49,7 @@ module PgEventstore
     attr_accessor subscriptions_set_max_retries: Integer
 
     attr_accessor subscriptions_set_retries_interval: Integer
+
+    attr_accessor subscription_graceful_shutdown_timeout: Integer | Float
   end
 end

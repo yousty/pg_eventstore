@@ -24,6 +24,7 @@ RSpec.describe PgEventstore::Config do
     it { is_expected.to have_option(:subscription_pull_interval).with_default_value(1.0) }
     it { is_expected.to have_option(:subscription_max_retries).with_default_value(5) }
     it { is_expected.to have_option(:subscription_restart_terminator) }
+    it { is_expected.to have_option(:subscription_graceful_shutdown_timeout).with_default_value(15) }
   end
 
   describe '#connection_options' do

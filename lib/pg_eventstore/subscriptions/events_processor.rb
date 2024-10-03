@@ -11,10 +11,12 @@ module PgEventstore
                    :within_state
 
     # @param handler [#call]
-    def initialize(handler)
+    # @param graceful_shutdown_timeout [Integer, Float] seconds. Determines how long to wait before force-shutdown
+    #   the runner when stopping it using #stop_async
+    def initialize(handler, graceful_shutdown_timeout:)
       @handler = handler
       @raw_events = []
-      @basic_runner = BasicRunner.new(0, 5)
+      @basic_runner = BasicRunner.new(0, graceful_shutdown_timeout)
       attach_runner_callbacks
     end
 

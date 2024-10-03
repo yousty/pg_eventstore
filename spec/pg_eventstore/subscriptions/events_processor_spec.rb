@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::EventsProcessor do
-  let(:instance) { described_class.new(handler) }
+  let(:instance) { described_class.new(handler, graceful_shutdown_timeout: graceful_shutdown_timeout) }
   let(:handler) { proc { |raw_event| processed_events.push(raw_event['id']) } }
+  let(:graceful_shutdown_timeout) { 5 }
   let(:processed_events) { [] }
 
   describe 'instance' do
