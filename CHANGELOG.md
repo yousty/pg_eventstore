@@ -1,5 +1,22 @@
 ## [Unreleased]
 
+## [1.4.0]
+- Add an ability to configure subscription graceful shutdown timeout globally and per subscription. Default value is 15 seconds. Previously it was hardcoded to 5 seconds. Examples:
+
+```ruby
+# Set it globally, for all subscriptions
+PgEventstore.configure do |config|
+  config.subscription_graceful_shutdown_timeout = 5
+end
+
+# Set it per subscription
+subscriptions_manager.subscribe(
+  'MySubscriptionWithHeavyLiftingTask',
+  handler: proc { |event| puts event },
+  graceful_shutdown_timeout: 20
+)
+```
+
 ## [1.3.4]
 - Fix `NoMethodError` error in `Client#read_paginated` when stream does not exist or when there are no events matching the given filter
 
