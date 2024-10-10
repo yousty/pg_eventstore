@@ -1,0 +1,24 @@
+module PgEventstore
+  class SubscriptionsSetLifecycle
+    HEARTBEAT_INTERVAL: Integer
+
+    type subscriptions_set_attrs_type = { name: String, max_restarts_number: Integer, time_between_restarts: Integer }
+
+    @config_name: Symbol
+
+    @subscriptions_set_attrs: subscriptions_set_attrs_type
+
+    @subscriptions_set_pinged_at: Time
+
+    attr_reader subscriptions_set: PgEventstore::SubscriptionsSet?
+
+
+    def initialize: (Symbol config_name, subscriptions_set_attrs_type subscriptions_set_attrs)-> void
+
+    def ping_subscriptions_set: -> void
+
+    def persisted_subscriptions_set: -> PgEventstore::SubscriptionsSet
+
+    def reset_subscriptions_set: -> void
+  end
+end

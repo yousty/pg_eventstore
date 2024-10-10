@@ -78,13 +78,12 @@ module PgEventstore
         # @param state [String]
         # @param updated_at [Time]
         # @return [String] html status
-        def colored_state(state, updated_at)
+        def colored_state(state, interval, updated_at)
           if state == RunnerState::STATES[:running]
             # -1 is added as a margin to prevent false-positive result
-            if updated_at < Time.now.utc - SubscriptionFeeder::HEARTBEAT_INTERVAL - 1
+            if updated_at < Time.now.utc - interval - 1
               title = <<~TEXT
-                Something is wrong. Last update was more than #{SubscriptionFeeder::HEARTBEAT_INTERVAL} seconds \
-                ago(#{updated_at}).
+                Something is wrong. Last update was more than #{interval} seconds ago(#{updated_at}).
               TEXT
               <<~HTML
                 <span class="text-warning text-nowrap">

@@ -42,7 +42,7 @@ module PgEventstore
         # _@param_ `updated_at`
         #
         # _@return_ — html status
-        def colored_state: (String state, Time updated_at) -> String
+        def colored_state: (String state, Integer interval, Time updated_at) -> String
 
         # _@param_ `ids`
         def delete_all_subscriptions_url: (::Array[Integer] ids) -> String
