@@ -6,117 +6,8 @@ module PgEventstore
   class SubscriptionFeeder
     extend Forwardable
 
-    class RunnersToSetAssociation
-      attr_reader :runners
-
-      def initialize(config_name, subscriptions_set_attrs)
-        @config_name = config_name
-        @subscriptions_set_attrs = subscriptions_set_attrs
-        @runners = []
-        @subscriptions_set = nil
-        @subscriptions_pinged_at = Time.at(0)
-        @force_lock = false
-      end
-
-      # Locks all Subscriptions behind the current SubscriptionsSet
-      # @return [void]
-      def lock_all
-        @runners.each { |runner| runner.lock!(subscriptions_set.id, force: @force_lock) }
-      rescue PgEventstore::SubscriptionAlreadyLockedError
-        @subscriptions_set&.delete
-        @subscriptions_set = nil
-        raise
-      end
-
-      # @return [void]
-      def ping_subscriptions
-        return if @subscriptions_pinged_at > Time.now.utc - SubscriptionFeeder::HEARTBEAT_INTERVAL
-
-        runners = @runners.select do |runner|
-          next false unless runner.running?
-
-          runner.subscription.updated_at < Time.now.utc - SubscriptionFeeder::HEARTBEAT_INTERVAL
-        end
-        unless runners.empty?
-          Subscription.using_connection(@config_name).ping_all(subscriptions_set.id, runners.map(&:subscription))
-        end
-
-        @subscriptions_pinged_at = Time.now.utc
-      end
-
-      def start_runners
-        @runners.each(&:start)
-      end
-
-      def stop_runners
-        @runners.each(&:stop_async)
-      end
-
-      # @return [PgEventstore::SubscriptionsSet]
-      def subscriptions_set
-        @subscriptions_set ||= SubscriptionsSet.using_connection(@config_name).create(**@subscriptions_set_attrs)
-      end
-
-      # Sets the force_lock flash to true. If set - all related Subscriptions will ignore their lock state and will be
-      # locked by the new SubscriptionsSet.
-      # @return [void]
-      def force_lock!
-        @force_lock = true
-      end
-    end
-
-    class Callbacks
-      class << self
-        def update_subscriptions_set_state(association, state, *)
-          association.subscriptions_set.update(state: state)
-        end
-
-        def lock_subscriptions(association, *)
-          association.lock_all
-        end
-
-        def start_runners(association, *)
-          association.start_runners
-        end
-
-        def start_cmds_handler(cmds_handler, *)
-          cmds_handler.start
-        end
-
-        def persist_error_info(association, error, *)
-          association.subscriptions_set.update(last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc)
-        end
-
-        def restart_runner(association, basic_runner, *)
-          return if association.subscriptions_set.restart_count >= association.subscriptions_set.max_restarts_number
-
-          Thread.new do
-            sleep association.subscriptions_set.time_between_restarts
-            basic_runner.restore
-          end
-        end
-
-        def ping_subscriptions_set(association, *)
-          return if association.subscriptions_set.updated_at > Time.now.utc - RunnersToSetAssociation::HEARTBEAT_INTERVAL
-
-          association.subscriptions_set.update(updated_at: Time.now.utc)
-        end
-
-        def feed_runners(association, config_name, *)
-          SubscriptionRunnersFeeder.new(config_name).feed(association.runners)
-        end
-
-        def ping_subscriptions(association, *)
-          association.ping_subscriptions
-        end
-      end
-    end
-
-    # @return [Integer] number of seconds between heartbeat updates
-    HEARTBEAT_INTERVAL = 10 # seconds
-
-    def_delegators :subscriptions_set, :id
     def_delegators :@basic_runner, :start, :stop, :restore, :state, :wait_for_finish, :stop_async
+    def_delegators :@subscriptions_lifecycle, :force_lock!
 
     # @param config_name [Symbol]
     # @param set_name [String]
@@ -124,14 +15,19 @@ module PgEventstore
     # @param retries_interval [Integer] a delay between retries of failed SubscriptionsSet
     def initialize(config_name:, set_name:, max_retries:, retries_interval:)
       @config_name = config_name
-      @runners = []
       @commands_handler = CommandsHandler.new(@config_name, self, @runners)
       @basic_runner = BasicRunner.new(0.2, 0)
-      @association = RunnersToSetAssociation.new(
-        config_name,
+      @subscriptions_set_lifecycle = SubscriptionsSetLifecycle.new(
+        @config_name,
         { name: set_name, max_restarts_number: max_retries, time_between_restarts: retries_interval }
       )
+      @subscriptions_lifecycle = SubscriptionsLifecycle.new(@config_name, @subscriptions_set_lifecycle)
       attach_runner_callbacks
+    end
+
+    # @return [Integer]
+    def id
+      @subscriptions_set_lifecycle.persisted_subscriptions_set.id
     end
 
     # Adds SubscriptionRunner to the set
@@ -139,7 +35,7 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionRunner]
     def add(runner)
       assert_proper_state!
-      @runners.push(runner)
+      @subscriptions_lifecycle.runners.push(runner)
       runner
     end
 
@@ -148,7 +44,7 @@ module PgEventstore
     def start_all
       return self unless @basic_runner.running?
 
-      @runners.each(&:start)
+      @subscriptions_lifecycle.runners.each(&:start)
       self
     end
 
@@ -157,7 +53,7 @@ module PgEventstore
     def stop_all
       return self unless @basic_runner.running?
 
-      @runners.each(&:stop_async)
+      @subscriptions_lifecycle.runners.each(&:stop_async)
       self
     end
 
@@ -165,14 +61,14 @@ module PgEventstore
     # dangerous to use - users may incidentally break their state.
     # @return [Array<PgEventstore::Subscription>]
     def read_only_subscriptions
-      @runners.map(&:subscription).map(&:dup)
+      @subscriptions_lifecycle.subscriptions.map(&:dup)
     end
 
     # Produces a copy of current SubscriptionsSet. This is needed, because original SubscriptionsSet object is
     # dangerous to use - users may incidentally break its state.
     # @return [PgEventstore::SubscriptionsSet, nil]
     def read_only_subscriptions_set
-      @subscriptions_set&.dup
+      @subscriptions_set_lifecycle.subscriptions_set&.dup
     end
 
     private
@@ -180,57 +76,62 @@ module PgEventstore
     # @return [void]
     def attach_runner_callbacks
       @basic_runner.define_callback(
-        :change_state, :after, Callbacks.method(:update_subscriptions_set_state).curry(3).call(@association)
+        :change_state, :after,
+        SubscriptionFeederHandlers.setup_handler(:update_subscriptions_set_state, @subscriptions_set_lifecycle)
       )
 
       @basic_runner.define_callback(
-        :before_runner_started, :before, Callbacks.method(:lock_subscriptions).curry(2).call(@association)
+        :before_runner_started, :before,
+        SubscriptionFeederHandlers.setup_handler(:lock_subscriptions, @subscriptions_lifecycle)
       )
       @basic_runner.define_callback(
-        :before_runner_started, :before, Callbacks.method(:start_runners).curry(2).call(@association)
+        :before_runner_started, :before,
+        SubscriptionFeederHandlers.setup_handler(:start_runners, @subscriptions_lifecycle)
       )
       @basic_runner.define_callback(
-        :before_runner_started, :before, Callbacks.method(:start_cmds_handler).curry(2).call(@commands_handler)
+        :before_runner_started, :before,
+        SubscriptionFeederHandlers.setup_handler(:start_cmds_handler, @commands_handler)
       )
 
       @basic_runner.define_callback(
-        :after_runner_died, :before, Callbacks.method(:persist_error_info).curry(3).call(@association)
+        :after_runner_died, :before,
+        SubscriptionFeederHandlers.setup_handler(:persist_error_info, @subscriptions_set_lifecycle)
       )
       @basic_runner.define_callback(
-        :after_runner_died, :before, Callbacks.method(:restart_runner).curry(3).call(@association, @basic_runner)
+        :after_runner_died, :before,
+        SubscriptionFeederHandlers.setup_handler(:restart_runner, @subscriptions_set_lifecycle, @basic_runner)
       )
 
       @basic_runner.define_callback(
-        :process_async, :before, Callbacks.method(:ping_subscriptions_set).curry(2).call(@association)
+        :process_async, :before,
+        SubscriptionFeederHandlers.setup_handler(:ping_subscriptions_set, @subscriptions_set_lifecycle)
       )
       @basic_runner.define_callback(
-        :process_async, :before, Callbacks.method(:feed_runners).curry(3).call(@association, @config_name)
+        :process_async, :before,
+        SubscriptionFeederHandlers.setup_handler(:feed_runners, @subscriptions_lifecycle, @config_name)
       )
       @basic_runner.define_callback(
-        :process_async, :after, Callbacks.method(:ping_subscriptions).curry(2).call(@association)
+        :process_async, :after,
+        SubscriptionFeederHandlers.setup_handler(:ping_subscriptions, @subscriptions_lifecycle)
       )
 
-      @basic_runner.define_callback(:after_runner_stopped, :before, method(:after_runner_stopped))
-      @basic_runner.define_callback(:before_runner_restored, :after, method(:update_runner_restarts))
-    end
+      @basic_runner.define_callback(
+        :after_runner_stopped, :before,
+        SubscriptionFeederHandlers.setup_handler(:stop_runners, @subscriptions_lifecycle)
+      )
+      @basic_runner.define_callback(
+        :after_runner_stopped, :before,
+        SubscriptionFeederHandlers.setup_handler(:reset_subscriptions_set, @subscriptions_set_lifecycle)
+      )
+      @basic_runner.define_callback(
+        :after_runner_stopped, :before,
+        SubscriptionFeederHandlers.setup_handler(:stop_commands_handler, @commands_handler)
+      )
 
-    # @return [void]
-    def update_runner_restarts
-      subscriptions_set.update(last_restarted_at: Time.now.utc, restart_count: subscriptions_set.restart_count + 1)
-    end
-
-    # @return [void]
-    def after_runner_stopped
-      @runners.each(&:stop_async).each(&:wait_for_finish)
-      @subscriptions_set&.delete
-      @subscriptions_set = nil
-      @commands_handler.stop
-    end
-
-    # @param state [String]
-    # @return [void]
-    def update_subscriptions_set_state(state)
-      subscriptions_set.update(state: state)
+      @basic_runner.define_callback(
+        :before_runner_restored, :after,
+        SubscriptionFeederHandlers.setup_handler(:update_subscriptions_set_restarts, @subscriptions_set_lifecycle)
+      )
     end
 
     # This method helps to ensure that no Subscription is added after SubscriptionFeeder's runner is working
@@ -238,10 +139,11 @@ module PgEventstore
     # @raise [RuntimeError]
     def assert_proper_state!
       return if @basic_runner.initial? || @basic_runner.stopped?
+      subscriptions_set = @subscriptions_set_lifecycle.persisted_subscriptions_set
 
       error_message = <<~TEXT
-        Could not add subscription - #{subscriptions_set.name}##{subscriptions_set.id} must be either in the initial \
-        or in the stopped state, but it is in the #{@basic_runner.state} state now.
+        Could not add subscription - #{subscriptions_set.name}##{subscriptions_set.id} must be \
+        either in the initial or in the stopped state, but it is in the #{@basic_runner.state} state now.
       TEXT
       raise error_message
     end
