@@ -14,6 +14,8 @@ module PgEventstore
 
     def initialize: (Symbol config_name, PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle)-> void
 
+    def force_locked?: -> bool
+
     def lock_all: -> void
 
     def ping_subscriptions: -> void

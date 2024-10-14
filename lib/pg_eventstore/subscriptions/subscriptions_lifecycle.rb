@@ -24,7 +24,9 @@ module PgEventstore
     # Locks all Subscriptions behind the current SubscriptionsSet
     # @return [void]
     def lock_all
-      @runners.each { |runner| runner.lock!(@subscriptions_set_lifecycle.persisted_subscriptions_set.id, force: @force_lock) }
+      @runners.each do |runner|
+        runner.lock!(@subscriptions_set_lifecycle.persisted_subscriptions_set.id, force: force_locked?)
+      end
     rescue PgEventstore::SubscriptionAlreadyLockedError
       @subscriptions_set_lifecycle.reset_subscriptions_set
       raise
@@ -58,6 +60,11 @@ module PgEventstore
     # @return [void]
     def force_lock!
       @force_lock = true
+    end
+
+    # @return [Boolean]
+    def force_locked?
+      @force_lock
     end
   end
 end
