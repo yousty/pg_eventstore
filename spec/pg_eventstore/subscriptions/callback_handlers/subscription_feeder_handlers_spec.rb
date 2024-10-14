@@ -148,11 +148,15 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
         { name: 'Foo', max_restarts_number: 0, time_between_restarts: 0 }
       )
     end
-    let(:error) { StandardError.new("something happened") }
+    let(:error) do
+      StandardError.new("something happened").tap do |err|
+        err.set_backtrace([])
+      end
+    end
 
     it 'updates SubscriptionsSet#last_error' do
       expect { subject }.to change { subscriptions_set_lifecycle.persisted_subscriptions_set.reload.last_error }.to(
-        { 'class' => 'StandardError', 'message' => 'something happened', 'backtrace' => nil }
+        { 'class' => 'StandardError', 'message' => 'something happened', 'backtrace' => [] }
       )
     end
     it 'updates SubscriptionsSet#last_error_occurred_at', timecop: true do

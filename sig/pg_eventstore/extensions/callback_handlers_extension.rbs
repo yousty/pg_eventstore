@@ -4,7 +4,7 @@ module PgEventstore
       def self.included: (untyped klass) -> untyped
 
       module ClassMethods
-        def setup_handler: (Symbol name, *untyped args) { (*untyped) -> untyped } -> untyped
+        def setup_handler: (Symbol name, *untyped args) -> ^(*untyped rest) -> untyped
       end
     end
   end

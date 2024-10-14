@@ -68,7 +68,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     context "when feeder's runner is in the 'dead' state" do
       before do
-        allow(PgEventstore::SubscriptionFeederHandlers).to rectry eive(:ping_subscriptions_set).and_raise('Oops!')
+        allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_raise('Oops!')
         instance.start
         sleep 1.1 # Let the feeder's runner die
       end
