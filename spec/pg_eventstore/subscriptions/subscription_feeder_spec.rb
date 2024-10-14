@@ -22,7 +22,9 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     context "when feeder's runner is in the 'initial' state" do
       it 'adds the subscription runner' do
-        expect { subject }.to change { instance.instance_variable_get(:@runners) }.from([]).to([subscription_runner])
+        expect { subject }.to change {
+          instance.read_only_subscriptions
+        }.from([]).to([subscription_runner.subscription])
       end
       it 'returns added runner' do
         is_expected.to eq(subscription_runner)
@@ -53,7 +55,9 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
       it 'adds the subscription runner' do
         aggregate_failures do
-          expect { subject }.to change { instance.instance_variable_get(:@runners) }.from([]).to([subscription_runner])
+          expect { subject }.to change {
+            instance.read_only_subscriptions
+          }.from([]).to([subscription_runner.subscription])
           expect(instance.state).to eq('stopped')
         end
       end
@@ -64,7 +68,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     context "when feeder's runner is in the 'dead' state" do
       before do
-        allow(instance).to receive(:feeder).and_raise('Oops!')
+        allow(PgEventstore::SubscriptionFeederHandlers).to rectry eive(:ping_subscriptions_set).and_raise('Oops!')
         instance.start
         sleep 1.1 # Let the feeder's runner die
       end
@@ -183,7 +187,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     context "when feeder's runner is in the 'dead' state" do
       before do
-        allow(instance).to receive(:feeder).and_raise('Oops!')
+        allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_raise('Oops!')
         instance.start
         sleep 1.1 # Let the feeder's runner die
         setup_subscription_runners
@@ -301,7 +305,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
     context "when feeder's runner is in the 'dead' state" do
       before do
-        allow(instance).to receive(:feeder).and_raise('Oops!')
+        allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_raise('Oops!')
         instance.start
         sleep 1.1 # Let the feeder's runner die
         setup_subscription_runners
@@ -330,14 +334,6 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
       it_behaves_like 'runners does not stop'
       it { expect(instance.state).to eq('halting') }
-    end
-  end
-
-  describe '#force_lock!' do
-    subject { instance.force_lock! }
-
-    it 'sets @force_lock flag to true' do
-      expect { subject }.to change { instance.instance_variable_get(:@force_lock) }.to(true)
     end
   end
 
@@ -397,7 +393,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       subject { instance.restore }
 
       before do
-        allow(instance).to receive(:feeder).and_raise('gg wp')
+        allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_raise('gg wp')
         instance.start
         sleep 1.1 # Let the feeder's runner die
       end
@@ -510,17 +506,31 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       sleep 1
     end
 
+    let(:subscription_runner) do
+      PgEventstore::SubscriptionRunner.new(
+        stats: PgEventstore::SubscriptionHandlerPerformance.new,
+        events_processor: PgEventstore::EventsProcessor.new(
+          proc { |event| processed_events.push(event) }, graceful_shutdown_timeout: 5
+        ),
+        subscription: SubscriptionsHelper.init_with_connection(set: set_name)
+      )
+    end
+    let(:processed_events) { [] }
+    let!(:event) do
+      stream = PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1')
+      PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new(id: SecureRandom.uuid))
+    end
+
     let(:error) { StandardError.new('gg wp') }
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
     let(:max_retries) { 1 }
-    let(:runners_feeder) { PgEventstore::SubscriptionRunnersFeeder.new(:default) }
 
     before do
+      instance.add(subscription_runner)
+
       should_raise = true
       error = self.error
-      allow(PgEventstore::SubscriptionRunnersFeeder).to receive(:new).and_return(runners_feeder)
-      allow(runners_feeder).to receive(:feed).and_call_original
-      allow(instance).to receive(:feeder).and_wrap_original do |orig_meth, *args, **kwargs, &blk|
+      allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_wrap_original do |orig_meth, *args, **kwargs, &blk|
         if should_raise
           should_raise = false
           raise error
@@ -552,9 +562,8 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       subject
       expect(instance.state).to eq('running')
     end
-    it 'feeds subscription runners' do
-      subject
-      expect(runners_feeder).to have_received(:feed).at_least(:once)
+    it 'processes events' do
+      expect { subject }.to change { processed_events }.to([a_hash_including('id' => event.id)])
     end
 
     context 'when max number of restarts is reached' do
@@ -564,10 +573,11 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         subject
         expect(instance.state).to eq('dead')
       end
-      it 'does not feed subscription runners' do
-        subject
-        sleep 1.1 # Sleep an additional second to prevent false-positive result
-        expect(runners_feeder).not_to have_received(:feed)
+      it 'does process events' do
+        expect {
+          subject
+          sleep 1.1 # Sleep an additional second to prevent false-positive result
+        }.not_to change { processed_events }
       end
     end
   end
@@ -583,7 +593,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
 
     before do
-      allow(instance).to receive(:feeder).and_raise(error)
+      allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_raise(error)
     end
 
     after do
@@ -633,7 +643,8 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       allow(events_receiver).to receive(:call)
       instance.add(subscription_runner1)
       instance.add(subscription_runner2)
-      stub_const("#{described_class}::HEARTBEAT_INTERVAL", 1.5)
+      stub_const("PgEventstore::SubscriptionsLifecycle::HEARTBEAT_INTERVAL", 1.5)
+      stub_const("PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL", 1.5)
     end
 
     after do
@@ -655,7 +666,9 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
     it 'does not update SubscriptionsSet#updated_at too often' do
       subject
-      expect { sleep 0.5 }.not_to change { instance.read_only_subscriptions_set.updated_at }
+      expect { sleep 1 }.to change {
+        instance.read_only_subscriptions_set.updated_at
+      }.to(be_between(Time.now, Time.now + 0.3))
     end
     it 'updates Subscription#updated_at of running Subscription' do
       subject

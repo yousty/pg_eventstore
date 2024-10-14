@@ -15,13 +15,13 @@ module PgEventstore
     # @param retries_interval [Integer] a delay between retries of failed SubscriptionsSet
     def initialize(config_name:, set_name:, max_retries:, retries_interval:)
       @config_name = config_name
-      @commands_handler = CommandsHandler.new(@config_name, self, @runners)
       @basic_runner = BasicRunner.new(0.2, 0)
       @subscriptions_set_lifecycle = SubscriptionsSetLifecycle.new(
         @config_name,
         { name: set_name, max_restarts_number: max_retries, time_between_restarts: retries_interval }
       )
       @subscriptions_lifecycle = SubscriptionsLifecycle.new(@config_name, @subscriptions_set_lifecycle)
+      @commands_handler = CommandsHandler.new(@config_name, self, @subscriptions_lifecycle.runners)
       attach_runner_callbacks
     end
 
