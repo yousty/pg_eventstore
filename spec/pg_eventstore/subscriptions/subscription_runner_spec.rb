@@ -310,6 +310,18 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     it 'processes the event' do
       expect { subject }.to change { processed_events }.to([event])
     end
+    it 'updates Subscription#current_position' do
+      # Delay of 0.1 is to let the subscription time to update
+      expect { subject; sleep 0.1 }.to change { subscription.reload.current_position }
+    end
+    it 'updates Subscription#average_event_processing_time' do
+      # Delay of 0.1 is to let the subscription time to update
+      expect { subject; sleep 0.1 }.to change { subscription.reload.average_event_processing_time }
+    end
+    it 'updates Subscription#total_processed_events' do
+      # Delay of 0.1 is to let the subscription time to update
+      expect { subject; sleep 0.1 }.to change { subscription.reload.total_processed_events }
+    end
 
     context 'when the number of restarts hit the limit' do
       before do
@@ -319,6 +331,20 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       it 'does not restart EventsProcessor' do
         subject
         expect(instance.state).to eq('dead')
+      end
+      # Important tests when the handler fails - we need to make sure that all those subscription attributes are not
+      # updated.
+      it 'does not update Subscription#current_position' do
+        # Delay of 0.1 is to let the subscription time to update(in case if it gets updated)
+        expect { subject; sleep 0.1 }.not_to change { subscription.reload.current_position }
+      end
+      it 'does not update Subscription#average_event_processing_time' do
+        # Delay of 0.1 is to let the subscription time to update(in case if it gets updated)
+        expect { subject; sleep 0.1 }.not_to change { subscription.reload.average_event_processing_time }
+      end
+      it 'does not update Subscription#total_processed_events' do
+        # Delay of 0.1 is to let the subscription time to update(in case if it gets updated)
+        expect { subject; sleep 0.1 }.not_to change { subscription.reload.total_processed_events }
       end
     end
 

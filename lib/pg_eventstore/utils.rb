@@ -61,6 +61,14 @@ module PgEventstore
         str.gsub!(/[A-Z]/) { |letter| '_' + letter.downcase }
         str
       end
+
+      # Detect the global position of the event record in the database. If it is a link event - we pick a
+      # global_position of the link instead of picking a global_position of an event this link points to.
+      # @param raw_event [Hash]
+      # @return [Integer]
+      def original_global_position(raw_event)
+        raw_event['link'] ? raw_event['link']['global_position'] : raw_event['global_position']
+      end
     end
   end
 end

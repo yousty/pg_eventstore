@@ -4,7 +4,7 @@ module PgEventstore
     extend Forwardable
 
     # _@param_ `handler`
-    %a{rbs:test:skip} def initialize: (_SubscriptionHandler handler, graceful_shutdown_timeout: Float | Integer) -> void
+    %a{rbs:test:skip} def initialize: (_RawEventHandler handler, graceful_shutdown_timeout: Float | Integer) -> void
 
     # _@param_ `raw_events`
     def feed: (::Array[::Hash[untyped, untyped]] raw_events) -> void

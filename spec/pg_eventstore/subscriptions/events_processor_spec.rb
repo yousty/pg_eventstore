@@ -152,11 +152,13 @@ RSpec.describe PgEventstore::EventsProcessor do
     let(:on_error_cbx) { proc { |error| error_receiver.call(error) } }
     let(:error_receiver) { double('Error receiver') }
     let(:error) { StandardError.new('Oops!') }
+    let(:handler) do
+      proc { raise error }
+    end
 
     before do
       instance.define_callback(:error, :after, on_error_cbx)
       allow(error_receiver).to receive(:call)
-      allow(instance).to receive(:process_event).and_raise(error)
     end
 
     after do
@@ -165,7 +167,7 @@ RSpec.describe PgEventstore::EventsProcessor do
 
     it 'runs :error action' do
       subject
-      # Let the runner start
+      # Let the runner start and die
       sleep 0.1
       # Feed the processor to trigger the error
       instance.feed([{ 'id' => SecureRandom.uuid, 'global_position' => 1 }])
@@ -184,11 +186,13 @@ RSpec.describe PgEventstore::EventsProcessor do
 
     let(:on_restart_cbx) { proc { restart_receiver.call } }
     let(:restart_receiver) { double('Restart receiver') }
+    let(:handler) do
+      proc { raise 'Oops!' }
+    end
 
     before do
       instance.define_callback(:restart, :after, on_restart_cbx)
       allow(restart_receiver).to receive(:call)
-      allow(instance).to receive(:process_event).and_raise('Oops!')
       instance.start
     end
 
