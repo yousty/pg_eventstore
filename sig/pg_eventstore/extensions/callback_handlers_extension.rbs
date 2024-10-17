@@ -1,0 +1,11 @@
+module PgEventstore
+  module Extensions
+    module CallbackHandlersExtension
+      def self.included: (untyped klass) -> untyped
+
+      module ClassMethods
+        def setup_handler: (Symbol name, *untyped args) -> ^(*untyped rest) -> untyped
+      end
+    end
+  end
+end

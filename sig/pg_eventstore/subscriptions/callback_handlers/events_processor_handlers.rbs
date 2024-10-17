@@ -1,0 +1,11 @@
+module PgEventstore
+  class EventsProcessorHandlers
+    def self.process_event: (PgEventstore::Callbacks callbacks, _RawEventHandler handler, Array[Hash[untyped, untyped]] raw_events) -> void
+
+    def self.after_runner_died: (PgEventstore::Callbacks callbacks, StandardError error) -> void
+
+    def self.before_runner_restored: (PgEventstore::Callbacks callbacks) -> void
+
+    def self.change_state: (PgEventstore::Callbacks callbacks, String state) -> void
+  end
+end

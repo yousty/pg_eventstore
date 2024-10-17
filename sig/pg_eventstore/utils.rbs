@@ -16,5 +16,7 @@ module PgEventstore
 
     # _@param_ `str`
     def self.underscore_str: (String str) -> String
+
+    def self.original_global_position: (Hash[untyped, untyped] raw_event) -> Integer
   end
 end

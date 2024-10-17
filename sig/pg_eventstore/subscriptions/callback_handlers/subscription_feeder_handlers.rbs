@@ -1,0 +1,31 @@
+module PgEventstore
+  class SubscriptionFeederHandlers
+    include PgEventstore::Extensions::CallbackHandlersExtension
+
+    def self.update_subscriptions_set_state: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle, String state) -> void
+
+    def self.lock_subscriptions: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle) -> void
+
+    def self.start_runners: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle) -> void
+
+    def self.start_cmds_handler: (PgEventstore::CommandsHandler cmds_handler) -> void
+
+    def self.persist_error_info: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle, StandardError error) -> void
+
+    def self.restart_runner: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle, PgEventstore::BasicRunner basic_runner, StandardError _error) -> void
+
+    def self.ping_subscriptions_set: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
+
+    def self.feed_runners: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle, Symbol config_name) -> void
+
+    def self.ping_subscriptions: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle) -> void
+
+    def self.stop_runners: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle) -> void
+
+    def self.reset_subscriptions_set: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
+
+    def self.stop_commands_handler: (PgEventstore::CommandsHandler cmds_handler) -> void
+
+    def self.update_subscriptions_set_restarts: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
+  end
+end

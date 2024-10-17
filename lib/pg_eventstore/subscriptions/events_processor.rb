@@ -26,7 +26,7 @@ module PgEventstore
       raise EmptyChunkFedError.new("Empty chunk was fed!") if raw_events.empty?
 
       within_state(:running) do
-        callbacks.run_callbacks(:feed, global_position(raw_events.last))
+        callbacks.run_callbacks(:feed, Utils.original_global_position(raw_events.last))
         @raw_events.push(*raw_events)
       end
     end
@@ -44,47 +44,23 @@ module PgEventstore
 
     private
 
-    # @param raw_event [Hash]
-    # @return [void]
-    def process_event(raw_event)
-      callbacks.run_callbacks(:process, global_position(raw_event)) do
-        @handler.call(raw_event)
-      end
-    end
-
     def attach_runner_callbacks
-      @basic_runner.define_callback(:process_async, :before, method(:process_async))
-      @basic_runner.define_callback(:after_runner_died, :before, method(:after_runner_died))
-      @basic_runner.define_callback(:before_runner_restored, :before, method(:before_runner_restored))
-      @basic_runner.define_callback(:change_state, :before, method(:change_state))
-    end
+      @basic_runner.define_callback(
+        :process_async, :before,
+        EventsProcessorHandlers.setup_handler(:process_event, @callbacks, @handler, @raw_events)
+      )
 
-    def process_async
-      raw_event = @raw_events.shift
-      return sleep 0.5 if raw_event.nil?
+      @basic_runner.define_callback(
+        :after_runner_died, :before, EventsProcessorHandlers.setup_handler(:after_runner_died, callbacks)
+      )
 
-      process_event(raw_event)
-    rescue
-      @raw_events.unshift(raw_event)
-      raise
-    end
+      @basic_runner.define_callback(
+        :before_runner_restored, :before, EventsProcessorHandlers.setup_handler(:before_runner_restored, callbacks)
+      )
 
-    def after_runner_died(...)
-      callbacks.run_callbacks(:error, ...)
-    end
-
-    def before_runner_restored
-      callbacks.run_callbacks(:restart)
-    end
-
-    def change_state(...)
-      callbacks.run_callbacks(:change_state, ...)
-    end
-
-    # @param raw_event [Hash]
-    # @return [Integer]
-    def global_position(raw_event)
-      raw_event['link'] ? raw_event['link']['global_position'] : raw_event['global_position']
+      @basic_runner.define_callback(
+        :change_state, :before, EventsProcessorHandlers.setup_handler(:change_state, callbacks)
+      )
     end
   end
 end

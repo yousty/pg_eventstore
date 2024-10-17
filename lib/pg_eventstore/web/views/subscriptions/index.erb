@@ -66,7 +66,7 @@
                         <tbody>
                           <tr>
                             <td><%= subscriptions_set.id %></td>
-                            <td><%= colored_state(subscriptions_set.state, subscriptions_set.updated_at) %></td>
+                            <td><%= colored_state(subscriptions_set.state, PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL, subscriptions_set.updated_at) %></td>
                             <td><%= subscriptions_set.restart_count %></td>
                             <td><%= subscriptions_set.max_restarts_number %></td>
                             <td><%= subscriptions_set.time_between_restarts %>s</td>
@@ -161,7 +161,7 @@
                             <td><%= subscription.current_position %></td>
                             <td><%= subscription.chunk_query_interval %>s</td>
                             <td><%= subscription.last_chunk_fed_at %></td>
-                            <td><%= colored_state(subscription.state, subscription.updated_at) %></td>
+                            <td><%= colored_state(subscription.state, PgEventstore::SubscriptionsLifecycle::HEARTBEAT_INTERVAL, subscription.updated_at) %></td>
                             <td>
                               <% if subscription.average_event_processing_time %>
                                 <%= "#{(1 / subscription.average_event_processing_time).to_i}/s" %>

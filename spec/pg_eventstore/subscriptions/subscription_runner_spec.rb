@@ -283,6 +283,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     let(:processed_events) { [] }
     let(:event) { { 'id' => SecureRandom.uuid, 'global_position' => 1 } }
     let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', time_between_restarts: 0) }
+    # Delay of 0.1 is to let the subscription time to update. It is related to actions after runner's restart
+    let(:subscription_update_delay) { 0.1 }
 
     before do
       instance.start
@@ -310,6 +312,15 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     it 'processes the event' do
       expect { subject }.to change { processed_events }.to([event])
     end
+    it 'updates Subscription#current_position' do
+      expect { subject; sleep subscription_update_delay }.to change { subscription.reload.current_position }
+    end
+    it 'updates Subscription#average_event_processing_time' do
+      expect { subject; sleep subscription_update_delay }.to change { subscription.reload.average_event_processing_time }
+    end
+    it 'updates Subscription#total_processed_events' do
+      expect { subject; sleep subscription_update_delay }.to change { subscription.reload.total_processed_events }
+    end
 
     context 'when the number of restarts hit the limit' do
       before do
@@ -319,6 +330,17 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       it 'does not restart EventsProcessor' do
         subject
         expect(instance.state).to eq('dead')
+      end
+      # Important tests when the handler fails - we need to make sure that all those subscription attributes are not
+      # updated.
+      it 'does not update Subscription#current_position' do
+        expect { subject; sleep subscription_update_delay }.not_to change { subscription.reload.current_position }
+      end
+      it 'does not update Subscription#average_event_processing_time' do
+        expect { subject; sleep subscription_update_delay }.not_to change { subscription.reload.average_event_processing_time }
+      end
+      it 'does not update Subscription#total_processed_events' do
+        expect { subject; sleep subscription_update_delay }.not_to change { subscription.reload.total_processed_events }
       end
     end
 

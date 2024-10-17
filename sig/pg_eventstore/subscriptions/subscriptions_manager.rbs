@@ -53,7 +53,7 @@ module PgEventstore
     # _@param_ `middlewares`
     #
     # _@param_ `handler`
-    def create_event_handler: (::Array[Symbol]? middlewares, untyped handler) -> Proc
+    def create_raw_event_handler: (::Array[Symbol]? middlewares, _SubscriptionHandler handler) -> _RawEventHandler
 
     # _@param_ `middlewares`
     def select_middlewares: (?::Array[Symbol]? middlewares) -> ::Array[PgEventstore::Middleware]

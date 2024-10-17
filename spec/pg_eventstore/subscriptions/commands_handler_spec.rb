@@ -46,11 +46,47 @@ RSpec.describe PgEventstore::CommandsHandler do
       aggregate_failures do
         expect(feeder).not_to have_received(:stop_all)
         expect(runner).not_to have_received(:stop_async)
-        sleep 1.2
+        sleep described_class::PULL_INTERVAL + 0.2
         # After a second we perform the same test over the same objects, but with different expectation to prove
         # that the action is actually asynchronous
         expect(feeder).to have_received(:stop_all)
         expect(runner).to have_received(:stop_async)
+      end
+    end
+
+    context 'when feeder was restarted' do
+      let(:another_runner_command) do
+        runner_command_queries.create(
+          subscription_id: runner.id, subscriptions_set_id: feeder.id, command_name: 'Restore', data: {}
+        )
+      end
+
+      before do
+        instance # persist instance into memory to demonstrate the same instance acts properly in this scenario
+        feeder.start.stop_async.wait_for_finish.start
+        # Prepare runner to be in "stopped" state to be able to trigger "Restore" command
+        runner.start.stop_async.wait_for_finish
+        allow(runner).to receive(:restore).and_call_original
+        another_runner_command
+      end
+
+      after do
+        feeder.stop_async.wait_for_finish
+        runner.stop_async.wait_for_finish
+      end
+
+      it "does not run commands from previous run" do
+        subject
+        sleep described_class::PULL_INTERVAL + 0.2
+        aggregate_failures do
+          expect(feeder).not_to have_received(:stop_all)
+          expect(runner).not_to have_received(:stop_async)
+        end
+      end
+      it 'runs the command from current run' do
+        subject
+        sleep described_class::PULL_INTERVAL + 0.2
+        expect(runner).to have_received(:restore)
       end
     end
   end
@@ -61,7 +97,7 @@ RSpec.describe PgEventstore::CommandsHandler do
     before do
       stub_const("#{described_class}::RESTART_DELAY", 1)
       should_raise = true
-      allow(instance).to receive(:subscription_feeder_commands).and_wrap_original do |original_method, *args, **kwargs, &blk|
+      allow(PgEventstore::CommandsHandlerHandlers).to receive(:process_feeder_commands).and_wrap_original do |original_method, *args, **kwargs, &blk|
         if should_raise
           should_raise = false
           raise "Something went wrong!"
@@ -78,7 +114,7 @@ RSpec.describe PgEventstore::CommandsHandler do
       subject
       aggregate_failures do
         expect(instance.state).to eq("running")
-        sleep 1.2 # wait for runner to run async action and fail afterwards
+        sleep described_class::PULL_INTERVAL + 0.2 # wait for runner to run async action and fail afterwards
         expect(instance.state).to eq("dead")
         sleep described_class::RESTART_DELAY
         expect(instance.state).to eq("running")

@@ -9,6 +9,12 @@ require_relative 'subscription_handler_performance'
 require_relative 'subscription_runner'
 require_relative 'subscriptions_set'
 require_relative 'subscription_runners_feeder'
+require_relative 'subscriptions_set_lifecycle'
+require_relative 'subscriptions_lifecycle'
+require_relative 'callback_handlers/subscription_feeder_handlers'
+require_relative 'callback_handlers/subscription_runner_handlers'
+require_relative 'callback_handlers/events_processor_handlers'
+require_relative 'callback_handlers/commands_handler_handlers'
 require_relative 'subscription_feeder'
 require_relative 'extensions/command_class_lookup_extension'
 require_relative 'extensions/base_command_extension'
@@ -84,7 +90,7 @@ module PgEventstore
       runner = SubscriptionRunner.new(
         stats: SubscriptionHandlerPerformance.new,
         events_processor: EventsProcessor.new(
-          create_event_handler(middlewares, handler), graceful_shutdown_timeout: graceful_shutdown_timeout
+          create_raw_event_handler(middlewares, handler), graceful_shutdown_timeout: graceful_shutdown_timeout
         ),
         subscription: subscription,
         restart_terminator: restart_terminator,
@@ -118,7 +124,7 @@ module PgEventstore
     # @param middlewares [Array<Symbol>, nil]
     # @param handler [#call]
     # @return [Proc]
-    def create_event_handler(middlewares, handler)
+    def create_raw_event_handler(middlewares, handler)
       deserializer = EventDeserializer.new(select_middlewares(middlewares), config.event_class_resolver)
       ->(raw_event) { handler.call(deserializer.deserialize(raw_event)) }
     end

@@ -1,0 +1,27 @@
+module PgEventstore
+  class SubscriptionsLifecycle
+    HEARTBEAT_INTERVAL: Integer
+
+    @config_name: Symbol
+
+    @subscriptions_set_lifecycle: PgEventstore::SubscriptionsSetLifecycle
+
+    @subscriptions_pinged_at: Time
+
+    @force_lock: bool
+
+    attr_reader runners: Array[PgEventstore::SubscriptionRunner]
+
+    def initialize: (Symbol config_name, PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle)-> void
+
+    def force_locked?: -> bool
+
+    def lock_all: -> void
+
+    def ping_subscriptions: -> void
+
+    def subscriptions: -> Array[PgEventstore::Subscription]
+
+    def force_lock!: -> void
+  end
+end

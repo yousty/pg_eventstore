@@ -74,66 +74,41 @@ module PgEventstore
 
     # @return [void]
     def attach_callbacks
-      @events_processor.define_callback(:process, :around, method(:track_exec_time))
-      @events_processor.define_callback(:process, :after, method(:update_subscription_stats))
-      @events_processor.define_callback(:error, :after, method(:update_subscription_error))
-      @events_processor.define_callback(:error, :after, method(:restart_subscription))
-      @events_processor.define_callback(:feed, :after, method(:update_subscription_chunk_stats))
-      @events_processor.define_callback(:restart, :after, method(:update_subscription_restarts))
-      @events_processor.define_callback(:change_state, :after, method(:update_subscription_state))
-    end
-
-    # @param action [Proc]
-    # @return [void]
-    def track_exec_time(action, *)
-      @stats.track_exec_time { action.call }
-    end
-
-    # @param current_position [Integer]
-    # @return [void]
-    def update_subscription_stats(current_position)
-      @subscription.update(
-        average_event_processing_time: @stats.average_event_processing_time,
-        current_position: current_position,
-        total_processed_events: @subscription.total_processed_events + 1
+      @events_processor.define_callback(
+        :process, :around,
+        SubscriptionRunnerHandlers.setup_handler(:track_exec_time, @stats)
       )
-    end
+      @events_processor.define_callback(
+        :process, :after,
+        SubscriptionRunnerHandlers.setup_handler(:update_subscription_stats, @subscription, @stats)
+      )
 
-    # @param state [String]
-    # @return [void]
-    def update_subscription_state(state)
-      @subscription.update(state: state)
-    end
+      @events_processor.define_callback(
+        :error, :after,
+        SubscriptionRunnerHandlers.setup_handler(:update_subscription_error, @subscription)
+      )
+      @events_processor.define_callback(
+        :error, :after,
+        SubscriptionRunnerHandlers.setup_handler(
+          :restart_events_processor,
+          @subscription, @restart_terminator, @failed_subscription_notifier, @events_processor
+        )
+      )
 
-    # @return [void]
-    def update_subscription_restarts
-      @subscription.update(last_restarted_at: Time.now.utc, restart_count: @subscription.restart_count + 1)
-    end
+      @events_processor.define_callback(
+        :feed, :after,
+        SubscriptionRunnerHandlers.setup_handler(:update_subscription_chunk_stats, @subscription)
+      )
 
-    # @param error [StandardError]
-    # @return [void]
-    def update_subscription_error(error)
-      @subscription.update(last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc)
-    end
+      @events_processor.define_callback(
+        :restart, :after,
+        SubscriptionRunnerHandlers.setup_handler(:update_subscription_restarts, @subscription)
+      )
 
-    # @param global_position [Integer]
-    # @return [void]
-    def update_subscription_chunk_stats(global_position)
-      @subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: global_position)
-    end
-
-    # @param error [StandardError]
-    # @return [void]
-    def restart_subscription(error)
-      return if @restart_terminator&.call(@subscription.dup)
-      if @subscription.restart_count >= @subscription.max_restarts_number
-        return @failed_subscription_notifier&.call(@subscription.dup, error)
-      end
-
-      Thread.new do
-        sleep @subscription.time_between_restarts
-        restore
-      end
+      @events_processor.define_callback(
+        :change_state, :after,
+        SubscriptionRunnerHandlers.setup_handler(:update_subscription_state, @subscription)
+      )
     end
   end
 end
