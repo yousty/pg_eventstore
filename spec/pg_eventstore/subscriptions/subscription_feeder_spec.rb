@@ -73,6 +73,10 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         sleep 1.1 # Let the feeder's runner die
       end
 
+      after do
+        instance.stop_async.wait_for_finish
+      end
+
       it 'raises error' do
         aggregate_failures do
           expect { subject }.to raise_error(/Could not add subscription/)
@@ -128,6 +132,10 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       instance.add(subscription_runner2)
     end
 
+    after do
+      instance.stop_async.wait_for_finish
+    end
+
     shared_examples 'runners are starting' do
       it 'returns self' do
         is_expected.to eq(instance)
@@ -167,10 +175,6 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         setup_subscription_runners
       end
 
-      after do
-        instance.stop_async.wait_for_finish
-      end
-
       it_behaves_like 'runners are starting'
       it { expect(instance.state).to eq('running') }
     end
@@ -193,10 +197,6 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         setup_subscription_runners
       end
 
-      after do
-        instance.stop_async.wait_for_finish
-      end
-
       it_behaves_like 'runners does not start'
       it { expect(instance.state).to eq('dead') }
     end
@@ -208,10 +208,6 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         sleep 0.1
         instance.stop_async
         setup_subscription_runners
-      end
-
-      after do
-        instance.wait_for_finish
       end
 
       it_behaves_like 'runners does not start'
@@ -244,6 +240,10 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     before do
       instance.add(subscription_runner1)
       instance.add(subscription_runner2)
+    end
+
+    after do
+      instance.stop_async.wait_for_finish
     end
 
     shared_examples 'runners are stopping' do
