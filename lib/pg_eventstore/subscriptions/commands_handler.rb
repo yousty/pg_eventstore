@@ -31,35 +31,19 @@ module PgEventstore
     private
 
     def attach_runner_callbacks
-      @basic_runner.define_callback(:process_async, :before, method(:process_async))
-      @basic_runner.define_callback(:after_runner_died, :before, method(:after_runner_died))
-    end
+      @basic_runner.define_callback(
+        :process_async, :before,
+      CommandsHandlerHandlers.setup_handler(:process_feeder_commands, @config_name, @subscription_feeder)
+      )
+      @basic_runner.define_callback(
+        :process_async, :before,
+        CommandsHandlerHandlers.setup_handler(:process_runners_commands, @config_name, @runners, @subscription_feeder)
+      )
 
-    def process_async
-      subscription_feeder_commands.process
-      subscription_runners_commands.process
-    end
-
-    # @param error [StandardError]
-    # @return [void]
-    def after_runner_died(error)
-      PgEventstore.logger&.error "#{self.class.name}: Error occurred: #{error.message}"
-      PgEventstore.logger&.error "#{self.class.name}: Backtrace: #{error.backtrace&.join("\n")}"
-      PgEventstore.logger&.error "#{self.class.name}: Trying to auto-repair in #{RESTART_DELAY} seconds..."
-      Thread.new do
-        sleep RESTART_DELAY
-        @basic_runner.restore
-      end
-    end
-
-    # @return [PgEventstore::CommandHandlers::SubscriptionFeederCommands]
-    def subscription_feeder_commands
-      CommandHandlers::SubscriptionFeederCommands.new(@config_name, @subscription_feeder)
-    end
-
-    # @return [PgEventstore::CommandHandlers::SubscriptionRunnersCommands]
-    def subscription_runners_commands
-      CommandHandlers::SubscriptionRunnersCommands.new(@config_name, @runners, @subscription_feeder.id)
+      @basic_runner.define_callback(
+        :after_runner_died, :before,
+        CommandsHandlerHandlers.setup_handler(:restore_runner, @basic_runner, RESTART_DELAY)
+      )
     end
   end
 end
