@@ -70,6 +70,7 @@ module PgEventstore
           url("#{path}?v=#{PgEventstore::VERSION}")
         end
 
+        # @return [Boolean]
         def resolve_link_tos?
           params.key?(:resolve_link_tos) ? params[:resolve_link_tos] == 'true' : true
         end
