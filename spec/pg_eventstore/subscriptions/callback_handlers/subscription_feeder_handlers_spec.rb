@@ -162,7 +162,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     it 'updates SubscriptionsSet#last_error_occurred_at', timecop: true do
       expect { subject }.to change {
         subscriptions_set_lifecycle.persisted_subscriptions_set.reload.last_error_occurred_at
-      }.to(Time.now.round(6))
+      }.to(Time.now.floor(6))
     end
   end
 
@@ -225,7 +225,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     it 'updates SubscriptionsSet#updated_at', timecop: true do
       expect { subject }.to change {
         subscriptions_set_lifecycle.persisted_subscriptions_set.reload.updated_at
-      }.to(Time.now.round(6))
+      }.to(Time.now.floor(6))
     end
   end
 
@@ -350,10 +350,10 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
 
     it 'updates #updated_at of first subscription', timecop: true do
-      expect { subject }.to change { subscription1.reload.updated_at }.to(Time.now.round(6))
+      expect { subject }.to change { subscription1.reload.updated_at }.to(Time.now.floor(6))
     end
     it 'updates #updated_at of second subscription', timecop: true do
-      expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.round(6))
+      expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.floor(6))
     end
   end
 
@@ -469,7 +469,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     it 'updates SubscriptionsSet#last_restarted_at', timecop: true do
       expect { subject }.to change {
         subscriptions_set_lifecycle.persisted_subscriptions_set.reload.last_restarted_at
-      }.to(Time.now.round(6))
+      }.to(Time.now.floor(6))
     end
     it 'updates SubscriptionsSet#restart_count' do
       expect { subject }.to change {

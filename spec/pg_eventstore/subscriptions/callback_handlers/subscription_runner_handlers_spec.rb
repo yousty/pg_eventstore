@@ -53,7 +53,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
       )
     end
     it 'updates Subscription#last_error_occurred_at', timecop: true do
-      expect { subject }.to change { subscription.reload.last_error_occurred_at }.to(Time.now.round(6))
+      expect { subject }.to change { subscription.reload.last_error_occurred_at }.to(Time.now.floor(6))
     end
   end
 
@@ -141,7 +141,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
     let(:global_position) { 123 }
 
     it 'updates Subscription#last_chunk_fed_at', timecop: true do
-      expect { subject }.to change { subscription.reload.last_chunk_fed_at }.to(Time.now.round(6))
+      expect { subject }.to change { subscription.reload.last_chunk_fed_at }.to(Time.now.floor(6))
     end
     it 'updates Subscription#last_chunk_greatest_position' do
       expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(global_position)
@@ -154,7 +154,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
     let(:subscription) { SubscriptionsHelper.create_with_connection }
 
     it 'updates Subscription#last_restarted_at', timecop: true do
-      expect { subject }.to change { subscription.reload.last_restarted_at }.to(Time.now.round(6))
+      expect { subject }.to change { subscription.reload.last_restarted_at }.to(Time.now.floor(6))
     end
     it 'updates Subscription#restart_count' do
       expect { subject }.to change { subscription.reload.restart_count }.by(1)

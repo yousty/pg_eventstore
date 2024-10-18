@@ -364,7 +364,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
       expect { subject }.not_to change { subscription3.reload.updated_at }
     end
     it 'returns id/Time association', timecop: true do
-      is_expected.to eq(subscription1.id => Time.now.utc.round(6))
+      is_expected.to eq(subscription1.id => Time.now.utc.floor(6))
     end
   end
 end

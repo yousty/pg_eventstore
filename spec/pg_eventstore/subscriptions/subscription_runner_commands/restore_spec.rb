@@ -69,7 +69,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::Restore do
         expect { subject }.to change { subscription.reload.options_hash }.to(
           hash_including(
             restart_count: 1,
-            last_restarted_at: Time.now.round(6),
+            last_restarted_at: Time.now.floor(6),
             last_error: nil,
             last_error_occurred_at: nil
           )

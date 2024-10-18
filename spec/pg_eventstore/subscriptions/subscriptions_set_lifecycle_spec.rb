@@ -9,7 +9,7 @@ RSpec.describe PgEventstore::SubscriptionsSetLifecycle do
 
     context 'when it is a time to ping' do
       it 'updates SubscriptionsSet#updated_at', timecop: true do
-        expect { subject }.to change { instance.persisted_subscriptions_set.reload.updated_at }.to(Time.now.round(6))
+        expect { subject }.to change { instance.persisted_subscriptions_set.reload.updated_at }.to(Time.now.floor(6))
       end
     end
 

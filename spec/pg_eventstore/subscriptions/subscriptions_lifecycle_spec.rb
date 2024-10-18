@@ -154,10 +154,10 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
         end
 
         it 'updates #updated_at of first subscription', timecop: true do
-          expect { subject }.to change { subscription1.reload.updated_at }.to(Time.now.round(6))
+          expect { subject }.to change { subscription1.reload.updated_at }.to(Time.now.floor(6))
         end
         it 'updates #updated_at of second subscription', timecop: true do
-          expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.round(6))
+          expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.floor(6))
         end
       end
 
@@ -171,7 +171,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
           expect { subject }.not_to change { subscription1.reload.updated_at }
         end
         it 'updates #updated_at of second subscription', timecop: true do
-          expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.round(6))
+          expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.floor(6))
         end
       end
 
@@ -186,7 +186,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
           expect { subject }.not_to change { subscription1.reload.updated_at }
         end
         it 'updates #updated_at of second subscription', timecop: true do
-          expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.round(6))
+          expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.floor(6))
         end
       end
     end
