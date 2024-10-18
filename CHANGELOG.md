@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.5.0]
+- Add ability to toggle link events in the admin UI
+- Mark linked events in the admin UI with "link" icon
+
 ## [1.4.0]
 - Add an ability to configure subscription graceful shutdown timeout globally and per subscription. Default value is 15 seconds. Previously it was hardcoded to 5 seconds. Examples:
 
