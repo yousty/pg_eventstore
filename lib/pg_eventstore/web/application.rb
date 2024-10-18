@@ -69,6 +69,10 @@ module PgEventstore
         def asset_url(path)
           url("#{path}?v=#{PgEventstore::VERSION}")
         end
+
+        def resolve_link_tos?
+          params.key?(:resolve_link_tos) ? params[:resolve_link_tos] == 'true' : true
+        end
       end
 
       get '/' do
@@ -77,7 +81,10 @@ module PgEventstore
           starting_id: params[:starting_id]&.to_i,
           per_page: Paginator::EventsCollection::PER_PAGE[params[:per_page]],
           order: Paginator::EventsCollection::SQL_DIRECTIONS[params[:order]],
-          options: { filter: { event_types: events_filter, streams: streams_filter } }
+          options: {
+            filter: { event_types: events_filter, streams: streams_filter },
+            resolve_link_tos: resolve_link_tos?
+          }
         )
 
         if request.xhr?

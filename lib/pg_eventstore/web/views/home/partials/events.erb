@@ -5,7 +5,12 @@
     <td><%= event.stream.context %></td>
     <td><%= event.stream.stream_name %></td>
     <td><a href="<%= stream_path(event) %>"><%= event.stream.stream_id %></a></td>
-    <td><%= event.type %></td>
+    <td>
+      <%= event.type %>
+      <% if event.link %>
+        <i class="fa fa-link"></i>
+      <% end %>
+    </td>
     <td><%= event.created_at.strftime('%F %T') %></td>
     <td><%= event.id %></td>
     <td><a href="javascript: void(0);" class="d-inline-block text-nowrap toggle-event-data">JSON <i

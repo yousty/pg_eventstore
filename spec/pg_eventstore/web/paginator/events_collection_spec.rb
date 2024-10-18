@@ -78,8 +78,16 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
       let!(:link) { PgEventstore.client.link_to(stream3, event1) }
       let(:order) { :desc }
 
-      it 'resolves links' do
-        is_expected.to eq([event1, event5])
+      it 'returns it' do
+        is_expected.to eq([link, event5])
+      end
+
+      context 'when :resolve_link_tos option is provided' do
+        let(:options) { { resolve_link_tos: true } }
+
+        it 'resolves the link' do
+          is_expected.to eq([event1, event5])
+        end
       end
     end
 

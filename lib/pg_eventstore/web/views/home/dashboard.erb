@@ -26,6 +26,7 @@
             <br/>
             <form id="filters-form" action="<%= url('/') %>" method="GET" data-parsley-validate class="form-horizontal form-label-left">
               <input type="hidden" name="per_page" value="<%= params[:per_page].to_i %>">
+              <input type="hidden" name="resolve_link_tos" value="<%= resolve_link_tos? %>">
               <div class="stream-filters">
                 <% streams_filter&.each do |attrs| %>
                   <%= erb :'home/partials/stream_filter', { layout: false }, { stream: attrs } %>
@@ -89,6 +90,16 @@
                     <button type="submit" class="d-none"></button>
                   </div>
                 </form>
+                <div class="float-md-right mt-2 mr-2">
+                  <div class="form-group">
+                    <div class="checkbox">
+                      <label for="resolve-link-tos" class="control-label">
+                        Resolve links
+                        <input type="checkbox" id="resolve-link-tos" value="true" autocomplete="off" <% if resolve_link_tos? %> checked <% end %> data-url-checked="<%= resolve_link_tos_url(true) %>" data-url-unchecked="<%= resolve_link_tos_url(false) %>">
+                      </label>
+                    </div>
+                  </div>
+                </div>
                 <div class="float-md-right mt-2 mr-2">
                   <div class="form-group">
                     <div class="checkbox">

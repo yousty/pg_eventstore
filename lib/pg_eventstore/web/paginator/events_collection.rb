@@ -23,9 +23,7 @@ module PgEventstore
         def collection
           @_collection ||= PgEventstore.client(config_name).read(
             PgEventstore::Stream.all_stream,
-            options: options.merge(
-              from_position: starting_id, max_count: per_page, direction: order, resolve_link_tos: true
-            ),
+            options: options.merge(from_position: starting_id, max_count: per_page, direction: order),
             middlewares: []
           )
         end

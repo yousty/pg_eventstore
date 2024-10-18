@@ -75,6 +75,40 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         expect(rendered_event_ids).to eq(events1.map(&:id).reverse)
       end
     end
+
+    describe 'resolving links' do
+      let!(:events1) do
+        PgEventstore.client.append_to_stream(stream1, [PgEventstore::Event.new(type: "Foo")])
+      end
+      let!(:events2) do
+        PgEventstore.client.link_to(stream2, [events1.first])
+      end
+
+      context 'when :resolve_link_tos param has "true" value' do
+        let(:params) { { resolve_link_tos: 'true' } }
+
+        it 'resolves link events' do
+          subject
+          expect(rendered_event_ids).to eq(events1.map(&:id) * 2)
+        end
+      end
+
+      context 'when :resolve_link_tos param has "false" value' do
+        let(:params) { { resolve_link_tos: 'false' } }
+
+        it 'displays link events' do
+          subject
+          expect(rendered_event_ids).to eq(events.map(&:id).reverse)
+        end
+      end
+
+      context 'when :resolve_link_tos is not provided' do
+        it 'resolves link events' do
+          subject
+          expect(rendered_event_ids).to eq(events1.map(&:id) * 2)
+        end
+      end
+    end
   end
 
   describe 'POST /change_config' do

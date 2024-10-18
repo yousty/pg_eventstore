@@ -50,6 +50,10 @@ module PgEventstore
           build_path(params.merge(order: order))
         end
 
+        def resolve_link_tos_url(should_resolve)
+          build_path(params.merge(resolve_link_tos: should_resolve))
+        end
+
         # @param number [Integer] total number of events by the current filter
         # @return [String]
         def total_count(number)
@@ -92,7 +96,6 @@ module PgEventstore
               }
             }
           )
-
         end
 
         private
