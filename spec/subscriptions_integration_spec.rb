@@ -298,4 +298,55 @@ RSpec.describe 'Subscriptions integration' do
       expect(processed_events.map(&:id)).to eq([event1, event2, event1, event2].map(&:id))
     end
   end
+
+  describe 'force-locking subscriptions' do
+    subject { manager.start }
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name, force_lock: true) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+
+    let!(:existing_subscriptions_set) { SubscriptionsSetHelper.create_with_connection(name: set_name) }
+    let!(:locked_subscription) do
+      SubscriptionsHelper.create_with_connection(
+        set: set_name, name: subscription_name, locked_by: existing_subscriptions_set.id
+      )
+    end
+    let(:subscription_name) { 'Subscription 1' }
+
+    let(:handler) { proc { |event| processed_events.push(event) } }
+    let(:processed_events) { [] }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
+    let!(:event) do
+      event = PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo')
+      PgEventstore.client.append_to_stream(stream, event)
+    end
+
+    let(:queries) do
+      PgEventstore::SubscriptionQueries.new(PgEventstore.connection)
+    end
+
+    before do
+      PgEventstore.config.subscription_pull_interval = 0.2
+      manager.subscribe(
+        subscription_name,
+        handler: handler, options: { filter: { streams: [{ context: 'FooCtx' }] } }
+      )
+    end
+
+    after do
+      manager.stop
+      PgEventstore.send(:init_variables)
+    end
+
+    it 'locks existing subscription under new SubscriptionsSet' do
+      expect { subject }.to change { locked_subscription.reload.locked_by }.to(kind_of(Integer))
+    end
+    it 'does not create another subscription' do
+      expect { subject }.not_to change { queries.find_all(set: set_name).size }
+    end
+    it 'processes events correctly' do
+      expect { subject; sleep 1 }.to change { processed_events.size }.by(1)
+    end
+  end
 end

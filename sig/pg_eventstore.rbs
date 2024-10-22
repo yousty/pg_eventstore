@@ -12,18 +12,12 @@ module PgEventstore
   # _@param_ `name`
   def self.connection: (?Symbol name) -> PgEventstore::Connection
 
-  # _@param_ `config_name`
-  #
-  # _@param_ `subscription_set`
-  #
-  # _@param_ `max_retries` — max number of retries of failed SubscriptionsSet
-  #
-  # _@param_ `retries_interval` — a delay between retries of failed SubscriptionsSet
   def self.subscriptions_manager: (
       ?Symbol config_name,
       subscription_set: String,
       ?max_retries: Integer?,
-      ?retries_interval: Integer?
+      ?retries_interval: Integer?,
+      ?force_lock: bool
     ) -> PgEventstore::SubscriptionsManager
 
   # _@param_ `name`

@@ -126,7 +126,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
     let(:subscription_feeder) do
       PgEventstore::SubscriptionFeeder.new(
-        config_name: :default, set_name: 'Foo', max_retries: 0, retries_interval: 0
+        config_name: :default, set_name: 'Foo', max_retries: 0, retries_interval: 0, force_lock: false
       )
     end
 
@@ -439,7 +439,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
     let(:subscription_feeder) do
       PgEventstore::SubscriptionFeeder.new(
-        config_name: :default, set_name: 'Foo', max_retries: 0, retries_interval: 0
+        config_name: :default, set_name: 'Foo', max_retries: 0, retries_interval: 0, force_lock: false
       )
     end
 

@@ -71,10 +71,10 @@ To "unlock" the subscription you should gracefully stop the subscription manager
 subscriptions_manager.stop
 ```
 
-If you shut down the process which runs your subscriptions without calling the `#stop` method, subscriptions will remain locked, and the only way to unlock them will be to call the `#force_lock!` method before calling the `#start` method:
+If you shut down the process which runs your subscriptions without calling the `#stop` method, subscriptions will remain locked, and the only way to unlock them is to pass `force_lock: true`:
 
 ```ruby
-subscriptions_manager.force_lock!
+subscriptions_manager = PgEventstore.subscriptions_manager(subscription_set: 'SubscriptionsOfMyAwesomeMicroservice', force_lock: true)
 subscriptions_manager.start
 ```
 
@@ -87,7 +87,9 @@ PgEventstore.configure do |config|
   config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore' }  
 end
 
-subscriptions_manager = PgEventstore.subscriptions_manager(subscription_set: 'MyAwesomeSubscriptions')
+subscriptions_manager = PgEventstore.subscriptions_manager(
+  subscription_set: 'MyAwesomeSubscriptions', force_lock: ENV['FORCE_LOCK'] == 'true'
+)
 subscriptions_manager.subscribe(
   'Foo events Subscription', 
   handler: proc { |event| p "Foo events Subscription: #{event.inspect}" }, 
@@ -99,7 +101,6 @@ subscriptions_manager.subscribe(
   options: { filter: { streams: [{ context: 'BarCtx' }] } 
   }
 )
-subscriptions_manager.force_lock! if ENV['FORCE_LOCK'] == 'true'
 timeout = 20 # 20 seconds
 deadline = Time.now + timeout
 loop do

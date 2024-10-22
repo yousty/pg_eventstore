@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::SubscriptionsLifecycle do
-  let(:instance) { described_class.new(:default, subscriptions_set_lifecycle) }
+  let(:instance) { described_class.new(:default, subscriptions_set_lifecycle, force_lock: force_lock) }
   let(:subscriptions_set_lifecycle) do
     PgEventstore::SubscriptionsSetLifecycle.new(
       :default,
       { name: 'Foo', max_restarts_number: 0, time_between_restarts: 0 }
     )
   end
+  let(:force_lock) { false }
 
   describe '#lock_all' do
     subject { instance.lock_all }
@@ -252,9 +253,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
     end
 
     context 'when instance is force-locked' do
-      before do
-        instance.force_lock!
-      end
+      let(:force_lock) { true }
 
       it { is_expected.to eq(true) }
     end

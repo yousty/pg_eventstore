@@ -12,7 +12,7 @@ module PgEventstore
 
     attr_reader runners: Array[PgEventstore::SubscriptionRunner]
 
-    def initialize: (Symbol config_name, PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle)-> void
+    def initialize: (Symbol config_name, PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle, ?force_lock: bool)-> void
 
     def force_locked?: -> bool
 

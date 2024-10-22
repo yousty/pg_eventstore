@@ -6,6 +6,8 @@ module PgEventstore
     # _@param_ `object`
     def self.deep_dup: (untyped object) -> Object
 
+    def self.deprecation_warning: (String message) -> void
+
     # _@param_ `array`
     #
     # _@return_ — positional variables, based on array size. Example: "$1, $2, $3"

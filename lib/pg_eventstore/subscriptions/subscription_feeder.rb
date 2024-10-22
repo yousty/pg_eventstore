@@ -13,14 +13,17 @@ module PgEventstore
     # @param set_name [String]
     # @param max_retries [Integer] max number of retries of failed SubscriptionsSet
     # @param retries_interval [Integer] a delay between retries of failed SubscriptionsSet
-    def initialize(config_name:, set_name:, max_retries:, retries_interval:)
+    # @param force_lock [Boolean] whether to force-lock subscriptions
+    def initialize(config_name:, set_name:, max_retries:, retries_interval:, force_lock:)
       @config_name = config_name
       @basic_runner = BasicRunner.new(0.2, 0)
       @subscriptions_set_lifecycle = SubscriptionsSetLifecycle.new(
         @config_name,
         { name: set_name, max_restarts_number: max_retries, time_between_restarts: retries_interval }
       )
-      @subscriptions_lifecycle = SubscriptionsLifecycle.new(@config_name, @subscriptions_set_lifecycle)
+      @subscriptions_lifecycle = SubscriptionsLifecycle.new(
+        @config_name, @subscriptions_set_lifecycle, force_lock: force_lock
+      )
       @commands_handler = CommandsHandler.new(@config_name, self, @subscriptions_lifecycle.runners)
       attach_runner_callbacks
     end

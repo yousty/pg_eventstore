@@ -13,12 +13,12 @@ module PgEventstore
 
     # @param config_name [Symbol]
     # @param subscriptions_set_lifecycle [PgEventstore::SubscriptionsSetLifecycle]
-    def initialize(config_name, subscriptions_set_lifecycle)
+    def initialize(config_name, subscriptions_set_lifecycle, force_lock: false)
       @config_name = config_name
       @subscriptions_set_lifecycle = subscriptions_set_lifecycle
       @runners = []
       @subscriptions_pinged_at = Time.at(0)
-      @force_lock = false
+      @force_lock = force_lock
     end
 
     # Locks all Subscriptions behind the current SubscriptionsSet
@@ -59,6 +59,11 @@ module PgEventstore
     # locked by the new SubscriptionsSet.
     # @return [void]
     def force_lock!
+      message = <<~TEXT
+        Usage of #force_lock! is deprecated and will be removed in v2. Please pass :force_lock keyword argument when \
+        initializing SubscriptionsManager. Example: PgEventstore.subscriptions_manager(force_lock: true)
+      TEXT
+      Utils.deprecation_warning(message)
       @force_lock = true
     end
 

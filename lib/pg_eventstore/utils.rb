@@ -69,6 +69,12 @@ module PgEventstore
       def original_global_position(raw_event)
         raw_event['link'] ? raw_event['link']['global_position'] : raw_event['global_position']
       end
+
+      # @param message [String]
+      # @return [void]
+      def deprecation_warning(message)
+        PgEventstore.logger&.warn("\e[31m[DEPRECATED]: #{message}\e[0m")
+      end
     end
   end
 end

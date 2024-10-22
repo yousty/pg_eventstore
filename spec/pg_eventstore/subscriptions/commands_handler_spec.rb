@@ -5,7 +5,7 @@ RSpec.describe PgEventstore::CommandsHandler do
   let(:config_name) { :default }
   let(:feeder) do
     PgEventstore::SubscriptionFeeder.new(
-      config_name: config_name, set_name: 'MySubscriptionsSet', max_retries: 0, retries_interval: 0
+      config_name: config_name, set_name: 'MySubscriptionsSet', max_retries: 0, retries_interval: 0, force_lock: false
     )
   end
   let(:runners) { [runner] }

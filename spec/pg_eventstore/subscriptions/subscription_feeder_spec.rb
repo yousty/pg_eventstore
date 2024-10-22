@@ -2,7 +2,9 @@
 
 RSpec.describe PgEventstore::SubscriptionFeeder do
   let(:instance) do
-    described_class.new(config_name: config_name, set_name: set_name, max_retries: max_retries, retries_interval: 0)
+    described_class.new(
+      config_name: config_name, set_name: set_name, max_retries: max_retries, retries_interval: 0, force_lock: false
+    )
   end
   let(:config_name) { :default }
   let(:set_name) { 'FooSet' }

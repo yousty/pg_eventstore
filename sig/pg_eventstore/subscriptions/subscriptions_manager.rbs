@@ -13,7 +13,8 @@ module PgEventstore
         config: PgEventstore::Config,
         set_name: String,
         ?max_retries: Integer?,
-        ?retries_interval: Integer?
+        ?retries_interval: Integer?,
+        ?force_lock: bool
       ) -> void
 
     # _@param_ `subscription_name` — subscription's name

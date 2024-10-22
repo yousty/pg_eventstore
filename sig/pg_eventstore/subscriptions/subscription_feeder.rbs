@@ -2,18 +2,12 @@ module PgEventstore
   class SubscriptionFeeder
     extend Forwardable
 
-    # _@param_ `config_name`
-    #
-    # _@param_ `set_name`
-    #
-    # _@param_ `max_retries` — max number of retries of failed SubscriptionsSet
-    #
-    # _@param_ `retries_interval` — a delay between retries of failed SubscriptionsSet
     def initialize: (
         config_name: Symbol,
         set_name: String,
         max_retries: Integer,
-        retries_interval: Integer
+        retries_interval: Integer,
+        force_lock: bool
       ) -> void
 
     def id: () -> Integer
