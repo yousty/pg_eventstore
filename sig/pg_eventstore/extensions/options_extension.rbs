@@ -1,6 +1,23 @@
 module PgEventstore
   module Extensions
     module OptionsExtension
+      class Option
+        attr_reader name: Symbol
+        attr_reader metadata: untyped?
+
+        def initialize: (Symbol name, ?untyped? metadata) -> untyped
+
+        def ==: (untyped other_option) -> bool
+
+        def eql?: (untyped other_option) -> bool
+
+        def hash: () -> Integer
+      end
+
+      class Options
+        def []: (Symbol option) -> PgEventstore::Extensions::OptionsExtension::Option?
+      end
+
       def self.included: (untyped klass) -> untyped
 
       def initialize: (**untyped options) -> void
@@ -25,7 +42,7 @@ module PgEventstore
         # _@param_ `opt_name` — option name
         #
         # _@param_ `blk` — provide define value using block. It will be later evaluated in the context of your object to determine the default value of the option
-        def option: (Symbol opt_name) ?{ () -> untyped } -> Symbol
+        def option: (Symbol opt_name, ?metadata: untyped?) ?{ () -> untyped } -> Symbol
 
         def inherited: (untyped klass) -> untyped
 

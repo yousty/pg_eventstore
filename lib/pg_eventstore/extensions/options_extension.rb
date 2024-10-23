@@ -40,14 +40,54 @@ module PgEventstore
     #
     #   SomeClass.new(attr1: 'hihi', attr4: 'byebye')
     module OptionsExtension
+      class Option
+        attr_reader :name, :metadata
+
+        # @param name [Symbol]
+        # @param metadata [Object, nil]
+        def initialize(name, metadata: nil)
+          @name = name
+          @metadata = metadata
+        end
+
+        # @param other_option [Object]
+        # @return [Boolean]
+        def ==(other_option)
+          return false unless other_option.is_a?(Option)
+
+          name == other_option.name
+        end
+
+        # @param other_option [Object]
+        # @return [Boolean]
+        def eql?(other_option)
+          return false unless other_option.is_a?(Option)
+
+          name.eql?(other_option.name)
+        end
+
+        # @return [Integer]
+        def hash
+          name.hash
+        end
+      end
+
+      class Options < Set
+        # @param option [Symbol]
+        # @return [PgEventstore::Extensions::OptionsExtension::Option, nil]
+        def [](option)
+          @hash.assoc(Option.new(option))&.dig(0)
+        end
+      end
+
       # @!visibility private
       module ClassMethods
         # @param opt_name [Symbol] option name
         # @param blk [Proc] provide define value using block. It will be later evaluated in the
         #   context of your object to determine the default value of the option
         # @return [Symbol]
-        def option(opt_name, &blk)
-          self.options = (options + Set.new([opt_name])).freeze
+        def option(opt_name, metadata: nil, &blk)
+          self.options = (options + Options.new([Option.new(opt_name, metadata: metadata)])).freeze
           warn_already_defined(opt_name)
           warn_already_defined(:"#{opt_name}=")
           define_method "#{opt_name}=" do |value|
@@ -67,7 +107,7 @@ module PgEventstore
 
         def inherited(klass)
           super
-          klass.options = Set.new(options).freeze
+          klass.options = Options.new(options).freeze
         end
 
         private
@@ -86,7 +126,7 @@ module PgEventstore
 
       def self.included(klass)
         klass.singleton_class.attr_accessor(:options)
-        klass.options = Set.new.freeze
+        klass.options = Options.new.freeze
         klass.extend(ClassMethods)
       end
 
@@ -100,7 +140,7 @@ module PgEventstore
       # @return [Hash]
       def options_hash
         self.class.options.each_with_object({}) do |option, res|
-          res[option] = public_send(option)
+          res[option.name] = public_send(option.name)
         end
       end
       alias attributes_hash options_hash
@@ -108,7 +148,7 @@ module PgEventstore
       # @param opt_name [Symbol]
       # @return [Boolean]
       def readonly!(opt_name)
-        return false unless self.class.options.include?(opt_name)
+        return false unless self.class.options.include?(Option.new(opt_name))
 
         @readonly.add(opt_name)
         true
@@ -136,8 +176,8 @@ module PgEventstore
       def init_default_values(options)
         self.class.options.each do |option|
           # init default values of options
-          value = options.key?(option) ? options[option] : public_send(option)
-          public_send("#{option}=", value)
+          value = options.key?(option.name) ? options[option.name] : public_send(option.name)
+          public_send("#{option.name}=", value)
         end
       end
     end
