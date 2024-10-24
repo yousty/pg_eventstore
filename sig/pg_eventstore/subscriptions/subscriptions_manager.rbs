@@ -2,6 +2,8 @@ module PgEventstore
   class SubscriptionsManager
     extend Forwardable
 
+    def self.callbacks: () -> PgEventstore::Callbacks
+
     # _@param_ `config`
     #
     # _@param_ `set_name`
@@ -16,6 +18,8 @@ module PgEventstore
         ?retries_interval: Integer?,
         ?force_lock: bool
       ) -> void
+
+    def config_name: () -> Symbol
 
     # _@param_ `subscription_name` — subscription's name
     #
@@ -58,6 +62,8 @@ module PgEventstore
 
     # _@param_ `middlewares`
     def select_middlewares: (?::Array[Symbol]? middlewares) -> ::Array[PgEventstore::Middleware]
+
+    def start!: () -> PgEventstore::BasicRunner
 
     def start: () -> PgEventstore::BasicRunner?
 

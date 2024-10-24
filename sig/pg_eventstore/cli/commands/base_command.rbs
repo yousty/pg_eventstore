@@ -1,0 +1,17 @@
+module PgEventstore
+  module CLI
+    module Commands
+      class BaseCommand
+        attr_reader options: PgEventstore::CLI::BaseOptions
+
+        def initialize: (PgEventstore::CLI::BaseOptions options) -> untyped
+
+        def call: -> void
+
+        private
+
+        def load_external_files: -> void
+      end
+    end
+  end
+end

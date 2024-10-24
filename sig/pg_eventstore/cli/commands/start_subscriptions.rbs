@@ -1,0 +1,25 @@
+module PgEventstore
+  module CLI
+    module Commands
+      class StartSubscriptions
+        KEEP_ALIVE_INTERVAL: Integer
+
+        @subscription_managers: ::Set[PgEventstore::SubscriptionsManager]
+
+        def call: -> void
+
+        private
+
+        def attach_callbacks: -> void
+
+        def keep_process_alive: -> void
+
+        def persist_pid: -> void
+
+        def setup_killsig: -> void
+
+        def validate_subscriptions: -> void
+      end
+    end
+  end
+end

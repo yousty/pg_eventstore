@@ -2,6 +2,13 @@ module PgEventstore
   class SubscriptionFeeder
     extend Forwardable
 
+    @basic_runner: PgEventstore::BasicRunner
+    @commands_handler: PgEventstore::CommandsHandler
+    @subscriptions_lifecycle: PgEventstore::SubscriptionsLifecycle
+    @subscriptions_set_lifecycle: PgEventstore::SubscriptionsSetLifecycle
+
+    attr_reader config_name: Symbol
+
     def initialize: (
         config_name: Symbol,
         set_name: String,
@@ -10,7 +17,7 @@ module PgEventstore
         force_lock: bool
       ) -> void
 
-    def id: () -> Integer
+    def id: () -> Integer?
 
     # _@param_ `runner`
     def add: (PgEventstore::SubscriptionRunner runner) -> PgEventstore::SubscriptionRunner

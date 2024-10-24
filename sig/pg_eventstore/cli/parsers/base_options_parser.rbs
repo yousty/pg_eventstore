@@ -1,0 +1,17 @@
+module PgEventstore
+  module CLI
+    class BaseOptionsParser
+      @parser: ::OptionParser
+
+      def self.banner: -> String
+
+      attr_reader args: Array[String]
+
+      attr_reader options: PgEventstore::CLI::BaseOptions
+
+      def initialize: (Array[String] args, PgEventstore::CLI::BaseOptions options) -> void
+
+      def parse: -> [Array[String], PgEventstore::CLI::BaseOptions]
+    end
+  end
+end

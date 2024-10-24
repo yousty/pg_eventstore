@@ -1,0 +1,14 @@
+module PgEventstore
+  module CLI
+    module Commands
+      module CallbackHandlers
+        class StartCmdHandlers
+          def self.handle_start_up: (Proc action, PgEventstore::SubscriptionsManager, manager) -> void
+
+          def self.register_managers: (Array[PgEventstore::SubscriptionsManager] subscription_managers,
+              PgEventstore::SubscriptionsManager manager) -> void
+        end
+      end
+    end
+  end
+end

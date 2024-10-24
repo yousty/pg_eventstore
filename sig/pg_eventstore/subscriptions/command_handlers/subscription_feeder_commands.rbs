@@ -11,6 +11,10 @@ module PgEventstore
       def queries: () -> PgEventstore::SubscriptionsSetCommandQueries
 
       def connection: () -> PgEventstore::Connection
+
+      private
+
+      def commands: () -> Array[PgEventstore::SubscriptionFeederCommands::Base]
     end
   end
 end

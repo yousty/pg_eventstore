@@ -31,12 +31,19 @@ module PgEventstore
   class SubscriptionsManager
     extend Forwardable
 
+    class << self
+      # @return [PgEventstore::Callbacks]
+      def callbacks
+        @callbacks ||= Callbacks.new
+      end
+    end
+
     # @!attribute config
     #   @return [PgEventstore::Config]
     attr_reader :config
     private :config
 
-    def_delegators :@subscription_feeder, :stop, :force_lock!
+    def_delegators :@subscription_feeder, :stop, :force_lock!, :running?
 
     # @param config [PgEventstore::Config]
     # @param set_name [String]
@@ -47,7 +54,7 @@ module PgEventstore
       @config = config
       @set_name = set_name
       @subscription_feeder = SubscriptionFeeder.new(
-        config_name: config.name,
+        config_name: config_name,
         set_name: set_name,
         max_retries: max_retries || config.subscriptions_set_max_retries,
         retries_interval: retries_interval || config.subscriptions_set_retries_interval,
@@ -113,12 +120,25 @@ module PgEventstore
       @subscription_feeder.read_only_subscriptions_set
     end
 
+    # @return [PgEventstore::BasicRunner]
+    # @raise [PgEventstore::SubscriptionAlreadyLockedError]
+    def start!
+      self.class.callbacks.run_callbacks(:start, self) do
+        @subscription_feeder.start
+      end
+    end
+
     # @return [PgEventstore::BasicRunner, nil]
     def start
-      @subscription_feeder.start
+      start!
     rescue PgEventstore::SubscriptionAlreadyLockedError => e
       PgEventstore.logger&.warn(e.message)
       nil
+    end
+
+    # @return [Symbol]
+    def config_name
+      @config.name
     end
 
     private

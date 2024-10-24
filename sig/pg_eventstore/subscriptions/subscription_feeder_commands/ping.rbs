@@ -1,0 +1,11 @@
+module PgEventstore
+  module SubscriptionFeederCommands
+    class Ping
+      def exec_cmd: (PgEventstore::SubscriptionFeeder subscription_feeder) -> void
+
+      private
+
+      def queries: -> PgEventstore::SubscriptionsSetQueries
+    end
+  end
+end

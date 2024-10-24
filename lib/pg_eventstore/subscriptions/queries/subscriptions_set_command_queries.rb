@@ -55,9 +55,11 @@ module PgEventstore
         conn.exec_params(sql, [command_name, subscriptions_set_id, data])
       end
       deserialize(pg_result.to_a.first)
+    rescue PG::ForeignKeyViolation
+      raise RecordNotFound.new("subscriptions_set", subscriptions_set_id)
     end
 
-    # @param subscriptions_set_id [Integer]
+    # @param subscriptions_set_id [Integer, nil]
     # @return [Array<PgEventstore::SubscriptionFeederCommands::Base>]
     def find_commands(subscriptions_set_id)
       sql_builder =

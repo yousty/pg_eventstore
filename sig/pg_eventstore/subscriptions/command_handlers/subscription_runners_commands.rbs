@@ -1,12 +1,18 @@
 module PgEventstore
   module CommandHandlers
     class SubscriptionRunnersCommands
+      @config_name: Symbol
+
+      @runners: ::Array[PgEventstore::SubscriptionRunner]
+
+      @subscriptions_set_id: Integer?
+
       # _@param_ `config_name`
       #
       # _@param_ `runners`
       #
       # _@param_ `subscriptions_set_id`
-      def initialize: (Symbol config_name, ::Array[PgEventstore::SubscriptionRunner] runners, Integer subscriptions_set_id) -> void
+      def initialize: (Symbol config_name, ::Array[PgEventstore::SubscriptionRunner] runners, Integer? subscriptions_set_id) -> void
 
       def process: () -> void
 

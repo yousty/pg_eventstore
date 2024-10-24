@@ -6,7 +6,9 @@ module PgEventstore
   class SubscriptionFeeder
     extend Forwardable
 
-    def_delegators :@basic_runner, :start, :stop, :restore, :state, :wait_for_finish, :stop_async
+    attr_reader :config_name
+
+    def_delegators :@basic_runner, :start, :stop, :restore, :state, :wait_for_finish, :stop_async, :running?
     def_delegators :@subscriptions_lifecycle, :force_lock!
 
     # @param config_name [Symbol]
@@ -28,9 +30,9 @@ module PgEventstore
       attach_runner_callbacks
     end
 
-    # @return [Integer]
+    # @return [Integer, nil]
     def id
-      @subscriptions_set_lifecycle.persisted_subscriptions_set.id
+      @subscriptions_set_lifecycle.subscriptions_set&.id
     end
 
     # Adds SubscriptionRunner to the set
