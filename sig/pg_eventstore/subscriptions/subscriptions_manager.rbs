@@ -2,6 +2,11 @@ module PgEventstore
   class SubscriptionsManager
     extend Forwardable
 
+    @set_name: String
+    @subscription_feeder: PgEventstore::SubscriptionFeeder
+    @subscriptions_lifecycle: PgEventstore::SubscriptionsLifecycle
+    @subscriptions_set_lifecycle: PgEventstore::SubscriptionsSetLifecycle
+
     def self.callbacks: () -> PgEventstore::Callbacks
 
     # _@param_ `config`

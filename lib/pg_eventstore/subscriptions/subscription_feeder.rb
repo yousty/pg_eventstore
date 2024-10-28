@@ -9,23 +9,15 @@ module PgEventstore
     attr_reader :config_name
 
     def_delegators :@basic_runner, :start, :stop, :restore, :state, :wait_for_finish, :stop_async, :running?
-    def_delegators :@subscriptions_lifecycle, :force_lock!
 
     # @param config_name [Symbol]
-    # @param set_name [String]
-    # @param max_retries [Integer] max number of retries of failed SubscriptionsSet
-    # @param retries_interval [Integer] a delay between retries of failed SubscriptionsSet
-    # @param force_lock [Boolean] whether to force-lock subscriptions
-    def initialize(config_name:, set_name:, max_retries:, retries_interval:, force_lock:)
+    # @param subscriptions_set_lifecycle [PgEventstore::SubscriptionsSetLifecycle]
+    # @param subscriptions_lifecycle [PgEventstore::SubscriptionsLifecycle]
+    def initialize(config_name:, subscriptions_set_lifecycle:, subscriptions_lifecycle:)
       @config_name = config_name
       @basic_runner = BasicRunner.new(0.2, 0)
-      @subscriptions_set_lifecycle = SubscriptionsSetLifecycle.new(
-        @config_name,
-        { name: set_name, max_restarts_number: max_retries, time_between_restarts: retries_interval }
-      )
-      @subscriptions_lifecycle = SubscriptionsLifecycle.new(
-        @config_name, @subscriptions_set_lifecycle, force_lock: force_lock
-      )
+      @subscriptions_set_lifecycle = subscriptions_set_lifecycle
+      @subscriptions_lifecycle = subscriptions_lifecycle
       @commands_handler = CommandsHandler.new(@config_name, self, @subscriptions_lifecycle.runners)
       attach_runner_callbacks
     end
@@ -33,15 +25,6 @@ module PgEventstore
     # @return [Integer, nil]
     def id
       @subscriptions_set_lifecycle.subscriptions_set&.id
-    end
-
-    # Adds SubscriptionRunner to the set
-    # @param runner [PgEventstore::SubscriptionRunner]
-    # @return [PgEventstore::SubscriptionRunner]
-    def add(runner)
-      assert_proper_state!
-      @subscriptions_lifecycle.runners.push(runner)
-      runner
     end
 
     # Starts all SubscriptionRunners. This is only available if SubscriptionFeeder's runner is alive.
@@ -60,20 +43,6 @@ module PgEventstore
 
       @subscriptions_lifecycle.runners.each(&:stop_async)
       self
-    end
-
-    # Produces a copy of currently running Subscriptions. This is needed, because original Subscriptions objects are
-    # dangerous to use - users may incidentally break their state.
-    # @return [Array<PgEventstore::Subscription>]
-    def read_only_subscriptions
-      @subscriptions_lifecycle.subscriptions.map(&:dup)
-    end
-
-    # Produces a copy of current SubscriptionsSet. This is needed, because original SubscriptionsSet object is
-    # dangerous to use - users may incidentally break its state.
-    # @return [PgEventstore::SubscriptionsSet, nil]
-    def read_only_subscriptions_set
-      @subscriptions_set_lifecycle.subscriptions_set&.dup
     end
 
     private
@@ -137,20 +106,6 @@ module PgEventstore
         :before_runner_restored, :after,
         SubscriptionFeederHandlers.setup_handler(:update_subscriptions_set_restarts, @subscriptions_set_lifecycle)
       )
-    end
-
-    # This method helps to ensure that no Subscription is added after SubscriptionFeeder's runner is working
-    # @return [void]
-    # @raise [RuntimeError]
-    def assert_proper_state!
-      return if @basic_runner.initial? || @basic_runner.stopped?
-      subscriptions_set = @subscriptions_set_lifecycle.persisted_subscriptions_set
-
-      error_message = <<~TEXT
-        Could not add subscription - #{subscriptions_set.name}##{subscriptions_set.id} must be \
-        either in the initial or in the stopped state, but it is in the #{@basic_runner.state} state now.
-      TEXT
-      raise error_message
     end
   end
 end

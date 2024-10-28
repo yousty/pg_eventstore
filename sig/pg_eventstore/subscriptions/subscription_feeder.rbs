@@ -11,10 +11,8 @@ module PgEventstore
 
     def initialize: (
         config_name: Symbol,
-        set_name: String,
-        max_retries: Integer,
-        retries_interval: Integer,
-        force_lock: bool
+        subscriptions_set_lifecycle: PgEventstore::SubscriptionsSetLifecycle,
+        subscriptions_lifecycle: PgEventstore::SubscriptionsLifecycle
       ) -> void
 
     def id: () -> Integer?

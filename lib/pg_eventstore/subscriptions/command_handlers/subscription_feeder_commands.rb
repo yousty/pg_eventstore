@@ -27,6 +27,8 @@ module PgEventstore
         ping_cmd = commands.find do |cmd|
           cmd.name == 'Ping'
         end
+        return commands unless ping_cmd
+
         # "Ping" command should go in prio
         [ping_cmd, *(commands - [ping_cmd])]
       end

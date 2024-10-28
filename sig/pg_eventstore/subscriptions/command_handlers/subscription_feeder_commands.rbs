@@ -1,6 +1,10 @@
 module PgEventstore
   module CommandHandlers
     class SubscriptionFeederCommands
+      @config_name: Symbol
+
+      @subscription_feeder: PgEventstore::SubscriptionFeeder
+
       # _@param_ `config_name`
       #
       # _@param_ `subscription_feeder`
