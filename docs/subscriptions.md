@@ -90,8 +90,6 @@ Persist this script into a file(let's say `subscriptions.rb`). Now it is time to
 pg-eventstore subscriptions start -r ./subscriptions.rb
 ```
 
-For more info run `pg-eventstore --help`.
-
 After running that test subscriptions you can open another ruby console and test posting different events:
 
 ```ruby
