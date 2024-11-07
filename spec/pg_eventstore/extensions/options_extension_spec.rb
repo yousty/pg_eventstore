@@ -117,8 +117,23 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
   describe '.options' do
     subject { dummy_class.options }
 
-    it { is_expected.to be_a(Set) }
+    it { is_expected.to be_a(described_class::Options) }
     it { is_expected.to be_frozen }
+  end
+
+  describe 'getting an option by its name' do
+    subject { dummy_class.options[:foo] }
+
+    before do
+      dummy_class.option(:foo, metadata: :bar)
+    end
+
+    it 'returns it' do
+      aggregate_failures do
+        expect(subject).to eq(described_class::Option.new(:foo))
+        expect(subject.metadata).to eq(:bar)
+      end
+    end
   end
 
   describe '#options_hash' do
