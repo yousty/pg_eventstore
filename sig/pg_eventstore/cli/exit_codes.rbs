@@ -1,0 +1,8 @@
+module PgEventstore
+  module CLI
+    module ExitCodes
+      ERROR: Integer
+      SUCCESS: Integer
+    end
+  end
+end

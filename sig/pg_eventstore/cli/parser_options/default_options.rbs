@@ -1,0 +1,8 @@
+module PgEventstore
+  module CLI
+    module ParserOptions
+      class DefaultOptions
+      end
+    end
+  end
+end

@@ -45,8 +45,8 @@
 # end
 RSpec::Matchers.define :has_option do |option_name|
   match do |obj|
-    option = PgEventstore::Extensions::OptionsExtension::Option.new(option_name)
-    is_correct = obj.class.respond_to?(:options) && obj.class.options.include?(option)
+    option = obj.class.options[option_name]
+    is_correct = obj.class.respond_to?(:options) && option
     if defined?(@default_value)
       is_correct &&=
         RSpec::Matchers::BuiltIn::Match.new(@default_value).matches?(obj.class.allocate.public_send(option_name))
@@ -58,8 +58,8 @@ RSpec::Matchers.define :has_option do |option_name|
   end
 
   failure_message do |obj|
-    option = PgEventstore::Extensions::OptionsExtension::Option.new(option_name)
-    option_presence = obj.class.respond_to?(:options) && obj.class.options.include?(option)
+    option = obj.class.options[option_name]
+    option_presence = obj.class.respond_to?(:options) && option
 
     default_value_message = "with default value #{@default_value.inspect}"
     metadata_message = "with metadata #{@metadata.inspect}"

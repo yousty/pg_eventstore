@@ -3,9 +3,9 @@ module PgEventstore
     module Commands
       module CallbackHandlers
         class StartCmdHandlers
-          def self.handle_start_up: (Proc action, PgEventstore::SubscriptionsManager, manager) -> void
+          def self.handle_start_up: (Proc action, PgEventstore::SubscriptionsManager manager) -> void
 
-          def self.register_managers: (Array[PgEventstore::SubscriptionsManager] subscription_managers,
+          def self.register_managers: (Set[PgEventstore::SubscriptionsManager] subscription_managers,
               PgEventstore::SubscriptionsManager manager) -> void
         end
       end

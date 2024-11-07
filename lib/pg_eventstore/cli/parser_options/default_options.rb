@@ -2,7 +2,9 @@
 
 module PgEventstore
   module CLI
-    class DefaultOptions < BaseOptions
+    module ParserOptions
+      class DefaultOptions < BaseOptions
+      end
     end
   end
 end

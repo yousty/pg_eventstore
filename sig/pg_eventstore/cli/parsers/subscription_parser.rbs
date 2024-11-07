@@ -1,0 +1,9 @@
+module PgEventstore
+  module CLI
+    module Parsers
+      class SubscriptionParser
+        def self.banner: -> String
+      end
+    end
+  end
+end

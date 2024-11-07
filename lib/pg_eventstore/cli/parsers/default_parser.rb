@@ -2,11 +2,12 @@
 
 module PgEventstore
   module CLI
-    class DefaultOptionsParser < BaseOptionsParser
-      class << self
-        # @return [String]
-        def banner
-          <<~TEXT
+    module Parsers
+      class DefaultParser < BaseParser
+        class << self
+          # @return [String]
+          def banner
+            <<~TEXT
             Usage: pg-eventstore [options]
                    pg-eventstore [command]
         
@@ -15,6 +16,7 @@ module PgEventstore
   
               Options:
           TEXT
+          end
         end
       end
     end

@@ -4,25 +4,40 @@ module PgEventstore
   module CLI
     module Commands
       class BaseCommand
+        module BaseCommandActions
+          # @return [Integer] exit code
+          def call
+            load_external_files
+            super
+          end
+
+          private
+
+          # @return [void]
+          def load_external_files
+            options.requires.each do |file_path|
+              require(file_path)
+            end
+          end
+        end
+
+        class << self
+          def inherited(klass)
+            super
+            klass.prepend BaseCommandActions
+          end
+        end
+
         attr_reader :options
 
-        # @param options [PgEventstore::CLI::BaseOptions]
+        # @param options [PgEventstore::CLI::ParserOptions::BaseOptions]
         def initialize(options)
           @options = options
         end
 
-        # @return [void]
+        # @return [Integer] exit code
         def call
-          load_external_files
-        end
-
-        private
-
-        # @return [void]
-        def load_external_files
-          options.requires.each do |file|
-            require file
-          end
+          raise NotImplementedError
         end
       end
     end

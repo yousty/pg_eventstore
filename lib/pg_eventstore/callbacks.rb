@@ -95,6 +95,22 @@ module PgEventstore
       result
     end
 
+    # @param action [Object]
+    # @param filter [Symbol]
+    # @param callback [#call]
+    # @return [void]
+    def remove_callback(action, filter, callback)
+      return unless @callbacks.dig(action, filter)
+
+      @callbacks[action][filter].delete(callback)
+    end
+
+    # Clear all defined callbacks
+    # @return [void]
+    def clear
+      @callbacks.clear
+    end
+
     private
 
     # @return [void]

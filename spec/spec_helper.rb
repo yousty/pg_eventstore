@@ -7,6 +7,7 @@ require 'securerandom'
 require 'redis'
 require 'logger'
 require 'pg_eventstore/web'
+require 'pg_eventstore/cli'
 require 'rack/test'
 require 'timecop'
 require 'nokogiri'
@@ -65,6 +66,11 @@ RSpec.configure do |config|
       pg_conf.connection_pool_size = 20
     end
     PgEventstore::TestHelpers.clean_up_db
+  end
+
+  config.after do
+    PgEventstore::CLI.callbacks.clear
+    CLIHelper.clean_up
   end
 
   config.around(timecop: true) do |example|

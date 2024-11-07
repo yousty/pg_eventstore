@@ -1,0 +1,15 @@
+module PgEventstore
+  module CLI
+    module ParserOptions
+      class BaseOptions
+        include PgEventstore::Extensions::OptionsExtension
+
+        def attach_parser_handlers: (OptionParser parser) -> void
+
+        def option: (Symbol option) -> PgEventstore::Extensions::OptionsExtension::Option
+
+        def to_parser_opts: (Symbol option) -> Array[String]
+      end
+    end
+  end
+end

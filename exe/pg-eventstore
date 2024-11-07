@@ -13,4 +13,4 @@ logger.formatter = proc do |severity, time, progname, msg|
 end
 
 PgEventstore.logger = logger
-PgEventstore::CLI.execute(ARGV)
+Kernel.exit(PgEventstore::CLI.execute(ARGV))

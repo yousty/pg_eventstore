@@ -147,4 +147,45 @@ RSpec.describe PgEventstore::Callbacks do
       end
     end
   end
+
+  describe '#remove_callback' do
+    subject { instance.remove_callback(action, filter, callback) }
+
+    let(:action) { :my_action }
+    let(:another_action) { :foo_action }
+    let(:filter) { :before }
+    let(:another_filter) { :after }
+    let(:callback) { proc {} }
+    let(:callbacks) { instance.instance_variable_get(:@callbacks) }
+
+    before do
+      instance.define_callback(action, filter, callback)
+      instance.define_callback(action, another_filter, callback)
+      instance.define_callback(another_action, filter, callback)
+    end
+
+    it 'removes the given callback from callbacks list by the given filter and action' do
+      expect { subject }.to change { callbacks.dig(action, filter) }.from([callback]).to([])
+    end
+    it 'does not remove the given callback for unaffected filter' do
+      expect { subject }.not_to change { callbacks.dig(action, another_filter) }.from([callback])
+    end
+    it 'does not remove the given callback for unaffected action' do
+      expect { subject }.not_to change { callbacks.dig(another_action, filter) }.from([callback])
+    end
+  end
+
+  describe '#clear' do
+    subject { instance.clear }
+
+    let(:callbacks) { instance.instance_variable_get(:@callbacks) }
+
+    before do
+      instance.define_callback(:my_action, :before, proc {})
+    end
+
+    it 'clears defined callbacks' do
+      expect { subject }.to change { callbacks }.from(a_hash_including(:my_action)).to({})
+    end
+  end
 end

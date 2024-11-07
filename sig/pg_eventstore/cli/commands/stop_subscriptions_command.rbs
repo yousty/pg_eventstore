@@ -1,0 +1,11 @@
+module PgEventstore
+  module CLI
+    module Commands
+      class StopSubscriptionsCommand
+        %a{rbs:test:skip} def call: -> Integer
+
+        def initialize: (PgEventstore::CLI::ParserOptions::BaseOptions options) -> void
+      end
+    end
+  end
+end

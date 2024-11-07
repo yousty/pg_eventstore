@@ -2,15 +2,11 @@ module PgEventstore
   module CLI
     module Commands
       class BaseCommand
-        attr_reader options: PgEventstore::CLI::BaseOptions
+        attr_reader options: PgEventstore::CLI::ParserOptions::BaseOptions
 
-        def initialize: (PgEventstore::CLI::BaseOptions options) -> untyped
+        %a{rbs:test:skip} def initialize: (PgEventstore::CLI::ParserOptions::BaseOptions options) -> untyped
 
-        def call: -> void
-
-        private
-
-        def load_external_files: -> void
+        def call: -> Integer
       end
     end
   end

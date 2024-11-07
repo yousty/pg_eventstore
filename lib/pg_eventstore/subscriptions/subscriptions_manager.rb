@@ -31,13 +31,6 @@ module PgEventstore
   class SubscriptionsManager
     extend Forwardable
 
-    class << self
-      # @return [PgEventstore::Callbacks]
-      def callbacks
-        @callbacks ||= Callbacks.new
-      end
-    end
-
     # @!attribute config
     #   @return [PgEventstore::Config]
     attr_reader :config
@@ -133,7 +126,7 @@ module PgEventstore
     # @return [PgEventstore::BasicRunner]
     # @raise [PgEventstore::SubscriptionAlreadyLockedError]
     def start!
-      self.class.callbacks.run_callbacks(:start, self) do
+      run_cli_callbacks do
         @subscription_feeder.start
       end
     end
@@ -152,6 +145,15 @@ module PgEventstore
     end
 
     private
+
+    # @return [Object] the result of the passed block
+    def run_cli_callbacks
+      return yield unless defined?(::PgEventstore::CLI)
+
+      PgEventstore::CLI.callbacks.run_callbacks(:start_manager, self) do
+        yield
+      end
+    end
 
     # @param middlewares [Array<Symbol>, nil]
     # @param handler [#call]

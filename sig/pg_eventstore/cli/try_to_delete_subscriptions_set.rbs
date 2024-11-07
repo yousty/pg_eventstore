@@ -1,0 +1,24 @@
+module PgEventstore
+  module CLI
+    class TryToDeleteSubscriptionsSet
+      def self.try_to_delete: (Symbol config_name, Integer subscriptions_set_id) -> bool
+
+      attr_reader config_name: Symbol
+      attr_reader subscriptions_set_id: Integer
+
+      def initialize: (Symbol config_name, Integer subscriptions_set_id) -> void
+
+      def try_to_delete: -> bool
+
+      private
+
+      def config: -> PgEventstore::Config
+
+      def connection: -> PgEventstore::Connection
+
+      def subscriptions_set_commands_queries: -> PgEventstore::SubscriptionsSetCommandQueries
+
+      def subscriptions_set_queries: -> PgEventstore::SubscriptionsSetQueries
+    end
+  end
+end
