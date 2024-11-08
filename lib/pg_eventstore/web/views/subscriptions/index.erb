@@ -24,7 +24,7 @@
       <% @set_collection.names.each do |set_name| %>
         <li class="nav-item">
           <a class="nav-link <%= "active bg-dark text-white" if @current_set == set_name %>" href="<%= subscriptions_state ? subscriptions_state_url(state: subscriptions_state, set_name: set_name) : subscriptions_url(set_name: set_name) %>">
-            <%= set_name %>
+            <%= h set_name %>
           </a>
         </li>
       <% end %>
@@ -98,7 +98,7 @@
                           <% if subscriptions_set.last_error %>
                             <tr class="collapse" id="last-set-error-<%= subscriptions_set.id %>">
                               <td colspan="9">
-                                <pre><%= JSON.pretty_generate(subscriptions_set.last_error) %></pre>
+                                <pre><%= h JSON.pretty_generate(subscriptions_set.last_error) %></pre>
                               </td>
                             </tr>
                           <% end %>
@@ -151,7 +151,7 @@
                         <% subscriptions.each do |subscription| %>
                           <tr>
                             <td><%= subscription.id %></td>
-                            <td><%= subscription.name %></td>
+                            <td><%= h subscription.name %></td>
                             <td><%= subscription.total_processed_events %></td>
                             <td>
                               <a data-toggle="collapse" href="#options-<%= subscription.id %>" aria-controls="options-<%= subscription.id %>" role="button" aria-expanded="false" class="d-inline-block text-nowrap">
@@ -209,13 +209,13 @@
                           </tr>
                           <tr class="collapse" id="options-<%= subscription.id %>">
                             <td colspan="16">
-                              <pre><%= JSON.pretty_generate(subscription.options) %></pre>
+                              <pre><%= h JSON.pretty_generate(subscription.options) %></pre>
                             </td>
                           </tr>
                           <% if subscription.last_error %>
                             <tr class="collapse" id="last-error-<%= subscription.id %>">
                               <td colspan="16">
-                                <pre><%= JSON.pretty_generate(subscription.last_error) %></pre>
+                                <pre><%= h JSON.pretty_generate(subscription.last_error) %></pre>
                               </td>
                             </tr>
                           <% end %>

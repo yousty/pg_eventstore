@@ -82,13 +82,13 @@
           <ul class="navbar-right" style="height: 29px;">
             <li class="nav-item dropdown open" style="padding-left: 15px;">
               <a href="javascript: void(0);" class="user-profile dropdown-toggle" aria-haspopup="true" id="navbarDropdown" data-toggle="dropdown" aria-expanded="false">
-                <strong>Current config:</strong> <%= current_config.inspect %>
+                <strong>Current config:</strong> <%= h current_config.inspect %>
               </a>
               <div class="dropdown-menu dropdown-usermenu pull-right" aria-labelledby="navbarDropdown">
                 <% PgEventstore.available_configs.each do |config| %>
                   <form action="<%= url('/change_config') %>" method="POST">
-                    <input type="hidden" name="config" value="<%= config %>">
-                    <button type="submit" class="dropdown-item"><%= config.inspect %></button>
+                    <input type="hidden" name="config" value="<%= h config %>">
+                    <button type="submit" class="dropdown-item"><%= h config.inspect %></button>
                   </form>
                 <% end %>
               </div>

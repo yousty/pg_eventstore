@@ -3,7 +3,7 @@
     <select name="filter[streams][][context]" class="form-control mb-2" data-placeholder="Context" data-url="<%= url('/stream_contexts_filtering') %>">
       <option></option>
       <% if stream[:context] %>
-        <option value="<%= stream[:context] %>" selected><%= stream[:context] %></option>
+        <option value="<%= h stream[:context] %>" selected><%= h stream[:context] %></option>
       <% end %>
     </select>
   </div>
@@ -11,7 +11,7 @@
     <select name="filter[streams][][stream_name]" class="form-control mb-2" data-placeholder="Stream name" data-url="<%= url('/stream_names_filtering') %>">
       <option></option>
       <% if stream[:stream_name] %>
-        <option value="<%= stream[:stream_name] %>" selected><%= stream[:stream_name] %></option>
+        <option value="<%= h stream[:stream_name] %>" selected><%= h stream[:stream_name] %></option>
       <% end %>
     </select>
   </div>
@@ -19,7 +19,7 @@
     <select name="filter[streams][][stream_id]" class="form-control mb-2" data-placeholder="Stream ID" data-url="<%= url('/stream_ids_filtering') %>">
       <option></option>
       <% if stream[:stream_id] %>
-        <option value="<%= stream[:stream_id] %>" selected><%= stream[:stream_id] %></option>
+        <option value="<%= h stream[:stream_id] %>" selected><%= h stream[:stream_id] %></option>
       <% end %>
     </select>
   </div>

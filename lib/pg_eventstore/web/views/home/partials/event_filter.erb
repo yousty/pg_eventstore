@@ -3,7 +3,7 @@
     <select name="filter[events][]" class="form-control mb-2" data-placeholder="Event type" data-url="<%= url('/event_types_filtering') %>">
       <option></option>
       <% if event_type %>
-        <option value="<%= event_type %>" selected><%= event_type %></option>
+        <option value="<%= h event_type %>" selected><%= h event_type %></option>
       <% end %>
     </select>
   </div>
