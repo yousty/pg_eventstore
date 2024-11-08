@@ -36,7 +36,7 @@ RSpec.describe 'CLI integration' do
       expect {
         subject
         # Let subscriptions to process event
-        sleep 2
+        sleep 3
       }.to change {
         CLIHelper.processed_events
       }.to(
@@ -49,7 +49,7 @@ RSpec.describe 'CLI integration' do
       expect {
         subject
         # Let subscriptions to process event
-        sleep 2
+        sleep 3
       }.to change {
         PgEventstore::Utils.read_pid('/tmp/pg-es_subscriptions.pid')&.to_i
       }.to(subscriptions_pid)
@@ -89,7 +89,7 @@ RSpec.describe 'CLI integration' do
       expect {
         subject
         # Let subscriptions process to start
-        sleep 2
+        sleep 3
       }.to change {
         PgEventstore::Utils.read_pid(pid_file_path)&.to_i
       }.to(subscriptions_pid)
