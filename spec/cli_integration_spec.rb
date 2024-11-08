@@ -89,7 +89,7 @@ RSpec.describe 'CLI integration' do
       expect {
         subject
         # Let subscriptions process to start
-        sleep 1
+        sleep 2
       }.to change {
         PgEventstore::Utils.read_pid(pid_file_path)&.to_i
       }.to(subscriptions_pid)
