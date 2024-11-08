@@ -1,16 +1,14 @@
 # frozen_string_literal: true
 
-processed_events = []
 subscriptions_manager = PgEventstore.subscriptions_manager(
   subscription_set: 'MyAwesomeSubscriptions'
 )
 
 subscriptions_manager.subscribe(
   'Foo events Subscription',
-  handler: proc { |event| processed_events.push(event) },
+  handler: proc { |event| CLIHelper.process_event(event) },
   options: { filter: { event_types: ['Foo'] } }
 )
 subscriptions_manager.start
 
 CLIHelper.current_subscription_manager = subscriptions_manager
-CLIHelper.current_processed_events = processed_events

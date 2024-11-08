@@ -9,8 +9,8 @@ module PgEventstore
         end
       end
 
-      # @return [Integer] seconds
-      SHUTDOWN_CHECK_INTERVAL = 2
+      # @return [Float] seconds
+      SHUTDOWN_CHECK_INTERVAL = 2.0
 
       attr_reader :config_name, :subscriptions_set_id
 

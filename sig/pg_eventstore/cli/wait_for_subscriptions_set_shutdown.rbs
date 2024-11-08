@@ -1,7 +1,7 @@
 module PgEventstore
   module CLI
     class WaitForSubscriptionsSetShutdown
-      SHUTDOWN_CHECK_INTERVAL: Integer
+      SHUTDOWN_CHECK_INTERVAL: Float
 
       def self.wait_for_shutdown: (Symbol config_name, Integer subscriptions_set_id) -> bool
 
