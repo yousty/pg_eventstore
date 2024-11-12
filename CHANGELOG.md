@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+## [1.6.0]
+- Introduce subscriptions CLI. Type `pg-eventstore subscriptions --help` to see available commands. The main purpose of it is to provide the single way to start/stop subscription processes. Check [Subscriptions](docs/subscriptions.md#creating-a-subscription) docs about the new way to start and keep running a subscriptions process.
+
 ## [1.5.0]
 - Add ability to toggle link events in the admin UI
 - Mark linked events in the admin UI with "link" icon
