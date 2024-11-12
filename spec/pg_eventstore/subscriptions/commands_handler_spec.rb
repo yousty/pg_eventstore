@@ -5,8 +5,19 @@ RSpec.describe PgEventstore::CommandsHandler do
   let(:config_name) { :default }
   let(:feeder) do
     PgEventstore::SubscriptionFeeder.new(
-      config_name: config_name, set_name: 'MySubscriptionsSet', max_retries: 0, retries_interval: 0, force_lock: false
+      config_name: config_name,
+      subscriptions_set_lifecycle: subscriptions_set_lifecycle,
+      subscriptions_lifecycle: subscriptions_lifecycle
     )
+  end
+  let(:subscriptions_set_lifecycle) do
+    PgEventstore::SubscriptionsSetLifecycle.new(
+      config_name,
+      { name: 'Foo', max_restarts_number: 0, time_between_restarts: 0 }
+    )
+  end
+  let(:subscriptions_lifecycle) do
+    PgEventstore::SubscriptionsLifecycle.new(config_name, subscriptions_set_lifecycle)
   end
   let(:runners) { [runner] }
   let(:runner) do
@@ -21,11 +32,18 @@ RSpec.describe PgEventstore::CommandsHandler do
     subject { instance.start }
 
     let!(:feeder_command) do
-      feeder_command_queries.create(subscriptions_set_id: feeder.id, command_name: 'StopAll', data: {})
+      feeder_command_queries.create(
+        subscriptions_set_id: subscriptions_set_lifecycle.persisted_subscriptions_set.id,
+        command_name: 'StopAll',
+        data: {}
+      )
     end
     let!(:runner_command) do
       runner_command_queries.create(
-        subscription_id: runner.id, subscriptions_set_id: feeder.id, command_name: 'Stop', data: {}
+        subscription_id: runner.id,
+        subscriptions_set_id: subscriptions_set_lifecycle.persisted_subscriptions_set.id,
+        command_name: 'Stop',
+        data: {}
       )
     end
 
@@ -57,7 +75,10 @@ RSpec.describe PgEventstore::CommandsHandler do
     context 'when feeder was restarted' do
       let(:another_runner_command) do
         runner_command_queries.create(
-          subscription_id: runner.id, subscriptions_set_id: feeder.id, command_name: 'Restore', data: {}
+          subscription_id: runner.id,
+          subscriptions_set_id: subscriptions_set_lifecycle.persisted_subscriptions_set.id,
+          command_name: 'Restore',
+          data: {}
         )
       end
 

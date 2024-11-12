@@ -1,0 +1,26 @@
+module PgEventstore
+  module CLI
+    class WaitForSubscriptionsSetShutdown
+      SHUTDOWN_CHECK_INTERVAL: Float
+
+      def self.wait_for_shutdown: (Symbol config_name, Integer subscriptions_set_id) -> bool
+
+      attr_reader config_name: Symbol
+      attr_reader subscriptions_set_id: Integer
+
+      def initialize: (Symbol config_name, Integer subscriptions_set_id) -> void
+
+      def wait_for_shutdown: -> bool
+
+      private
+
+      def config: -> PgEventstore::Config
+
+      def connection: -> PgEventstore::Connection
+
+      def find_set!: -> PgEventstore::SubscriptionsSet
+
+      def subscriptions_set_queries: -> PgEventstore::SubscriptionsSetQueries
+    end
+  end
+end

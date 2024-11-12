@@ -49,6 +49,10 @@ Documentation chapters:
 - [How to make multiple commands atomic](docs/multiple_commands.md)
 - [Admin UI](docs/admin_ui.md)
 
+## CLI
+
+The gem is shipped with its own CLI. Use `pg-eventstore --help` to find out its capabilities.
+
 ## Development
 
 After checking out the repo, run:

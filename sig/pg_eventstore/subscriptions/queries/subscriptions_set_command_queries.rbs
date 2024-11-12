@@ -23,7 +23,7 @@ module PgEventstore
     def create: (subscriptions_set_id: Integer, command_name: String, data: ::Hash[untyped, untyped]) -> PgEventstore::SubscriptionFeederCommands::Base
 
     # _@param_ `subscriptions_set_id`
-    def find_commands: (Integer subscriptions_set_id) -> ::Array[PgEventstore::SubscriptionFeederCommands::Base]
+    def find_commands: (Integer? subscriptions_set_id) -> ::Array[PgEventstore::SubscriptionFeederCommands::Base]
 
     # _@param_ `id`
     def delete: (Integer id) -> void

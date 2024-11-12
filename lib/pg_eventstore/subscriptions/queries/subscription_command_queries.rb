@@ -64,7 +64,7 @@ module PgEventstore
     end
 
     # @param subscription_ids [Array<Integer>]
-    # @param subscriptions_set_id [Integer]
+    # @param subscriptions_set_id [Integer, nil]
     # @return [Array<PgEventstore::SubscriptionRunnerCommands::Base>]
     def find_commands(subscription_ids, subscriptions_set_id:)
       return [] if subscription_ids.empty?

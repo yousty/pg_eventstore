@@ -75,6 +75,32 @@ module PgEventstore
       def deprecation_warning(message)
         PgEventstore.logger&.warn("\e[31m[DEPRECATED]: #{message}\e[0m")
       end
+
+      # @param file_path [String]
+      # @param content [String]
+      # @return [void]
+      def write_to_file(file_path, content)
+        file = File.open(file_path, "w")
+        file.write(content)
+        file.close
+      end
+
+      # @param file_path [String]
+      # @return [void]
+      def remove_file(file_path)
+        File.delete(file_path)
+      rescue Errno::ENOENT
+      end
+
+      # @param file_path [String]
+      # @return [String, nil]
+      def read_pid(file_path)
+        file = File.open(file_path, "r")
+        file.readline.strip.tap do
+          file.close
+        end
+      rescue Errno::ENOENT
+      end
     end
   end
 end

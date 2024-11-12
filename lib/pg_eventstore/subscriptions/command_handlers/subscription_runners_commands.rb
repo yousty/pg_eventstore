@@ -5,7 +5,7 @@ module PgEventstore
     class SubscriptionRunnersCommands
       # @param config_name [Symbol]
       # @param runners [Array<PgEventstore::SubscriptionRunner>]
-      # @param subscriptions_set_id [Integer]
+      # @param subscriptions_set_id [Integer, nil]
       def initialize(config_name, runners, subscriptions_set_id)
         @config_name = config_name
         @runners = runners.to_h { |runner| [runner.id, runner] }

@@ -13,13 +13,25 @@ module PgEventstore
       # Look up commands for the given SubscriptionFeeder and execute them
       # @return [void]
       def process
-        queries.find_commands(@subscription_feeder.id).each do |command|
+        commands.each do |command|
           command.exec_cmd(@subscription_feeder)
           queries.delete(command.id)
         end
       end
 
       private
+
+      # @return [Array<PgEventstore::SubscriptionFeederCommands::Base>]
+      def commands
+        commands = queries.find_commands(@subscription_feeder.id)
+        ping_cmd = commands.find do |cmd|
+          cmd.name == 'Ping'
+        end
+        return commands unless ping_cmd
+
+        # "Ping" command should go in prio
+        [ping_cmd, *(commands - [ping_cmd])]
+      end
 
       # @return [PgEventstore::SubscriptionsSetCommandQueries]
       def queries

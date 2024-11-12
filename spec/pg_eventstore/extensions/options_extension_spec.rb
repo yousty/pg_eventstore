@@ -22,7 +22,11 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
       expect(instance).to respond_to("#{option}=")
     end
     it 'adds that option to the options list' do
-      expect { subject }.to change { dummy_class.options }.to(Set.new([option]))
+      expect { subject }.to change { dummy_class.options }.to(Set.new([described_class::Option.new(option)]))
+    end
+    it 'recognizes the given option when instantiating the class' do
+      subject
+      expect(dummy_class.new(option => 'some value').public_send(option)).to eq('some value')
     end
 
     context 'when block is provided' do
@@ -51,6 +55,29 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
     end
   end
 
+  describe 'defining option with metadata' do
+    subject { dummy_class.option(option, metadata: metadata) }
+
+    let(:option) { :some_opt }
+    let(:metadata) { :my_awesome_metadata }
+
+    context 'when option with same name but different metadata already exists' do
+      let(:another_metadata) { :different_metadata }
+
+      before do
+        dummy_class.option(option, metadata: :different_metadata)
+      end
+
+      it 'does not override it' do
+        subject
+        aggregate_failures do
+          expect(dummy_class.options).to eq(Set.new([described_class::Option.new(option)]))
+          expect(dummy_class.options.map(&:metadata)).to eq([another_metadata])
+        end
+      end
+    end
+  end
+
   describe 'defining options in inherited class' do
     let(:child) { Class.new(dummy_class) }
     let(:child_of_child) { Class.new(child) }
@@ -62,11 +89,21 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
     end
 
     it 'inherits all options from parent to the child correctly' do
-      expect(child.options).to eq(Set.new([:parent_opt, :child_opt]))
+      expect(child.options).to(
+        eq(Set.new([described_class::Option.new(:parent_opt), described_class::Option.new(:child_opt)]))
+      )
     end
     it 'inherits all options from parent to the child of child correctly' do
       expect(child_of_child.options).to(
-        eq(Set.new([:parent_opt, :child_opt, :child_of_child_opt]))
+        eq(
+          Set.new(
+            [
+              described_class::Option.new(:parent_opt),
+              described_class::Option.new(:child_opt),
+              described_class::Option.new(:child_of_child_opt)
+            ]
+          )
+        )
       )
     end
     it 'freezes options sets of children' do
@@ -80,8 +117,23 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
   describe '.options' do
     subject { dummy_class.options }
 
-    it { is_expected.to be_a(Set) }
+    it { is_expected.to be_a(described_class::Options) }
     it { is_expected.to be_frozen }
+  end
+
+  describe 'getting an option by its name' do
+    subject { dummy_class.options[:foo] }
+
+    before do
+      dummy_class.option(:foo, metadata: :bar)
+    end
+
+    it 'returns it' do
+      aggregate_failures do
+        expect(subject).to eq(described_class::Option.new(:foo))
+        expect(subject.metadata).to eq(:bar)
+      end
+    end
   end
 
   describe '#options_hash' do

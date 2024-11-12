@@ -36,7 +36,8 @@ module PgEventstore
     attr_reader :config
     private :config
 
-    def_delegators :@subscription_feeder, :stop, :force_lock!
+    def_delegators :@subscription_feeder, :stop, :running?
+    def_delegators :@subscriptions_lifecycle, :force_lock!
 
     # @param config [PgEventstore::Config]
     # @param set_name [String]
@@ -46,12 +47,21 @@ module PgEventstore
     def initialize(config:, set_name:, max_retries: nil, retries_interval: nil, force_lock: false)
       @config = config
       @set_name = set_name
+      @subscriptions_set_lifecycle = SubscriptionsSetLifecycle.new(
+        config_name,
+        {
+          name: set_name,
+          max_restarts_number: max_retries || config.subscriptions_set_max_retries,
+          time_between_restarts: retries_interval || config.subscriptions_set_retries_interval
+        }
+      )
+      @subscriptions_lifecycle = SubscriptionsLifecycle.new(
+        config_name, @subscriptions_set_lifecycle, force_lock: force_lock
+      )
       @subscription_feeder = SubscriptionFeeder.new(
-        config_name: config.name,
-        set_name: set_name,
-        max_retries: max_retries || config.subscriptions_set_max_retries,
-        retries_interval: retries_interval || config.subscriptions_set_retries_interval,
-        force_lock: force_lock
+        config_name: config_name,
+        subscriptions_set_lifecycle: @subscriptions_set_lifecycle,
+        subscriptions_lifecycle: @subscriptions_lifecycle
       )
     end
 
@@ -99,29 +109,51 @@ module PgEventstore
         failed_subscription_notifier: failed_subscription_notifier
       )
 
-      @subscription_feeder.add(runner)
+      @subscriptions_lifecycle.runners.push(runner)
       true
     end
 
     # @return [Array<PgEventstore::Subscription>]
     def subscriptions
-      @subscription_feeder.read_only_subscriptions
+      @subscriptions_lifecycle.subscriptions.map(&:dup)
     end
 
     # @return [PgEventstore::SubscriptionsSet, nil]
     def subscriptions_set
-      @subscription_feeder.read_only_subscriptions_set
+      @subscriptions_set_lifecycle.subscriptions_set&.dup
+    end
+
+    # @return [PgEventstore::BasicRunner]
+    # @raise [PgEventstore::SubscriptionAlreadyLockedError]
+    def start!
+      run_cli_callbacks do
+        @subscription_feeder.start
+      end
     end
 
     # @return [PgEventstore::BasicRunner, nil]
     def start
-      @subscription_feeder.start
+      start!
     rescue PgEventstore::SubscriptionAlreadyLockedError => e
       PgEventstore.logger&.warn(e.message)
       nil
     end
 
+    # @return [Symbol]
+    def config_name
+      @config.name
+    end
+
     private
+
+    # @return [Object] the result of the passed block
+    def run_cli_callbacks
+      return yield unless defined?(::PgEventstore::CLI)
+
+      PgEventstore::CLI.callbacks.run_callbacks(:start_manager, self) do
+        yield
+      end
+    end
 
     # @param middlewares [Array<Symbol>, nil]
     # @param handler [#call]

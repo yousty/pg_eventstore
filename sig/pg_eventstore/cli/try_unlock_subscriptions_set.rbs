@@ -1,0 +1,7 @@
+module PgEventstore
+  module CLI
+    class TryUnlockSubscriptionsSet
+      def self.try_unlock: (Symbol config_name, Integer subscriptions_set_id) -> bool
+    end
+  end
+end

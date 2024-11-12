@@ -1,0 +1,9 @@
+module PgEventstore
+  module CLI
+    module ParserOptions
+      class SubscriptionOptions
+        def attach_parser_handlers: (OptionParser parser) -> void
+      end
+    end
+  end
+end

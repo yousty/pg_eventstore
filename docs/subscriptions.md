@@ -29,7 +29,7 @@ Now we can use the `#subscribe` method to create the subscription:
 subscriptions_manager.subscribe('MyAwesomeSubscription', handler: proc { |event| puts event })
 ```
 
-First argument is the subscription's name. **It must be unique within the subscription set**. Second argument is your subscription's handler where you will be processing your events as they arrive. The example shows the minimum set of arguments required to create the subscription. 
+First argument is the subscription's name. **It must be unique within the subscriptions set**. Second argument is your subscription's handler where you will be processing your events as they arrive. The example shows the minimum set of arguments required to create the subscription. 
 
 In the given state it will be listening to all events from all streams. You can define various filters by providing the `:filter` key of `options` argument:
 
@@ -50,28 +50,9 @@ subscriptions_manager.start
 # => PgEventstore::BasicRunner
 ```
 
-After calling `#start` all subscriptions are locked behind the given subscriptions set and can't be locked by any other subscriptions set. This measure is needed to prevent running the same subscription under the same subscription set using different processes/subscription managers. Such situation will lead to a malformed subscription state and will break its position, meaning the same event will be processed several times. In real world the lock attempt may still happen. This can be common scenario when using kubernetes which rolls out new deployment before shutting down old one. In this case `#start` will return `nil`. You can use this behavior to properly handle such cases. Example:
+After calling `#start` all subscriptions are locked behind the given subscriptions set and can't be locked by any other subscriptions set. This measure is needed to prevent running the same subscription under the same subscription set using different processes/subscription managers. Such situation will lead to a malformed subscription state and will break its position, meaning the same event will be processed several times.
 
-```ruby
-timeout = 20 # 20 seconds
-deadline = Time.now + timeout
-loop do
-  break if subscriptions_manager.start
-  if Time.now > deadline
-    puts "Failed to acquire subscriptions lock within #{timeout} seconds. Exiting now."
-    exit
-  end
-  sleep 2
-end
-```
-
-To "unlock" the subscription you should gracefully stop the subscription manager:
-
-```ruby
-subscriptions_manager.stop
-```
-
-If you shut down the process which runs your subscriptions without calling the `#stop` method, subscriptions will remain locked, and the only way to unlock them is to pass `force_lock: true`:
+If, for some reason, you want to lock already locked subscription - you can provide `force_lock: true`:
 
 ```ruby
 subscriptions_manager = PgEventstore.subscriptions_manager(subscription_set: 'SubscriptionsOfMyAwesomeMicroservice', force_lock: true)
@@ -81,14 +62,12 @@ subscriptions_manager.start
 A complete example of the subscription setup process looks like this:
 
 ```ruby
-require 'pg_eventstore'
-
 PgEventstore.configure do |config|
   config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore' }  
 end
 
 subscriptions_manager = PgEventstore.subscriptions_manager(
-  subscription_set: 'MyAwesomeSubscriptions', force_lock: ENV['FORCE_LOCK'] == 'true'
+  subscription_set: 'MyAwesomeSubscriptions'
 )
 subscriptions_manager.subscribe(
   'Foo events Subscription', 
@@ -101,39 +80,17 @@ subscriptions_manager.subscribe(
   options: { filter: { streams: [{ context: 'BarCtx' }] } 
   }
 )
-timeout = 20 # 20 seconds
-deadline = Time.now + timeout
-loop do
-  break if subscriptions_manager.start
-  if Time.now > deadline
-    puts "Failed to acquire subscriptions lock within #{timeout} seconds. Exiting now."
-    exit
-  end
-  sleep 2
-end
-
-Kernel.trap('TERM') do
-  puts "Received TERM signal. Stopping Subscriptions Manager and exiting..."
-  # It is important to wrap subscriptions_manager.stop into another Thread, because it uses Thread::Mutex#synchronize
-  # internally, but its usage is not allowed inside Kernel.trap block
-  Thread.new { subscriptions_manager.stop }.join
-  exit
-end
-
-loop do
-  sleep 5
-  subscriptions_manager.subscriptions.each do |subscription|
-    puts <<~TEXT
-      Subscription <<#{subscription.name.inspect}>> is at position #{subscription.current_position}. \
-      Events processed: #{subscription.total_processed_events}
-    TEXT
-  end
-  puts "Current SubscriptionsSet: #{subscriptions_manager.subscriptions_set}"
-  puts ""
-end
+subscriptions_manager.start
 ```
 
-You can save this script in `subscriptions.rb`, run it with `bundle exec ruby subscriptions.rb`, open another ruby console and test posting different events:
+Persist this script into a file(let's say `subscriptions.rb`). Now it is time to start the process which will be processing those subscriptions. `pg_eventstore` has CLI for that purpose:
+
+```bash
+# -r ./subscriptions.rb will load our subscriptions definitions
+pg-eventstore subscriptions start -r ./subscriptions.rb
+```
+
+After running that test subscriptions you can open another ruby console and test posting different events:
 
 ```ruby
 require 'pg_eventstore'

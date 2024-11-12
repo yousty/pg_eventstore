@@ -45,25 +45,46 @@
 # end
 RSpec::Matchers.define :has_option do |option_name|
   match do |obj|
-    option_presence = obj.class.respond_to?(:options) && obj.class.options.include?(option_name)
-    if @default_value
-      option_presence && RSpec::Matchers::BuiltIn::Match.new(@default_value).matches?(obj.class.allocate.public_send(option_name))
-    else
-      option_presence
+    option = obj.class.options[option_name]
+    is_correct = obj.class.respond_to?(:options) && option
+    if defined?(@default_value)
+      is_correct &&=
+        RSpec::Matchers::BuiltIn::Match.new(@default_value).matches?(obj.class.allocate.public_send(option_name))
     end
+    if defined?(@metadata)
+      is_correct &&= RSpec::Matchers::BuiltIn::Match.new(@metadata).matches?(option.metadata)
+    end
+    is_correct
   end
 
   failure_message do |obj|
-    option_presence = obj.class.respond_to?(:options) && obj.class.options.include?(option_name)
-    if option_presence && @default_value
-      msg = "Expected #{obj.class} to have `#{option_name.inspect}' option with #{@default_value.inspect}"
-      msg += ' default value, but default value is'
-      msg += " #{obj.class.allocate.public_send(option_name).inspect}"
-    else
-      msg = "Expected #{obj} to have `#{option_name.inspect}' option."
-    end
+    option = obj.class.options[option_name]
+    option_presence = obj.class.respond_to?(:options) && option
 
-    msg
+    default_value_message = "with default value #{@default_value.inspect}"
+    metadata_message = "with metadata #{@metadata.inspect}"
+    message = "Expected #{obj.class} to have `#{option_name.inspect}' option"
+    message += " #{default_value_message}," if defined?(@default_value)
+    message += " #{metadata_message}," if defined?(@metadata)
+    message += "," unless defined?(@metadata) || defined?(@default_value)
+    if option_presence
+      actual_default_value = obj.class.allocate.public_send(option_name)
+      actual_metadata = option.metadata
+      default_value_matches = RSpec::Matchers::BuiltIn::Match.new(@default_value).matches?(actual_default_value)
+      metadata_matches = RSpec::Matchers::BuiltIn::Match.new(@metadata).matches?(actual_metadata)
+
+      case [default_value_matches, metadata_matches]
+      when [false, true]
+        message += " but default value is #{actual_default_value.inspect}"
+      when [true, false]
+        message += " but metadata is #{actual_metadata.inspect}"
+      else
+        message += " but default value is #{actual_default_value.inspect} and metadata is #{actual_metadata.inspect}"
+      end
+    else
+      message += " but there is no option found with the given name"
+    end
+    message
   end
 
   description do
@@ -82,6 +103,10 @@ RSpec::Matchers.define :has_option do |option_name|
 
   chain :with_default_value do |val|
     @default_value = val
+  end
+
+  chain :with_metadata do |val|
+    @metadata = val
   end
 end
 

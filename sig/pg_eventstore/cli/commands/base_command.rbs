@@ -1,0 +1,13 @@
+module PgEventstore
+  module CLI
+    module Commands
+      class BaseCommand
+        attr_reader options: PgEventstore::CLI::ParserOptions::BaseOptions
+
+        %a{rbs:test:skip} def initialize: (PgEventstore::CLI::ParserOptions::BaseOptions options) -> untyped
+
+        def call: -> Integer
+      end
+    end
+  end
+end

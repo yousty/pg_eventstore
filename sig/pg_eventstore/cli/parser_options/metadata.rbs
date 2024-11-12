@@ -1,0 +1,11 @@
+module PgEventstore
+  module CLI
+    module ParserOptions
+      class Metadata
+        include PgEventstore::Extensions::OptionsExtension
+
+        def to_parser_opts: -> Array[String]
+      end
+    end
+  end
+end

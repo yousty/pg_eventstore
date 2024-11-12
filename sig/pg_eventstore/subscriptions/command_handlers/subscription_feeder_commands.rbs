@@ -1,6 +1,10 @@
 module PgEventstore
   module CommandHandlers
     class SubscriptionFeederCommands
+      @config_name: Symbol
+
+      @subscription_feeder: PgEventstore::SubscriptionFeeder
+
       # _@param_ `config_name`
       #
       # _@param_ `subscription_feeder`
@@ -11,6 +15,10 @@ module PgEventstore
       def queries: () -> PgEventstore::SubscriptionsSetCommandQueries
 
       def connection: () -> PgEventstore::Connection
+
+      private
+
+      def commands: () -> Array[PgEventstore::SubscriptionFeederCommands::Base]
     end
   end
 end

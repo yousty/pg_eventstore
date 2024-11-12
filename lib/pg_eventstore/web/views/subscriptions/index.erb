@@ -86,7 +86,7 @@
                                 </a>
                               <% end %>
                               <% if PgEventstore::RunnerState::STATES.values_at(:running, :dead).include?(subscriptions_set.state) %>
-                                <a class="btn btn-warning" data-confirm="You are about to stop SubscriptionsSet#<%= subscriptions_set.id %>. This will also delete it and will result in stopping all related Subscriptions. Continue?" data-confirm-title="Stop SubscriptionsSet" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmd('Stop')) %>" data-toggle="tooltip" title="This action will delete Subscriptions Set and release all related Subscriptions.">
+                                <a class="btn btn-warning" data-confirm="You are about to stop SubscriptionsSet#<%= subscriptions_set.id %>. This will also delete it and will result in stopping all related Subscriptions. If you used pg_eventstore CLI to start subscriptions - the related process will also be stopped.  Continue?" data-confirm-title="Stop SubscriptionsSet" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmd('Stop')) %>" data-toggle="tooltip" title="This action will delete Subscriptions Set and release all related Subscriptions.">
                                   Stop
                                 </a>
                               <% end %>

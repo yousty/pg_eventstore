@@ -27,7 +27,7 @@ module PgEventstore
 
     # @return [PgEventstore::SubscriptionsSet]
     def persisted_subscriptions_set
-      @subscriptions_set ||= SubscriptionsSet.using_connection(@config_name).create(**@subscriptions_set_attrs)
+      @subscriptions_set ||= SubscriptionsSet.using_connection(@config_name).create(@subscriptions_set_attrs)
     end
 
     # @return [void]

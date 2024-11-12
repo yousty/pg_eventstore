@@ -126,8 +126,19 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
     let(:subscription_feeder) do
       PgEventstore::SubscriptionFeeder.new(
-        config_name: :default, set_name: 'Foo', max_retries: 0, retries_interval: 0, force_lock: false
+        config_name: :default,
+        subscriptions_set_lifecycle: subscriptions_set_lifecycle,
+        subscriptions_lifecycle: subscriptions_lifecycle
       )
+    end
+    let(:subscriptions_set_lifecycle) do
+      PgEventstore::SubscriptionsSetLifecycle.new(
+        :default,
+        { name: 'Foo', max_restarts_number: 0, time_between_restarts: 0 }
+      )
+    end
+    let(:subscriptions_lifecycle) do
+      PgEventstore::SubscriptionsLifecycle.new(:default, subscriptions_set_lifecycle)
     end
 
     after do
@@ -439,8 +450,19 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
     let(:subscription_feeder) do
       PgEventstore::SubscriptionFeeder.new(
-        config_name: :default, set_name: 'Foo', max_retries: 0, retries_interval: 0, force_lock: false
+        config_name: :default,
+        subscriptions_set_lifecycle: subscriptions_set_lifecycle,
+        subscriptions_lifecycle: subscriptions_lifecycle
       )
+    end
+    let(:subscriptions_set_lifecycle) do
+      PgEventstore::SubscriptionsSetLifecycle.new(
+        :default,
+        { name: 'Foo', max_restarts_number: 0, time_between_restarts: 0 }
+      )
+    end
+    let(:subscriptions_lifecycle) do
+      PgEventstore::SubscriptionsLifecycle.new(:default, subscriptions_set_lifecycle)
     end
 
     before do

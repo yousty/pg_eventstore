@@ -1,0 +1,10 @@
+module PgEventstore
+  module CLI
+    COMMANDS: Hash[Array[String], singleton(PgEventstore::CLI::Commands::BaseCommand)]
+    OPTIONS_PARSER: Hash[String, [singleton(PgEventstore::CLI::Parsers::BaseParser), singleton(PgEventstore::CLI::ParserOptions::BaseOptions)]]
+
+    def self.callbacks: -> PgEventstore::Callbacks
+
+    def self.execute: (Array[String] args) -> void
+  end
+end
