@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 # This matcher is defined to test options which are defined by using
-# EventStoreClient::Extensions::OptionsExtension option. Example:
+# PgEventstore::Extensions::OptionsExtension option. Example:
 # Let's say you have next class
 # class SomeClass
 #   include PgEventstore::Extensions::OptionsExtension
 #
-#   option(:some_opt) { '1' }
+#   option(:some_opt, metadata: { foo: :bar }) { '1' }
 # end
 #
-# To test that its instance has the proper option with the proper default value you can use this
+# To test that its instance has the proper option with the proper default value and proper metadata you can use this
 # matcher:
 # RSpec.describe SomeClass do
 #   subject { described_class.new }
@@ -17,31 +17,7 @@
 #   # Check that :some_opt is present
 #   it { is_expected.to have_option(:some_opt) }
 #   # Check that :some_opt is present and has the correct default value
-#   it { is_expected.to have_option(:some_opt).with_default_value('1') }
-# end
-#
-# If you have more complex implementation of default value of your option - you should handle it
-# customly. For example:
-# class SomeClass
-#   include PgEventstore::Extensions::OptionsExtension
-#
-#   option(:some_opt) { calc_value }
-# end
-# You could test it like so:
-# RSpec.described SomeClass do
-#   let(:instance) { described_class.new }
-#
-#   describe ':some_opt default value' do
-#     subject { instance.some_opt }
-#
-#     let(:value) { 'some val' }
-#
-#     before do
-#       allow(instance).to receive(:calc_value).and_return(value)
-#     end
-#
-#     it { is_expected.to eq(value) }
-#   end
+#   it { is_expected.to have_option(:some_opt).with_default_value('1').with_metadata(foo: :bar) }
 # end
 RSpec::Matchers.define :has_option do |option_name|
   match do |obj|
