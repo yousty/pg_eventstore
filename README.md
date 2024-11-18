@@ -53,6 +53,51 @@ Documentation chapters:
 
 The gem is shipped with its own CLI. Use `pg-eventstore --help` to find out its capabilities.
 
+## RSpec
+
+### Clean up test db
+
+The gem provides a class to clean up your `pg_eventstore` test db between tests. Example usage(in your `spec/spec_helper.rb`:
+
+```ruby
+require 'pg_eventstore/rspec/test_helpers'
+
+RSpec.configure do |config|
+  config.before do
+    PgEventstore::TestHelpers.clean_up_db
+  end
+end
+```
+
+### RSpec matcher for OptionsExtension
+
+If you would like to be able to test the functional, provided by `PgEventstore::Extensions::OptionsExtension` extension - there is a rspec matcher. Load custom matcher in you `spec_helper.rb`:
+
+```ruby
+require 'pg_eventstore/rspec/has_option_matcher'
+```
+
+Let's say you have next class:
+```ruby
+class SomeClass
+  include PgEventstore::Extensions::OptionsExtension
+
+  option(:some_opt, metadata: { foo: :bar }) { '1' }
+end
+```
+
+To test that its instance has the proper option with the proper default value and proper metadata you can use this matcher:
+```ruby
+RSpec.describe SomeClass do
+  subject { described_class.new }
+
+  # Check that :some_opt is present
+  it { is_expected.to have_option(:some_opt) }
+  # Check that :some_opt is present and has the correct default value
+  it { is_expected.to have_option(:some_opt).with_default_value('1').with_metadata(foo: :bar) }
+end
+```
+
 ## Development
 
 After checking out the repo, run:
