@@ -1,0 +1,15 @@
+<div class="form-row align-items-center">
+  <div class="col-3">
+    <select name="filter[system_stream]" class="form-control mb-2" data-placeholder="Select system stream">
+      <option></option>
+      <% PgEventstore::Stream::KNOWN_SYSTEM_STREAMS.each do |stream_name| %>
+        <option value="<%= stream_name %>" <% if stream == stream_name %> selected <% end %>><%= stream_name %></option>
+      <% end %>
+    </select>
+  </div>
+  <div class="col-1">
+    <a class="btn btn-default remove-filter" href="javascript: void(0);">
+      <i class="fa fa-minus-circle"></i>
+    </a>
+  </div>
+</div>

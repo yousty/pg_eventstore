@@ -4,6 +4,15 @@ module PgEventstore
       class EventTypesCollection < PgEventstore::Web::Paginator::BaseCollection
         PER_PAGE: Integer
 
+        def initialize: (
+            Symbol config_name,
+            starting_id: (String | Integer)?,
+            per_page: Integer,
+            order: Symbol,
+            ?options: ::Hash[untyped, untyped],
+            ?system_stream: String?
+          ) -> void
+
         def collection: () -> ::Array[::Hash[String, String]]
 
         def next_page_starting_id: () -> String?

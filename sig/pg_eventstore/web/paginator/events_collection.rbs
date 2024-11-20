@@ -6,6 +6,8 @@ module PgEventstore
         PER_PAGE: ::Hash[String, Integer]
         MAX_NUMBER_TO_COUNT: Integer
 
+        @stream: PgEventstore::Stream
+
         def collection: () -> ::Array[PgEventstore::Event]
 
         def next_page_starting_id: () -> Integer?
@@ -15,7 +17,7 @@ module PgEventstore
         def total_count: () -> Integer
 
         # _@param_ `event`
-        def event_global_position: (PgEventstore::Event event) -> Integer?
+        def event_global_position: (PgEventstore::Event? event) -> Integer?
 
         # _@param_ `sql_builder`
         def estimate_count: (PgEventstore::SQLBuilder sql_builder) -> Integer

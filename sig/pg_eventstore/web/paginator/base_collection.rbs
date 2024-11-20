@@ -2,15 +2,6 @@ module PgEventstore
   module Web
     module Paginator
       class BaseCollection
-        # _@param_ `config_name`
-        #
-        # _@param_ `starting_id`
-        #
-        # _@param_ `per_page`
-        #
-        # _@param_ `order` — :asc or :desc
-        #
-        # _@param_ `options` — additional options to filter the collection
         def initialize: (
             Symbol config_name,
             starting_id: (String | Integer)?,

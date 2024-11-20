@@ -70,7 +70,7 @@ module PgEventstore
     # @param options [Hash]
     # @return [Array<PgEventstore::Event>]
     def stream_events(stream, options)
-      exec_params = events_filtering(stream, options).to_exec_params
+      exec_params = QueryBuilders::EventsFiltering.events_filtering(stream, options).to_exec_params
       raw_events = connection.with do |conn|
         conn.exec_params(*exec_params)
       end.to_a
@@ -126,15 +126,6 @@ module PgEventstore
         "(#{prepared.join(',')})"
       end
       [sql_rows_for_insert, values]
-    end
-
-    # @param stream [PgEventstore::Stream]
-    # @param options [Hash]
-    # @return [PgEventstore::EventsFiltering]
-    def events_filtering(stream, options)
-      return QueryBuilders::EventsFiltering.all_stream_filtering(options) if stream.all_stream?
-
-      QueryBuilders::EventsFiltering.specific_stream_filtering(stream, options)
     end
 
     # @return [PgEventstore::LinksResolver]

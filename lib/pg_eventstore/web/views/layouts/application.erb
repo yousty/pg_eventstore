@@ -87,7 +87,7 @@
               <div class="dropdown-menu dropdown-usermenu pull-right" aria-labelledby="navbarDropdown">
                 <% PgEventstore.available_configs.each do |config| %>
                   <form action="<%= url('/change_config') %>" method="POST">
-                    <input type="hidden" name="config" value="<%= h config %>">
+                    <input type="hidden" name="config" value="<%= h config.to_s %>">
                     <button type="submit" class="dropdown-item"><%= h config.inspect %></button>
                   </form>
                 <% end %>

@@ -19,6 +19,12 @@ module PgEventstore
           end&.reject { _1.empty? }
         end
 
+        # @return [String, nil]
+        def system_stream
+          params in { filter: { system_stream: String => system_stream } }
+          system_stream if Stream::KNOWN_SYSTEM_STREAMS.include?(system_stream)
+        end
+
         # @return [Array<String>, nil]
         def events_filter
           params in { filter: { events: Array => events } }
@@ -31,6 +37,8 @@ module PgEventstore
           PgEventstore.available_configs.include?(config) ? config : :default
         end
 
+        # @param val [Object]
+        # @return [void]
         def current_config=(val)
           response.set_cookie('current_config', { value: val.to_s, http_only: true, same_site: :lax })
         end
@@ -40,7 +48,7 @@ module PgEventstore
           PgEventstore.connection(current_config)
         end
 
-        # @param collection [PgEventstore::Paginator::BaseCollection]
+        # @param collection [PgEventstore::Web::Paginator::BaseCollection]
         # @return [void]
         def paginated_json_response(collection)
           halt 200, {
@@ -85,7 +93,8 @@ module PgEventstore
           options: {
             filter: { event_types: events_filter, streams: streams_filter },
             resolve_link_tos: resolve_link_tos?
-          }
+          },
+          system_stream: system_stream
         )
 
         if request.xhr?

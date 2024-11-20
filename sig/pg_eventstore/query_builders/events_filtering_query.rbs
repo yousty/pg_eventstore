@@ -6,6 +6,10 @@ module PgEventstore
       SQL_DIRECTIONS: Hash[String | Symbol, String]
       SUBSCRIPTIONS_OPTIONS: ::Array[Symbol]
 
+      @sql_builder: PgEventstore::SQLBuilder
+
+      def self.events_filtering: (PgEventstore::Stream stream, ::Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
+      
       # _@param_ `options`
       def self.subscriptions_events_filtering: (::Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
 
@@ -16,6 +20,8 @@ module PgEventstore
       #
       # _@param_ `options`
       def self.specific_stream_filtering: (PgEventstore::Stream stream, ::Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
+
+      def self.system_stream_filtering: (PgEventstore::Stream stream, Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
 
       def initialize: () -> void
 

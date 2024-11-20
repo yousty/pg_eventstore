@@ -1,6 +1,9 @@
 <script type="text/html" id="stream-filter-tmpl">
   <%= erb :'home/partials/stream_filter', { layout: false }, { stream: {} } %>
 </script>
+<script type="text/html" id="system-stream-filter-tmpl">
+  <%= erb :'home/partials/system_stream_filter', { layout: false }, { stream: nil } %>
+</script>
 <script type="text/html" id="event-type-filter-tmpl">
   <%= erb :'home/partials/event_filter', { layout: false }, { event_type: '' } %>
 </script>
@@ -27,6 +30,11 @@
             <form id="filters-form" action="<%= url('/') %>" method="GET" data-parsley-validate class="form-horizontal form-label-left">
               <input type="hidden" name="per_page" value="<%= params[:per_page].to_i %>">
               <input type="hidden" name="resolve_link_tos" value="<%= resolve_link_tos? %>">
+              <div class="system-stream-filter">
+                <% if system_stream %>
+                  <%= erb :'home/partials/system_stream_filter', { layout: false }, { stream: system_stream } %>
+                <% end %>
+              </div>
               <div class="stream-filters">
                 <% streams_filter&.each do |attrs| %>
                   <%= erb :'home/partials/stream_filter', { layout: false }, { stream: attrs } %>
@@ -48,6 +56,7 @@
                       </button>
                       <div class="dropdown-menu">
                         <a class="dropdown-item add-stream-filter" href="javascript: void(0)">Add stream filter</a>
+                        <a class="dropdown-item add-system-stream-filter" href="javascript: void(0)">Add system stream filter</a>
                         <a class="dropdown-item add-event-filter" href="javascript: void(0)">Add event filter</a>
                       </div>
                     </div>

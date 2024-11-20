@@ -76,6 +76,15 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       end
     end
 
+    context 'when filtering by "$streams" system stream' do
+      let(:params) { { filter: { system_stream: "$streams" } } }
+
+      it 'displays 0-stream revision events' do
+        subject
+        expect(rendered_event_ids).to eq([events2.first.id, events1.first.id])
+      end
+    end
+
     describe 'resolving links' do
       let!(:events1) do
         PgEventstore.client.append_to_stream(stream1, [PgEventstore::Event.new(type: "Foo")])
