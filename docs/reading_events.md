@@ -53,7 +53,7 @@ In case a stream with given name does not exist, a `PgEventstore::StreamNotFound
 ```ruby
 begin
   stream = PgEventstore::Stream.new(context: 'non-existing-context', stream_name: 'User', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
-  PgEventstore.client.read(stream)
+  PgEventstore.client.read(stream, options: { max_count: 1 })
 rescue PgEventstore::StreamNotFoundError => e
   puts e.message # => Stream #<PgEventstore::Stream:0x01> does not exist.
   puts e.stream # => #<PgEventstore::Stream:0x01>
@@ -78,6 +78,15 @@ You can read from a specific position of the "all" stream. This is very similar 
 
 ```ruby
 PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { from_position: 9023, direction: 'Backwards' })
+```
+
+## Reading from "$streams" system stream
+
+`"$streams"` is a special stream which consists of events with `stream_revision == 0`. This allows you to effectively query all streams. Example:
+
+```ruby
+stream = PgEventstore::Stream.system_stream("$streams")
+PgEventstore.client.read(stream).map(&:stream) # => array of unique streams
 ```
 
 ## Middlewares
@@ -160,6 +169,12 @@ You can also mix filtering by stream's attributes and event types. The result wi
 PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [{ context: 'MyAwesomeContext' }], event_types: %w[Foo Bar] } })
 ```
 
+### "$streams" stream filtering
+
+When reading from `"$streams"` same rules apply as when reading from "all" stream. For example, read all streams which have `context == "MyAwesomeContext"` and start from events with event type either `"Foo"` or `"Bar"`:
+```ruby
+PgEventstore.client.read(PgEventstore::Stream.system_stream("$streams"), options: { filter: { streams: [{ context: 'MyAwesomeContext' }], event_types: %w[Foo Bar] } })
+```
 
 ## Pagination
 

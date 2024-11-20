@@ -14,6 +14,16 @@ RSpec.describe PgEventstore::Stream do
     end
   end
 
+  describe '.system_stream' do
+    subject { described_class.system_stream(stream_name) }
+
+    let(:stream_name) { '$some-stream' }
+
+    it 'returns system stream' do
+      is_expected.to eq(described_class.new(context: stream_name, stream_name: '', stream_id: ''))
+    end
+  end
+
   describe '#all_stream?' do
     subject { instance.all_stream? }
 

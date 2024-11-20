@@ -11,3 +11,5 @@
 log/
 Gemfile.lock
 db/postgresql/
+*.dump
+*.tar.gz

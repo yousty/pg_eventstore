@@ -31,11 +31,6 @@ module PgEventstore
     # _@param_ `events`
     def prepared_statements: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> ::Array[(::Array[String] | ::Array[Object])]
 
-    # _@param_ `stream`
-    #
-    # _@param_ `options`
-    def events_filtering: (PgEventstore::Stream stream, ::Hash[untyped, untyped] options) -> PgEventstore::QueryBuilders::EventsFiltering
-
     def links_resolver: () -> PgEventstore::LinksResolver
 
     # Returns the value of attribute connection.

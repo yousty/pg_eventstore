@@ -8,6 +8,8 @@ module PgEventstore
     SYSTEM_STREAM_PREFIX = '$'
     # @return [Integer]
     NON_EXISTING_STREAM_REVISION = -1
+    # @return [Array<String>]
+    KNOWN_SYSTEM_STREAMS = %w[$streams].freeze
 
     class << self
       # Produces "all" stream instance. "all" stream does not represent any specific stream. Instead, it indicates that
@@ -17,6 +19,12 @@ module PgEventstore
         allocate.tap do |stream|
           stream.instance_variable_set(:@all_stream, true)
         end
+      end
+
+      # @param name [String]
+      # @return [PgEventstore::Stream]
+      def system_stream(name)
+        new(context: name, stream_name: '', stream_id: '')
       end
     end
 

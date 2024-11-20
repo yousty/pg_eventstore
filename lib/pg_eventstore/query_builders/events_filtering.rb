@@ -21,6 +21,18 @@ module PgEventstore
       SUBSCRIPTIONS_OPTIONS = %i[from_position resolve_link_tos filter max_count].freeze
 
       class << self
+        # @param stream [PgEventstore::Stream]
+        # @param options [Hash]
+        # @return [PgEventstore::EventsFiltering]
+        def events_filtering(stream, options)
+          return all_stream_filtering(options) if stream.all_stream?
+          if stream.system? && Stream::KNOWN_SYSTEM_STREAMS.include?(stream.context)
+            return system_stream_filtering(stream, options)
+          end
+
+          specific_stream_filtering(stream, options)
+        end
+
         # @param options [Hash]
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def subscriptions_events_filtering(options)
@@ -53,6 +65,15 @@ module PgEventstore
           event_filter.add_revision(options[:from_revision], options[:direction])
           event_filter.add_stream_direction(options[:direction])
           event_filter
+        end
+
+        # @param stream [PgEventstore::Stream] system stream
+        # @param options [Hash]
+        # @return [PgEventstore::QueryBuilders::EventsFiltering]
+        def system_stream_filtering(stream, options)
+          all_stream_filtering(options).tap do |event_filter|
+            event_filter.set_source(stream.context)
+          end
         end
       end
 
@@ -137,6 +158,12 @@ module PgEventstore
       # @return [Array]
       def to_exec_params
         @sql_builder.to_exec_params
+      end
+
+      # @param table_name [String] system stream view name
+      # @return [void]
+      def set_source(table_name)
+        @sql_builder.from(%{ "#{PG::Connection.escape(table_name)}" events })
       end
 
       private

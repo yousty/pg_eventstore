@@ -1,0 +1,27 @@
+module PgEventstore
+  module Web
+    class Application
+      def asset_url: (String path) -> String
+
+      def connection: -> PgEventstore::Connection
+
+      def current_config: -> Symbol
+
+      def current_config=: (untyped val) -> void
+
+      def events_filter: -> Array[String]?
+
+      def h: (String text) -> String
+
+      def paginated_json_response: (PgEventstore::Web::Paginator::BaseCollection collection) -> void
+
+      def redirect_back_url: (fallback_url: String) -> String
+
+      def resolve_link_tos?: -> bool
+
+      def streams_filter: -> Array[Hash[untyped, untyped]]?
+
+      def system_stream: -> String?
+    end
+  end
+end

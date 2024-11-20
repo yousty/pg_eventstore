@@ -68,6 +68,27 @@ PARTITION BY LIST (context);
 
 
 --
+-- Name: $streams; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public."$streams" AS
+ SELECT id,
+    context,
+    stream_name,
+    stream_id,
+    global_position,
+    stream_revision,
+    data,
+    metadata,
+    link_id,
+    link_partition_id,
+    created_at,
+    type
+   FROM public.events
+  WHERE (stream_revision = 0);
+
+
+--
 -- Name: events_global_position_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -367,6 +388,13 @@ ALTER TABLE ONLY public.subscriptions_set_commands
 
 ALTER TABLE ONLY public.subscriptions_set
     ADD CONSTRAINT subscriptions_set_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_events_0_stream_revision_global_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_0_stream_revision_global_position ON ONLY public.events USING btree (stream_revision, global_position) WHERE (stream_revision = 0);
 
 
 --
