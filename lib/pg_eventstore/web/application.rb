@@ -9,6 +9,7 @@ module PgEventstore
       set :environment, -> { (ENV['RACK_ENV'] || ENV['RAILS_ENV'] || ENV['APP_ENV'])&.to_sym || :development }
       set :logging, -> { environment == :development || environment == :test }
       set :erb, layout: :'layouts/application'
+      set :host_authorization, { allow_if: ->(_env) { true } }
 
       helpers(Paginator::Helpers, Subscriptions::Helpers) do
         # @return [Array<Hash>, nil]
