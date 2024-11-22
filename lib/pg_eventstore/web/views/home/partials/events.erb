@@ -6,10 +6,13 @@
     <td><%= h event.stream.stream_name %></td>
     <td><a href="<%= stream_path(event) %>"><%= event.stream.stream_id %></a></td>
     <td>
-      <%= h event.type %>
+      <p class="float-left"><%= h event.type %></p>
       <% if event.link %>
-        <i class="fa fa-link"></i>
+        <p class="float-left ml-2">
+          <i class="fa fa-link"></i>
+        </p>
       <% end %>
+      <div class="clearfix"></div>
     </td>
     <td><%= event.created_at.strftime('%F %T') %></td>
     <td><%= event.id %></td>
