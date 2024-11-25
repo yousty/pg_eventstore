@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+- Implement reading from `"$streams"` system stream
+- Disable Host authorization introduced in sinatra v4.1
+
 ## [1.6.0]
 - Introduce subscriptions CLI. Type `pg-eventstore subscriptions --help` to see available commands. The main purpose of it is to provide the single way to start/stop subscription processes. Check [Subscriptions](docs/subscriptions.md#creating-a-subscription) docs about the new way to start and keep running a subscriptions process.
 
