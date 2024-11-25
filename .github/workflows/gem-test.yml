@@ -17,16 +17,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up Ruby
+        if: ${{ !steps.skip-workflow.outputs.skip }}
         uses: ruby/setup-ruby@v1.169.0
         with:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
       - name: Run PostgreSQL
+        if: ${{ !steps.skip-workflow.outputs.skip }}
         run: docker compose up --detach
       - name: Install rbs collection
+        if: ${{ !steps.skip-workflow.outputs.skip }}
         run: |
           bundle exec rbs collection install
       - name: Run tests
+        if: ${{ !steps.skip-workflow.outputs.skip }}
         run: |
           sleep 10
           ./bin/setup_db
