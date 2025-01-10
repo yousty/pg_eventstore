@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+## [1.7.0]
 - Implement reading from `"$streams"` system stream
 - Disable Host authorization introduced in sinatra v4.1
 
