@@ -16,7 +16,9 @@
 - `stream_revision` - Integer(optional, read only). A revision of an event inside its stream.
 - `data` - Hash(optional). Event's payload data. For example, if you have a `DescriptionChanged` event class, then you may want to have a description value in the event payload data. Example: `DescriptionChanged.new(data: { 'description' => 'Description of something', 'post_id' => SecureRandom.uuid })`
 - `metadata` - Hash(optional). Event metadata. Event meta information which is not part of an events data payload. Example: `{ published_by: publishing_user.id }`
-- `link_id` - String(UUIDv4, optional, read only). If an event is a link event (link events are pointers to other events), this attribute contains the `id` of the original event. Manually assigning this attribute has no effect. It is internally set when appending an event to the given stream or when reading events from the database.
+- `link_id` - String(UUIDv4, optional, read only). If an event is a link event (link events are pointers to other events), this attribute contains an `id` of the original event. Manually assigning this attribute has no effect. It is internally set when appending an event to the given stream or when reading events from the database.
+- `link_partition_id` - Integer(optional, read only). If an event is a link event - this attribute contains a partition `id` of original event. Manually assigning this attribute has no effect. It is internally set when appending an event to the given stream or when reading events from the database.
+- `link` - PgEventstore::Event(optional, read only). When reading from a stream using `resolve_link_tos: true`, if an event is resolved from a link - this attribute contains a `PgEventstore::Event` object which corresponds to that link. Manually assigning this attribute has no effect. It is internally set when reading events from the database.
 - `created_at` - Time(optional, read only). Database's timestamp when an event was appended to a stream. You may want to put your own timestamp into a `metadata` attribute - it may be useful when migrating between different databases. Manually assigning this attribute has no effect. It is internally set when appending an event to the given stream or when reading events from the database.
 
 Example:
@@ -40,7 +42,21 @@ PgEventstore::Stream.new(context: 'Sales', stream_name: 'Customer', stream_id: '
 PgEventstore::Stream.new(context: 'Sales', stream_name: 'Customer', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 ```
 
-There is a special stream, called the "all" stream. You can get this object by calling the`PgEventstore::Stream.all_stream` method. Read more about the "all" stream in the `Reading from the "all" stream` section of [Reading events](reading_events.md) chapter.
+### "all" stream
+
+There is a special stream, called the "all" stream. You can get this object by calling the `PgEventstore::Stream.all_stream` method. Read more about the "all" stream in the `Reading from the "all" stream` section of [Reading events](reading_events.md) chapter.
+
+### System streams
+
+System stream is a special stream, the representation of which is pre-defined by the gem. System stream object can be created in next way:
+
+```ruby
+PgEventstore::Stream.system_stream(stream_name)
+```
+
+Current list of system streams is:
+
+- `"$streams"`. Reading from this stream will return 0 revision events. This allows effectively loop through a list of streams. Read more in [Reading events](reading_events.md#streams-stream-filtering) chapter.
 
 ## Important note
 
