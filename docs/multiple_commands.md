@@ -44,3 +44,7 @@ old_email =
 # Sending email outside multiple block to prevent potential re-triggering of it 
 UserMailer.notify_email_changed(user.id, old_email: old_email, new_email: user.email).deliver_later
 ```
+
+## Side effect of internal implementation
+
+Please note that when publishing an event with a type as part of a `multiple` block that does not yet exist in the database, the block will run twice as the first attempt to publish will always fail due to the way `append_to_stream` is implemented. Consider this when writing expectations in your tests for example.
