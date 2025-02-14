@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [1.8.0]
+- Introduce default config for admin web UI. Now if you define `:admin_web_ui` config - it will be preferred over default config
+- Fix pagination of events in admin UI
+- Improve partial index for `$streams` system stream
+
 ## [1.7.0]
 - Implement reading from `"$streams"` system stream
 - Disable Host authorization introduced in sinatra v4.1
