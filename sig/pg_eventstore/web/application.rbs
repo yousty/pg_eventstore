@@ -1,6 +1,9 @@
 module PgEventstore
   module Web
     class Application
+      COOKIES_CONFIG_KEY: String
+      DEFAULT_ADMIN_UI_CONFIG: Symbol
+
       def asset_url: (String path) -> String
 
       def connection: -> PgEventstore::Connection
@@ -16,6 +19,8 @@ module PgEventstore
       def paginated_json_response: (PgEventstore::Web::Paginator::BaseCollection collection) -> void
 
       def redirect_back_url: (fallback_url: String) -> String
+
+      def resolve_config_by_name: (Symbol? config_name)-> Symbol
 
       def resolve_link_tos?: -> bool
 

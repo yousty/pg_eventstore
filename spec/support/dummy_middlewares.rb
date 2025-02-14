@@ -5,17 +5,18 @@ class DummyMiddleware
 
   ENCR_SECRET = 'secret'
   DECR_SECRET = '123456'
+  STORAGE_KEY = 'dummy_secret'
 
   # @param event [PgEventstore::Event]
   # @return [void]
   def serialize(event)
-    event.metadata['dummy_secret'] = ENCR_SECRET
+    event.metadata[STORAGE_KEY] = ENCR_SECRET
   end
 
   # @param event [PgEventstore::Event]
   # @return [void]
   def deserialize(event)
-    event.metadata['dummy_secret'] = DECR_SECRET
+    event.metadata[STORAGE_KEY] = DECR_SECRET
   end
 end
 
@@ -24,16 +25,17 @@ class Dummy2Middleware
 
   ENCR_SECRET = 'terces'
   DECR_SECRET = '654321'
+  STORAGE_KEY = 'dummy2_secret'
 
   # @param event [PgEventstore::Event]
   # @return [void]
   def serialize(event)
-    event.metadata['dummy2_secret'] = ENCR_SECRET
+    event.metadata[STORAGE_KEY] = ENCR_SECRET
   end
 
   # @param event [PgEventstore::Event]
   # @return [void]
   def deserialize(event)
-    event.metadata['dummy2_secret'] = DECR_SECRET
+    event.metadata[STORAGE_KEY] = DECR_SECRET
   end
 end

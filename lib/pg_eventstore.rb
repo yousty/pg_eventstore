@@ -18,6 +18,9 @@ require_relative 'pg_eventstore/middleware'
 require_relative 'pg_eventstore/subscriptions/subscriptions_manager'
 
 module PgEventstore
+  # @return [Symbol]
+  DEFAULT_CONFIG = :default
+
   class << self
     # @!attribute mutex
     #   @return [Thread::Mutex]
@@ -27,7 +30,7 @@ module PgEventstore
     # Creates a Config if not exists and yields it to the given block.
     # @param name [Symbol] a name to assign to a config
     # @return [Object] a result of the given block
-    def configure(name: :default)
+    def configure(name: DEFAULT_CONFIG)
       mutex.synchronize do
         @config[name] ||= Config.new(name: name)
         connection_config_was = @config[name].connection_options
@@ -48,7 +51,7 @@ module PgEventstore
 
     # @param name [Symbol]
     # @return [PgEventstore::Config]
-    def config(name = :default)
+    def config(name = DEFAULT_CONFIG)
       return @config[name] if @config[name]
 
       error_message = <<~TEXT
@@ -64,7 +67,7 @@ module PgEventstore
     # thread-safe
     # @param name [Symbol]
     # @return [PgEventstore::Connection]
-    def connection(name = :default)
+    def connection(name = DEFAULT_CONFIG)
       mutex.synchronize do
         @connection[name] ||= Connection.new(**config(name).connection_options)
       end
@@ -76,7 +79,7 @@ module PgEventstore
     # @param retries_interval [Integer, nil] a delay between retries of failed SubscriptionsSet
     # @param force_lock [Boolean] whether to force-lock subscriptions
     # @return [PgEventstore::SubscriptionsManager]
-    def subscriptions_manager(config_name = :default, subscription_set:, max_retries: nil, retries_interval: nil,
+    def subscriptions_manager(config_name = DEFAULT_CONFIG, subscription_set:, max_retries: nil, retries_interval: nil,
                               force_lock: false)
       SubscriptionsManager.new(
         config: config(config_name),
@@ -89,7 +92,7 @@ module PgEventstore
 
     # @param name [Symbol]
     # @return [PgEventstore::Client]
-    def client(name = :default)
+    def client(name = DEFAULT_CONFIG)
       Client.new(config(name))
     end
 
@@ -108,7 +111,7 @@ module PgEventstore
 
     # @return [void]
     def init_variables
-      @config = { default: Config.new(name: :default) }
+      @config = { DEFAULT_CONFIG => Config.new(name: DEFAULT_CONFIG) }
       @connection = {}
       @mutex = Thread::Mutex.new
     end

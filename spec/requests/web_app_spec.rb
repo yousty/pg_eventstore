@@ -3,6 +3,42 @@
 RSpec.describe PgEventstore::Web::Application, type: :request do
   let(:app) { described_class }
 
+  shared_examples 'admin web ui config' do
+    before do
+      # Make default config broken by setting available connections to zero to demonstrate the difference between it
+      # and Admin UI config
+      PgEventstore.configure do |config|
+        config.connection_pool_size = 0
+        config.connection_pool_timeout = 1
+      end
+    end
+
+    after do
+      PgEventstore.send(:init_variables)
+    end
+
+    context 'when admin web ui config is defined' do
+      before do
+        PgEventstore.configure(name: described_class::DEFAULT_ADMIN_UI_CONFIG) do |config|
+          config.pg_uri = PgEventstore.config.pg_uri
+          config.connection_pool_size = 2
+        end
+      end
+
+      it 'uses it by default' do
+        subject
+        expect(last_response.body).not_to include('ConnectionPool::TimeoutError')
+      end
+    end
+
+    context 'when admin web ui config is not defined' do
+      it 'uses default config' do
+        subject
+        expect(last_response.body).to include('ConnectionPool::TimeoutError')
+      end
+    end
+  end
+
   describe 'GET /' do
     subject { get '/', params }
 
@@ -27,6 +63,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         expect(rendered_event_ids).not_to include(events.first.id)
       end
     end
+    it_behaves_like 'admin web ui config'
 
     context 'when events limit is set to 20' do
       let(:params) { { per_page: 20 } }
@@ -125,15 +162,15 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     let(:params) { { config: :some_config } }
 
+    after do
+      PgEventstore.send(:init_variables)
+    end
+
     context 'when config is recognizable' do
       before do
         PgEventstore.configure(name: :some_config) do |config|
           config.max_count = 100
         end
-      end
-
-      after do
-        PgEventstore.send(:init_variables)
       end
 
       it 'persists it in cookies' do
@@ -143,9 +180,27 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     end
 
     context 'when config is not recognizable' do
-      it 'sets it to :default' do
-        subject
-        expect(last_response.headers['set-cookie']).to eq('current_config=default; httponly; samesite=lax')
+      context 'when admin web ui config is not defined' do
+        it 'sets it to default' do
+          subject
+          expect(last_response.headers['set-cookie']).to eq('current_config=default; httponly; samesite=lax')
+        end
+      end
+
+      context 'when admin web ui config is defined' do
+        before do
+          PgEventstore.configure(name: described_class::DEFAULT_ADMIN_UI_CONFIG) do |config|
+            config.pg_uri = PgEventstore.config.pg_uri
+            config.connection_pool_size = 2
+          end
+        end
+
+        it 'uses it by default' do
+          subject
+          expect(last_response.headers['set-cookie']).to(
+            eq("current_config=#{described_class::DEFAULT_ADMIN_UI_CONFIG}; httponly; samesite=lax")
+          )
+        end
       end
     end
   end
@@ -174,6 +229,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         )
       )
     end
+    it_behaves_like 'admin web ui config'
 
     context 'when there are more results than in current response' do
       before do
@@ -236,6 +292,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         )
       )
     end
+    it_behaves_like 'admin web ui config'
 
     context 'when there are more results than in current response' do
       before do
@@ -316,6 +373,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         )
       )
     end
+    it_behaves_like 'admin web ui config'
 
     context 'when there are more results than in current response' do
       before do
@@ -393,6 +451,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         )
       )
     end
+    it_behaves_like 'admin web ui config'
 
     context 'when there are more results than in current response' do
       before do
@@ -586,16 +645,19 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         expect(last_response.body).to include(set2.name)
       end
     end
+    it_behaves_like 'admin web ui config'
   end
 
   describe 'POST /subscription_cmd/:set_id/:id/:cmd' do
     subject { post "/subscription_cmd/#{set.id}/#{subscription.id}/#{cmd}" }
 
-    let(:set) { SubscriptionsSetHelper.create }
-    let(:subscription) { SubscriptionsHelper.create }
+    let!(:set) { SubscriptionsSetHelper.create }
+    let!(:subscription) { SubscriptionsHelper.create }
     let(:cmd) { 'Stop' }
 
     let(:cmd_queries) { PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection) }
+
+    it_behaves_like 'admin web ui config'
 
     context 'when command is recognizable' do
       it 'creates a command record' do
@@ -627,10 +689,12 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
   describe 'POST /subscriptions_set_cmd/:id/:cmd' do
     subject { post "/subscriptions_set_cmd/#{set.id}/#{cmd}" }
 
-    let(:set) { SubscriptionsSetHelper.create }
+    let!(:set) { SubscriptionsSetHelper.create }
     let(:cmd) { 'Stop' }
 
     let(:cmd_queries) { PgEventstore::SubscriptionsSetCommandQueries.new(PgEventstore.connection) }
+
+    it_behaves_like 'admin web ui config'
 
     context 'when command is recognizable' do
       it 'creates a command record' do
@@ -660,9 +724,11 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
   describe 'POST /delete_subscriptions_set/:id' do
     subject { post "/delete_subscriptions_set/#{set.id}" }
 
-    let(:set) { SubscriptionsSetHelper.create }
+    let!(:set) { SubscriptionsSetHelper.create }
 
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
+
+    it_behaves_like 'admin web ui config'
 
     context 'when SubscriptionsSet exists' do
       it 'deletes it' do
@@ -691,9 +757,11 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
   describe 'POST /delete_subscription/:id' do
     subject { post "/delete_subscription/#{subscription.id}" }
 
-    let(:subscription) { SubscriptionsHelper.create }
+    let!(:subscription) { SubscriptionsHelper.create }
 
     let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+
+    it_behaves_like 'admin web ui config'
 
     context 'when Subscription exists' do
       it 'deletes it' do
@@ -739,5 +807,6 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     it 'does not delete third subscription' do
       expect { subject }.not_to change { queries.find_by(id: subscription3.id) }
     end
+    it_behaves_like 'admin web ui config'
   end
 end

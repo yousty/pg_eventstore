@@ -5,6 +5,11 @@ require 'securerandom'
 module PgEventstore
   module Web
     class Application < Sinatra::Base
+      # @return [Symbol]
+      DEFAULT_ADMIN_UI_CONFIG = :admin_web_ui
+      # @return [String]
+      COOKIES_CONFIG_KEY = 'current_config'
+
       set :static_cache_control, [:private, max_age: 86400]
       set :environment, -> { (ENV['RACK_ENV'] || ENV['RAILS_ENV'] || ENV['APP_ENV'])&.to_sym || :development }
       set :logging, -> { environment == :development || environment == :test }
@@ -34,14 +39,23 @@ module PgEventstore
 
         # @return [Symbol]
         def current_config
-          config = request.cookies['current_config']&.to_s&.to_sym
-          PgEventstore.available_configs.include?(config) ? config : :default
+          resolve_config_by_name(request.cookies[COOKIES_CONFIG_KEY]&.to_s&.to_sym)
+        end
+
+        # @param config_name [Symbol, nil]
+        # @return [Symbol]
+        def resolve_config_by_name(config_name)
+          existing_config = [config_name, DEFAULT_ADMIN_UI_CONFIG].find do |name|
+            PgEventstore.available_configs.include?(name)
+          end
+
+          existing_config || PgEventstore::DEFAULT_CONFIG
         end
 
         # @param val [Object]
         # @return [void]
         def current_config=(val)
-          response.set_cookie('current_config', { value: val.to_s, http_only: true, same_site: :lax })
+          response.set_cookie(COOKIES_CONFIG_KEY, { value: val.to_s, http_only: true, same_site: :lax })
         end
 
         # @return [PgEventstore::Connection]
@@ -137,9 +151,7 @@ module PgEventstore
       end
 
       post '/change_config' do
-        config = params[:config]&.to_sym
-        config = :default unless PgEventstore.available_configs.include?(config)
-        self.current_config = config
+        self.current_config = resolve_config_by_name(params[:config]&.to_s&.to_sym)
         redirect(redirect_back_url(fallback_url: '/'))
       end
 

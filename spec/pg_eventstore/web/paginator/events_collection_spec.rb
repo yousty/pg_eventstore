@@ -108,10 +108,10 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
         PgEventstore.config.middlewares = {}
       end
 
-      it 'ignores it' do
+      it 'recognizes it' do
         aggregate_failures do
           expect(subject.size).to eq(2)
-          is_expected.to all satisfy { |event| event.metadata == {} }
+          is_expected.to all satisfy { |event| event.metadata == { DummyMiddleware::STORAGE_KEY => DummyMiddleware::DECR_SECRET } }
         end
       end
     end

@@ -1,4 +1,6 @@
 module PgEventstore
+  DEFAULT_CONFIG: Symbol
+
   # _@param_ `name` — a name to assign to a config
   #
   # _@return_ — a result of the given block

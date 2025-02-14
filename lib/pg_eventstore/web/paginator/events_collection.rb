@@ -34,8 +34,7 @@ module PgEventstore
         def collection
           @_collection ||= PgEventstore.client(config_name).read(
             @stream,
-            options: options.merge(from_position: starting_id, max_count: per_page, direction: order),
-            middlewares: []
+            options: options.merge(from_position: starting_id, max_count: per_page, direction: order)
           )
         end
 
@@ -60,7 +59,7 @@ module PgEventstore
           ).to_sql_builder.unselect.select('global_position').offset(1)
           sql, params = sql_builder.to_exec_params
           sql = "SELECT * FROM (#{sql}) events ORDER BY global_position #{order} LIMIT 1"
-          PgEventstore.connection.with  do |conn|
+          connection.with  do |conn|
             conn.exec_params(sql, params)
           end.to_a.dig(0, 'global_position')
         end
