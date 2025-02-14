@@ -394,7 +394,7 @@ ALTER TABLE ONLY public.subscriptions_set
 -- Name: idx_events_0_stream_revision_global_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_0_stream_revision_global_position ON ONLY public.events USING btree (stream_revision, global_position) WHERE (stream_revision = 0);
+CREATE INDEX idx_events_0_stream_revision_global_position ON ONLY public.events USING btree (global_position) WHERE (stream_revision = 0);
 
 
 --
