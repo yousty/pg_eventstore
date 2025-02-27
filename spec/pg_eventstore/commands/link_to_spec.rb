@@ -324,7 +324,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           expect { subject }.to(
             raise_error(
               PgEventstore::SystemStreamError,
-              "Stream #{projection_stream.inspect} is a system stream and can't be used to append events."
+              "Can't perform this action with #{projection_stream.inspect} system stream."
             )
           )
         end
@@ -337,7 +337,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           expect { subject }.to(
             raise_error(
               PgEventstore::SystemStreamError,
-              "Stream #{projection_stream.inspect} is a system stream and can't be used to append events."
+              "Can't perform this action with #{projection_stream.inspect} system stream."
             )
           )
         end

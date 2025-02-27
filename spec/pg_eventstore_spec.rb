@@ -199,6 +199,44 @@ RSpec.describe PgEventstore do
     end
   end
 
+  describe '.maintenance' do
+    context 'when no config name is given' do
+      subject { described_class.maintenance }
+
+      it 'sets default config' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::Maintenance)
+          expect(subject.send(:config).name).to eq(:default)
+        end
+      end
+    end
+
+    context 'when config name is given' do
+      subject { described_class.maintenance(config_name) }
+
+      let(:config_name) { :some_config }
+
+      before do
+        described_class.configure(name: config_name, &:itself)
+      end
+
+      it 'sets the given config' do
+        aggregate_failures do
+          is_expected.to be_a(PgEventstore::Maintenance)
+          expect(subject.send(:config).name).to eq(config_name)
+        end
+      end
+    end
+
+    context 'when non-existing config name is given' do
+      subject { described_class.maintenance(:non_existing_config) }
+
+      it 'raises error' do
+        expect { subject }.to raise_error(/Could not find #{:non_existing_config.inspect} config/)
+      end
+    end
+  end
+
   describe '.subscriptions_manager' do
     context 'when no config name is given' do
       subject { described_class.subscriptions_manager(subscription_set: 'MySubscriptions') }

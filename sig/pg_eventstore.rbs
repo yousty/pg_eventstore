@@ -14,6 +14,8 @@ module PgEventstore
   # _@param_ `name`
   def self.connection: (?Symbol name) -> PgEventstore::Connection
 
+  def self.maintenance: (?Symbol name) -> PgEventstore::Maintenance
+
   def self.subscriptions_manager: (
       ?Symbol config_name,
       subscription_set: String,

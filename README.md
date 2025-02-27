@@ -45,6 +45,7 @@ Documentation chapters:
 - [Linking events](docs/linking_events.md)
 - [Reading events](docs/reading_events.md)
 - [Subscriptions](docs/subscriptions.md)
+- [Maintenance functions](docs/maintenance.md)
 - [Writing middlewares](docs/writing_middleware.md)
 - [How to make multiple commands atomic](docs/multiple_commands.md)
 - [Admin UI](docs/admin_ui.md)

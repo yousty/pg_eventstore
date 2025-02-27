@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Implement an ability to delete a stream
+
 ## [1.8.0]
 - Introduce default config for admin web UI. Now if you define `:admin_web_ui` config - it will be preferred over default config
 - Fix pagination of events in admin UI

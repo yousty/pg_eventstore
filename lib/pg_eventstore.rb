@@ -11,7 +11,10 @@ require_relative 'pg_eventstore/event_class_resolver'
 require_relative 'pg_eventstore/config'
 require_relative 'pg_eventstore/event'
 require_relative 'pg_eventstore/stream'
+require_relative 'pg_eventstore/commands'
+require_relative 'pg_eventstore/queries'
 require_relative 'pg_eventstore/client'
+require_relative 'pg_eventstore/maintenance'
 require_relative 'pg_eventstore/connection'
 require_relative 'pg_eventstore/errors'
 require_relative 'pg_eventstore/middleware'
@@ -94,6 +97,12 @@ module PgEventstore
     # @return [PgEventstore::Client]
     def client(name = DEFAULT_CONFIG)
       Client.new(config(name))
+    end
+
+    # @param name [Symbol]
+    # @return [PgEventstore::Maintenance]
+    def maintenance(name = DEFAULT_CONFIG)
+      Maintenance.new(config(name))
     end
 
     # @return [Logger, nil]

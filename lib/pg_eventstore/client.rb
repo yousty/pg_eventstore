@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-require_relative 'commands'
 require_relative 'event_serializer'
 require_relative 'event_deserializer'
-require_relative 'queries'
 
 module PgEventstore
   class Client

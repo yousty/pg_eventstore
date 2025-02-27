@@ -45,6 +45,9 @@ Tell `PgEventstore` which config you want to use:
 PgEventstore.client(:pg_db_1).read(PgEventstore::Stream.all_stream)
 # Read from "all" stream using :pg_db_2 config
 PgEventstore.client(:pg_db_2).read(PgEventstore::Stream.all_stream)
+# Delete a stream using :pg_db_1 config
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: '1')
+PgEventstore.maintenance.delete_stream(stream)
 ```
 
 ### Default config

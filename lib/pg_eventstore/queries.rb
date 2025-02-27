@@ -6,6 +6,7 @@ require_relative 'queries/transaction_queries'
 require_relative 'queries/event_queries'
 require_relative 'queries/partition_queries'
 require_relative 'queries/links_resolver'
+require_relative 'queries/maintenance_queries'
 
 module PgEventstore
   # @!visibility private
@@ -21,5 +22,9 @@ module PgEventstore
     # @!attribute transactions
     #   @return [PgEventstore::TransactionQueries, nil]
     attribute(:transactions)
+
+    # @!attribute maintenance
+    #   @return [PgEventstore::MaintenanceQueries, nil]
+    attribute(:maintenance)
   end
 end

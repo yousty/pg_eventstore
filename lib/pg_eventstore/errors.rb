@@ -41,7 +41,7 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     def initialize(stream)
       @stream = stream
-      super("Stream #{stream.inspect} is a system stream and can't be used to append events.")
+      super("Can't perform this action with #{stream.inspect} system stream.")
     end
   end
 

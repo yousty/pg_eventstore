@@ -1,0 +1,7 @@
+module PgEventstore
+  module Commands
+    class DeleteStream < PgEventstore::AbstractCommand
+      def call: (PgEventstore::Stream stream) -> bool
+    end
+  end
+end

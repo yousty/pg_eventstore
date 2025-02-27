@@ -1,0 +1,17 @@
+module PgEventstore
+  class Maintenance
+    @config: PgEventstore::Config
+
+    attr_reader config: PgEventstore::Config
+
+    def initialize: (PgEventstore::Config config) -> void
+
+    def connection: () -> PgEventstore::Connection
+
+    def delete_stream: (PgEventstore::Stream stream)-> bool
+
+    def maintenance_queries: () -> PgEventstore::MaintenanceQueries
+
+    def transaction_queries: () -> PgEventstore::TransactionQueries
+  end
+end
