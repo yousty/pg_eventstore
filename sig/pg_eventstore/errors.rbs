@@ -113,4 +113,14 @@ module PgEventstore
 
     attr_accessor event_types: ::Array[String]
   end
+
+  class TooManyRecordsToLockError < PgEventstore::Error
+    def initialize: (PgEventstore::Stream stream, Integer number_of_records) -> void
+
+    attr_accessor stream: PgEventstore::Stream
+
+    attr_accessor number_of_records: Integer
+
+    def user_friendly_message: -> String
+  end
 end

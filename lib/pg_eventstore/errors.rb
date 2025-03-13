@@ -225,4 +225,22 @@ module PgEventstore
 
   class EmptyChunkFedError < Error
   end
+
+  class TooManyRecordsToLockError < Error
+    attr_reader :stream
+    attr_reader :number_of_records
+
+    # @param stream [PgEventstore::Stream]
+    # @param number_of_records [Integer]
+    def initialize(stream, number_of_records)
+      @stream = stream
+      @number_of_records = number_of_records
+      super(user_friendly_message)
+    end
+
+    # @return [String]
+    def user_friendly_message
+      "Too many records of #{stream.to_hash.inspect} stream to lock: #{number_of_records}"
+    end
+  end
 end

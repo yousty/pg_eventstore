@@ -1,0 +1,21 @@
+module PgEventstore
+  class MaintenanceQueries
+    attr_reader connection: PgEventstore::Connection
+
+    def initialize: (PgEventstore::Connection connection)-> untyped
+
+    def adjust_stream_revisions: (PgEventstore::Stream stream, Integer after_revision)-> void
+
+    def delete_event: (PgEventstore::Event event)-> Integer
+
+    def delete_stream: (PgEventstore::Stream stream)-> Integer
+
+    def events_to_lock_count: (PgEventstore::Stream stream, Integer after_revision)-> Integer
+
+    def reload_event: (PgEventstore::Event event)-> PgEventstore::Event?
+
+    private
+
+    def basic_deserializer: -> PgEventstore::EventDeserializer
+  end
+end

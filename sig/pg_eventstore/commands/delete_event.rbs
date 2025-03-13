@@ -1,0 +1,13 @@
+module PgEventstore
+  module Commands
+    class DeleteEvent
+      MAX_RECORDS_TO_LOCK: Integer
+
+      def call: (PgEventstore::Event event, force: bool)-> bool
+
+      private
+
+      def check_records_number_to_lock: (PgEventstore::Event event)-> void
+    end
+  end
+end

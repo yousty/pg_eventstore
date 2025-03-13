@@ -1,9 +1,0 @@
-module PgEventstore
-  class MaintenanceQueries
-    attr_reader connection: PgEventstore::Connection
-
-    def initialize: (PgEventstore::Connection connection)-> untyped
-
-    def delete_stream: (PgEventstore::Stream stream)-> Integer
-  end
-end

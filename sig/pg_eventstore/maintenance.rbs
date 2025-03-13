@@ -8,6 +8,8 @@ module PgEventstore
 
     def connection: () -> PgEventstore::Connection
 
+    def delete_event: (PgEventstore::Event event, ?force: bool)-> bool
+
     def delete_stream: (PgEventstore::Stream stream)-> bool
 
     def maintenance_queries: () -> PgEventstore::MaintenanceQueries

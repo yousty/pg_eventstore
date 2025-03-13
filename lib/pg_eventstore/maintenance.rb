@@ -13,11 +13,19 @@ module PgEventstore
     end
 
     # @param stream [PgEventstore::Stream]
-    # @return [Boolean] whether stream was deleted successfully
+    # @return [Boolean] whether a stream was deleted successfully
     def delete_stream(stream)
       Commands::DeleteStream.new(
         Queries.new(transactions: transaction_queries, maintenance: maintenance_queries)
       ).call(stream)
+    end
+
+    # @param event [PgEventstore::Event] persisted event
+    # @return [Boolean] whether an event was deleted successfully
+    def delete_event(event, force: false)
+      Commands::DeleteEvent.new(
+        Queries.new(transactions: transaction_queries, maintenance: maintenance_queries)
+      ).call(event, force:)
     end
 
     private
