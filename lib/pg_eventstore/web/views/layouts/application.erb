@@ -95,6 +95,12 @@
             </li>
           </ul>
         </nav>
+        <div class="alert alert-success alert-dismissible fade show text-center d-none" id="flash-message" role="alert">
+          <h5 class="text-dark message"></h5>
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
       </div>
     </div>
     <!-- /top navigation -->
@@ -133,11 +139,17 @@
   </div>
 </div>
 
+<script type="text/javascript">
+  window.flashMessageCookie = "<%= PgEventstore::Web::Application::COOKIES_FLASH_MESSAGE_KEY %>";
+</script>
+
 <!-- jQuery -->
 <script src="<%= asset_url("javascripts/vendor/jquery.min.js") %>"></script>
 <!-- Bootstrap -->
 <script src="<%= asset_url("javascripts/vendor/bootstrap.bundle.min.js") %>"></script>
 <script src="<%= asset_url("javascripts/vendor/select2.full.min.js") %>"></script>
+
+<script src="<%= asset_url("javascripts/vendor/js.cookie.min.js") %>"></script>
 
 <!-- Custom Theme Scripts -->
 <script src="<%= asset_url("javascripts/gentelella.js") %>"></script>

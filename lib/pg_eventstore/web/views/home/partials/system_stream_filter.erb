@@ -1,6 +1,6 @@
 <div class="form-row align-items-center">
   <div class="col-3">
-    <select name="filter[system_stream]" class="form-control mb-2" data-placeholder="Select system stream">
+    <select name="filter[system_stream]" class="form-control mb-2" data-placeholder="Select system stream" autocomplete="off">
       <option></option>
       <% PgEventstore::Stream::KNOWN_SYSTEM_STREAMS.each do |stream_name| %>
         <option value="<%= stream_name %>" <% if stream == stream_name %> selected <% end %>><%= stream_name %></option>

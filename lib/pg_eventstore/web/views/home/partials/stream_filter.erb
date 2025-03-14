@@ -1,31 +1,36 @@
 <div class="form-row align-items-center">
   <div class="col-3">
-    <select name="filter[streams][][context]" class="form-control mb-2" data-placeholder="Context" data-url="<%= url('/stream_contexts_filtering') %>">
+    <select name="filter[streams][][context]" class="form-control mb-2" data-placeholder="Context" data-url="<%= url('/stream_contexts_filtering') %>" autocomplete="off">
       <option></option>
       <% if stream[:context] %>
         <option value="<%= h stream[:context] %>" selected><%= h stream[:context] %></option>
       <% end %>
     </select>
   </div>
-  <div class="col-4">
-    <select name="filter[streams][][stream_name]" class="form-control mb-2" data-placeholder="Stream name" data-url="<%= url('/stream_names_filtering') %>">
+  <div class="col-3">
+    <select name="filter[streams][][stream_name]" class="form-control mb-2" data-placeholder="Stream name" data-url="<%= url('/stream_names_filtering') %>" autocomplete="off">
       <option></option>
       <% if stream[:stream_name] %>
         <option value="<%= h stream[:stream_name] %>" selected><%= h stream[:stream_name] %></option>
       <% end %>
     </select>
   </div>
-  <div class="col-4">
-    <select name="filter[streams][][stream_id]" class="form-control mb-2" data-placeholder="Stream ID" data-url="<%= url('/stream_ids_filtering') %>">
+  <div class="col-3">
+    <select name="filter[streams][][stream_id]" class="form-control mb-2" data-placeholder="Stream ID" data-url="<%= url('/stream_ids_filtering') %>" autocomplete="off">
       <option></option>
       <% if stream[:stream_id] %>
         <option value="<%= h stream[:stream_id] %>" selected><%= h stream[:stream_id] %></option>
       <% end %>
     </select>
   </div>
-  <div class="col-1">
+  <div class="col-3">
     <a class="btn btn-default remove-filter" href="javascript: void(0);">
       <i class="fa fa-minus-circle"></i>
     </a>
+    <% if stream[:context] && stream[:stream_name] && stream[:stream_id] %>
+      <a class="btn btn-danger btn-small delete-stream" data-confirm="You are about to delete all events in <%= h stream.inspect %> stream. This action is irreversible Continue?" data-confirm-title="Delete Stream" data-method="post" href="<%= delete_stream_url(stream) %>">
+        Delete stream
+      </a>
+    <% end %>
   </div>
 </div>

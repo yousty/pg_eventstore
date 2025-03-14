@@ -165,3 +165,35 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="delete-event-modal" tabindex="-1" role="dialog" aria-labelledby="delete-event-modal" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Delete Event</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body font-weight-bold text-break">
+        <h5>
+          You are about to delete Event on global position <span class="global-position-text"></span>. This action is irreversible. Continue?
+        </h5>
+
+        <form id="delete-event-form" data-parsley-validate="" class="form-horizontal form-label-left" novalidate="" method="POST">
+          <input type="hidden" name="data[force]" value="false">
+          <div class="checkbox">
+            <label>
+              <input type="checkbox" id="force-delete" name="data[force]" autocomplete="off" value="true">
+              Ignore limitations(see <a class="text-info" href="https://github.com/yousty/pg_eventstore/blob/main/docs/maintenance.md#deleting-an-event-in-a-large-stream" target="_blank" rel="noreferrer,nofollow">docs</a>).
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-danger" form="delete-event-form">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>

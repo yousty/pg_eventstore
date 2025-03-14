@@ -16,4 +16,15 @@ module RequestsHelper
   rescue JSON::ParserError
     last_response.body
   end
+
+  # @return [Hash]
+  def flash_message
+    flash_message = last_response.headers['set-cookie']&.split(';')&.find do |str|
+      str.start_with?(PgEventstore::Web::Application::COOKIES_FLASH_MESSAGE_KEY)
+    end
+    return unless flash_message
+
+    flash_message = flash_message.gsub("#{PgEventstore::Web::Application::COOKIES_FLASH_MESSAGE_KEY}=", '')
+    JSON.parse(Base64.urlsafe_decode64(CGI.unescape(flash_message)), symbolize_names: true)
+  end
 end

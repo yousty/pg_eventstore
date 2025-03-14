@@ -16,8 +16,14 @@
     </td>
     <td><%= event.created_at.strftime('%F %T') %></td>
     <td><%= event.id %></td>
-    <td><a href="javascript: void(0);" class="d-inline-block text-nowrap toggle-event-data">JSON <i
-      class="fa fa-eye"></i> </a></td>
+    <td>
+      <a href="javascript: void(0);" class="d-inline-block text-nowrap toggle-event-data">
+        JSON <i class="fa fa-eye"></i>
+      </a>
+      <a href="javascript: void(0);" class="ml-2 btn btn-danger btn-small delete-event-btn" data-global-position="<%= event.global_position %>" data-url="<%= delete_event_url(event.global_position) %>" data-toggle="modal" data-target="#delete-event-modal">
+        Delete
+      </a>
+    </td>
   </tr>
   <tr class="event-payload d-none">
     <td colspan="8">

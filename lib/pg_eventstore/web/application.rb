@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'securerandom'
+require 'base64'
 
 module PgEventstore
   module Web
@@ -9,6 +10,8 @@ module PgEventstore
       DEFAULT_ADMIN_UI_CONFIG = :admin_web_ui
       # @return [String]
       COOKIES_CONFIG_KEY = 'current_config'
+      # @return [String]
+      COOKIES_FLASH_MESSAGE_KEY = 'flash_message'
 
       set :static_cache_control, [:private, max_age: 86400]
       set :environment, -> { (ENV['RACK_ENV'] || ENV['RAILS_ENV'] || ENV['APP_ENV'])&.to_sym || :development }
@@ -96,6 +99,14 @@ module PgEventstore
         # @return [Boolean]
         def resolve_link_tos?
           params.key?(:resolve_link_tos) ? params[:resolve_link_tos] == 'true' : true
+        end
+
+        # @param val [Hash]
+        def flash_message=(val)
+          val = Base64.urlsafe_encode64(val.to_json)
+          response.set_cookie(
+            COOKIES_FLASH_MESSAGE_KEY, { value: val, http_only: false, same_site: :lax, path: '/' }
+          )
         end
       end
 
@@ -242,6 +253,44 @@ module PgEventstore
         end
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))
+      end
+
+      post '/delete_event/:global_position' do
+        params in { data: { force: String => force } }
+        global_position = params[:global_position].to_i
+        force = force == 'true'
+        event = PgEventstore.client(current_config).read(
+          PgEventstore::Stream.all_stream, options: { max_count: 1, from_position: global_position }
+        ).first
+        if event&.global_position == global_position
+          begin
+            PgEventstore.maintenance(current_config).delete_event(event, force: force)
+            self.flash_message = {
+              message: "An event at global position #{event.global_position} has been deleted successfully.",
+              kind: 'success'
+            }
+          rescue TooManyRecordsToLockError => e
+            text = <<~TEXT
+              Could not delete an event at global position #{event.global_position} - too many \
+              records(~#{e.number_of_records}) to lock.
+            TEXT
+            self.flash_message = { message: text, kind: 'error' }
+          end
+        else
+          self.flash_message = { message: 'Failed to delete an event - event does not exist.', kind: 'warning' }
+        end
+        redirect(redirect_back_url(fallback_url: '/'))
+      end
+
+      post '/delete_stream/:context/:stream_name/:stream_id' do
+        attrs = Hash[params.slice(:context, :stream_name, :stream_id)].transform_keys(&:to_sym)
+        stream = PgEventstore::Stream.new(**attrs)
+        PgEventstore.maintenance(current_config).delete_stream(stream)
+        self.flash_message = {
+          message: "Stream #{stream.to_hash} has been successfully deleted.",
+          kind: 'success'
+        }
+        redirect(redirect_back_url(fallback_url: '/'))
       end
     end
   end

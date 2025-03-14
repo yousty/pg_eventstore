@@ -2,6 +2,7 @@ module PgEventstore
   module Web
     class Application
       COOKIES_CONFIG_KEY: String
+      COOKIES_FLASH_MESSAGE_KEY: String
       DEFAULT_ADMIN_UI_CONFIG: Symbol
 
       def asset_url: (String path) -> String
@@ -13,6 +14,8 @@ module PgEventstore
       def current_config=: (untyped val) -> void
 
       def events_filter: -> Array[String]?
+
+      def flash_message=: (({ message: String, kind: String }) val)-> String
 
       def h: (String text) -> String
 

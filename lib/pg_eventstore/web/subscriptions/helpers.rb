@@ -107,6 +107,18 @@ module PgEventstore
           encoded_params = Rack::Utils.build_nested_query(ids: ids)
           url("/delete_all_subscriptions?#{encoded_params}")
         end
+
+        # @param global_position [Integer]
+        # @return [String]
+        def delete_event_url(global_position)
+          url("/delete_event/#{global_position}")
+        end
+
+        # @param stream_attrs [Hash]
+        # @return [String]
+        def delete_stream_url(stream_attrs)
+          url("/delete_stream/#{stream_attrs[:context]}/#{stream_attrs[:stream_name]}/#{stream_attrs[:stream_id]}")
+        end
       end
     end
   end
