@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [1.10.0]
+- Admin UI: Adjust `SubscriptionSet` "Stop"/"Delete" buttons appearance. Now if `SubscriptionsSet` is not alive anymore(the related process is dead or does not exist anymore) - "Delete" button is shown. If `SubscriptionSet` is alive - "Stop" button is shown
+- Admin IU: fixed several potential XSS vulnerabilities
+- Admin IU: Add "Copy to clipboard" button near stream id that copies ruby stream definition
+- Admin UI: allow deletion of streams with empty attribute values
+
 ## [1.9.0]
 
 - Implement an ability to delete a stream
