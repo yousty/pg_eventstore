@@ -1065,7 +1065,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     it_behaves_like 'admin web ui config'
 
     context 'when stream exists' do
-      let(:events) { Array.new(2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) } }
+      let!(:events) { Array.new(2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) } }
 
       it 'deletes it' do
         expect { subject }.to change { safe_read(stream).map(&:id) }.from(events.map(&:id)).to([])
@@ -1076,6 +1076,41 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       end
       it_behaves_like 'redirect' do
         let(:default_path) { '/' }
+      end
+
+      context 'when unaccepted stream attributes are passed' do
+        let(:params) { PgEventstore::Stream.system_stream("$some-stream").to_hash }
+
+        it 'flashes error message' do
+          subject
+          expect(flash_message).to(
+            eq(message: "Could not delete #{params}. It is not valid stream for deletion.", kind: 'error')
+          )
+        end
+        it 'does not delete anything' do
+          expect { subject }.not_to change { PgEventstore.client.read(PgEventstore::Stream.all_stream).count }.from(2)
+        end
+        it_behaves_like 'redirect' do
+          let(:default_path) { '/' }
+        end
+      end
+
+      context 'when incomplete stream attributes are passed' do
+        let(:params) { { context: stream.context } }
+
+        it 'flashes error message' do
+          stream_attrs = { context: stream.context, stream_name: nil, stream_id: nil }
+          subject
+          expect(flash_message).to(
+            eq(message: "Could not delete #{stream_attrs}. It is not valid stream for deletion.", kind: 'error')
+          )
+        end
+        it 'does not delete anything' do
+          expect { subject }.not_to change { PgEventstore.client.read(PgEventstore::Stream.all_stream).count }.from(2)
+        end
+        it_behaves_like 'redirect' do
+          let(:default_path) { '/' }
+        end
       end
     end
 
