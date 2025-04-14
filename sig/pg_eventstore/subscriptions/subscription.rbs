@@ -1,5 +1,7 @@
 module PgEventstore
   class Subscription
+    DEFAULT_TIMESTAMP: Time
+
     include PgEventstore::Extensions::UsingConnectionExtension
     include PgEventstore::Extensions::OptionsExtension
 

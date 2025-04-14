@@ -79,26 +79,39 @@ module PgEventstore
         # @param updated_at [Time]
         # @return [String] html status
         def colored_state(state, interval, updated_at)
-          if state == RunnerState::STATES[:running]
-            # -1 is added as a margin to prevent false-positive result
-            if updated_at < Time.now.utc - interval - 1
-              title = <<~TEXT
-                Something is wrong. Last update was more than #{interval} seconds ago(#{updated_at}).
-              TEXT
-              <<~HTML
-                <span class="text-warning text-nowrap">
-                  #{state}
-                  <i class="fa fa-question-circle" data-toggle="tooltip" title="#{title}"></i>
-                </span>              
-              HTML
+          text_class =
+            case state
+            when RunnerState::STATES[:running]
+              alive?(interval, updated_at) ? 'text-success' : 'text-warning'
+            when RunnerState::STATES[:dead]
+              'text-danger'
             else
-              "<span class=\"text-success\">#{state}</span>"
+              'text-info'
             end
-          elsif state == RunnerState::STATES[:dead]
-            "<span class=\"text-danger\">#{state}</span>"
+
+          if alive?(interval, updated_at)
+            <<~HTML
+              <span class="#{text_class}">#{state}</span>
+            HTML
           else
-            "<span class=\"text-info\">#{state}</span>"
+            title = <<~TEXT
+              Something is wrong. Last update was more than #{interval} seconds ago(#{updated_at}).
+            TEXT
+            <<~HTML
+              <span class="#{text_class} text-nowrap">
+                #{state}
+                <i class="fa fa-question-circle" data-toggle="tooltip" title="#{title}"></i>
+              </span>
+            HTML
           end
+        end
+
+        # @param interval [Integer]
+        # @param last_updated_at [Time]
+        # @return [Boolean]
+        def alive?(interval, last_updated_at)
+          # -1 is added as a margin to prevent false-positive result
+          last_updated_at > Time.now.utc - interval - 1
         end
 
         # @param ids [Array<Integer>]
@@ -117,7 +130,8 @@ module PgEventstore
         # @param stream_attrs [Hash]
         # @return [String]
         def delete_stream_url(stream_attrs)
-          url("/delete_stream/#{stream_attrs[:context]}/#{stream_attrs[:stream_name]}/#{stream_attrs[:stream_id]}")
+          encoded_params = Rack::Utils.build_nested_query(stream_attrs)
+          url("/delete_stream?#{encoded_params}")
         end
       end
     end

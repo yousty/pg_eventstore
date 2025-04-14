@@ -212,6 +212,82 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         end
       end
     end
+
+    describe 'XSS protection in an event/stream parts' do
+      let(:stream) do
+        PgEventstore::Stream.new(context: '<script xss>', stream_name: '<script xss>', stream_id: '<script xss>')
+      end
+      let!(:event) do
+        PgEventstore.client.append_to_stream(
+          stream,
+          PgEventstore::Event.new(
+            type: '<script xss>', data: { foo: '<script xss>' }, metadata: { foo: '<script xss>' }
+          )
+        )
+      end
+      let!(:link) do
+        PgEventstore.client.link_to(stream, event)
+      end
+
+      it 'does not include unescaped content' do
+        subject
+        expect(last_response.body).not_to include('<script xss>')
+      end
+      it 'displays given events' do
+        subject
+        expect(rendered_event_ids).to eq([event.id, event.id])
+      end
+    end
+
+    describe 'XSS protection in config name' do
+      let(:params) { { config: config_name } }
+      let(:config_name) { :"<script xss>" }
+
+      before do
+        PgEventstore.configure(name: config_name) do |config|
+          config.max_count = 100
+        end
+      end
+
+      after do
+        PgEventstore.send(:init_variables)
+      end
+
+      it 'does not include unescaped content' do
+        subject
+        expect(last_response.body).not_to include('<script xss>')
+      end
+      it 'displays the given config' do
+        subject
+        expect(last_response.body).to include('script xss')
+      end
+    end
+
+    describe 'XSS protection when filtering by stream parts' do
+      let(:stream) do
+        PgEventstore::Stream.new(context: '<script xss>', stream_name: '<script xss>', stream_id: '<script xss>')
+      end
+      let!(:event) do
+        PgEventstore.client.append_to_stream(
+          stream,
+          PgEventstore::Event.new(
+            type: '<script xss>', data: { foo: '<script xss>' }, metadata: { foo: '<script xss>' }
+          )
+        )
+      end
+      let(:params) do
+        { filter: { streams: [stream.to_hash], events: [event.type] } }
+      end
+
+      it 'does not include unescaped content' do
+        subject
+        expect(last_response.body).not_to include('<script xss>')
+      end
+      it 'displays the given event' do
+        subject
+        expect(rendered_event_ids).to eq([event.id])
+      end
+    end
   end
 
   describe 'POST /change_config' do
@@ -681,6 +757,23 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         end
       end
     end
+
+    describe 'XSS protection' do
+      before do
+        set2.update(name: '<script xss1>')
+        subscription2.update(name: '<script xss2>', set: set2.name)
+      end
+
+      it 'does not include unescaped content' do
+        subject
+        aggregate_failures do
+          expect(last_response.body).not_to include('<script xss1>')
+          expect(last_response.body).not_to include('<script xss2>')
+          expect(last_response.body).to include('script xss1')
+          expect(last_response.body).to include('script xss2')
+        end
+      end
+    end
   end
 
   describe 'GET /subscriptions/:state' do
@@ -963,10 +1056,11 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     end
   end
 
-  describe 'POST /delete_stream/:context/:stream_name/:stream_id' do
-    subject { post "/delete_stream/#{stream.context}/#{stream.stream_name}/#{stream.stream_id}" }
+  describe 'POST /delete_stream' do
+    subject { post "/delete_stream", params }
 
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+    let(:params) { stream.to_hash }
 
     it_behaves_like 'admin web ui config'
 

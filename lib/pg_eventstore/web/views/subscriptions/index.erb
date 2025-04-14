@@ -85,14 +85,16 @@
                                   Restore
                                 </a>
                               <% end %>
-                              <% if PgEventstore::RunnerState::STATES.values_at(:running, :dead).include?(subscriptions_set.state) %>
+                              <% if PgEventstore::RunnerState::STATES.values_at(:running, :dead).include?(subscriptions_set.state) && alive?(PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL, subscriptions_set.updated_at) %>
                                 <a class="btn btn-warning" data-confirm="You are about to stop SubscriptionsSet#<%= subscriptions_set.id %>. This will also delete it and will result in stopping all related Subscriptions. If you used pg_eventstore CLI to start subscriptions - the related process will also be stopped.  Continue?" data-confirm-title="Stop SubscriptionsSet" data-method="post" href="<%= subscriptions_set_cmd_url(subscriptions_set.id, subscriptions_set_cmd('Stop')) %>" data-toggle="tooltip" title="This action will delete Subscriptions Set and release all related Subscriptions.">
                                   Stop
                                 </a>
                               <% end %>
-                              <a class="btn btn-danger" data-confirm="You are about to delete SubscriptionsSet#<%= subscriptions_set.id %>. Continue?" data-confirm-title="Delete SubscriptionsSet" data-method="post" href="<%= url("/delete_subscriptions_set/#{subscriptions_set.id}") %>" data-toggle="tooltip" title="Use this action only on stuck Subscriptions Set - to clean it up.">
-                                Delete
-                              </a>
+                              <% unless alive?(PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL, subscriptions_set.updated_at) %>
+                                <a class="btn btn-danger" data-confirm="You are about to delete SubscriptionsSet#<%= subscriptions_set.id %>. Continue?" data-confirm-title="Delete SubscriptionsSet" data-method="post" href="<%= url("/delete_subscriptions_set/#{subscriptions_set.id}") %>" data-toggle="tooltip" title="Use this action only on stuck Subscriptions Set - to clean it up.">
+                                  Delete
+                                </a>
+                              <% end %>
                             </td>
                           </tr>
                           <% if subscriptions_set.last_error %>
@@ -160,7 +162,7 @@
                             </td>
                             <td><%= subscription.current_position %></td>
                             <td><%= subscription.chunk_query_interval %>s</td>
-                            <td><%= subscription.last_chunk_fed_at %></td>
+                            <td><%= subscription.last_chunk_fed_at if subscription.last_chunk_fed_at > PgEventstore::Subscription::DEFAULT_TIMESTAMP %></td>
                             <td><%= colored_state(subscription.state, PgEventstore::SubscriptionsLifecycle::HEARTBEAT_INTERVAL, subscription.updated_at) %></td>
                             <td>
                               <% if subscription.average_event_processing_time %>

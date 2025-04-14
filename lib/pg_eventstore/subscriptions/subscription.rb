@@ -6,6 +6,9 @@ module PgEventstore
     include Extensions::UsingConnectionExtension
     include Extensions::OptionsExtension
 
+    # @return [Time]
+    DEFAULT_TIMESTAMP = Time.at(0).utc.freeze
+
     # @!attribute id
     #   @return [Integer, nil]
     attribute(:id)
@@ -164,7 +167,7 @@ module PgEventstore
         last_restarted_at: nil,
         max_restarts_number: max_restarts_number,
         chunk_query_interval: chunk_query_interval,
-        last_chunk_fed_at: Time.at(0).utc,
+        last_chunk_fed_at: DEFAULT_TIMESTAMP,
         last_chunk_greatest_position: nil,
         last_error: nil,
         last_error_occurred_at: nil,

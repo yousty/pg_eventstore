@@ -2,6 +2,8 @@ module PgEventstore
   module Web
     module Subscriptions
       module Helpers
+        def alive?: (Integer interval, Time last_updated_at)-> bool
+
         def delete_event_url: (Integer global_position)-> String
 
         def delete_stream_url: (({ context: String, stream_name: String, stream_id: String }) stream_attrs)-> String

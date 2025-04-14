@@ -282,14 +282,27 @@ module PgEventstore
         redirect(redirect_back_url(fallback_url: '/'))
       end
 
-      post '/delete_stream/:context/:stream_name/:stream_id' do
-        attrs = Hash[params.slice(:context, :stream_name, :stream_id)].transform_keys(&:to_sym)
-        stream = PgEventstore::Stream.new(**attrs)
-        PgEventstore.maintenance(current_config).delete_stream(stream)
-        self.flash_message = {
-          message: "Stream #{stream.to_hash} has been successfully deleted.",
-          kind: 'success'
+      post '/delete_stream' do
+        attrs = {
+          context: params[:context].to_s,
+          stream_name: params[:stream_name]&.to_s,
+          stream_id: params[:stream_id]&.to_s,
         }
+
+        stream = PgEventstore::Stream.new(**attrs)
+        if stream.to_a.none? { |val| val.nil? || val.empty? } && !stream.system?
+          PgEventstore.maintenance(current_config).delete_stream(stream)
+          self.flash_message = {
+            message: "Stream #{stream.to_hash} has been successfully deleted.",
+            kind: 'success'
+          }
+        else
+          self.flash_message = {
+            message: "Could not delete #{stream.to_hash}. It is not valid stream for deletion.",
+            kind: 'error'
+          }
+        end
+
         redirect(redirect_back_url(fallback_url: '/'))
       end
     end
