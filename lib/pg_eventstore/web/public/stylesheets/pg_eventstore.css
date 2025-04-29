@@ -4,6 +4,18 @@ tr.collapsing {
     display: none;
 }
 
+td.json-cell {
+    max-width: 1px;
+}
+
+td.json-cell pre {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    white-space: pre;
+}
+
 #confirmation-modal .modal-body {
     font-size: 1.2rem;
 }

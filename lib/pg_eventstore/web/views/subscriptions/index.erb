@@ -210,13 +210,13 @@
                             </td>
                           </tr>
                           <tr class="collapse" id="options-<%= subscription.id %>">
-                            <td colspan="16">
+                            <td colspan="16" class="json-cell">
                               <pre><%= h JSON.pretty_generate(subscription.options) %></pre>
                             </td>
                           </tr>
                           <% if subscription.last_error %>
                             <tr class="collapse" id="last-error-<%= subscription.id %>">
-                              <td colspan="16">
+                              <td colspan="16" class="json-cell">
                                 <pre><%= h JSON.pretty_generate(subscription.last_error) %></pre>
                               </td>
                             </tr>
