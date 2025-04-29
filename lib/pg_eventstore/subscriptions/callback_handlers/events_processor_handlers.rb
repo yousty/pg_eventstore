@@ -16,9 +16,9 @@ module PgEventstore
         callbacks.run_callbacks(:process, Utils.original_global_position(raw_event)) do
           handler.call(raw_event)
         end
-      rescue
+      rescue => exception
         raw_events.unshift(raw_event)
-        raise
+        raise Utils.wrap_exception(exception, global_position: Utils.original_global_position(raw_event))
       end
 
       # @param callbacks [PgEventstore::Callbacks]

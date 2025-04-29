@@ -176,7 +176,7 @@ RSpec.describe PgEventstore::EventsProcessor do
         sleep 0.5
         # After half a second we perform the same test over the same object, but with different expectation to prove
         # that the action is actually asynchronous
-        expect(error_receiver).to have_received(:call).with(error)
+        expect(error_receiver).to have_received(:call).with(instance_of(PgEventstore::WrappedException))
       end
     end
   end

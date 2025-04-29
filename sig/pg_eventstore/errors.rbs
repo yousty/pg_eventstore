@@ -123,4 +123,12 @@ module PgEventstore
 
     def user_friendly_message: -> String
   end
+
+  class WrappedException < PgEventstore::Error
+    def initialize: (StandardError original_exception, Hash[Symbol, untyped] extra) -> void
+
+    attr_accessor original_exception: StandardError
+
+    attr_accessor extra: Hash[Symbol, untyped]
+  end
 end

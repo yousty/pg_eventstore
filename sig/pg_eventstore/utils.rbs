@@ -20,5 +20,9 @@ module PgEventstore
     def self.underscore_str: (String str) -> String
 
     def self.original_global_position: (Hash[untyped, untyped] raw_event) -> Integer
+
+    def self.unwrap_exception: (PgEventstore::WrappedException | StandardError wrapped_exception)-> StandardError
+
+    def self.wrap_exception: (StandardError exception, **untyped extra)-> PgEventstore::WrappedException
   end
 end

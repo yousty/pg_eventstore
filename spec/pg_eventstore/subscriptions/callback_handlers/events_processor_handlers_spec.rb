@@ -91,21 +91,21 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
         expect {
           begin
             subject
-          rescue error_class
+          rescue PgEventstore::WrappedException
           end
         }.to change { Time.now }.by(be_between(0, 0.01))
       end
       it 'does not process any event' do
         begin
           subject
-        rescue error_class
+        rescue PgEventstore::WrappedException
         end
         expect(raw_event_handler).not_to have_received(:call)
       end
       it 'runs only :before :process callbacks' do
         begin
           subject
-        rescue error_class
+        rescue PgEventstore::WrappedException
         end
         aggregate_failures do
           expect(position_handler_before).to have_received(:call).with(raw_event1['global_position'])
@@ -116,12 +116,32 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
         expect {
           begin
             subject
-          rescue error_class
+          rescue PgEventstore::WrappedException
           end
         }.not_to change { raw_events }
       end
       it 'raises the error' do
-        expect { subject }.to raise_error(error_class, 'Oops!')
+        expect { subject }.to raise_error(PgEventstore::WrappedException) do |error|
+          aggregate_failures do
+            expect(error.original_exception).to be_a(error_class)
+            expect(error.original_exception.message).to eq('Oops!')
+            expect(error.extra).to eq(global_position: raw_event1['global_position'])
+          end
+        end
+      end
+
+      context 'when event which caused an exception is a link event' do
+        let(:raw_event1) { { 'global_position' => 123, 'link' => { 'global_position' => 321 } } }
+
+        it 'raises the error with correct global position' do
+          expect { subject }.to raise_error(PgEventstore::WrappedException) do |error|
+            aggregate_failures do
+              expect(error.original_exception).to be_a(error_class)
+              expect(error.original_exception.message).to eq('Oops!')
+              expect(error.extra).to eq(global_position: raw_event1['link']['global_position'])
+            end
+          end
+        end
       end
     end
   end

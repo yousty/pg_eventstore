@@ -41,7 +41,8 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
     subject { described_class.update_subscription_error(subscription, error) }
 
     let(:subscription) { SubscriptionsHelper.create_with_connection(total_processed_events: 2) }
-    let(:error) do
+    let(:error) { PgEventstore::WrappedException.new(original_error, { foo: 'bar' }) }
+    let(:original_error) do
       StandardError.new("something happened").tap do |err|
         err.set_backtrace([])
       end
@@ -49,7 +50,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
 
     it 'updates Subscription#last_error' do
       expect { subject }.to change { subscription.reload.last_error }.to(
-        { 'class' => 'StandardError', 'message' => 'something happened', 'backtrace' => [] }
+        { 'class' => 'StandardError', 'message' => 'something happened', 'backtrace' => [], 'foo' => 'bar' }
       )
     end
     it 'updates Subscription#last_error_occurred_at', timecop: true do
@@ -68,7 +69,8 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
     let(:restart_terminator) { nil }
     let(:failed_subscription_notifier) { nil }
     let(:events_processor) { PgEventstore::EventsProcessor.new(handler, graceful_shutdown_timeout: 1) }
-    let(:error) { StandardError.new("something happened") }
+    let(:original_exception) { StandardError.new("something happened") }
+    let(:error) { PgEventstore::WrappedException.new(original_exception, {}) }
     let(:handler) do
       should_raise = true
       proc do
@@ -125,7 +127,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
 
         it 'calls it' do
           subject
-          expect(notifier).to have_received(:call).with(subscription, error)
+          expect(notifier).to have_received(:call).with(subscription, original_exception)
         end
         it 'does not restart events processor' do
           expect { subject; sleep subscription.time_between_restarts + 0.1 }.not_to change { events_processor.state }

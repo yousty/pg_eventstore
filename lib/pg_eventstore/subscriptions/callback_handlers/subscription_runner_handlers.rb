@@ -26,7 +26,7 @@ module PgEventstore
       end
 
       # @param subscription [PgEventstore::Subscription]
-      # @param error [StandardError]
+      # @param error [PgEventstore::WrappedException]
       # @return [void]
       def update_subscription_error(subscription, error)
         subscription.update(last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc)
@@ -36,13 +36,13 @@ module PgEventstore
       # @param restart_terminator [#call, nil]
       # @param failed_subscription_notifier [#call, nil]
       # @param events_processor [PgEventstore::EventsProcessor]
-      # @param error [StandardError]
+      # @param error [PgEventstore::WrappedException]
       # @return [void]
       def restart_events_processor(subscription, restart_terminator, failed_subscription_notifier, events_processor,
                                    error)
         return if restart_terminator&.call(subscription.dup)
         if subscription.restart_count >= subscription.max_restarts_number
-          return failed_subscription_notifier&.call(subscription.dup, error)
+          return failed_subscription_notifier&.call(subscription.dup, Utils.unwrap_exception(error))
         end
 
         Thread.new do

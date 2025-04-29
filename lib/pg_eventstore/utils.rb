@@ -46,11 +46,14 @@ module PgEventstore
       # @param error [StandardError]
       # @return [Hash]
       def error_info(error)
+        original_error = unwrap_exception(error)
         {
-          class: error.class,
-          message: error.message,
-          backtrace: error.backtrace
-        }
+          class: original_error.class,
+          message: original_error.message,
+          backtrace: original_error.backtrace
+        }.tap do |attrs|
+          attrs.merge!(error.extra) if error.is_a?(WrappedException)
+        end
       end
 
       # @param str [String]
@@ -100,6 +103,21 @@ module PgEventstore
           file.close
         end
       rescue Errno::ENOENT
+      end
+
+      # @param exception [StandardError]
+      # @param extra [Hash] additional exception info
+      # @return [PgEventstore::WrappedException]
+      def wrap_exception(exception, **extra)
+        WrappedException.new(exception, extra)
+      end
+
+      # @param wrapped_exception [StandardError, PgEventstore::WrappedException]
+      # @return [StandardError]
+      def unwrap_exception(wrapped_exception)
+        return wrapped_exception.original_exception if wrapped_exception.is_a?(WrappedException)
+
+        wrapped_exception
       end
     end
   end

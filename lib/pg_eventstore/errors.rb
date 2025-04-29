@@ -243,4 +243,14 @@ module PgEventstore
       "Too many records of #{stream.to_hash.inspect} stream to lock: #{number_of_records}"
     end
   end
+
+  class WrappedException < Error
+    attr_reader :original_exception
+    attr_reader :extra
+
+    def initialize(original_exception, extra)
+      @original_exception = original_exception
+      @extra = extra
+    end
+  end
 end

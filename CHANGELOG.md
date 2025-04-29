@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Add a global position that caused an error to the subscription's error JSON info. This will help you understand what event caused your subscription to fail.  
+
 ## [1.10.0]
 - Admin UI: Adjust `SubscriptionSet` "Stop"/"Delete" buttons appearance. Now if `SubscriptionsSet` is not alive anymore(the related process is dead or does not exist anymore) - "Delete" button is shown. If `SubscriptionSet` is alive - "Stop" button is shown
 - Admin IU: fixed several potential XSS vulnerabilities
