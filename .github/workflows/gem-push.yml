@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     name: Test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         ruby-version: ['3.0', '3.1', '3.2', '3.3']
@@ -36,7 +36,7 @@ jobs:
   push:
     needs: build
     name: Publish to RubyGems
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
