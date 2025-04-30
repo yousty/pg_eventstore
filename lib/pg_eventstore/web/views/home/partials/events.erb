@@ -2,17 +2,17 @@
   <tr>
     <td><%= event.global_position %></td>
     <td><%= event.stream_revision %></td>
-    <td><%= h event.stream.context %></td>
-    <td><%= h event.stream.stream_name %></td>
+    <td><%= empty_characters_fallback(h event.stream.context) %></td>
+    <td><%= empty_characters_fallback(h event.stream.stream_name) %></td>
     <td>
-      <a href="<%= stream_path(event) %>"><%= h event.stream.stream_id %></a>
+      <a href="<%= stream_path(event) %>"><%= empty_characters_fallback(h event.stream.stream_id) %></a>
       <a role="button" href="#" data-title="Copy stream definition." class="copy-to-clipboard"
          data-clipboard-content="<%= h "PgEventstore::Stream.new(context: #{event.stream.context.inspect}, stream_name: #{event.stream.stream_name.inspect}, stream_id: #{event.stream.stream_id.inspect})" %>">
         <i class="fa fa-clipboard"></i>
       </a>
     </td>
     <td>
-      <p class="float-left"><%= h event.type %></p>
+      <p class="float-left"><%= empty_characters_fallback(h event.type) %></p>
       <% if event.link %>
         <p class="float-left ml-2">
           <i class="fa fa-link"></i>

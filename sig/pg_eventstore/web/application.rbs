@@ -5,6 +5,8 @@ module PgEventstore
       COOKIES_FLASH_MESSAGE_KEY: String
       DEFAULT_ADMIN_UI_CONFIG: Symbol
 
+      EMPTY_STRING_SIGN: String
+
       def asset_url: (String path) -> String
 
       def connection: -> PgEventstore::Connection
@@ -12,6 +14,8 @@ module PgEventstore
       def current_config: -> Symbol
 
       def current_config=: (untyped val) -> void
+
+      def escape_empty_string: (String? string) -> String?
 
       def events_filter: -> Array[String]?
 
@@ -30,6 +34,8 @@ module PgEventstore
       def streams_filter: -> Array[Hash[untyped, untyped]]?
 
       def system_stream: -> String?
+
+      def unescape_empty_string: (String? string) -> String?
     end
   end
 end

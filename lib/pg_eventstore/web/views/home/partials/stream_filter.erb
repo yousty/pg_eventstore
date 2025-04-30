@@ -3,7 +3,11 @@
     <select name="filter[streams][][context]" class="form-control mb-2" data-placeholder="Context" data-url="<%= url('/stream_contexts_filtering') %>" autocomplete="off">
       <option></option>
       <% if stream[:context] %>
-        <option value="<%= h stream[:context] %>" selected><%= h stream[:context] %></option>
+        <% if stream[:context] == PgEventstore::Web::Application::EMPTY_STRING_SIGN %>
+          <option class="zero-byte-val" selected></option>
+        <% else %>
+          <option value="<%= h stream[:context] %>" selected><%= h stream[:context] %></option>
+        <% end %>
       <% end %>
     </select>
   </div>
@@ -11,7 +15,11 @@
     <select name="filter[streams][][stream_name]" class="form-control mb-2" data-placeholder="Stream name" data-url="<%= url('/stream_names_filtering') %>" autocomplete="off">
       <option></option>
       <% if stream[:stream_name] %>
-        <option value="<%= h stream[:stream_name] %>" selected><%= h stream[:stream_name] %></option>
+        <% if stream[:stream_name] == PgEventstore::Web::Application::EMPTY_STRING_SIGN %>
+          <option class="zero-byte-val" selected></option>
+        <% else %>
+          <option value="<%= h stream[:stream_name] %>" selected><%= h stream[:stream_name] %></option>
+        <% end %>
       <% end %>
     </select>
   </div>
@@ -19,7 +27,11 @@
     <select name="filter[streams][][stream_id]" class="form-control mb-2" data-placeholder="Stream ID" data-url="<%= url('/stream_ids_filtering') %>" autocomplete="off">
       <option></option>
       <% if stream[:stream_id] %>
-        <option value="<%= h stream[:stream_id] %>" selected><%= h stream[:stream_id] %></option>
+        <% if stream[:stream_id] == PgEventstore::Web::Application::EMPTY_STRING_SIGN %>
+          <option class="zero-byte-val" selected></option>
+        <% else %>
+          <option value="<%= h stream[:stream_id] %>" selected><%= h stream[:stream_id] %></option>
+        <% end %>
       <% end %>
     </select>
   </div>

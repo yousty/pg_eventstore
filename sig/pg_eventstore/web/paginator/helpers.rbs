@@ -2,6 +2,8 @@ module PgEventstore
   module Web
     module Paginator
       module Helpers
+        def empty_characters_fallback: (String str)-> String
+
         # _@param_ `collection`
         def previous_page_link: (PgEventstore::Web::Paginator::BaseCollection collection) -> String
 

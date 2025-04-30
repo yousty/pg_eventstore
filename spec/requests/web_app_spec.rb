@@ -288,6 +288,60 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         expect(rendered_event_ids).to eq([event.id])
       end
     end
+
+    describe 'filtering of events with an empty string value in stream parts' do
+      let(:stream) do
+        PgEventstore::Stream.new(context: '', stream_name: '', stream_id: '')
+      end
+      let(:another_stream) { PgEventstore::Stream.new(context: 'foo', stream_name: 'bar', stream_id: 'baz') }
+
+      let!(:event) do
+        PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
+      end
+      let!(:another_event) do
+        PgEventstore.client.append_to_stream(another_stream, PgEventstore::Event.new)
+      end
+
+      let(:params) do
+        {
+          filter:
+            {
+              streams: [
+                {
+                  context: described_class::EMPTY_STRING_SIGN,
+                  stream_name: described_class::EMPTY_STRING_SIGN,
+                  stream_id: described_class::EMPTY_STRING_SIGN
+                }
+              ]
+            }
+        }
+      end
+
+      it 'displays events of a stream with empty-string attribute values' do
+        subject
+        expect(rendered_event_ids).to eq([event.id])
+      end
+    end
+
+    describe 'filtering of events with an empty string value in an event type' do
+      let(:stream) { PgEventstore::Stream.new(context: 'foo', stream_name: 'bar', stream_id: 'baz') }
+
+      let!(:event) do
+        PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new(type: ''))
+      end
+      let!(:another_event) do
+        PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
+      end
+
+      let(:params) do
+        { filter: { events: [PgEventstore::Web::Application::EMPTY_STRING_SIGN] } }
+      end
+
+      it 'displays events with empty-string event type value' do
+        subject
+        expect(rendered_event_ids).to eq([event.id])
+      end
+    end
   end
 
   describe 'POST /change_config' do
@@ -352,58 +406,101 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     let(:params) { {} }
 
-    let(:stream1) { PgEventstore::Stream.new(context: 'FacCtx', stream_name: 'MyStream', stream_id: '1') }
-    let(:stream2) { PgEventstore::Stream.new(context: 'FabCtx', stream_name: 'MyStream', stream_id: '1') }
-    let(:stream3) { PgEventstore::Stream.new(context: 'FbcCtx', stream_name: 'MyStream', stream_id: '1') }
+    describe 'normal circumstances' do
+      let(:stream1) { PgEventstore::Stream.new(context: 'FacCtx', stream_name: 'MyStream', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FabCtx', stream_name: 'MyStream', stream_id: '1') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'FbcCtx', stream_name: 'MyStream', stream_id: '1') }
 
-    before do
-      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
-    end
-
-    it 'returns all contexts' do
-      subject
-      expect(parsed_body).to(
-        eq(
-          'results' => [{ 'context' => 'FabCtx' }, { 'context' => 'FacCtx' }, { 'context' => 'FbcCtx' }],
-          'pagination' => { 'more' => false, 'starting_id' => nil }
-        )
-      )
-    end
-    it_behaves_like 'admin web ui config'
-
-    context 'when there are more results than in current response' do
       before do
-        stub_const('PgEventstore::Web::Paginator::StreamContextsCollection::PER_PAGE', 2)
+        PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
       end
 
-      it 'paginates it' do
+      it 'returns all contexts' do
         subject
         expect(parsed_body).to(
           eq(
-            'results' => [{ 'context' => 'FabCtx' }, { 'context' => 'FacCtx' }],
-            'pagination' => { 'more' => true, 'starting_id' => 'FbcCtx' }
+            'results' => [{ 'context' => 'FabCtx' }, { 'context' => 'FacCtx' }, { 'context' => 'FbcCtx' }],
+            'pagination' => { 'more' => false, 'starting_id' => nil }
           )
         )
       end
-    end
+      it_behaves_like 'admin web ui config'
 
-    context 'when :starting_id param is provided' do
-      let(:params) { { starting_id: 'FacCtx' } }
+      context 'when there are more results than in current response' do
+        before do
+          stub_const('PgEventstore::Web::Paginator::StreamContextsCollection::PER_PAGE', 2)
+        end
 
-      it 'returns contexts starting from the provided one' do
-        subject
-        expect(parsed_body['results']).to eq([{ 'context' => 'FacCtx' }, { 'context' => 'FbcCtx' }])
+        it 'paginates it' do
+          subject
+          expect(parsed_body).to(
+            eq(
+              'results' => [{ 'context' => 'FabCtx' }, { 'context' => 'FacCtx' }],
+              'pagination' => { 'more' => true, 'starting_id' => 'FbcCtx' }
+            )
+          )
+        end
+      end
+
+      context 'when :starting_id param is provided' do
+        let(:params) { { starting_id: 'FacCtx' } }
+
+        it 'returns contexts starting from the provided one' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'context' => 'FacCtx' }, { 'context' => 'FbcCtx' }])
+        end
+      end
+
+      context 'when :term param is provided' do
+        let(:params) { { term: 'Fa' } }
+
+        it 'returns contexts which start from that value' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'context' => 'FabCtx' }, { 'context' => 'FacCtx' }])
+        end
       end
     end
 
-    context 'when :term param is provided' do
-      let(:params) { { term: 'Fa' } }
+    describe 'empty strings' do
+      let(:stream1) { PgEventstore::Stream.new(context: '', stream_name: 'MyStream', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FabCtx', stream_name: 'MyStream', stream_id: '1') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'FbcCtx', stream_name: 'MyStream', stream_id: '1') }
 
-      it 'returns contexts which start from that value' do
+      before do
+        PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
+      end
+
+      it 'returns all contexts and correctly escapes empty strings' do
         subject
-        expect(parsed_body['results']).to eq([{ 'context' => 'FabCtx' }, { 'context' => 'FacCtx' }])
+        expect(parsed_body).to(
+          eq(
+            'results' => [
+              { 'context' => described_class::EMPTY_STRING_SIGN }, { 'context' => 'FabCtx' }, { 'context' => 'FbcCtx' }
+            ],
+            'pagination' => { 'more' => false, 'starting_id' => nil }
+          )
+        )
+      end
+
+      context 'when :starting_id param is an empty-string sign' do
+        let(:params) { { starting_id: described_class::EMPTY_STRING_SIGN } }
+
+        it 'returns all contexts and correctly escapes empty strings' do
+          subject
+          expect(parsed_body['results']).to(
+            eq(
+              [
+                { 'context' => described_class::EMPTY_STRING_SIGN },
+                { 'context' => 'FabCtx' },
+                { 'context' => 'FbcCtx' }
+              ]
+            )
+          )
+        end
       end
     end
   end
@@ -413,78 +510,134 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     let(:params) { { context: 'FooCtx' } }
 
-    let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fac', stream_id: '1') }
-    let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fab', stream_id: '1') }
-    let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fbc', stream_id: '1') }
-    let(:stream4) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Fad', stream_id: '1') }
+    describe 'normal circumstances' do
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fac', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fab', stream_id: '1') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fbc', stream_id: '1') }
+      let(:stream4) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Fad', stream_id: '1') }
 
-    before do
-      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
-    end
-
-    it 'returns stream names for the given context' do
-      subject
-      expect(parsed_body).to(
-        eq(
-          'results' => [{ 'stream_name' => 'Fab' }, { 'stream_name' => 'Fac' }, { 'stream_name' => 'Fbc' }],
-          'pagination' => { 'more' => false, 'starting_id' => nil }
-        )
-      )
-    end
-    it_behaves_like 'admin web ui config'
-
-    context 'when there are more results than in current response' do
       before do
-        stub_const('PgEventstore::Web::Paginator::StreamNamesCollection::PER_PAGE', 2)
+        PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
       end
 
-      it 'paginates it' do
+      it 'returns stream names for the given context' do
         subject
         expect(parsed_body).to(
           eq(
-            'results' => [{ 'stream_name' => 'Fab' }, { 'stream_name' => 'Fac' }],
-            'pagination' => { 'more' => true, 'starting_id' => 'Fbc' }
+            'results' => [{ 'stream_name' => 'Fab' }, { 'stream_name' => 'Fac' }, { 'stream_name' => 'Fbc' }],
+            'pagination' => { 'more' => false, 'starting_id' => nil }
           )
         )
       end
-    end
+      it_behaves_like 'admin web ui config'
 
-    context 'when another context is provided' do
-      let(:params) { { context: 'BarCtx' } }
+      context 'when there are more results than in current response' do
+        before do
+          stub_const('PgEventstore::Web::Paginator::StreamNamesCollection::PER_PAGE', 2)
+        end
 
-      it 'returns stream names from that context' do
-        subject
-        expect(parsed_body['results']).to eq([{ 'stream_name' => 'Fad' }])
+        it 'paginates it' do
+          subject
+          expect(parsed_body).to(
+            eq(
+              'results' => [{ 'stream_name' => 'Fab' }, { 'stream_name' => 'Fac' }],
+              'pagination' => { 'more' => true, 'starting_id' => 'Fbc' }
+            )
+          )
+        end
+      end
+
+      context 'when another context is provided' do
+        let(:params) { { context: 'BarCtx' } }
+
+        it 'returns stream names from that context' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'stream_name' => 'Fad' }])
+        end
+      end
+
+      context 'when non-existing context is provided' do
+        let(:params) { { context: 'BazCtx' } }
+
+        it 'returns no results' do
+          subject
+          expect(parsed_body['results']).to eq([])
+        end
+      end
+
+      context 'when :starting_id param is provided' do
+        let(:params) { super().merge(starting_id: 'Fac') }
+
+        it 'returns stream names starting from the provided one' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'stream_name' => 'Fac' }, { 'stream_name' => 'Fbc' }])
+        end
+      end
+
+      context 'when :term param is provided' do
+        let(:params) { super().merge(term: 'Fa') }
+
+        it 'returns stream names which start from that value' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'stream_name' => 'Fab' }, { 'stream_name' => 'Fac' }])
+        end
       end
     end
 
-    context 'when non-existing context is provided' do
-      let(:params) { { context: 'BazCtx' } }
+    describe 'empty strings' do
+      let(:stream1) { PgEventstore::Stream.new(context: '', stream_name: 'Fac', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: '', stream_name: '', stream_id: '1') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fbc', stream_id: '1') }
+      let(:stream4) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: '', stream_id: '1') }
 
-      it 'returns no results' do
-        subject
-        expect(parsed_body['results']).to eq([])
+      before do
+        PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
       end
-    end
 
-    context 'when :starting_id param is provided' do
-      let(:params) { super().merge(starting_id: 'Fac') }
-
-      it 'returns stream names starting from the provided one' do
+      it 'returns stream names for the given context and correctly escapes empty strings' do
         subject
-        expect(parsed_body['results']).to eq([{ 'stream_name' => 'Fac' }, { 'stream_name' => 'Fbc' }])
+        expect(parsed_body).to(
+          eq(
+            'results' => [
+              { 'stream_name' => described_class::EMPTY_STRING_SIGN },
+              { 'stream_name' => 'Fbc' }
+            ],
+            'pagination' => { 'more' => false, 'starting_id' => nil }
+          )
+        )
       end
-    end
 
-    context 'when :term param is provided' do
-      let(:params) { super().merge(term: 'Fa') }
+      context "when :context param is an empty-string sign" do
+        let(:params) { { context: described_class::EMPTY_STRING_SIGN } }
 
-      it 'returns stream names which start from that value' do
-        subject
-        expect(parsed_body['results']).to eq([{ 'stream_name' => 'Fab' }, { 'stream_name' => 'Fac' }])
+        it 'returns stream names from that context and correctly escapes empty strings' do
+          subject
+          expect(parsed_body['results']).to(
+            eq([{ 'stream_name' => described_class::EMPTY_STRING_SIGN }, { 'stream_name' => 'Fac' }])
+          )
+        end
+      end
+
+      context 'when :starting_id param is an empty-string sign' do
+        let(:params) { super().merge(starting_id: described_class::EMPTY_STRING_SIGN) }
+
+        it 'returns all stream names according to the given :context filter and correctly escapes empty strings' do
+          subject
+          expect(parsed_body['results']).to(
+            eq(
+              [
+                { 'stream_name' => described_class::EMPTY_STRING_SIGN },
+                { 'stream_name' => 'Fbc' }
+              ]
+            )
+          )
+        end
       end
     end
   end
@@ -494,78 +647,139 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     let(:params) { { context: 'FooCtx', stream_name: 'MyStream' } }
 
-    let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: 'Fac') }
-    let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: 'Fab') }
-    let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: 'Fbc') }
-    let(:stream4) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'AnotherStream', stream_id: 'Fad') }
+    describe 'normal circumstances' do
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: 'Fac') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: 'Fab') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: 'Fbc') }
+      let(:stream4) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'AnotherStream', stream_id: 'Fad') }
 
-    before do
-      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
-    end
-
-    it 'returns stream ids for the given context and stream_name' do
-      subject
-      expect(parsed_body).to(
-        eq(
-          'results' => [{ 'stream_id' => 'Fab' }, { 'stream_id' => 'Fac' }, { 'stream_id' => 'Fbc' }],
-          'pagination' => { 'more' => false, 'starting_id' => nil }
-        )
-      )
-    end
-    it_behaves_like 'admin web ui config'
-
-    context 'when there are more results than in current response' do
       before do
-        stub_const('PgEventstore::Web::Paginator::StreamIdsCollection::PER_PAGE', 2)
+        PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
       end
 
-      it 'paginates it' do
+      it 'returns stream ids for the given context and stream_name' do
         subject
         expect(parsed_body).to(
           eq(
-            'results' => [{ 'stream_id' => 'Fab' }, { 'stream_id' => 'Fac' }],
-            'pagination' => { 'more' => true, 'starting_id' => 'Fbc' }
+            'results' => [{ 'stream_id' => 'Fab' }, { 'stream_id' => 'Fac' }, { 'stream_id' => 'Fbc' }],
+            'pagination' => { 'more' => false, 'starting_id' => nil }
           )
         )
       end
-    end
+      it_behaves_like 'admin web ui config'
 
-    context 'when another context and stream anem is provided' do
-      let(:params) { { context: 'BarCtx', stream_name: 'AnotherStream' } }
+      context 'when there are more results than in current response' do
+        before do
+          stub_const('PgEventstore::Web::Paginator::StreamIdsCollection::PER_PAGE', 2)
+        end
 
-      it 'returns stream ids from there' do
-        subject
-        expect(parsed_body['results']).to eq([{ 'stream_id' => 'Fad' }])
+        it 'paginates it' do
+          subject
+          expect(parsed_body).to(
+            eq(
+              'results' => [{ 'stream_id' => 'Fab' }, { 'stream_id' => 'Fac' }],
+              'pagination' => { 'more' => true, 'starting_id' => 'Fbc' }
+            )
+          )
+        end
+      end
+
+      context 'when another context and stream name is provided' do
+        let(:params) { { context: 'BarCtx', stream_name: 'AnotherStream' } }
+
+        it 'returns stream ids from there' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'stream_id' => 'Fad' }])
+        end
+      end
+
+      context 'when non-existing stream name is provided' do
+        let(:params) { { context: 'BarCtx', stream_name: 'MyStream' } }
+
+        it 'returns no results' do
+          subject
+          expect(parsed_body['results']).to eq([])
+        end
+      end
+
+      context 'when :starting_id param is provided' do
+        let(:params) { super().merge(starting_id: 'Fac') }
+
+        it 'returns stream ids starting from the provided one' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'stream_id' => 'Fac' }, { 'stream_id' => 'Fbc' }])
+        end
+      end
+
+      context 'when :term param is provided' do
+        let(:params) { super().merge(term: 'Fa') }
+
+        it 'returns stream ids which start from that value' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'stream_id' => 'Fab' }, { 'stream_id' => 'Fac' }])
+        end
       end
     end
 
-    context 'when non-existing stream name is provided' do
-      let(:params) { { context: 'BarCtx', stream_name: 'MyStream' } }
+    describe 'empty strings' do
+      let(:stream1) { PgEventstore::Stream.new(context: '', stream_name: 'MyStream', stream_id: 'Fac') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: '', stream_id: 'Fab') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: '') }
+      let(:stream4) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'AnotherStream', stream_id: 'Fad') }
 
-      it 'returns no results' do
-        subject
-        expect(parsed_body['results']).to eq([])
+      before do
+        PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
       end
-    end
 
-    context 'when :starting_id param is provided' do
-      let(:params) { super().merge(starting_id: 'Fac') }
-
-      it 'returns stream ids starting from the provided one' do
+      it 'returns stream ids for the given context and stream_name and correctly escapes empty strings' do
         subject
-        expect(parsed_body['results']).to eq([{ 'stream_id' => 'Fac' }, { 'stream_id' => 'Fbc' }])
+        expect(parsed_body).to(
+          eq(
+            'results' => [
+              { 'stream_id' => described_class::EMPTY_STRING_SIGN }
+            ],
+            'pagination' => { 'more' => false, 'starting_id' => nil }
+          )
+        )
       end
-    end
 
-    context 'when :term param is provided' do
-      let(:params) { super().merge(term: 'Fa') }
+      context 'when :context param is an empty-string sign' do
+        let(:params) { { context: described_class::EMPTY_STRING_SIGN, stream_name: 'MyStream' } }
 
-      it 'returns stream ids which start from that value' do
-        subject
-        expect(parsed_body['results']).to eq([{ 'stream_id' => 'Fab' }, { 'stream_id' => 'Fac' }])
+        it 'returns stream ids from that filter' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'stream_id' => 'Fac' }])
+        end
+      end
+
+      context 'when :stream_name param is an empty-string sign' do
+        let(:params) { { context: 'FooCtx', stream_name: described_class::EMPTY_STRING_SIGN } }
+
+        it 'returns stream ids from that filter' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'stream_id' => 'Fab' }])
+        end
+      end
+
+      context 'when :starting_id param is an empty-string sign' do
+        let(:params) { super().merge(starting_id: described_class::EMPTY_STRING_SIGN) }
+
+        it 'returns stream ids for the given context and stream_name and correctly escapes empty strings' do
+          subject
+          expect(parsed_body['results']).to(
+            eq(
+              [
+                { 'stream_id' => described_class::EMPTY_STRING_SIGN }
+              ]
+            )
+          )
+        end
       end
     end
   end
@@ -575,57 +789,101 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     let(:params) { {} }
 
-    let(:stream) { PgEventstore::Stream.new(context: 'FacCtx', stream_name: 'MyStream', stream_id: '1') }
-    let(:event1) { PgEventstore::Event.new(type: 'Fac') }
-    let(:event2) { PgEventstore::Event.new(type: 'Fab') }
-    let(:event3) { PgEventstore::Event.new(type: 'Fbc') }
+    describe 'normal circumstances' do
+      let(:stream) { PgEventstore::Stream.new(context: 'FacCtx', stream_name: 'MyStream', stream_id: '1') }
+      let(:event1) { PgEventstore::Event.new(type: 'Fac') }
+      let(:event2) { PgEventstore::Event.new(type: 'Fab') }
+      let(:event3) { PgEventstore::Event.new(type: 'Fbc') }
 
-    before do
-      PgEventstore.client.append_to_stream(stream, [event1, event2, event3])
-    end
-
-    it 'returns all event types' do
-      subject
-      expect(parsed_body).to(
-        eq(
-          'results' => [{ 'event_type' => 'Fab' }, { 'event_type' => 'Fac' }, { 'event_type' => 'Fbc' }],
-          'pagination' => { 'more' => false, 'starting_id' => nil }
-        )
-      )
-    end
-    it_behaves_like 'admin web ui config'
-
-    context 'when there are more results than in current response' do
       before do
-        stub_const('PgEventstore::Web::Paginator::EventTypesCollection::PER_PAGE', 2)
+        PgEventstore.client.append_to_stream(stream, [event1, event2, event3])
       end
 
-      it 'paginates it' do
+      it 'returns all event types' do
         subject
         expect(parsed_body).to(
           eq(
-            'results' => [{ 'event_type' => 'Fab' }, { 'event_type' => 'Fac' }],
-            'pagination' => { 'more' => true, 'starting_id' => 'Fbc' }
+            'results' => [{ 'event_type' => 'Fab' }, { 'event_type' => 'Fac' }, { 'event_type' => 'Fbc' }],
+            'pagination' => { 'more' => false, 'starting_id' => nil }
           )
         )
       end
-    end
+      it_behaves_like 'admin web ui config'
 
-    context 'when :starting_id param is provided' do
-      let(:params) { { starting_id: 'Fac' } }
+      context 'when there are more results than in current response' do
+        before do
+          stub_const('PgEventstore::Web::Paginator::EventTypesCollection::PER_PAGE', 2)
+        end
 
-      it 'returns event types starting from the provided one' do
-        subject
-        expect(parsed_body['results']).to eq([{ 'event_type' => 'Fac' }, { 'event_type' => 'Fbc' }])
+        it 'paginates it' do
+          subject
+          expect(parsed_body).to(
+            eq(
+              'results' => [{ 'event_type' => 'Fab' }, { 'event_type' => 'Fac' }],
+              'pagination' => { 'more' => true, 'starting_id' => 'Fbc' }
+            )
+          )
+        end
+      end
+
+      context 'when :starting_id param is provided' do
+        let(:params) { { starting_id: 'Fac' } }
+
+        it 'returns event types starting from the provided one' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'event_type' => 'Fac' }, { 'event_type' => 'Fbc' }])
+        end
+      end
+
+      context 'when :term param is provided' do
+        let(:params) { { term: 'Fa' } }
+
+        it 'returns event types which start from that value' do
+          subject
+          expect(parsed_body['results']).to eq([{ 'event_type' => 'Fab' }, { 'event_type' => 'Fac' }])
+        end
       end
     end
 
-    context 'when :term param is provided' do
-      let(:params) { { term: 'Fa' } }
+    describe 'empty strings' do
+      let(:stream) { PgEventstore::Stream.new(context: 'FacCtx', stream_name: 'MyStream', stream_id: '1') }
+      let(:event1) { PgEventstore::Event.new(type: 'Fac') }
+      let(:event2) { PgEventstore::Event.new(type: '') }
+      let(:event3) { PgEventstore::Event.new(type: 'Fbc') }
 
-      it 'returns event types which start from that value' do
+      before do
+        PgEventstore.client.append_to_stream(stream, [event1, event2, event3])
+      end
+
+      it 'returns all event types and correctly escapes empty strings' do
         subject
-        expect(parsed_body['results']).to eq([{ 'event_type' => 'Fab' }, { 'event_type' => 'Fac' }])
+        expect(parsed_body).to(
+          eq(
+            'results' => [
+              { 'event_type' => described_class::EMPTY_STRING_SIGN },
+              { 'event_type' => 'Fac' },
+              { 'event_type' => 'Fbc' }
+            ],
+            'pagination' => { 'more' => false, 'starting_id' => nil }
+          )
+        )
+      end
+
+      context 'when :starting_id param is an empty-string sign' do
+        let(:params) { { starting_id: described_class::EMPTY_STRING_SIGN } }
+
+        it 'returns all event types and correctly escapes empty strings' do
+          subject
+          expect(parsed_body['results']).to(
+            eq(
+              [
+                { 'event_type' => described_class::EMPTY_STRING_SIGN },
+                { 'event_type' => 'Fac' },
+                { 'event_type' => 'Fbc' }
+              ]
+            )
+          )
+        end
       end
     end
   end

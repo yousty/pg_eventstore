@@ -88,14 +88,22 @@ module PgEventstore
               filter: {
                 streams: [
                   {
-                    context: event.stream.context,
-                    stream_name: event.stream.stream_name,
-                    stream_id: event.stream.stream_id
+                    context: escape_empty_string(event.stream.context),
+                    stream_name: escape_empty_string(event.stream.stream_name),
+                    stream_id: escape_empty_string(event.stream.stream_id)
                   }
                 ]
               }
             }
           )
+        end
+
+        # @param str [String]
+        # @return [String]
+        def empty_characters_fallback(str)
+          return str unless str.strip == ''
+
+          '<i>Non-printable characters</i>'
         end
 
         private

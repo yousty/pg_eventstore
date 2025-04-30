@@ -13,6 +13,11 @@ module PgEventstore
       # @return [String]
       COOKIES_FLASH_MESSAGE_KEY = 'flash_message'
 
+      # Defines a replacement for empty string value in a stream attributes filter or in an event type filter. This
+      # replacement is needed to differentiate a user selection vs default placeholder value.
+      # @return [String]
+      EMPTY_STRING_SIGN = "\x00".freeze
+
       set :static_cache_control, [:private, max_age: 86400]
       set :environment, -> { (ENV['RACK_ENV'] || ENV['RAILS_ENV'] || ENV['APP_ENV'])&.to_sym || :development }
       set :logging, -> { environment == :development || environment == :test }
@@ -69,8 +74,11 @@ module PgEventstore
         # @param collection [PgEventstore::Web::Paginator::BaseCollection]
         # @return [void]
         def paginated_json_response(collection)
+          results = collection.collection.map do |attrs|
+            attrs.transform_values { escape_empty_string(_1) }
+          end
           halt 200, {
-            results: collection.collection,
+            results: results,
             pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id }
           }.to_json
         end
@@ -108,9 +116,25 @@ module PgEventstore
             COOKIES_FLASH_MESSAGE_KEY, { value: val, http_only: false, same_site: :lax, path: '/' }
           )
         end
+
+        # @param string [String, nil]
+        # @return [String, nil]
+        def escape_empty_string(string)
+          string == '' ? EMPTY_STRING_SIGN : string
+        end
+
+        # @param string [String, nil]
+        # @return [String, nil]
+        def unescape_empty_string(string)
+          string == EMPTY_STRING_SIGN ? '' : string
+        end
       end
 
       get '/' do
+        streams_filter = self.streams_filter&.map do |attrs|
+          attrs.transform_values { unescape_empty_string(_1) }
+        end
+        events_filter = self.events_filter&.map(&method(:unescape_empty_string))
         @collection = Paginator::EventsCollection.new(
           current_config,
           starting_id: params[:starting_id]&.to_i,
@@ -169,7 +193,7 @@ module PgEventstore
       get '/stream_contexts_filtering', provides: :json do
         collection = Paginator::StreamContextsCollection.new(
           current_config,
-          starting_id: params[:starting_id],
+          starting_id: unescape_empty_string(params[:starting_id]),
           per_page: Paginator::StreamContextsCollection::PER_PAGE,
           order: :asc,
           options: { query: params[:term] }
@@ -180,10 +204,10 @@ module PgEventstore
       get '/stream_names_filtering', provides: :json do
         collection = Paginator::StreamNamesCollection.new(
           current_config,
-          starting_id: params[:starting_id],
+          starting_id: unescape_empty_string(params[:starting_id]),
           per_page: Paginator::StreamNamesCollection::PER_PAGE,
           order: :asc,
-          options: { query: params[:term], context: params[:context] }
+          options: { query: params[:term], context: unescape_empty_string(params[:context]) }
         )
         paginated_json_response(collection)
       end
@@ -191,10 +215,14 @@ module PgEventstore
       get '/stream_ids_filtering', provides: :json do
         collection = Paginator::StreamIdsCollection.new(
           current_config,
-          starting_id: params[:starting_id],
+          starting_id: unescape_empty_string(params[:starting_id]),
           per_page: Paginator::StreamIdsCollection::PER_PAGE,
           order: :asc,
-          options: { query: params[:term], context: params[:context], stream_name: params[:stream_name] }
+          options: {
+            query: params[:term],
+            context: unescape_empty_string(params[:context]),
+            stream_name: unescape_empty_string(params[:stream_name])
+          }
         )
         paginated_json_response(collection)
       end
@@ -202,7 +230,7 @@ module PgEventstore
       get '/event_types_filtering', provides: :json do
         collection = Paginator::EventTypesCollection.new(
           current_config,
-          starting_id: params[:starting_id],
+          starting_id: unescape_empty_string(params[:starting_id]),
           per_page: Paginator::EventTypesCollection::PER_PAGE,
           order: :asc,
           options: { query: params[:term] }
