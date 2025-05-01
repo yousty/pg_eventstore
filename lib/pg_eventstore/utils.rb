@@ -85,7 +85,8 @@ module PgEventstore
       def write_to_file(file_path, content)
         file = File.open(file_path, "w")
         file.write(content)
-        file.close
+      ensure
+        file&.close
       end
 
       # @param file_path [String]
@@ -99,10 +100,10 @@ module PgEventstore
       # @return [String, nil]
       def read_pid(file_path)
         file = File.open(file_path, "r")
-        file.readline.strip.tap do
-          file.close
-        end
+        file.readline.strip
       rescue Errno::ENOENT
+      ensure
+        file&.close
       end
 
       # @param exception [StandardError]
