@@ -29,8 +29,15 @@ RSpec.describe PgEventstore::CLI::ParserOptions::BaseOptions do
     let(:parser) { OptionParser.new }
 
     before do
-      allow(OptionParser).to receive(:exit)
-      allow(OptionParser).to receive(:puts)
+      # We don't want to suddenly exit during test run. Ruby >= 3.4.0 and ruby < 3.4.0 handle exit differently. Thus,
+      # we need to stub it differently.
+      if RUBY_VERSION >= Gem::Version.new('3.4.0')
+        allow(parser).to receive(:exit)
+        allow(parser).to receive(:puts)
+      else
+        allow(OptionParser).to receive(:exit)
+        allow(OptionParser).to receive(:puts)
+      end
     end
 
     it 'registers "-h" option' do
