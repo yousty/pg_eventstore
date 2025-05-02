@@ -110,7 +110,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       before do
         allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_raise('Oops!')
         instance.start
-        sleep 1.1 # Let the feeder's runner die
+        dv(instance).wait_until(timeout: 1.1) { _1.state == 'dead' }
         setup_subscription_runners
       end
 
@@ -122,7 +122,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       before do
         binding
         instance.start
-        sleep 0.1
+        dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
         instance.stop_async
         setup_subscription_runners
       end
@@ -224,7 +224,8 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       before do
         allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_raise('Oops!')
         instance.start
-        sleep 1.1 # Let the feeder's runner die
+        # Let the feeder's runner die
+        dv(instance).wait_until(timeout: 1.1) { _1.state == 'dead' }
         setup_subscription_runners
       end
 
@@ -240,7 +241,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       before do
         binding
         instance.start
-        sleep 0.1
+        dv(instance).wait_until(timeout: 1.1) { _1.state == 'running' }
         instance.stop_async
         setup_subscription_runners
       end
@@ -360,7 +361,9 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       subscription_cmd_queries.create(
         subscription_id: id, subscriptions_set_id: subscriptions_set_id, command_name: 'Stop', data: {}
       )
-      expect { subject; sleep 2 }.to change { subscription_runner2.state }.to('stopped')
+      expect { subject }.to change {
+        dv(subscription_runner2).deferred_wait(timeout: 2) { _1.state == 'stopped' }.state
+      }.to('stopped')
     end
 
     context 'when second Subscription is already locked' do
@@ -505,7 +508,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(
-          proc { |raw_event| events_receiver.call(raw_event) }, graceful_shutdown_timeout: 5
+          proc { |raw_event| processed_events1.push(raw_event) }, graceful_shutdown_timeout: 5
         ),
         subscription: SubscriptionsHelper.create_with_connection(options: { filter: { event_types: ['Bar'] } })
       )
@@ -514,17 +517,17 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(
-          proc { |raw_event| events_receiver.call(raw_event) }, graceful_shutdown_timeout: 5
+          proc { |raw_event| processed_events2.push(raw_event) }, graceful_shutdown_timeout: 5
         ),
         subscription: SubscriptionsHelper.create_with_connection(
           name: 'sub2', options: { filter: { event_types: ['Baz'] } }
         )
       )
     end
-    let(:events_receiver) { double('Events receiver') }
+    let(:processed_events1) { [] }
+    let(:processed_events2) { [] }
 
     before do
-      allow(events_receiver).to receive(:call)
       subscriptions_lifecycle.runners.push(subscription_runner1)
       subscriptions_lifecycle.runners.push(subscription_runner2)
       stub_const("PgEventstore::SubscriptionsLifecycle::HEARTBEAT_INTERVAL", 1.5)
@@ -538,10 +541,11 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     it 'processes matching events' do
       subject
       PgEventstore.client.append_to_stream(stream, [event1, event2])
-      sleep 1.5 # Let everything to start and process events
+      # Let subscriptions process events
+      dv(processed_events1).wait_until(timeout: 1.5) { _1.size == 1 }
       aggregate_failures do
-        expect(events_receiver).to have_received(:call).with(a_hash_including('data' => { 'bar' => 'baz' }))
-        expect(events_receiver).not_to have_received(:call).with(a_hash_including('data' => { 'foo' => 'bar' }))
+        expect(processed_events1).to match_array([a_hash_including('data' => { 'bar' => 'baz' })])
+        expect(processed_events2).to eq([])
       end
     end
     it 'updates SubscriptionsSet#updated_at' do
@@ -618,13 +622,19 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     it 'stops CommandsHandler' do
       subject
       subscriptions_set_id = subscriptions_set_lifecycle.persisted_subscriptions_set.id
-      subscription_cmd_queries.create(
+      cmd = subscription_cmd_queries.create(
         subscription_id: subscription_runner2.id,
         subscriptions_set_id: subscriptions_set_id,
         command_name: 'Start',
         data: {}
       )
-      sleep 1.1
+      cmd_lookup_attrs = {
+        subscription_id: cmd.subscription_id,
+        subscriptions_set_id: cmd.subscriptions_set_id,
+        command_name: cmd.name
+      }
+      # Wait until the created command is consumed
+      dv.wait_until(timeout: 1.1) { subscription_cmd_queries.find_by(**cmd_lookup_attrs).nil? }
       expect(subscription_runner2.state).to eq('stopped')
     end
   end
@@ -632,10 +642,15 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
   describe 'on after runner stopped when stopping via command' do
     subject do
       subscriptions_set_id = subscriptions_set_lifecycle.persisted_subscriptions_set.id
-      set_cmd_queries.create(
-        subscriptions_set_id: subscriptions_set_id, command_name: 'Stop', data: {}
-      )
-      sleep PgEventstore::CommandsHandler::PULL_INTERVAL * 2
+      cmd = set_cmd_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: 'Stop', data: {})
+      cmd_lookup_attrs = {
+        subscriptions_set_id: cmd.subscriptions_set_id,
+        command_name: cmd.name
+      }
+      # Wait until the created command is consumed
+      dv.wait_until(timeout: PgEventstore::CommandsHandler::PULL_INTERVAL * 2) do
+        set_cmd_queries.find_by(**cmd_lookup_attrs).nil?
+      end
     end
 
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
@@ -685,6 +700,9 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     it 'stops CommandsHandler' do
       subject
       subscriptions_set_id = subscriptions_set_lifecycle.persisted_subscriptions_set.id
+      # We create a subscription command here and wait for some time. But since CommandsHandler was already stopped -
+      # this subscription command should never trigger a start of the given subscription. Thus, subscription_runner2
+      # should remain stopped.
       subscription_cmd_queries.create(
         subscription_id: subscription_runner2.id,
         subscriptions_set_id: subscriptions_set_id,

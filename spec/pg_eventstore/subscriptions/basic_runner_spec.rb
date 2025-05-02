@@ -76,7 +76,7 @@ RSpec.describe PgEventstore::BasicRunner do
           end
         end
         it 'changes the state to "dead"' do
-          expect { subject; sleep 0.5 }.to change { instance.state }.to("dead")
+          expect { subject }.to change { dv(instance).deferred_wait(timeout: 0.5) { _1.state == 'dead' }.state }.to('dead')
         end
       end
     end
@@ -113,7 +113,7 @@ RSpec.describe PgEventstore::BasicRunner do
 
       it 'does not change the state' do
         aggregate_failures do
-          expect { subject; sleep 0.1 }.not_to change { instance.state }
+          expect { subject }.not_to change { dv(instance).deferred_wait(timeout: 0.1) { _1.state == 'dead' }.state }
           expect(instance.state).to eq("dead")
         end
       end
@@ -137,7 +137,7 @@ RSpec.describe PgEventstore::BasicRunner do
       before do
         instance.start
         callbacks_definitions
-        sleep 0.1
+        dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
         instance.stop_async
       end
 
@@ -226,7 +226,7 @@ RSpec.describe PgEventstore::BasicRunner do
       before do
         callbacks_definitions
         instance.start
-        sleep 0.1
+        dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
         instance.stop_async
       end
 
@@ -250,7 +250,7 @@ RSpec.describe PgEventstore::BasicRunner do
       before do
         callbacks_definitions
         instance.start
-        sleep 0.1
+        dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       end
 
       it 'executes :after_runner_stopped action' do
@@ -274,7 +274,7 @@ RSpec.describe PgEventstore::BasicRunner do
         callbacks_definitions
         instance.define_callback(:process_async, :before, proc { raise "You shall not pass!" })
         instance.start
-        sleep run_interval + 0.1
+        dv(instance).wait_until(timeout: run_interval + 0.1) { _1.state == 'dead' }
       end
 
       it 'executes :after_runner_stopped action' do
@@ -326,7 +326,7 @@ RSpec.describe PgEventstore::BasicRunner do
     context 'when state is "stopped"' do
       before do
         instance.start.stop
-        sleep 0.2
+        dv(instance).wait_until(timeout: 0.2) { _1.state == 'stopped' }
       end
 
       it 'does not spawn another async job to stop the runner' do
@@ -357,7 +357,7 @@ RSpec.describe PgEventstore::BasicRunner do
       before do
         callbacks_definitions
         instance.start
-        sleep 0.1 # Let the runner's thread to start
+        dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       end
 
       it 'spawns another thread to stop the current runner' do
@@ -424,7 +424,9 @@ RSpec.describe PgEventstore::BasicRunner do
         expect { subject }.to change { instance.state }.from("dead").to("halting")
       end
       it 'changes the state to "stopped" after async_shutdown_time seconds' do
-        expect { subject; sleep async_shutdown_time }.to change { instance.state }.from("dead").to("stopped")
+        expect { subject }.to change {
+          dv(instance).deferred_wait(timeout: async_shutdown_time) { _1.state == 'stopped' }.state
+        }.from('dead').to('stopped')
       end
       it "releases runner's thread after async_shutdown_time seconds" do
         expect { subject; sleep async_shutdown_time }.to change {
@@ -564,7 +566,7 @@ RSpec.describe PgEventstore::BasicRunner do
     context 'when state is "halting"' do
       before do
         instance.start
-        sleep 0.1
+        dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
         instance.stop_async
         callbacks_definitions
       end
@@ -644,7 +646,9 @@ RSpec.describe PgEventstore::BasicRunner do
           instance.instance_variable_get(:@state).stopped!
         end
 
-        expect { subject; sleep 0.6 }.to change { instance.state }.from("running").to("stopped")
+        expect { subject }.to change {
+          dv(instance).deferred_wait(timeout: 0.6) { _1.state == 'stopped' }.state
+        }.from('running').to('stopped')
       end
     end
 
@@ -659,7 +663,9 @@ RSpec.describe PgEventstore::BasicRunner do
           instance.instance_variable_get(:@state).stopped!
         end
 
-        expect { subject; sleep 0.6 }.to change { instance.state }.from("halting").to("stopped")
+        expect { subject }.to change {
+          dv(instance).deferred_wait(timeout: 0.6) { _1.state == 'stopped' }.state
+        }.from('halting').to('stopped')
       end
     end
   end
@@ -682,8 +688,7 @@ RSpec.describe PgEventstore::BasicRunner do
     end
 
     it 'performs :after_runner_stopped action before stopping' do
-      subject
-      expect(REDIS.get('foo')).to eq('bar')
+      expect { subject }.to change { REDIS.get('foo') }.to('bar')
     end
   end
 

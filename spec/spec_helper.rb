@@ -71,6 +71,7 @@ RSpec.configure do |config|
   config.after do
     PgEventstore::CLI.callbacks.clear
     CLIHelper.clean_up
+    DeferredValue.teardown
   end
 
   config.around(timecop: true) do |example|
@@ -85,4 +86,5 @@ RSpec.configure do |config|
   config.include PartitionsHelper
   config.include Rack::Test::Methods, type: :request
   config.include RequestsHelper, type: :request
+  config.include DeferredValueExt
 end

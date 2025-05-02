@@ -302,11 +302,13 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
 
     it 'processes events of first subscription' do
-      expect { subject; sleep 0.5 }.to change { precessed_events1 }.to([a_hash_including('type' => 'Bar')])
+      expect { subject }.to change {
+        dv(precessed_events1).deferred_wait(timeout: 0.5) { _1.size == 1 }
+      }.to([a_hash_including('type' => 'Bar')])
     end
     it 'processes events of second subscription' do
-      expect { subject; sleep 0.5 }.to change {
-        precessed_events2
+      expect { subject }.to change {
+        dv(precessed_events2).deferred_wait(timeout: 0.5) { _1.size == 2 }
       }.to([a_hash_including('type' => 'Baz'), a_hash_including('type' => 'Baz')])
     end
   end

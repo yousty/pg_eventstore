@@ -24,8 +24,8 @@ RSpec.describe PgEventstore::EventsProcessor do
 
     before do
       instance.start
-      # give runner time to try to consume first even and then get into sleep, so we can test changes in the chunk
-      sleep 0.1
+      # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
+      dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       instance.feed([event_in_queue])
       allow(global_position_receiver).to receive(:call)
       instance.define_callback(:feed, :after, feed_callback)
@@ -53,7 +53,9 @@ RSpec.describe PgEventstore::EventsProcessor do
           expect { subject }.to raise_error(PgEventstore::EmptyChunkFedError)
         end
         it 'does not change the queue' do
-          expect { subject rescue nil }.not_to change { instance.instance_variable_get(:@raw_events) }
+          expect { subject rescue nil }.not_to change {
+            instance.instance_variable_get(:@raw_events)
+          }.from([event_in_queue])
         end
         it 'does not execute :feed action' do
           subject rescue nil
@@ -91,8 +93,8 @@ RSpec.describe PgEventstore::EventsProcessor do
 
     before do
       instance.start
-      # give runner time to try to consume first even and then get into sleep, so we can test changes in the chunk
-      sleep 0.1
+      # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
+      dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       instance.feed([{ 'id' => SecureRandom.uuid, 'global_position' => 1 }])
     end
 
@@ -110,8 +112,8 @@ RSpec.describe PgEventstore::EventsProcessor do
 
     before do
       instance.start
-      # give runner time to try to consume first even and then get into sleep, so we can test changes in the chunk
-      sleep 0.1
+      # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
+      dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       instance.feed([{ 'id' => SecureRandom.uuid, 'global_position' => 1 }])
     end
 
@@ -140,9 +142,9 @@ RSpec.describe PgEventstore::EventsProcessor do
     end
 
     it 'processes the given events' do
-      #  Let the runner start
-      sleep 0.1
-      expect { subject; sleep 0.6 }.to change { processed_events }.to(raw_events.map { _1['id'] })
+      expect { subject }.to change {
+        dv(processed_events).deferred_wait(timeout: 0.6) { _1.size == raw_events.size }
+      }.to(raw_events.map { _1['id'] })
     end
   end
 
@@ -168,7 +170,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     it 'runs :error action' do
       subject
       # Let the runner start and die
-      sleep 0.1
+      dv(instance).wait_until(timeout: 0.1) { _1.state == 'dead' }
       # Feed the processor to trigger the error
       instance.feed([{ 'id' => SecureRandom.uuid, 'global_position' => 1 }])
       aggregate_failures do
@@ -204,7 +206,7 @@ RSpec.describe PgEventstore::EventsProcessor do
       # Feed the processor to trigger the error
       instance.feed([{ 'id' => SecureRandom.uuid, 'global_position' => 1 }])
       # Let the runner time to die
-      sleep 0.6
+      dv(instance).wait_until(timeout: 0.6) { _1.state == 'dead' }
       subject
       expect(restart_receiver).to have_received(:call)
     end
@@ -255,17 +257,18 @@ RSpec.describe PgEventstore::EventsProcessor do
     it 'runs :process action' do
       subject
       #  Let the runner start
-      sleep 0.1
+      dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       aggregate_failures do
         expect(global_position_receiver).not_to have_received(:call)
         # Feed the processor to trigger the event processing
         instance.feed(raw_events)
         # Let the runner to process the given events
-        sleep 0.6
+        dv(processed_events).wait_until(timeout: 0.6) { _1.size == raw_events.size }
         # After half a second we perform the same test over the same object, but with different expectation to prove
         # that the action is actually asynchronous
         expect(global_position_receiver).to have_received(:call).with(123)
         expect(global_position_receiver).to have_received(:call).with(125)
+        expect(global_position_receiver).not_to have_received(:call).with(124)
       end
     end
   end

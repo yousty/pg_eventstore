@@ -29,15 +29,15 @@ RSpec.describe 'Subscriptions integration' do
       PgEventstore.send(:init_variables)
     end
 
-    it 'processes events by first subscription' do
-      subject
-      sleep 0.1 + pull_interval
-      expect(processed_events1).to eq([PgEventstore.client.read(stream).first])
+    it 'processes events of first subscription' do
+      expect { subject }.to change {
+        dv(processed_events1).deferred_wait(timeout: pull_interval) { _1.size == 1 }
+      }.to([PgEventstore.client.read(stream).first])
     end
-    it 'processes events by second subscription' do
-      subject
-      sleep 0.1 + pull_interval
-      expect(processed_events2).to eq(PgEventstore.client.read(stream))
+    it 'processes events of second subscription' do
+      expect { subject }.to change {
+        dv(processed_events2).deferred_wait(timeout: pull_interval) { _1.size == 2 }
+      }.to(PgEventstore.client.read(stream))
     end
   end
 
@@ -73,9 +73,9 @@ RSpec.describe 'Subscriptions integration' do
     end
 
     it 'processes events sooner than config.subscription_pull_interval' do
-      subject
-      sleep 0.6 + pull_interval
-      expect(processed_events).to eq([PgEventstore.client.read(stream).first])
+      expect { subject }.to change {
+        dv(processed_events).deferred_wait(timeout: pull_interval) { _1.size == 1 }
+      }.to([PgEventstore.client.read(stream).first])
     end
   end
 
@@ -203,18 +203,25 @@ RSpec.describe 'Subscriptions integration' do
       PgEventstore.send(:init_variables)
     end
 
-    it 'processes events taking into account overridden middlewares' do
-      subject
-      sleep 0.1 + pull_interval
+    it 'processes events of first subscription taking into account overridden middlewares' do
       aggregate_failures do
-        expect(processed_events1.size).to eq(1)
+        expect { subject }.to change {
+          dv(processed_events1).deferred_wait(timeout: pull_interval) { _1.size == 1 }.size
+        }.to(1)
         expect(processed_events1).to(
           all satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::DECR_SECRET }
         )
         expect(processed_events1).to(
           all satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET }
         )
-        expect(processed_events2.size).to eq(2)
+      end
+    end
+
+    it 'processes events of second subscription taking into account overridden middlewares' do
+      aggregate_failures do
+        expect { subject }.to change {
+          dv(processed_events2).deferred_wait(timeout: pull_interval) { _1.size == 1 }.size
+        }.to(2)
         expect(processed_events2).to(
           all satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::ENCR_SECRET }
         )
@@ -293,9 +300,10 @@ RSpec.describe 'Subscriptions integration' do
     end
 
     it 'processes events correctly' do
-      subject
-      sleep 1
-      expect(processed_events.map(&:id)).to eq([event1, event2, event1, event2].map(&:id))
+      aggregate_failures do
+        expect { subject }.to change { dv(processed_events).deferred_wait(timeout: 1) { _1.size == 4 }.size }.to(4)
+        expect(processed_events.map(&:id)).to eq([event1, event2, event1, event2].map(&:id))
+      end
     end
   end
 
@@ -346,7 +354,7 @@ RSpec.describe 'Subscriptions integration' do
       expect { subject }.not_to change { queries.find_all(set: set_name).size }
     end
     it 'processes events correctly' do
-      expect { subject; sleep 1 }.to change { processed_events.size }.by(1)
+      expect { subject }.to change { dv(processed_events).deferred_wait(timeout: 1) { _1.size == 1 }.size }.by(1)
     end
   end
 end

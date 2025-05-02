@@ -40,7 +40,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::Restore do
     before do
       subscription_runner.start
       subscription_runner.feed(['global_position' => 1])
-      sleep 0.5
+      dv(processed_events).wait_until(timeout: 0.5) { _1.size == 1 }
     end
 
     after do

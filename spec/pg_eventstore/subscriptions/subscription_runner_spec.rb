@@ -107,7 +107,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           context 'when there are events left in the queue' do
             before do
               instance.start
-              sleep 0.1
+              dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
               events_processor.feed(
                 [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
               )
@@ -126,7 +126,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
         context 'when there are a lot of events left in the chunk' do
           before do
             instance.start
-            sleep 0.1
+            dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
             stats.track_exec_time { sleep 0.2 }
             instance.feed(Array.new(100) { |i| { 'id' => i, 'global_position' => i } })
           end
@@ -152,7 +152,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           context 'when there are events left in the queue' do
             before do
               instance.start
-              sleep 0.1
+              dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
               events_processor.feed(
                 [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
               )
@@ -182,7 +182,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           context 'when there are events left in the queue' do
             before do
               instance.start
-              sleep 0.1
+              dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
               events_processor.feed(
                 [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
               )
@@ -237,7 +237,10 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'processing async action' do
-    subject { instance.feed([event1, event2]); sleep 0.8 }
+    subject do
+      instance.feed([event1, event2])
+      dv.wait_until(timeout: 0.8) { subscription.reload.total_processed_events == 2 }
+    end
 
     let(:event1) { { 'global_position' => 12, 'data' => { 'foo' => 'bar' } } }
     let(:event2) { { 'global_position' => 23, 'data' => { 'baz' => 'bar' } } }
@@ -266,7 +269,10 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'on error' do
-    subject { instance.feed([event]); sleep 0.5 }
+    subject do
+      instance.feed([event])
+      dv(processed_events).wait_until(timeout: 0.6) { _1.size == 1 }
+    end
 
     let(:handler) do
       should_raise = true
@@ -283,12 +289,10 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     let(:processed_events) { [] }
     let(:event) { { 'id' => SecureRandom.uuid, 'global_position' => 1 } }
     let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', time_between_restarts: 0) }
-    # Delay of 0.1 is to let the subscription time to update. It is related to actions after runner's restart
-    let(:subscription_update_delay) { 0.1 }
 
     before do
       instance.start
-      sleep 0.1
+      dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
     end
 
     after do
@@ -313,13 +317,13 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       expect { subject }.to change { processed_events }.to([event])
     end
     it 'updates Subscription#current_position' do
-      expect { subject; sleep subscription_update_delay }.to change { subscription.reload.current_position }
+      expect { subject }.to change { subscription.reload.current_position }
     end
     it 'updates Subscription#average_event_processing_time' do
-      expect { subject; sleep subscription_update_delay }.to change { subscription.reload.average_event_processing_time }
+      expect { subject }.to change { subscription.reload.average_event_processing_time }
     end
     it 'updates Subscription#total_processed_events' do
-      expect { subject; sleep subscription_update_delay }.to change { subscription.reload.total_processed_events }
+      expect { subject }.to change { subscription.reload.total_processed_events }
     end
 
     context 'when the number of restarts hit the limit' do
@@ -334,13 +338,13 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       # Important tests when the handler fails - we need to make sure that all those subscription attributes are not
       # updated.
       it 'does not update Subscription#current_position' do
-        expect { subject; sleep subscription_update_delay }.not_to change { subscription.reload.current_position }
+        expect { subject }.not_to change { subscription.reload.current_position }
       end
       it 'does not update Subscription#average_event_processing_time' do
-        expect { subject; sleep subscription_update_delay }.not_to change { subscription.reload.average_event_processing_time }
+        expect { subject }.not_to change { subscription.reload.average_event_processing_time }
       end
       it 'does not update Subscription#total_processed_events' do
-        expect { subject; sleep subscription_update_delay }.not_to change { subscription.reload.total_processed_events }
+        expect { subject }.not_to change { subscription.reload.total_processed_events }
       end
     end
 
@@ -439,7 +443,10 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'on restart' do
-    subject { instance.feed(['id' => SecureRandom.uuid, 'global_position' => 1]); sleep 0.5 }
+    subject do
+      instance.feed(['id' => SecureRandom.uuid, 'global_position' => 1])
+      dv.wait_until(timeout: 0.5) { subscription.reload.restart_count == max_restarts_number }
+    end
 
     let(:handler) { proc { raise 'You rolled 1. Critical failure!' } }
     let(:subscription) do
@@ -451,7 +458,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
     before do
       instance.start
-      sleep 0.1
+      dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
     end
 
     after do
@@ -488,7 +495,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     before do
       subscription.update(last_chunk_greatest_position: 1)
       instance.start
-      sleep 0.1
+      dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
     end
 
     after do

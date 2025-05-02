@@ -56,7 +56,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
     before do
       # Feeding is only available when runner is running. So start it, put some events into a chunk and stop it.
       subscription_runner.start
-      sleep 0.1
+      dv(subscription_runner).wait_until(timeout: 0.1) { _1.state == 'running' }
       subscription_runner.feed([{ 'global_position' => 1 }])
       subscription_runner.stop_async.wait_for_finish
     end
