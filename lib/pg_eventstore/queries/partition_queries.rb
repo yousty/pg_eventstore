@@ -176,6 +176,19 @@ module PgEventstore
       end.to_a
     end
 
+    # @param stream_filters [Array<Hash[Symbol, String]>]
+    # @param event_filters [Array<String>]
+    # @return [Array<PgEventstore::Partition>]
+    def partitions(stream_filters, event_filters)
+      partitions_filter = QueryBuilders::PartitionsFiltering.new
+      stream_filters.each { |attrs| partitions_filter.add_stream_attrs(**attrs) }
+      partitions_filter.add_event_types(event_filters)
+      partitions_filter.with_event_types
+      connection.with do |conn|
+        conn.exec_params(*partitions_filter.to_exec_params)
+      end.map(&method(:deserialize))
+    end
+
     # @param stream [PgEventstore::Stream]
     # @return [String]
     def context_partition_name(stream)
@@ -193,6 +206,14 @@ module PgEventstore
     # @return [String]
     def event_type_partition_name(stream, event_type)
       "event_types_#{Digest::MD5.hexdigest("#{stream.context}-#{stream.stream_name}-#{event_type}")[0..5]}"
+    end
+
+    private
+
+    # @param attrs [Hash]
+    # @return [PgEventstore::Partition]
+    def deserialize(attrs)
+      Partition.new(**attrs.transform_keys(&:to_sym))
     end
   end
 end

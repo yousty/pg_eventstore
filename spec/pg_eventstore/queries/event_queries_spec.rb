@@ -167,4 +167,122 @@ RSpec.describe PgEventstore::EventQueries do
       end
     end
   end
+
+  describe '#grouped_events' do
+    context 'when stream is a regular stream' do
+      subject { instance.grouped_events(stream, options_by_event_type, resolve_link_tos: resolve_link_tos) }
+
+      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:options_by_event_type) do
+        [
+          { filter: { event_types: ['Foo'] }, max_count: 1 },
+          { filter: { event_types: ['Bar'] }, max_count: 1 },
+          { filter: { event_types: [PgEventstore::Event::LINK_TYPE] }, max_count: 1 }
+        ]
+      end
+      let(:resolve_link_tos) { false }
+
+      let!(:event1) do
+        event = PgEventstore::Event.new(id: '00000000-0000-0000-0000-000000000001', type: 'Foo')
+        PgEventstore.client.append_to_stream(stream, event)
+      end
+      let!(:event2) do
+        event = PgEventstore::Event.new(id: '00000000-0000-0000-0000-000000000002', type: 'Foo')
+        PgEventstore.client.append_to_stream(stream, event)
+      end
+      let!(:event3) do
+        event = PgEventstore::Event.new(id: '00000000-0000-0000-0000-000000000003', type: 'Bar')
+        PgEventstore.client.append_to_stream(stream, event)
+      end
+      let!(:event4) do
+        event = PgEventstore::Event.new(id: '00000000-0000-0000-0000-000000000004', type: 'Baz')
+        PgEventstore.client.append_to_stream(stream, event)
+      end
+
+      let!(:link) do
+        PgEventstore.client.link_to(stream, event1)
+      end
+
+      context 'when :resolve_link_tos is false' do
+        it 'returns events by the given filters, grouped by event type' do
+          aggregate_failures do
+            is_expected.to all be_a(PgEventstore::Event)
+            expect(subject.map(&:id)).to match_array([event1.id, event3.id, link.id])
+          end
+        end
+      end
+
+      context 'when :resolve_link_tos is true' do
+        let(:resolve_link_tos) { true }
+
+        it 'returns events by the given filters, grouped by event type, resolves links' do
+          aggregate_failures do
+            is_expected.to all be_a(PgEventstore::Event)
+            expect(subject.map(&:id)).to match_array([event1.id, event3.id, event1.id])
+          end
+        end
+      end
+    end
+
+    context 'when stream is "all" stream' do
+      subject do
+        instance.grouped_events(
+          PgEventstore::Stream.all_stream, options_by_event_type, resolve_link_tos: resolve_link_tos
+        )
+      end
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '2') }
+
+      let(:options_by_event_type) do
+        [
+          { filter: { event_types: ['Foo'] }, max_count: 1 },
+          { filter: { event_types: ['Bar'] }, max_count: 1 },
+          { filter: { event_types: [PgEventstore::Event::LINK_TYPE] }, max_count: 1 }
+        ]
+      end
+      let(:resolve_link_tos) { false }
+
+      let!(:event1) do
+        event = PgEventstore::Event.new(id: '00000000-0000-0000-0000-000000000001', type: 'Foo')
+        PgEventstore.client.append_to_stream(stream1, event)
+      end
+      let!(:event2) do
+        event = PgEventstore::Event.new(id: '00000000-0000-0000-0000-000000000002', type: 'Foo')
+        PgEventstore.client.append_to_stream(stream1, event)
+      end
+      let!(:event3) do
+        event = PgEventstore::Event.new(id: '00000000-0000-0000-0000-000000000003', type: 'Bar')
+        PgEventstore.client.append_to_stream(stream2, event)
+      end
+      let!(:event4) do
+        event = PgEventstore::Event.new(id: '00000000-0000-0000-0000-000000000004', type: 'Baz')
+        PgEventstore.client.append_to_stream(stream1, event)
+      end
+
+      let!(:link) do
+        PgEventstore.client.link_to(stream1, event1)
+      end
+
+      context 'when :resolve_link_tos is false' do
+        it 'returns all events by the given filters, grouped by event type' do
+          aggregate_failures do
+            is_expected.to all be_a(PgEventstore::Event)
+            expect(subject.map(&:id)).to match_array([event1.id, event3.id, link.id])
+          end
+        end
+      end
+
+      context 'when :resolve_link_tos is true' do
+        let(:resolve_link_tos) { true }
+
+        it 'returns all events by the given filters, grouped by event type, resolves links' do
+          aggregate_failures do
+            is_expected.to all be_a(PgEventstore::Event)
+            expect(subject.map(&:id)).to match_array([event1.id, event3.id, event1.id])
+          end
+        end
+      end
+    end
+  end
 end

@@ -4,6 +4,16 @@ module PgEventstore
   # Deadly simple SQL builder
   # @!visibility private
   class SQLBuilder
+    class << self
+      # @param builders [Array<PgEventstore::SQLBuilder>]
+      # @return [PgEventstore::SQLBuilder]
+      def union_builders(builders)
+        builders[1..].each_with_object(builders[0]) do |builder, first_builder|
+          first_builder.union(builder)
+        end
+      end
+    end
+
     def initialize
       @select_values = []
       @from_value = nil

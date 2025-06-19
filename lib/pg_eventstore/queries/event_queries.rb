@@ -98,6 +98,24 @@ module PgEventstore
       end
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @param options_by_event_type [Array<Hash>] a set of options per an event type
+    # @param options [Hash]
+    # @option options [Boolean] :resolve_link_tos
+    # @return [Array<PgEventstore::Event>]
+    def grouped_events(stream, options_by_event_type, **options)
+      builders = options_by_event_type.map do |filter|
+        QueryBuilders::EventsFiltering.events_filtering(stream, filter)
+      end
+      final_builder = SQLBuilder.union_builders(builders.map(&:to_sql_builder))
+
+      raw_events = connection.with do |conn|
+        conn.exec_params(*final_builder.to_exec_params)
+      end.to_a
+      raw_events = links_resolver.resolve(raw_events) if options[:resolve_link_tos]
+      deserializer.deserialize_many(raw_events)
+    end
+
     private
 
     # @param stream [PgEventstore::Stream]

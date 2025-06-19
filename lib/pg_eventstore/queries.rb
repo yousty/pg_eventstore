@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require_relative 'sql_builder'
+require_relative 'query_builders/basic_filtering'
 require_relative 'query_builders/events_filtering'
+require_relative 'query_builders/partitions_filtering'
 require_relative 'queries/transaction_queries'
 require_relative 'queries/event_queries'
 require_relative 'queries/partition_queries'

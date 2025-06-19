@@ -1,0 +1,21 @@
+module PgEventstore
+  module QueryBuilders
+    class PartitionsFiltering < BasicFiltering
+      TABLE_NAME: String
+
+      def self.extract_event_types_filter: (Hash[untyped, untyped] options) -> Array[String]
+
+      def self.extract_streams_filter: (Hash[untyped, untyped] options) -> Array[Hash[untyped, untyped]]
+
+      def add_event_types: (::Array[String] event_types) -> void
+
+      def add_stream_attrs: (?context: String?, ?stream_name: String?) -> void
+
+      def with_event_types: -> void
+
+      private
+
+      def correct_stream_filter?: (::Hash[untyped, untyped] stream_attrs) -> bool
+    end
+  end
+end

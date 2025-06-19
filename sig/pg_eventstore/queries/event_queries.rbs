@@ -10,6 +10,8 @@ module PgEventstore
     # _@param_ `event`
     def event_exists?: (PgEventstore::Event event) -> bool
 
+    def grouped_events: (Stream stream, Array[Hash[untyped, untyped]] options_by_event_type, **untyped options)-> Array[Event]
+
     # _@param_ `events`
     def ids_from_db: (::Array[PgEventstore::Event] events) -> ::Array[String]
 

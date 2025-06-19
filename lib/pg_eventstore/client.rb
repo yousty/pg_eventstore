@@ -55,7 +55,8 @@ module PgEventstore
     # Read events from the specific stream or from "all" stream.
     # @param stream [PgEventstore::Stream]
     # @param options [Hash] request options
-    # @option options [String] :direction read direction - 'Forwards' or 'Backwards'
+    # @option options [String] :direction read direction. Allowed values are "Forwards", "Backwards", "asc", "desc",
+    #   :asc, :desc
     # @option options [Integer] :from_revision a starting revision number. **Use this option when stream name is a
     #   normal stream name**
     # @option options [Integer, Symbol] :from_position a starting global position number. **Use this option when reading
@@ -94,7 +95,7 @@ module PgEventstore
     #       }
     #     )
     #
-    #     # Filtering the a mix of context and event type
+    #     # Filtering a mix of context and event type
     #     PgEventstore.client.read(
     #       PgEventstore::Stream.all_stream,
     #       options: { filter: { streams: [{ context: 'User' }], event_types: ['MyAwesomeEvent'] } }
@@ -123,6 +124,23 @@ module PgEventstore
         call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
+    # Takes a stream, determines a list of even types in it and returns most recent(or very first - depending on
+    # :direction option) events, one of each type. If :event_types filter is provided - uses it instead of automatic
+    # event types lookup logic. The result size is almost always less than or equal to event types list size, so passing
+    # :max_count option does not make any effect. In case if event of same type appears in different context/stream
+    # name - it will be counted as a different event, thus, may appear several times in the result.
+    # @see {#read} for the detailed docs
+    # @param stream [PgEventstore::Stream]
+    # @param options [Hash] request options
+    # @param middlewares [Array, nil]
+    # @return [Array<PgEventstore::Event>]
+    def read_grouped(stream, options: {}, middlewares: nil)
+      cmd_class = stream.all_stream? ? Commands::AllStreamReadGrouped : Commands::RegularStreamReadGrouped
+      cmd_class.
+        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
+        call(stream, options: options)
+    end
+
     # Links event from one stream into another stream. You can later access it by providing :resolve_link_tos option
     # when reading from a stream. Only existing events can be linked.
     # @param stream [PgEventstore::Stream]
@@ -149,7 +167,7 @@ module PgEventstore
     private
 
     # @param middlewares [Array, nil]
-    # @return [Array<Object<#serialize, #deserialize>>]
+    # @return [Array<PgEventstore::Middleware>]
     def middlewares(middlewares = nil)
       return config.middlewares.values unless middlewares
 

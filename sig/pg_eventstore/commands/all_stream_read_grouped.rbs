@@ -1,0 +1,16 @@
+module PgEventstore
+  module Commands
+    class AllStreamReadGrouped < AbstractCommand
+
+      def call: (Stream stream, ?options: ::Hash[untyped, untyped]) -> Array[Event]
+
+      private
+
+      def build_filter_options_for_partitions: (Partition partition, Hash[untyped, untyped] options) -> Hash[untyped, untyped]
+
+      def build_filter_options_for_streams: (Partition partition, Array[String] stream_ids, Hash[untyped, untyped] options) -> Array[Hash[untyped, untyped]]
+
+      def group_stream_ids: (Hash[untyped, untyped] options) -> Hash[untyped, untyped]
+    end
+  end
+end

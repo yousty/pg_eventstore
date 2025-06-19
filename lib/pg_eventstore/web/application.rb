@@ -27,7 +27,7 @@ module PgEventstore
       helpers(Paginator::Helpers, Subscriptions::Helpers) do
         # @return [Array<Hash>, nil]
         def streams_filter
-          params in { filter: { streams: Array => streams } }
+          streams = QueryBuilders::EventsFiltering.extract_streams_filter(params)
           streams&.select { _1 in { context: String, stream_name: String, stream_id: String } }&.map do
             Hash[_1.reject { |_, value| value == '' }].transform_keys(&:to_sym)
           end&.reject { _1.empty? }
@@ -41,8 +41,8 @@ module PgEventstore
 
         # @return [Array<String>, nil]
         def events_filter
-          params in { filter: { events: Array => events } }
-          events&.select { _1.is_a?(String) && _1 != '' }
+          events = QueryBuilders::EventsFiltering.extract_event_types_filter(params)
+          events&.reject { _1 == '' }
         end
 
         # @return [Symbol]

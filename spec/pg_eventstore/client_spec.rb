@@ -127,6 +127,112 @@ RSpec.describe PgEventstore::Client do
     end
   end
 
+  describe '#read_paginated' do
+    subject { instance.read_paginated(stream).next }
+
+    let(:stream1) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
+    let(:stream2) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '2') }
+    let(:stream) { stream1 }
+
+    before do
+      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new(type: 'foo'))
+      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new(type: 'bar'))
+    end
+
+    context 'when reading from the specific stream' do
+      it 'returns events of the given stream' do
+        aggregate_failures do
+          is_expected.to be_an(Array)
+          is_expected.to all be_a(PgEventstore::Event)
+          expect(subject.size).to eq(1)
+          expect(subject.first.type).to eq('foo')
+          expect(subject.first.stream).to eq(stream)
+        end
+      end
+
+      it 'applies all middlewares' do
+        expect(subject.first.metadata).to eq('foo' => 'foo', 'bar' => 'bar', 'baz' => 'baz')
+      end
+
+      context 'when :middlewares argument is given' do
+        subject { instance.read(stream, middlewares: %i[bar]) }
+
+        it 'applies only provided middlewares' do
+          expect(subject.first.metadata).to eq('foo' => 'secret-foo', 'bar' => 'bar', 'baz' => 'secret-baz')
+        end
+      end
+    end
+
+    context 'when reading from "all" stream' do
+      let(:stream) { PgEventstore::Stream.all_stream }
+
+      it 'returns all events' do
+        aggregate_failures do
+          is_expected.to be_an(Array)
+          is_expected.to all be_a(PgEventstore::Event)
+          expect(subject.size).to eq(2)
+          expect(subject.first.type).to eq('foo')
+          expect(subject.last.type).to eq('bar')
+          expect(subject.first.stream).to eq(stream1)
+          expect(subject.last.stream).to eq(stream2)
+        end
+      end
+    end
+  end
+
+  describe '#read_grouped' do
+    subject { instance.read_grouped(stream) }
+
+    let(:stream1) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
+    let(:stream2) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '2') }
+    let(:stream) { stream1 }
+
+    before do
+      PgEventstore.client.append_to_stream(stream1, Array.new(2) { PgEventstore::Event.new(type: 'foo') })
+      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new(type: 'bar'))
+    end
+
+    context 'when reading from the specific stream' do
+      it 'returns a projection of events of the given stream' do
+        aggregate_failures do
+          is_expected.to be_an(Array)
+          is_expected.to all be_a(PgEventstore::Event)
+          expect(subject.size).to eq(1)
+          expect(subject.first.type).to eq('foo')
+          expect(subject.first.stream).to eq(stream)
+        end
+      end
+
+      it 'applies all middlewares' do
+        expect(subject.first.metadata).to eq('foo' => 'foo', 'bar' => 'bar', 'baz' => 'baz')
+      end
+
+      context 'when :middlewares argument is given' do
+        subject { instance.read(stream, middlewares: %i[bar]) }
+
+        it 'applies only provided middlewares' do
+          expect(subject.first.metadata).to eq('foo' => 'secret-foo', 'bar' => 'bar', 'baz' => 'secret-baz')
+        end
+      end
+    end
+
+    context 'when reading from "all" stream' do
+      let(:stream) { PgEventstore::Stream.all_stream }
+
+      it 'returns a projection of all events' do
+        aggregate_failures do
+          is_expected.to be_an(Array)
+          is_expected.to all be_a(PgEventstore::Event)
+          expect(subject.size).to eq(2)
+          expect(subject.first.type).to eq('foo')
+          expect(subject.last.type).to eq('bar')
+          expect(subject.first.stream).to eq(stream1)
+          expect(subject.last.stream).to eq(stream2)
+        end
+      end
+    end
+  end
+
   describe '#multiple' do
     subject do
       instance.multiple do

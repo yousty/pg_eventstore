@@ -26,6 +26,8 @@ module PgEventstore
     # _@param_ `middlewares` — provide a list of middleware names to override a config's middlewares
     def read: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[::Symbol]?) -> ::Array[PgEventstore::Event]
 
+    def read_grouped: (Stream stream, Hash[untyped, untyped] options, ?middlewares: ::Array[::Symbol]?) -> ::Array[PgEventstore::Event]
+
     # _@param_ `stream`
     #
     # _@param_ `options` — request options
