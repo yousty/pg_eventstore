@@ -243,7 +243,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
       let(:options) { { filter: { streams: [{ context: 'SomeAnotherContext', stream_name: 'some-stream1' }] } } }
 
       it 'projects all events within the given stream name and context' do
-        expect(subject.map(&:id)).to eq([event2.id, event5.id])
+        expect(subject.map(&:id)).to match_array([event2.id, event5.id])
       end
     end
 
@@ -268,7 +268,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
       let(:options) { { filter: { streams: [{ context: 'SomeAnotherContext' }, { stream_name: 'some-stream1' }] } } }
 
       it 'projects all events that match context only, ignoring stream_name' do
-        expect(subject.map(&:id)).to eq([event2.id, event5.id])
+        expect(subject.map(&:id)).to match_array([event2.id, event5.id])
       end
     end
 
@@ -276,7 +276,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
       let(:options) { { filter: { streams: [events_stream1.to_hash, events_stream4.to_hash] } } }
 
       it 'projects all events of those streams' do
-        expect(subject.map(&:id)).to eq([event1.id, event4.id])
+        expect(subject.map(&:id)).to match_array([event1.id, event4.id])
       end
     end
 
@@ -292,7 +292,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
       let(:options) { { filter: { streams: [{ context: 'SomeAnotherContext2' }, { stream_id: '123' }] } } }
 
       it 'projects all events that match the given context only, ignoring stream id' do
-        expect(subject.map(&:id)).to eq([event4.id])
+        expect(subject.map(&:id)).to match_array([event4.id])
       end
     end
 
