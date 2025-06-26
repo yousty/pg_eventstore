@@ -5,7 +5,7 @@ module PgEventstore
     include Extensions::OptionsExtension
 
     # @!attribute id
-    #   @return [String] UUIDv4 string
+    #   @return [Integer]
     option(:id)
     # @!attribute context
     #   @return [String]

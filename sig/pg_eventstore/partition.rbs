@@ -2,7 +2,7 @@ module PgEventstore
   class Partition
     include Extensions::OptionsExtension
 
-    attr_accessor id: String
+    attr_accessor id: Integer
 
     attr_accessor context: String
 

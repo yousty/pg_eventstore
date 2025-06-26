@@ -39,7 +39,7 @@ module PgEventstore
     # _@return_ — partition attributes
     def context_partition: (PgEventstore::Stream stream) -> ::Hash[untyped, untyped]?
 
-    def partitions: (Array[Hash[Symbol, String]] stream_filters, Array[String] event_filters)-> Array[Partition]
+    def partitions: (Array[Hash[Symbol, String | nil]] stream_filters, Array[String] event_filters)-> Array[Partition]
 
     # _@param_ `stream`
     #

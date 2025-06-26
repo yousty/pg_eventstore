@@ -41,7 +41,8 @@ module PgEventstore
 
         # @return [Array<String>, nil]
         def events_filter
-          events = QueryBuilders::EventsFiltering.extract_event_types_filter(params)
+          event_filters = { filter: { event_types: params.dig(:filter, :events) } }
+          events = QueryBuilders::EventsFiltering.extract_event_types_filter(event_filters)
           events&.reject { _1 == '' }
         end
 
