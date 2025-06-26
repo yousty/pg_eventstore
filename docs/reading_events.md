@@ -237,9 +237,9 @@ end
 
 ```ruby
 stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
-event1 = PgEventstore::Event.new(type: 'Foo', id: '00000000-0000-0000-0000-000000000001')
-event2 = PgEventstore::Event.new(type: 'Foo', id: '00000000-0000-0000-0000-000000000002')
-event3 = PgEventstore::Event.new(type: 'Bar', id: '00000000-0000-0000-0000-000000000003')
+event1 = PgEventstore::Event.new(type: 'Foo', data: { foo: 1 })
+event2 = PgEventstore::Event.new(type: 'Foo', data: { foo: 2 })
+event3 = PgEventstore::Event.new(type: 'Bar', data: { bar: 2 })
 
 PgEventstore.client.append_to_stream(stream, [event1, event2, event3])
 
@@ -317,8 +317,8 @@ If same event type appear in different streams(different by `#context` and `#str
 stream1 = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
 stream2 = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1')
 
-event1 = PgEventstore::Event.new(type: 'Foo', id: '00000000-0000-0000-0000-000000000001')
-event2 = PgEventstore::Event.new(type: 'Foo', id: '00000000-0000-0000-0000-000000000002')
+event1 = PgEventstore::Event.new(type: 'Foo', data: { foo: 1 })
+event2 = PgEventstore::Event.new(type: 'Foo', data: { foo: 2 })
 
 PgEventstore.client.append_to_stream(stream1, event1)
 PgEventstore.client.append_to_stream(stream2, event2)
