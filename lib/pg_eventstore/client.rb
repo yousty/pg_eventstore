@@ -59,7 +59,7 @@ module PgEventstore
     #   :asc, :desc
     # @option options [Integer] :from_revision a starting revision number. **Use this option when stream name is a
     #   normal stream name**
-    # @option options [Integer, Symbol] :from_position a starting global position number. **Use this option when reading
+    # @option options [Integer] :from_position a starting global position number. **Use this option when reading
     #   from "all" stream**
     # @option options [Integer] :max_count max number of events to return in one response. Defaults to config.max_count
     # @option options [Boolean] :resolve_link_tos When using projections to create new events you
