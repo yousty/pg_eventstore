@@ -142,7 +142,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
     end
 
-    context 'when a middleware, inherited from Middleware module is present' do
+    context 'when a middleware has default Middleware module implementation' do
       let(:middlewares) { [dummy_middleware.new] }
       let(:dummy_middleware) do
         Class.new.tap { |c| c.include(PgEventstore::Middleware) }
@@ -154,31 +154,7 @@ RSpec.describe PgEventstore::Commands::Read do
     end
   end
 
-  describe 'event class resolving' do
-    subject { instance.call(stream, options: options) }
-
-    let(:event_class) { Class.new(PgEventstore::Event) }
-    let(:event) { event_class.new }
-    let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
-    let(:options) { {} }
-
-    before do
-      stub_const('DummyClass', event_class)
-      PgEventstore.client.append_to_stream(stream, event)
-    end
-
-    it "recognizes event's class" do
-      expect(subject.first).to be_a(DummyClass)
-    end
-
-    context 'when :resolve_link_tos option is given' do
-      let(:options) { { resolve_link_tos: true } }
-
-      it "recognizes event's class" do
-        expect(subject.first).to be_a(DummyClass)
-      end
-    end
-  end
+  it_behaves_like 'resolves event class when reading from stream'
 
   describe 'reading using filter by stream parts' do
     subject { instance.call(stream, options: options) }

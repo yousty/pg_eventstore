@@ -3,7 +3,11 @@
 module PgEventstore
   module QueryBuilders
     # @!visibility private
-    class EventsFiltering
+    class EventsFiltering < BasicFiltering
+      # @return [String]
+      TABLE_NAME = 'events'
+      private_constant :TABLE_NAME
+
       # @return [Integer]
       DEFAULT_LIMIT = 1_000
       # @return [Hash<String => String, Symbol => String>]
@@ -26,6 +30,7 @@ module PgEventstore
         # @return [PgEventstore::EventsFiltering]
         def events_filtering(stream, options)
           return all_stream_filtering(options) if stream.all_stream?
+
           if stream.system? && Stream::KNOWN_SYSTEM_STREAMS.include?(stream.context)
             return system_stream_filtering(stream, options)
           end
@@ -43,11 +48,9 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def all_stream_filtering(options)
           event_filter = new
-          options in { filter: { event_types: Array => event_types } }
-          event_filter.add_event_types(event_types)
+          event_filter.add_event_types(extract_event_types_filter(options))
           event_filter.add_limit(options[:max_count])
-          options in { filter: { streams: Array => streams } }
-          streams&.each { |attrs| event_filter.add_stream_attrs(**attrs) }
+          extract_streams_filter(options).each { |attrs| event_filter.add_stream_attrs(**attrs) }
           event_filter.add_global_position(options[:from_position], options[:direction])
           event_filter.add_all_stream_direction(options[:direction])
           event_filter
@@ -58,8 +61,7 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsFiltering]
         def specific_stream_filtering(stream, options)
           event_filter = new
-          options in { filter: { event_types: Array => event_types } }
-          event_filter.add_event_types(event_types)
+          event_filter.add_event_types(extract_event_types_filter(options))
           event_filter.add_limit(options[:max_count])
           event_filter.add_stream_attrs(**stream.to_hash)
           event_filter.add_revision(options[:from_revision], options[:direction])
@@ -75,14 +77,39 @@ module PgEventstore
             event_filter.set_source(stream.context)
           end
         end
+
+        # @param options [Hash]
+        # @return [Array<String>]
+        def extract_event_types_filter(options)
+          options in { filter: { event_types: Array => event_types } }
+          event_types&.select! do
+            _1.is_a?(String)
+          end
+          event_types || []
+        end
+
+        # @param options [Hash]
+        # @return [Array<Hash[Symbol, String]>]
+        def extract_streams_filter(options)
+          options in { filter: { streams: Array => streams } }
+          streams = streams&.map do
+            _1 in { context: String | NilClass => context }
+            _1 in { stream_name: String | NilClass => stream_name }
+            _1 in { stream_id: String | NilClass => stream_id }
+            { context: context, stream_name: stream_name, stream_id: stream_id }
+          end
+          streams || []
+        end
       end
 
       def initialize
-        @sql_builder =
-          SQLBuilder.new.
-            select('events.*').
-            from('events').
-            limit(DEFAULT_LIMIT)
+        super
+        @sql_builder.limit(DEFAULT_LIMIT)
+      end
+
+      # @return [String]
+      def to_table_name
+        TABLE_NAME
       end
 
       # @param context [String, nil]
@@ -95,21 +122,20 @@ module PgEventstore
 
         stream_attrs.compact!
         sql = stream_attrs.map do |attr, _|
-          "events.#{attr} = ?"
+          "#{to_table_name}.#{attr} = ?"
         end.join(" AND ")
         @sql_builder.where_or(sql, *stream_attrs.values)
       end
 
-      # @param event_types [Array<String>, nil]
+      # @param event_types [Array<String>]
       # @return [void]
       def add_event_types(event_types)
-        return if event_types.nil?
         return if event_types.empty?
 
         sql = event_types.size.times.map do
           "?"
         end.join(", ")
-        @sql_builder.where("events.type IN (#{sql})", *event_types)
+        @sql_builder.where("#{to_table_name}.type IN (#{sql})", *event_types)
       end
 
       # @param revision [Integer, nil]
@@ -118,7 +144,7 @@ module PgEventstore
       def add_revision(revision, direction)
         return unless revision
 
-        @sql_builder.where("events.stream_revision #{direction_operator(direction)} ?", revision)
+        @sql_builder.where("#{to_table_name}.stream_revision #{direction_operator(direction)} ?", revision)
       end
 
       # @param position [Integer, nil]
@@ -127,19 +153,19 @@ module PgEventstore
       def add_global_position(position, direction)
         return unless position
 
-        @sql_builder.where("events.global_position #{direction_operator(direction)} ?", position)
+        @sql_builder.where("#{to_table_name}.global_position #{direction_operator(direction)} ?", position)
       end
 
       # @param direction [String, Symbol, nil]
       # @return [void]
       def add_stream_direction(direction)
-        @sql_builder.order("events.stream_revision #{SQL_DIRECTIONS[direction]}")
+        @sql_builder.order("#{to_table_name}.stream_revision #{SQL_DIRECTIONS[direction]}")
       end
 
       # @param direction [String, Symbol, nil]
       # @return [void]
       def add_all_stream_direction(direction)
-        @sql_builder.order("events.global_position #{SQL_DIRECTIONS[direction]}")
+        @sql_builder.order("#{to_table_name}.global_position #{SQL_DIRECTIONS[direction]}")
       end
 
       # @param limit [Integer, nil]
@@ -150,20 +176,10 @@ module PgEventstore
         @sql_builder.limit(limit)
       end
 
-      # @return [PgEventstore::SQLBuilder]
-      def to_sql_builder
-        @sql_builder
-      end
-
-      # @return [Array]
-      def to_exec_params
-        @sql_builder.to_exec_params
-      end
-
       # @param table_name [String] system stream view name
       # @return [void]
       def set_source(table_name)
-        @sql_builder.from(%{ "#{PG::Connection.escape(table_name)}" events })
+        @sql_builder.from(%{ "#{PG::Connection.escape(table_name)}" #{to_table_name} })
       end
 
       private

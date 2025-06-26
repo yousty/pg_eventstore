@@ -127,7 +127,7 @@ module PgEventstore
     def subscriptions_events(query_options)
       return {} if query_options.empty?
 
-      final_builder = union_builders(query_options.map { |id, opts| query_builder(id, opts) })
+      final_builder = SQLBuilder.union_builders(query_options.map { |id, opts| query_builder(id, opts) })
       raw_events = connection.with do |conn|
         conn.exec_params(*final_builder.to_exec_params)
       end.to_a
@@ -175,14 +175,6 @@ module PgEventstore
     def query_builder(id, options)
       builder = PgEventstore::QueryBuilders::EventsFiltering.subscriptions_events_filtering(options).to_sql_builder
       builder.select("#{id} as runner_id")
-    end
-
-    # @param builders [Array<PgEventstore::SQLBuilder>]
-    # @return [PgEventstore::SQLBuilder]
-    def union_builders(builders)
-      builders[1..].each_with_object(builders[0]) do |builder, first_builder|
-        first_builder.union(builder)
-      end
     end
 
     # @return [PgEventstore::TransactionQueries]

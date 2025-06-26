@@ -1,0 +1,15 @@
+module PgEventstore
+  module QueryBuilders
+    class BasicFiltering
+      @sql_builder: SQLBuilder
+
+      def initialize: -> void
+
+      def to_exec_params: -> [String, Array[untyped]]
+
+      def to_sql_builder: -> SQLBuilder
+
+      def to_table_name: -> String
+    end
+  end
+end

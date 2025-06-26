@@ -230,3 +230,101 @@ PgEventstore.client.read_paginated(projection_stream, options: { resolve_link_to
   end
 end
 ```
+
+## Grouping events by type
+
+`pg_eventstore` implements an ability to group events by type when reading from a stream. Example:
+
+```ruby
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+event1 = PgEventstore::Event.new(type: 'Foo', data: { foo: 1 })
+event2 = PgEventstore::Event.new(type: 'Foo', data: { foo: 2 })
+event3 = PgEventstore::Event.new(type: 'Bar', data: { bar: 2 })
+
+PgEventstore.client.append_to_stream(stream, [event1, event2, event3])
+
+PgEventstore.client.read_grouped(stream) # => returns event1 and event3
+```
+
+API is very similar to the API of `#read`, but it ignores `:max_count` options as the result is always returns a set of event types in your stream.
+
+Reading most recent events:
+
+```ruby
+PgEventstore.client.read_grouped(stream, options: { direction: :desc })
+```
+
+Filtering the result by stream attributes:
+
+```ruby
+PgEventstore.client.read_grouped(
+  PgEventstore::Stream.all_stream,
+  options: { filter: { streams: [{ context: 'FooCtx' }] } }
+)
+```
+
+Filtering the result by event types:
+
+```ruby
+PgEventstore.client.read_grouped(
+  PgEventstore::Stream.all_stream,
+  options: { filter: { event_types: ['Foo', 'Bar'] } }
+)
+```
+
+Filtering by stream attributes and event types:
+
+```ruby
+PgEventstore.client.read_grouped(
+  PgEventstore::Stream.all_stream,
+  options: { filter: { streams: [{ context: 'FooCtx' }], event_types: ['Foo', 'Bar'] } }
+)
+```
+
+Reading most recent events until the certain stream revision:
+
+```ruby
+PgEventstore.client.read_grouped(stream, options: { direction: :desc, from_revision: 1 })
+```
+
+Reading the oldest events from the certain stream revision:
+
+```ruby
+PgEventstore.client.read_grouped(stream, options: { direction: :asc, from_revision: 1 })
+```
+
+Reading most recent events until the certain global position:
+
+```ruby
+PgEventstore.client.read_grouped(PgEventstore::Stream.all_stream, options: { direction: :desc, from_position: 5 })
+```
+
+Reading the oldest events from the certain global position:
+
+```ruby
+PgEventstore.client.read_grouped(PgEventstore::Stream.all_stream, options: { direction: :asc, from_position: 5 })
+```
+
+### Event types list lookup
+
+If you do not provide event types filter - event types list will be determined based on the rest of arguments(a stream argument or a stream filters option).
+
+### Multiple events of same type in the result
+
+If same event type appear in different streams(different by `#context` and `#stream_name`) - those events will appear in the result. This is because even though `Event#type` value may be the same - its meaning may have different meaning in different `context`/`stream_name` couple. Example:
+
+```ruby
+stream1 = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+stream2 = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1')
+
+event1 = PgEventstore::Event.new(type: 'Foo', data: { foo: 1 })
+event2 = PgEventstore::Event.new(type: 'Foo', data: { foo: 2 })
+
+PgEventstore.client.append_to_stream(stream1, event1)
+PgEventstore.client.append_to_stream(stream2, event2)
+
+PgEventstore.client.read_grouped(
+  PgEventstore::Stream.all_stream,
+  options: { filter: { streams: [{ context: 'FooCtx' }] } }
+) # => returns both events even though they are of "Foo" type
+```

@@ -46,7 +46,7 @@ module PgEventstore
 
     def remove_group: () -> self
 
-    def to_exec_params: () -> ::Array[(String | ::Array[untyped])]
+    def to_exec_params: () -> [String, ::Array[untyped]]
 
     def positional_values: () -> ::Array[Object]
 

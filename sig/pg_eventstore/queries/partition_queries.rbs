@@ -39,6 +39,8 @@ module PgEventstore
     # _@return_ — partition attributes
     def context_partition: (PgEventstore::Stream stream) -> ::Hash[untyped, untyped]?
 
+    def partitions: (Array[Hash[Symbol, String | nil]] stream_filters, Array[String] event_filters)-> Array[Partition]
+
     # _@param_ `stream`
     #
     # _@return_ — partition attributes
@@ -70,5 +72,9 @@ module PgEventstore
 
     # Returns the value of attribute connection.
     attr_accessor connection: PgEventstore::Connection
+
+    private
+
+    def deserialize: (Hash[untyped, untyped] attrs)-> Partition
   end
 end

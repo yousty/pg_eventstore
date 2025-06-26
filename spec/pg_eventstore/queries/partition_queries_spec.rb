@@ -211,7 +211,7 @@ RSpec.describe PgEventstore::PartitionQueries do
     end
   end
 
-  describe '#create partitions' do
+  describe '#create_partitions' do
     subject { instance.create_partitions(stream, event_type) }
 
     let(:stream) { PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
@@ -468,6 +468,198 @@ RSpec.describe PgEventstore::PartitionQueries do
 
     it 'returns partitions by ids' do
       is_expected.to match_array([partition1, partition2])
+    end
+  end
+
+  describe '#partitions' do
+    subject { instance.partitions(stream_filters, event_filters) }
+
+    let(:stream_filters) { [] }
+    let(:event_filters) { [] }
+
+    context 'when stream and event filters are empty' do
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+
+      let(:event1) { PgEventstore::Event.new(type: 'Foo') }
+      let(:event2) { PgEventstore::Event.new(type: 'Bar') }
+      let(:event3) { PgEventstore::Event.new(type: 'Baz') }
+
+      before do
+        PgEventstore.client.append_to_stream(stream1, event1)
+        PgEventstore.client.append_to_stream(stream2, event2)
+        PgEventstore.client.append_to_stream(stream2, event3)
+      end
+
+      it 'returns every existing partition' do
+        aggregate_failures do
+          expect(subject.size).to eq(3)
+          is_expected.to all be_a(PgEventstore::Partition)
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Foo', event_type: 'Foo')
+          )
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Bar', event_type: 'Bar')
+          )
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Bar', event_type: 'Baz')
+          )
+        end
+      end
+    end
+
+    context 'when the given events appear in a certain stream' do
+      let(:stream_filters) { [{ context: 'FooCtx', stream_name: 'Foo' }] }
+      let(:event_filters) { ['Foo'] }
+
+      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let!(:event) do
+        event = PgEventstore::Event.new(type: 'Foo')
+        PgEventstore.client.append_to_stream(stream, event)
+      end
+
+      it 'returns a partition holding that event type' do
+        aggregate_failures do
+          expect(subject.size).to eq(1)
+          is_expected.to all be_a(PgEventstore::Partition)
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Foo', event_type: 'Foo')
+          )
+        end
+      end
+    end
+
+    context 'when same event type appear in different streams' do
+      let(:stream_filters) { [{ context: 'FooCtx', stream_name: 'Foo' }, { context: 'FooCtx', stream_name: 'Bar' }] }
+      let(:event_filters) { ['Foo'] }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+
+      let(:event) { PgEventstore::Event.new(type: 'Foo') }
+
+      before do
+        PgEventstore.client.append_to_stream(stream1, event)
+        PgEventstore.client.append_to_stream(stream2, event)
+      end
+
+      it 'returns two different partitions with the given event filters, but different context/stream name combination' do
+        aggregate_failures do
+          expect(subject.size).to eq(2)
+          is_expected.to all be_a(PgEventstore::Partition)
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Foo', event_type: 'Foo')
+          )
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Bar', event_type: 'Foo')
+          )
+        end
+      end
+    end
+
+    context 'when stream filters include only one stream' do
+      let(:stream_filters) { [{ context: 'FooCtx', stream_name: 'Bar' }] }
+      let(:event_filters) { ['Foo'] }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+
+      let(:event) { PgEventstore::Event.new(type: 'Foo') }
+
+      before do
+        PgEventstore.client.append_to_stream(stream1, event)
+        PgEventstore.client.append_to_stream(stream2, event)
+      end
+
+      it 'returns a partition of a combination of context/stream name of that filter' do
+        aggregate_failures do
+          expect(subject.size).to eq(1)
+          is_expected.to all be_a(PgEventstore::Partition)
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Bar', event_type: 'Foo')
+          )
+        end
+      end
+    end
+
+    context 'when event type in filter does not exist' do
+      let(:stream_filters) { [{ context: 'FooCtx', stream_name: 'Foo' }, { context: 'FooCtx', stream_name: 'Bar' }] }
+      let(:event_filters) { ['Fuu'] }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+
+      let(:event) { PgEventstore::Event.new(type: 'Foo') }
+
+      before do
+        PgEventstore.client.append_to_stream(stream1, event)
+        PgEventstore.client.append_to_stream(stream2, event)
+      end
+
+      it { is_expected.to eq([]) }
+    end
+
+    context 'when streams filter is empty' do
+      let(:stream_filters) { [] }
+      let(:event_filters) { ['Foo', 'Bar'] }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1') }
+
+      let(:event1) { PgEventstore::Event.new(type: 'Foo') }
+      let(:event2) { PgEventstore::Event.new(type: 'Bar') }
+      let(:event3) { PgEventstore::Event.new(type: 'BaZ') }
+
+      before do
+        PgEventstore.client.append_to_stream(stream1, event1)
+        PgEventstore.client.append_to_stream(stream2, event2)
+        PgEventstore.client.append_to_stream(stream3, event3)
+      end
+
+      it 'returns all partitions by the given events filter' do
+        aggregate_failures do
+          expect(subject.size).to eq(2)
+          is_expected.to all be_a(PgEventstore::Partition)
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Foo', event_type: 'Foo')
+          )
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Bar', event_type: 'Bar')
+          )
+        end
+      end
+    end
+
+    context 'when events filter is empty' do
+      let(:stream_filters) { [{ context: 'FooCtx', stream_name: 'Foo' }, { context: 'FooCtx', stream_name: 'Bar' }] }
+      let(:event_filters) { [] }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1') }
+
+      let(:event1) { PgEventstore::Event.new(type: 'Foo') }
+      let(:event2) { PgEventstore::Event.new(type: 'Bar') }
+
+      before do
+        PgEventstore.client.append_to_stream(stream1, event1)
+        PgEventstore.client.append_to_stream(stream2, event1)
+        PgEventstore.client.append_to_stream(stream3, event2)
+      end
+
+      it 'returns all partitions by the given streams filter' do
+        aggregate_failures do
+          expect(subject.size).to eq(2)
+          is_expected.to all be_a(PgEventstore::Partition)
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Foo', event_type: 'Foo')
+          )
+          expect(subject.map(&:options_hash)).to(
+            include a_hash_including(context: 'FooCtx', stream_name: 'Bar', event_type: 'Foo')
+          )
+        end
+      end
     end
   end
 
