@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.12.0]
+
+- Introduce `#read_grouped` API method that allows to group events by type
+
 ## [1.11.0]
 
 - Add a global position that caused an error to the subscription's error JSON info. This will help you understand what event caused your subscription to fail.
