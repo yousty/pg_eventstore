@@ -3,32 +3,20 @@ module PgEventstore
     include PgEventstore::Extensions::CallbacksExtension
     extend Forwardable
 
-    # _@param_ `handler`
-    %a{rbs:test:skip} def initialize: (_RawEventHandler handler, graceful_shutdown_timeout: Float | Integer) -> void
+    %a{rbs:test:skip} def initialize: (
+        _RawEventHandler handler,
+        graceful_shutdown_timeout: Float | Integer,
+        ?recovery_strategies: Array[RunnerRecoveryStrategy]
+      ) -> void
 
-    # _@param_ `raw_events`
     def feed: (::Array[::Hash[untyped, untyped]] raw_events) -> void
 
     def events_left_in_chunk: () -> Integer
 
     def clear_chunk: () -> void
 
-    # _@param_ `raw_event`
     def process_event: (::Hash[untyped, untyped] raw_event) -> void
 
     def attach_runner_callbacks: () -> void
-
-    def process_async: () -> void
-
-    def after_runner_died: (StandardError error) -> void
-
-    def before_runner_restored: () -> void
-
-    def change_state: (*untyped args, **untyped kwargs) -> void
-
-    # _@param_ `raw_event`
-    def global_position: (::Hash[untyped, untyped] raw_event) -> Integer
-
-    def define_callback: () -> void
   end
 end

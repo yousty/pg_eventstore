@@ -28,15 +28,10 @@ module PgEventstore
     # @param stats [PgEventstore::SubscriptionHandlerPerformance]
     # @param events_processor [PgEventstore::EventsProcessor]
     # @param subscription [PgEventstore::Subscription]
-    # @param restart_terminator [#call, nil]
-    # @param failed_subscription_notifier [#call, nil]
-    def initialize(stats:, events_processor:, subscription:, restart_terminator: nil,
-                   failed_subscription_notifier: nil)
+    def initialize(stats:, events_processor:, subscription:)
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
-      @restart_terminator = restart_terminator
-      @failed_subscription_notifier = failed_subscription_notifier
 
       attach_callbacks
     end
@@ -86,13 +81,6 @@ module PgEventstore
       @events_processor.define_callback(
         :error, :after,
         SubscriptionRunnerHandlers.setup_handler(:update_subscription_error, @subscription)
-      )
-      @events_processor.define_callback(
-        :error, :after,
-        SubscriptionRunnerHandlers.setup_handler(
-          :restart_events_processor,
-          @subscription, @restart_terminator, @failed_subscription_notifier, @events_processor
-        )
       )
 
       @events_processor.define_callback(

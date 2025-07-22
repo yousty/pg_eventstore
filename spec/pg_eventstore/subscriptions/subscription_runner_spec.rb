@@ -5,7 +5,9 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     PgEventstore::SubscriptionRunner.new(stats: stats, events_processor: events_processor, subscription: subscription)
   end
   let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
-  let(:events_processor) { PgEventstore::EventsProcessor.new(handler, graceful_shutdown_timeout: 5) }
+  let(:events_processor) do
+    PgEventstore::EventsProcessor.new(handler, graceful_shutdown_timeout: 5)
+  end
   let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo') }
   let(:handler) { proc { } }
 
@@ -309,152 +311,26 @@ RSpec.describe PgEventstore::SubscriptionRunner do
         subscription.reload.last_error_occurred_at
       }.to(be_between(Time.now.utc - 1, Time.now.utc + 1))
     end
-    it 'restarts EventsProcessor' do
-      subject
-      expect(instance.state).to eq('running')
-    end
-    it 'processes the event' do
-      expect { subject }.to change { processed_events }.to([event])
-    end
-    it 'updates Subscription#current_position' do
-      expect { subject }.to change { subscription.reload.current_position }
-    end
-    it 'updates Subscription#average_event_processing_time' do
-      expect { subject }.to change { subscription.reload.average_event_processing_time }
-    end
-    it 'updates Subscription#total_processed_events' do
-      expect { subject }.to change { subscription.reload.total_processed_events }
-    end
-
-    context 'when the number of restarts hit the limit' do
-      before do
-        subscription.update(max_restarts_number: 0)
-      end
-
-      it 'does not restart EventsProcessor' do
-        subject
-        expect(instance.state).to eq('dead')
-      end
-      # Important tests when the handler fails - we need to make sure that all those subscription attributes are not
-      # updated.
-      it 'does not update Subscription#current_position' do
-        expect { subject }.not_to change { subscription.reload.current_position }
-      end
-      it 'does not update Subscription#average_event_processing_time' do
-        expect { subject }.not_to change { subscription.reload.average_event_processing_time }
-      end
-      it 'does not update Subscription#total_processed_events' do
-        expect { subject }.not_to change { subscription.reload.total_processed_events }
-      end
-    end
-
-    context 'when restart_terminator is defined' do
-      let(:instance) do
-        PgEventstore::SubscriptionRunner.new(
-          stats: stats,
-          events_processor: events_processor,
-          subscription: subscription,
-          restart_terminator: restart_terminator
-        )
-      end
-      let(:restart_terminator) { proc { |sub| subscription_receiver.call(sub) } }
-      let(:subscription_receiver) { double('Subscription receiver') }
-      let(:terminator_result) { true }
-
-      before do
-        allow(subscription_receiver).to receive(:call).and_return(terminator_result)
-      end
-
-      it 'calls it to determine whether need to restart EventsProcessor' do
-        subject
-        expect(subscription_receiver).to have_received(:call).with(instance_of(PgEventstore::Subscription))
-      end
-
-      context 'when terminator returns true' do
-        it 'does not restart EventsProcessor' do
-          subject
-          expect(instance.state).to eq('dead')
-        end
-      end
-
-      context 'when terminator returns falsey value' do
-        let(:terminator_result) { nil }
-
-        it 'restarts EventsProcessor' do
-          subject
-          expect(instance.state).to eq('running')
-        end
-
-        context 'when the number of restarts hit the limit' do
-          before do
-            subscription.update(max_restarts_number: 0)
-          end
-
-          it 'does not restart EventsProcessor' do
-            subject
-            expect(instance.state).to eq('dead')
-          end
-        end
-      end
-    end
-
-    context 'when failed_subscription_notifier is defined' do
-      let(:instance) do
-        PgEventstore::SubscriptionRunner.new(
-          stats: stats,
-          events_processor: events_processor,
-          subscription: subscription,
-          failed_subscription_notifier: failed_subscription_notifier
-        )
-      end
-      let(:failed_subscription_notifier) { proc { |sub, error| notifier.call(sub, error) } }
-      let(:notifier) { double('Subscription notifier') }
-
-      before do
-        allow(notifier).to receive(:call)
-      end
-
-      context 'when Subscription can be restarted' do
-        it 'restarts EventsProcessor' do
-          subject
-          expect(instance.state).to eq('running')
-        end
-        it 'does not call failed subscription notifier' do
-          subject
-          expect(notifier).not_to have_received(:call)
-        end
-      end
-
-      context 'when Subscription can no longer be restarted' do
-        before do
-          subscription.update(max_restarts_number: 0)
-        end
-
-        it 'does not restart EventsProcessor' do
-          subject
-          expect(instance.state).to eq('dead')
-        end
-        it 'calls failed subscription notifier' do
-          subject
-          expect(notifier).to have_received(:call).with(subscription, error)
-        end
-      end
-    end
   end
 
   describe 'on restart' do
     subject do
       instance.feed(['id' => SecureRandom.uuid, 'global_position' => 1])
-      dv.wait_until(timeout: 0.5) { subscription.reload.restart_count == max_restarts_number }
+      dv.wait_until(timeout: 1) { subscription.reload.restart_count > 0 }
     end
 
     let(:handler) { proc { raise 'You rolled 1. Critical failure!' } }
-    let(:subscription) do
-      SubscriptionsHelper.create_with_connection(
-        name: 'Foo', time_between_restarts: 0, max_restarts_number: max_restarts_number
+    let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo') }
+
+    let(:events_processor) do
+      PgEventstore::EventsProcessor.new(
+        handler,
+        graceful_shutdown_timeout: 0,
+        recovery_strategies: [
+          DummyErrorRecovery.new(recoverable_message: 'You rolled 1. Critical failure!', seconds_before_recovery: 0.1)
+        ]
       )
     end
-    let(:max_restarts_number) { 3 }
 
     before do
       instance.start
@@ -471,7 +347,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       }.to(be_between(Time.now.utc - 1, Time.now.utc + 1))
     end
     it 'updates Subscription#restart_count' do
-      expect { subject }.to change { subscription.reload.restart_count }.by(max_restarts_number)
+      expect { subject }.to change { subscription.reload.restart_count }
     end
   end
 

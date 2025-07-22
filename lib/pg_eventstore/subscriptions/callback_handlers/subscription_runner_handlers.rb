@@ -33,25 +33,6 @@ module PgEventstore
       end
 
       # @param subscription [PgEventstore::Subscription]
-      # @param restart_terminator [#call, nil]
-      # @param failed_subscription_notifier [#call, nil]
-      # @param events_processor [PgEventstore::EventsProcessor]
-      # @param error [PgEventstore::WrappedException]
-      # @return [void]
-      def restart_events_processor(subscription, restart_terminator, failed_subscription_notifier, events_processor,
-                                   error)
-        return if restart_terminator&.call(subscription.dup)
-        if subscription.restart_count >= subscription.max_restarts_number
-          return failed_subscription_notifier&.call(subscription.dup, Utils.unwrap_exception(error))
-        end
-
-        Thread.new do
-          sleep subscription.time_between_restarts
-          events_processor.restore
-        end
-      end
-
-      # @param subscription [PgEventstore::Subscription]
       # @param global_position [Integer]
       # @return [void]
       def update_subscription_chunk_stats(subscription, global_position)

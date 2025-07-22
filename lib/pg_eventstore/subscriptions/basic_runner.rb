@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module PgEventstore
-  # Implements simple background jobs runner. The job execution is done via declaring a callback on the specific
-  # action. The implementation also allows you to hook into different places of life cycle of the runner by defining
-  # callbacks on various actions. Here is the list of available actions:
+  # Implements simple background job runner. A job execution is done via declaring a callback on a specific action. The
+  # implementation also allows you to hook into different places of life cycle of the runner by defining callbacks on
+  # various actions. Here is the list of available actions:
   # - :before_runner_started. Happens before the runner's state switches from "initial"/"stopped" to "running" and
   #   runner's thread is started. It is also fired when the runner is restoring - right after :before_runner_restored
   #   action.
@@ -24,10 +24,39 @@ module PgEventstore
   #
   #     def_delegators :@basic_runner, :start, :stop, :wait_for_finish, :stop_async, :restore
   #
+  #     class SimpleRecoveryStrategy
+  #       include PgEventstore::RunnerRecoveryStrategy
+  #
+  #       def initialize(restore_func)
+  #         @attempts_count = 0
+  #         @restore_func = restore_func
+  #       end
+  #
+  #       def recovers?(error)
+  #         error.message.include?("I can not handle this any more!")
+  #       end
+  #
+  #       def recover(error)
+  #         (@attempts_count < 3).tap do |res|
+  #           @attempts_count += 1
+  #           @restore_func.call if res
+  #         end
+  #       end
+  #     end
+  #
   #     def initialize
-  #       @basic_runner = PgEventstore::BasicRunner.new(1, 2)
+  #       @basic_runner = PgEventstore::BasicRunner.new(
+  #         run_interval: 1, async_shutdown_time: 2, recovery_strategies: recovery_strategies
+  #       )
   #       @jobs_performed = 0
+  #       @jobs_limit = 3
   #       attach_runner_callbacks
+  #     end
+  #
+  #     protected
+  #
+  #     def work_harder
+  #       @jobs_limit += 3
   #     end
   #
   #     private
@@ -42,7 +71,7 @@ module PgEventstore
   #     end
   #
   #     def process_action
-  #       raise "What's the point? I can not handle this any more!" if @jobs_performed >= 3
+  #       raise "What's the point? I can not handle this any more!" if @jobs_performed >= @jobs_limit
   #       puts "Doing some heavy lifting job"
   #       sleep 2 # Simulate long running job
   #     end
@@ -67,6 +96,10 @@ module PgEventstore
   #     def after_runner_died(error)
   #       puts "Error occurred: #{error.inspect}"
   #     end
+  #
+  #     def recovery_strategies
+  #       [SimpleRecoveryStrategy.new(method(:work_harder))]
+  #     end
   #   end
   #
   #   runner = MyAwesomeRunner.new
@@ -85,11 +118,13 @@ module PgEventstore
     #   :after_runner_stopped callback
     # @param async_shutdown_time [Integer, Float] seconds. Determines how long to wait before force-shutdown the runner.
     #   It is only meaningful for the #stop_async
-    def initialize(run_interval, async_shutdown_time)
+    def initialize(run_interval:, async_shutdown_time:, recovery_strategies: [])
       @run_interval = run_interval
       @async_shutdown_time = async_shutdown_time
+      @recovery_strategies = recovery_strategies
       @state = RunnerState.new
       @mutex = Thread::Mutex.new
+      @runner = nil
       delegate_change_state_cbx
     end
 
@@ -154,9 +189,7 @@ module PgEventstore
     # Restores the runner after its death.
     # @return [self]
     def restore
-      synchronize do
-        return self unless @state.dead?
-
+      within_state(:dead) do
         callbacks.run_callbacks(:before_runner_restored)
         _start
       end
@@ -183,12 +216,26 @@ module PgEventstore
     end
 
     # @param state [Symbol]
-    # @return [Object] a result of evaluating of passed block
+    # @return [Object, nil] a result of evaluating of passed block
     def within_state(state, &blk)
       synchronize do
         return unless @state.public_send("#{RunnerState::STATES.fetch(state)}?")
 
         yield
+      end
+    end
+
+    protected
+
+    # @param error [StandardError]
+    # @param strategy [PgEventstore::RunnerRecoveryStrategy]
+    # @param current_runner_id [Integer]
+    # @return [Thread]
+    def async_recover(error, strategy, current_runner_id)
+      Thread.new do
+        init_recovery_ripper(current_runner_id)
+        Thread.current.exit unless strategy.recover(error)
+        recoverable { restore }
       end
     end
 
@@ -202,18 +249,13 @@ module PgEventstore
     def _start
       @state.running!
       @runner = Thread.new do
-        loop do
-          Thread.current.exit unless @state.running?
-          sleep @run_interval
+        recoverable do
+          loop do
+            Thread.current.exit unless @state.running?
+            sleep @run_interval
 
-          callbacks.run_callbacks(:process_async)
-        end
-      rescue => error
-        synchronize do
-          raise unless @state.halting? || @state.running?
-
-          @state.dead!
-          callbacks.run_callbacks(:after_runner_died, error)
+            callbacks.run_callbacks(:process_async)
+          end
         end
       end
     end
@@ -227,6 +269,44 @@ module PgEventstore
     # @return [void]
     def change_state(...)
       callbacks.run_callbacks(:change_state, ...)
+    end
+
+    # @param error [StandardError]
+    # @return [PgEventstore::RunnerRecoveryStrategy, nil]
+    def suitable_strategy(error)
+      @recovery_strategies.find { _1.recovers?(error) }
+    end
+
+    # @return [void]
+    def recoverable
+      yield
+    rescue => error
+      synchronize do
+        raise unless @state.halting? || @state.running?
+
+        recovery_strategy = suitable_strategy(error)
+        @state.dead!
+        callbacks.run_callbacks(:after_runner_died, error)
+      ensure
+        async_recover(error, recovery_strategy, @runner.__id__) if recovery_strategy
+      end
+    end
+
+    # @param current_runner_id [Integer]
+    # @return [Thread]
+    def init_recovery_ripper(current_runner_id)
+      recovery_job = Thread.current
+      Thread.new do
+        loop do
+          synchronize do
+            recovery_job.exit unless @state.dead?
+            recovery_job.exit unless current_runner_id == @runner.__id__
+          end
+          break unless recovery_job.alive?
+
+          sleep 1
+        end
+      end
     end
   end
 end

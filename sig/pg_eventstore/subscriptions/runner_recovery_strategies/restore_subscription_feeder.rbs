@@ -1,0 +1,11 @@
+module PgEventstore
+  module RunnerRecoveryStrategies
+    class RestoreSubscriptionFeeder
+      include RunnerRecoveryStrategy
+
+      @subscriptions_set_lifecycle: SubscriptionsSetLifecycle
+
+      def initialize: (subscriptions_set_lifecycle: SubscriptionsSetLifecycle)-> untyped
+    end
+  end
+end

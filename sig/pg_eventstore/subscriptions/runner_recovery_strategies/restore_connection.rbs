@@ -1,0 +1,18 @@
+module PgEventstore
+  module RunnerRecoveryStrategies
+    class RestoreConnection
+      include RunnerRecoveryStrategy
+
+      EXCEPTIONS_TO_HANDLE: Array[StandardError]
+      TIME_BETWEEN_RETRIES: Integer
+
+      @config_name: Symbol
+
+      def initialize: (Symbol config_name)-> untyped
+
+      private
+
+      def connection: -> Connection
+    end
+  end
+end

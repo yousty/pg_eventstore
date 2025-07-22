@@ -23,8 +23,7 @@ class DeferredValue
 
   def initialize(obj)
     @object = obj
-    @first_access = true
-    @async_job = nil
+    reset
   end
 
   def deferred_wait(timeout: 0, &blk)
@@ -34,13 +33,22 @@ class DeferredValue
       @object
     else
       @async_job&.join
-      @object
+      @object.tap do
+        reset
+      end
     end
   end
 
   def wait_until(...)
     deferred_wait(...)
     deferred_wait(...)
+  end
+
+  protected
+
+  def reset
+    @first_access = true
+    @async_job = nil
   end
 
   private

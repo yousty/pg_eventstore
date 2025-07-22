@@ -55,8 +55,9 @@ module PgEventstore
                 manager.stop
               end
             end.each(&:join)
-            Utils.remove_file(options.pid_path)
+          ensure
             @running = false
+            Utils.remove_file(options.pid_path)
           end
         end
 

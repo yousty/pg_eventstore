@@ -67,9 +67,9 @@ module PgEventstore
       should_retry = true
       @pool.with do |conn|
         yield conn
-      rescue PG::ConnectionBad
-        # Recover connection after fork. We do it only once and without any delay. Recover is required by both
-        # processes - child process and parent process
+      rescue PG::ConnectionBad, PG::UnableToSend
+        # Recover a connection after fork or when we lost a connection to PostgreSQL. We retry only once and without any
+        # delay.
         conn.sync_reset
         raise unless should_retry
         should_retry = false

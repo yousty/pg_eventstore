@@ -17,19 +17,17 @@ module PgEventstore
 
     def id: () -> Integer?
 
-    # _@param_ `runner`
-    def add: (PgEventstore::SubscriptionRunner runner) -> PgEventstore::SubscriptionRunner
-
     def start_all: () -> void
 
     def stop_all: () -> void
 
-    def read_only_subscriptions: () -> ::Array[PgEventstore::Subscription]
-
-    def read_only_subscriptions_set: () -> PgEventstore::SubscriptionsSet?
-
     def attach_runner_callbacks: () -> void
 
-    def assert_proper_state!: () -> void
+    private
+
+    def recovery_strategies: (
+        Symbol config_name,
+        SubscriptionsSetLifecycle subscriptions_set_lifecycle
+      ) -> Array[RunnerRecoveryStrategy]
   end
 end

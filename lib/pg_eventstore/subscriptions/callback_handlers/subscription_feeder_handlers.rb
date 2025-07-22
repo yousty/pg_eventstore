@@ -40,20 +40,6 @@ module PgEventstore
       end
 
       # @param subscriptions_set_lifecycle [PgEventstore::SubscriptionsSetLifecycle]
-      # @param basic_runner [PgEventstore::BasicRunner]
-      # @param _error [StandardError]
-      # @return [void]
-      def restart_runner(subscriptions_set_lifecycle, basic_runner, _error)
-        subscriptions_set = subscriptions_set_lifecycle.persisted_subscriptions_set
-        return if subscriptions_set.restart_count >= subscriptions_set.max_restarts_number
-
-        Thread.new do
-          sleep subscriptions_set.time_between_restarts
-          basic_runner.restore
-        end
-      end
-
-      # @param subscriptions_set_lifecycle [PgEventstore::SubscriptionsSetLifecycle]
       # @return [void]
       def ping_subscriptions_set(subscriptions_set_lifecycle)
         subscriptions_set_lifecycle.ping_subscriptions_set

@@ -74,5 +74,13 @@ module PgEventstore
 
     # Returns the value of attribute config.
     attr_accessor config: PgEventstore::Config
+
+    private
+
+    def recovery_strategies: (
+        Subscription subscription,
+        _RestartTerminator? restart_terminator,
+        _FailedSubscriptionNotifier? failed_subscription_notifier
+      ) -> Array[RunnerRecoveryStrategy]
   end
 end

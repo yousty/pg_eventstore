@@ -1,10 +1,10 @@
 module PgEventstore
   class CommandsHandlerHandlers
-    def self.process_feeder_commands: (Symbol config_name, PgEventstore::SubscriptionFeeder subscription_feeder) -> void
+    def self.process_feeder_commands: (Symbol config_name, SubscriptionFeeder subscription_feeder) -> void
 
-    def self.process_runners_commands: (Symbol config_name, Array[PgEventstore::SubscriptionRunner] runners,
-        PgEventstore::SubscriptionFeeder subscription_feeder) -> void
-
-    def self.restore_runner: (PgEventstore::BasicRunner basic_runner, Integer restart_delay, StandardError error) -> void
+    def self.process_runners_commands: (
+        Symbol config_name, Array[SubscriptionRunner] runners,
+        SubscriptionFeeder subscription_feeder
+      ) -> void
   end
 end

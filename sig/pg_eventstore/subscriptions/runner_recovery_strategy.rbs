@@ -1,0 +1,7 @@
+module PgEventstore
+  module RunnerRecoveryStrategy
+    def recover: (StandardError error)-> bool
+
+    def recovers?: (StandardError error)-> bool
+  end
+end
