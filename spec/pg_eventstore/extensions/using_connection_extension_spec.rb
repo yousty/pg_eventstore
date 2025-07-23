@@ -40,10 +40,6 @@ RSpec.describe PgEventstore::Extensions::UsingConnectionExtension do
           PgEventstore.configure(name: config_name, &:itself)
         end
 
-        after do
-          PgEventstore.send(:init_variables)
-        end
-
         it 'returns it' do
           aggregate_failures do
             is_expected.to be_a(PgEventstore::Connection)

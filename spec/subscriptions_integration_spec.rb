@@ -28,7 +28,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'processes events of first subscription' do
@@ -71,7 +70,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'processes events sooner than config.subscription_pull_interval' do
@@ -110,7 +108,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'retries custom number of times' do
@@ -154,7 +151,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'does the number of retries according to retries_interval' do
@@ -202,7 +198,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'processes events of first subscription taking into account overridden middlewares' do
@@ -252,7 +247,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'retries custom number of times' do
@@ -300,7 +294,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'processes events correctly' do
@@ -350,7 +343,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'locks existing subscription under new SubscriptionsSet' do
@@ -408,7 +400,6 @@ RSpec.describe 'Subscriptions integration' do
 
     after do
       manager.stop
-      PgEventstore.send(:init_variables)
     end
 
     it 'updates Subscription#last_error' do

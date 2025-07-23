@@ -60,11 +60,8 @@ RSpec.configure do |config|
 
   config.before do
     REDIS.flushdb
-    # Some tests reset default config, connection, etc. Thus. reconfigure a client before each test
-    PgEventstore.configure do |pg_conf|
-      pg_conf.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore_test' }
-      pg_conf.connection_pool_size = 20
-    end
+    # Some tests reset default config, connection, etc. Thus, reconfigure a client before each test
+    ConfigHelper.reconfigure
     PgEventstore::TestHelpers.clean_up_db
   end
 

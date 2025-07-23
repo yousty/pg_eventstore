@@ -35,10 +35,6 @@ RSpec.describe PgEventstore::CLI::TryUnlockSubscriptionsSet do
         thread.exit
       end
 
-      after do
-        PgEventstore.send(:init_variables)
-      end
-
       it { is_expected.to eq(false) }
     end
   end

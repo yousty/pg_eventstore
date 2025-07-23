@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore do
-  after do
-    PgEventstore.send(:init_variables)
-  end
-
   describe '.configure' do
     it 'yields config' do
       expect { |b| described_class.configure(&b) }.to yield_with_args(instance_of(described_class::Config))

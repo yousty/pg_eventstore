@@ -7,7 +7,7 @@ module PgEventstore
       # @return [Integer] seconds
       TIME_BETWEEN_RETRIES = 5
       # @return [Array<StandardError>]
-      EXCEPTIONS_TO_HANDLE = [PG::ConnectionBad, PG::UnableToSend, ConnectionPool::TimeoutError]
+      EXCEPTIONS_TO_HANDLE = [PG::ConnectionBad, PG::UnableToSend, ConnectionPool::TimeoutError].freeze
 
       include RunnerRecoveryStrategy
 
@@ -20,7 +20,7 @@ module PgEventstore
         EXCEPTIONS_TO_HANDLE.any? {error.is_a?(_1) }
       end
 
-      def recover(error)
+      def recover(_error)
         loop do
           sleep TIME_BETWEEN_RETRIES
 

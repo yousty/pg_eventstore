@@ -17,10 +17,6 @@ RSpec.describe PgEventstore::CLI::WaitForSubscriptionsSetShutdown do
         end
       end
 
-      after do
-        PgEventstore.send(:init_variables)
-      end
-
       it { is_expected.to eq(false) }
     end
 
@@ -32,10 +28,6 @@ RSpec.describe PgEventstore::CLI::WaitForSubscriptionsSetShutdown do
           c.subscription_graceful_shutdown_timeout = 5
         end
         stub_const("#{described_class}::SHUTDOWN_CHECK_INTERVAL", 1)
-      end
-
-      after do
-        PgEventstore.send(:init_variables)
       end
 
       around do |example|
