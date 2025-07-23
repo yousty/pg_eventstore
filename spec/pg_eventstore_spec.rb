@@ -7,22 +7,35 @@ RSpec.describe PgEventstore do
 
   describe '.configure' do
     it 'yields config' do
-      expect { |b| described_class.configure(&b) }.to yield_with_args(described_class.config)
+      expect { |b| described_class.configure(&b) }.to yield_with_args(instance_of(described_class::Config))
     end
 
     context 'when config name is provided' do
-      let(:config) { described_class.config(:some_config) }
-
-      before do
-        described_class.configure(name: :some_config) do |c|
+      subject do
+        described_class.configure(name: config_name) do |c|
           c.pg_uri = 'postgresql://localhost:5432'
         end
       end
 
-      it 'yields correct config' do
-        expect { |b| described_class.configure(name: :some_config, &b) }.to(
-          yield_with_args(config)
-        )
+      let(:config_name) { :some_config }
+
+      before do
+        described_class.configure(name: config_name) do |c|
+          c.pg_uri = 'postgresql://localhost:5433'
+        end
+      end
+
+      it 'yields config with correct name' do
+        described_class.configure(name: config_name) do |c|
+          expect(c.name).to eq(config_name)
+        end
+      end
+
+      it 'does not change attributes of other configs' do
+        expect { subject }.not_to change { described_class.config }
+      end
+      it 'changes attributes of the config with the given name' do
+        expect { subject }.to change { described_class.config(config_name).options_hash }
       end
     end
 
@@ -38,6 +51,40 @@ RSpec.describe PgEventstore do
           described_class.connection.instance_variable_get(:@uri)
         }.to('postgresql://some.pg.host:5432/')
       end
+      it 're-setups a connection object' do
+        expect { subject }.to change { described_class.connection.__id__ }
+      end
+    end
+
+    describe 'multiple configuration calls' do
+      subject do
+        described_class.configure do |c|
+          c.pg_uri = 'postgresql://some.pg.host:5432/'
+        end
+        described_class.configure do |c|
+          c.max_count = 123
+        end
+      end
+
+      before do
+        described_class.configure do |c|
+          c.pg_uri = 'postgresql://localhost:5432/'
+        end
+        described_class.configure do |c|
+          c.max_count = 10
+        end
+      end
+
+      it 'accumulates those changes' do
+        expect { subject }.to change {
+          described_class.config.options_hash
+        }.from(a_hash_including(pg_uri: 'postgresql://localhost:5432/', max_count: 10))
+         .to(a_hash_including(pg_uri: 'postgresql://some.pg.host:5432/', max_count: 123))
+      end
+    end
+
+    it 'returns a frozen object' do
+      expect(described_class.configure(&:itself)).to be_frozen
     end
   end
 

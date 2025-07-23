@@ -36,10 +36,11 @@ module PgEventstore
     # @return [Object] a result of the given block
     def configure(name: DEFAULT_CONFIG)
       mutex.synchronize do
-        @config[name] ||= Config.new(name: name)
+        @config[name] = @config[name] ? Config.new(name: name, **@config[name].options_hash) : Config.new(name: name)
         connection_config_was = @config[name].connection_options
 
         yield(@config[name]).tap do
+          @config[name].freeze
           next if connection_config_was == @config[name].connection_options
 
           # Reset the connection if user decided to reconfigure connection's options

@@ -19,7 +19,9 @@ RSpec.describe 'Subscriptions integration' do
 
     before do
       PgEventstore.client.append_to_stream(stream, [event1, event2])
-      PgEventstore.config.subscription_pull_interval = pull_interval
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = pull_interval
+      end
       manager.subscribe('Subscription 1', handler: handler1, options: { filter: { event_types: ['Foo'] } })
       manager.subscribe('Subscription 2', handler: handler2, options: { filter: { streams: [{ context: 'FooCtx' }] } })
     end
@@ -287,7 +289,9 @@ RSpec.describe 'Subscriptions integration' do
 
     before do
       PgEventstore.client.link_to(stream, [event1, event2])
-      PgEventstore.config.subscription_pull_interval = 0.2
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0.2
+      end
       manager.subscribe(
         'Subscription 1',
         handler: handler, options: { filter: { streams: [{ context: 'FooCtx' }] }, resolve_link_tos: true }
@@ -335,7 +339,9 @@ RSpec.describe 'Subscriptions integration' do
     end
 
     before do
-      PgEventstore.config.subscription_pull_interval = 0.2
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0.2
+      end
       manager.subscribe(
         subscription_name,
         handler: handler, options: { filter: { streams: [{ context: 'FooCtx' }] } }
