@@ -3,6 +3,7 @@
 module PgEventstore
   module CLI
     module Commands
+      # @!visibility private
       class StopSubscriptionsCommand < BaseCommand
         # @return [Integer] exit code
         def call

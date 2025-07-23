@@ -2,6 +2,7 @@
 
 module PgEventstore
   module CommandHandlers
+    # @!visibility private
     class SubscriptionFeederCommands
       # @param config_name [Symbol]
       # @param subscription_feeder [PgEventstore::SubscriptionFeeder]

@@ -3,6 +3,7 @@
 module PgEventstore
   # This class is responsible for starting/stopping all SubscriptionRunners. The background runner of it is responsible
   # for events pulling and feeding those SubscriptionRunners.
+  # @!visibility private
   class SubscriptionFeeder
     extend Forwardable
 

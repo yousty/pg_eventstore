@@ -2,6 +2,7 @@
 
 module PgEventstore
   module RunnerRecoveryStrategies
+    # @!visibility private
     class RestoreSubscriptionRunner
       include RunnerRecoveryStrategy
 

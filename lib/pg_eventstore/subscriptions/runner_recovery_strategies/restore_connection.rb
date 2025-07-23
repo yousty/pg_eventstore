@@ -2,6 +2,7 @@
 
 module PgEventstore
   module RunnerRecoveryStrategies
+    # @!visibility private
     class RestoreConnection
       # @return [Integer] seconds
       TIME_BETWEEN_RETRIES = 5

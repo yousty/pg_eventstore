@@ -3,6 +3,7 @@
 module PgEventstore
   module CLI
     module Commands
+      # @!visibility private
       class HelpCommand
         attr_reader :options
 

@@ -2,6 +2,7 @@
 
 module PgEventstore
   module CLI
+    # @!visibility private
     class TryToDeleteSubscriptionsSet
       class << self
         def try_to_delete(...)

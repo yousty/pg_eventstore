@@ -5,6 +5,7 @@ require_relative 'callback_handlers/start_cmd_handlers'
 module PgEventstore
   module CLI
     module Commands
+      # @!visibility private
       class StartSubscriptionsCommand < BaseCommand
         # @return [Integer] seconds
         KEEP_ALIVE_INTERVAL = 2

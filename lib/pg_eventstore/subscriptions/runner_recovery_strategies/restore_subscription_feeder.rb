@@ -2,6 +2,7 @@
 
 module PgEventstore
   module RunnerRecoveryStrategies
+    # @!visibility private
     class RestoreSubscriptionFeeder
       include RunnerRecoveryStrategy
 
@@ -10,7 +11,7 @@ module PgEventstore
         @subscriptions_set_lifecycle = subscriptions_set_lifecycle
       end
 
-      def recovers?(error)
+      def recovers?(_error)
         true
       end
 

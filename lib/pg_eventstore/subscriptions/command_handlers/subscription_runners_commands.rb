@@ -2,6 +2,7 @@
 
 module PgEventstore
   module CommandHandlers
+    # @!visibility private
     class SubscriptionRunnersCommands
       # @param config_name [Symbol]
       # @param runners [Array<PgEventstore::SubscriptionRunner>]
