@@ -177,6 +177,31 @@ RSpec.describe PgEventstore::BasicRunner do
         expect(before_cbx_task).not_to have_received(:run)
       end
     end
+
+    describe 'error in :change_state callback' do
+      subject do
+        super()
+      rescue error_class
+      end
+
+      let(:error_class) { Class.new(StandardError) }
+
+      before do
+        should_raise = true
+        instance.define_callback(
+          :change_state, :before,
+          proc {
+            if should_raise
+              should_raise = false
+              raise error_class, "That's unexpected!"
+            end
+          }
+        )
+        callbacks_definitions
+      end
+
+      it_behaves_like 'asynchronous execution'
+    end
   end
 
   describe '#stop' do
@@ -384,16 +409,20 @@ RSpec.describe PgEventstore::BasicRunner do
           expect { subject }.to change { instance.state }.from("running").to("halting")
         end
         it 'changes the state to "stopped" after async_shutdown_time seconds' do
-          expect { subject; sleep async_shutdown_time + test_adjustment_time }.to change {
-            instance.state
+          timeout = async_shutdown_time + test_adjustment_time
+          expect { subject }.to change {
+            dv(instance).deferred_wait(timeout: timeout) { _1.state == 'stopped' }.state
           }.from("running").to("stopped")
         end
-        it "releases runner's thread after async_shutdown_time seconds" do
-          expect { subject; sleep async_shutdown_time + test_adjustment_time }.to change {
-            instance.instance_variable_get(:@runner)
+        it "releases runner's thread pointer after async_shutdown_time seconds" do
+          timeout = async_shutdown_time + test_adjustment_time
+          expect { subject }.to change {
+            dv(instance).deferred_wait(timeout: timeout) {
+              _1.instance_variable_get(:@runner).nil?
+            }.instance_variable_get(:@runner)
           }.from(instance_of(Thread)).to(nil)
         end
-        it 'stops runners from processing further' do
+        it "removes runner's thread" do
           subject
           thread = instance.instance_variable_get(:@runner)
           aggregate_failures do
@@ -401,6 +430,11 @@ RSpec.describe PgEventstore::BasicRunner do
             sleep async_shutdown_time
             expect(Thread.list).not_to include(thread)
           end
+        end
+        it 'stops runners from processing further' do
+          subject
+          sleep async_shutdown_time
+          expect { sleep run_interval }.not_to change { perform_async_results.size }
         end
       end
 
@@ -437,17 +471,89 @@ RSpec.describe PgEventstore::BasicRunner do
             dv(instance).deferred_wait(timeout: async_shutdown_time) { _1.state == 'stopped' }.state
           }.from('dead').to('stopped')
         end
-        it "releases runner's thread after async_shutdown_time seconds" do
-          expect { subject; sleep async_shutdown_time }.to change {
-            instance.instance_variable_get(:@runner)
+        it "releases runner's thread pointer after async_shutdown_time seconds" do
+          expect { subject }.to change {
+            dv(instance).deferred_wait(timeout: async_shutdown_time) {
+              _1.instance_variable_get(:@runner).nil?
+            }.instance_variable_get(:@runner)
           }.from(instance_of(Thread)).to(nil)
         end
-        it 'stops runners from processing further' do
+        it "does not include runner's thread in the threads list" do
           subject
           thread = instance.instance_variable_get(:@runner)
-          sleep 0.1
           expect(Thread.list).not_to include(thread)
         end
+      end
+    end
+
+    describe 'error in :change_state callback' do
+      subject do
+        super()
+      rescue error_class
+      end
+
+      let(:after_stopped_task) { double('After runner is stopped') }
+      let(:perform_async_results) { [] }
+
+      let(:error_class) { Class.new(StandardError) }
+
+      # Adds some extra time needed ruby to apply changes from background thread to current thread
+      let(:test_adjustment_time) { 0.2 }
+
+      before do
+        allow(after_stopped_task).to receive(:run)
+        instance.define_callback(:after_runner_stopped, :before, proc { after_stopped_task.run })
+        instance.define_callback(:process_async, :before, proc { perform_async_results.push(:the_result) })
+        instance.start
+        instance.define_callback(
+          :change_state, :before,
+          proc {
+            # Disable stderr outputs
+            Thread.report_on_exception = false
+            raise error_class, "That's unexpected!"
+          }
+        )
+        dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
+      end
+
+      it 'spawns another thread to stop the current runner' do
+        expect { subject }.to change { Thread.list.size }.by(1)
+      end
+      it 'does not executes :after_runner_stopped action' do
+        subject
+        dv(instance).wait_until(timeout: async_shutdown_time) { instance.stopped? }
+        expect(after_stopped_task).not_to have_received(:run)
+      end
+      it 'changes the state to "halting"' do
+        expect { subject }.to change { instance.state }.from("running").to("halting")
+      end
+      it 'changes the state to "stopped" after async_shutdown_time seconds' do
+        timeout = async_shutdown_time + test_adjustment_time
+        expect { subject }.to change {
+          dv(instance).deferred_wait(timeout: timeout) { _1.state == 'stopped' }.state
+        }.from("running").to("stopped")
+      end
+      it "releases runner's thread pointer after async_shutdown_time seconds" do
+        timeout = async_shutdown_time + test_adjustment_time
+        expect { subject }.to change {
+          dv(instance).deferred_wait(timeout: timeout) {
+            _1.instance_variable_get(:@runner).nil?
+          }.instance_variable_get(:@runner)
+        }.from(instance_of(Thread)).to(nil)
+      end
+      it "removes runner's thread" do
+        subject
+        thread = instance.instance_variable_get(:@runner)
+        aggregate_failures do
+          expect(Thread.list).to include(thread)
+          sleep async_shutdown_time
+          expect(Thread.list).not_to include(thread)
+        end
+      end
+      it 'stops runners from processing further' do
+        subject
+        sleep async_shutdown_time
+        expect { sleep run_interval }.not_to change { perform_async_results.size }
       end
     end
   end

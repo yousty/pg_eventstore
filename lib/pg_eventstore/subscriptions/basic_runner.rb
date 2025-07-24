@@ -162,28 +162,34 @@ module PgEventstore
       synchronize do
         return self unless @state.running? || @state.dead?
 
-        @state.halting!
-        Thread.new do
-          stopping_at = Time.now.utc
-          halt = false
-          loop do
-            synchronize do
-              # Give the runner up to @async_shutdown_time seconds for graceful shutdown
-              @runner&.exit if Time.now.utc - stopping_at > @async_shutdown_time
+        begin
+          @state.halting!
+        ensure
+          Thread.new do
+            stopping_at = Time.now.utc
+            halt = false
+            loop do
+              synchronize do
+                # Give the runner up to @async_shutdown_time seconds for graceful shutdown
+                @runner&.exit if Time.now.utc - stopping_at > @async_shutdown_time
 
-              unless @runner&.alive?
-                @state.stopped!
+                unless @runner&.alive?
+                  @state.stopped!
+                  callbacks.run_callbacks(:after_runner_stopped)
+                end
+              ensure
+                next if @runner&.alive?
+
                 @runner = nil
-                callbacks.run_callbacks(:after_runner_stopped)
                 halt = true
               end
+              break if halt
+              sleep 0.1
             end
-            break if halt
-            sleep 0.1
           end
         end
-        self
       end
+      self
     end
 
     # Restores the runner after its death.
@@ -248,6 +254,7 @@ module PgEventstore
     # @return [void]
     def _start
       @state.running!
+    ensure
       @runner = Thread.new do
         recoverable do
           loop do
