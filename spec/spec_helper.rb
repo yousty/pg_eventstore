@@ -61,6 +61,7 @@ RSpec.configure do |config|
   config.before do
     REDIS.flushdb
     # Some tests reset default config, connection, etc. Thus, reconfigure a client before each test
+    PgEventstore.connection.shutdown
     ConfigHelper.reconfigure
     PgEventstore::TestHelpers.clean_up_db
   end

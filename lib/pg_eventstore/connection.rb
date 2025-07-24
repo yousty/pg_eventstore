@@ -77,6 +77,11 @@ module PgEventstore
       end
     end
 
+    # @return [void]
+    def shutdown
+      @pool.shutdown(&:close)
+    end
+
     private
 
     # @return [ConnectionPool]
