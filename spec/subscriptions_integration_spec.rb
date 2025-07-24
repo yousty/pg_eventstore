@@ -519,4 +519,76 @@ RSpec.describe 'Subscriptions integration' do
       end
     end
   end
+
+  describe 'recovering from connection errors' do
+    subject do
+      manager.start
+      publish_event.call
+      dv(processed_events).wait_until(timeout: 1) { _1.size == 1 }
+    end
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: 'My subs') }
+    let(:handler) do
+      proc { |event| processed_events.push(event) }
+    end
+    let(:processed_events) { [] }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
+    let(:publish_event) do
+      PgEventstore.configure(name: :stable_config) do |c|
+        c.pg_uri = ConfigHelper.test_db_uri
+      end
+      proc do
+        event = PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo')
+        PgEventstore.client(:stable_config).append_to_stream(stream, event)
+      end
+    end
+
+    let(:subscription_opts) { { retries_interval: 0 } }
+
+    let(:seconds_before_recovery) { 2 }
+    let(:seconds_before_disaster) { 1 }
+
+    around do |ex|
+      Thread.report_on_exception = false
+      # Simulate a sudden loss of connection to the database and its subsequent restoration
+      restore_job = nil
+      simulate_disconnect = Thread.new do
+        sleep seconds_before_disaster
+        PgEventstore.configure do |c|
+          c.pg_uri = "postgresql://localhost:1234/eventstore"
+        end
+        restore_job = Thread.new do
+          sleep seconds_before_recovery
+          publish_event.call
+          ConfigHelper.reconfigure
+        end
+      end
+      ex.run
+      simulate_disconnect.exit
+      restore_job&.exit
+      Thread.report_on_exception = true
+    end
+
+    before do
+      manager.subscribe('Sub 1', handler: handler, **subscription_opts)
+      stub_const("PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES", 1)
+    end
+
+    after do
+      manager.stop
+    end
+
+    it 'recovers a broken connection' do
+      subject
+      sleep seconds_before_disaster
+      aggregate_failures do
+        expect(processed_events.size).to eq(1)
+        expect(manager).not_to be_running
+        sleep seconds_before_recovery + PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES
+        expect(processed_events.size).to eq(2)
+        expect(manager).to be_running
+      end
+    end
+  end
 end
