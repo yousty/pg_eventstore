@@ -736,9 +736,7 @@ RSpec.describe PgEventstore::BasicRunner do
   end
 
   describe 'self-recovery' do
-    subject do
-      sleep 0.3
-    end
+    subject { sleep 0.4 }
 
     let(:before_restore_task) { double('Before runner restored') }
     let(:after_error_task) { double('After error happened') }
@@ -760,6 +758,7 @@ RSpec.describe PgEventstore::BasicRunner do
     let(:error) { StandardError.new("Regular") }
 
     let(:run_interval) { 0.1 }
+    let(:seconds_before_recovery) { 0.2 }
 
     let(:start_runner) do
       # #let does not play well with threads. Thus, additionally wrap async function into a proc to call it lazily later
@@ -799,7 +798,9 @@ RSpec.describe PgEventstore::BasicRunner do
       let(:recovery_strategies) do
         [
           DummyErrorRecovery.new(
-            seconds_before_recovery: 0.1, mocked_action: recovery_task, recoverable_message: error.message
+            seconds_before_recovery: seconds_before_recovery,
+            mocked_action: recovery_task,
+            recoverable_message: error.message
           )
         ]
       end
@@ -832,17 +833,23 @@ RSpec.describe PgEventstore::BasicRunner do
 
       let(:strategy1) do
         DummyErrorRecovery.new(
-          seconds_before_recovery: 0.1, mocked_action: recovery_task1, recoverable_message: 'Some error'
+          seconds_before_recovery: seconds_before_recovery,
+          mocked_action: recovery_task1,
+          recoverable_message: 'Some error'
         )
       end
       let(:strategy2) do
         DummyErrorRecovery.new(
-          seconds_before_recovery: 0.1, mocked_action: recovery_task2, recoverable_message: error.message
+          seconds_before_recovery: seconds_before_recovery,
+          mocked_action: recovery_task2,
+          recoverable_message: error.message
         )
       end
       let(:strategy3) do
         DummyErrorRecovery.new(
-          seconds_before_recovery: 0.1, mocked_action: recovery_task3, recoverable_message: error.message
+          seconds_before_recovery: seconds_before_recovery,
+          mocked_action: recovery_task3,
+          recoverable_message: error.message
         )
       end
 
@@ -880,10 +887,14 @@ RSpec.describe PgEventstore::BasicRunner do
     end
 
     context 'when error happens when starting the runner after recovery' do
+      subject { sleep 0.6 }
+
       let(:recovery_strategies) do
         [
           DummyErrorRecovery.new(
-            seconds_before_recovery: 0.1, mocked_action: recovery_task, recoverable_message: error.message
+            seconds_before_recovery: seconds_before_recovery,
+            mocked_action: recovery_task,
+            recoverable_message: error.message
           )
         ]
       end
