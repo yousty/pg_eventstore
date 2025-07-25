@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [1.13.0]
+
+- Introduce automatic subscriptions recovery from connection errors. This way if a subscription process loses the connection to the database - it will be trying to reconnect until the connection is restored.
+- Resolve ambiguity in usage of `PgEventstore.config` method. It now returns the frozen object.
+
 ## [1.12.0]
 
 - Introduce `#read_grouped` API method that allows to group events by type
