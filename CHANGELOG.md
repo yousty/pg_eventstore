@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.13.1]
+
+- Do not modify public methods arguments
+
 ## [1.13.0]
 
 - Introduce automatic subscriptions recovery from connection errors. This way if a subscription process loses the connection to the database - it will be trying to reconnect until the connection is restored.
