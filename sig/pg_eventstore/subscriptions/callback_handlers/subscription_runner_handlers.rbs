@@ -6,10 +6,6 @@ module PgEventstore
 
     def self.update_subscription_error: (PgEventstore::Subscription subscription, PgEventstore::WrappedException error) -> void
 
-    def self.restart_events_processor: (PgEventstore::Subscription subscription, _RestartTerminator? restart_terminator,
-        _FailedSubscriptionNotifier? failed_subscription_notifier, PgEventstore::EventsProcessor events_processor,
-        PgEventstore::WrappedException error) -> void
-
     def self.update_subscription_chunk_stats: (PgEventstore::Subscription subscription, Integer global_position) -> void
 
     def self.update_subscription_restarts: (PgEventstore::Subscription subscription) -> void

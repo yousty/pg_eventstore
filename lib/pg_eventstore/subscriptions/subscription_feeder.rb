@@ -3,6 +3,7 @@
 module PgEventstore
   # This class is responsible for starting/stopping all SubscriptionRunners. The background runner of it is responsible
   # for events pulling and feeding those SubscriptionRunners.
+  # @!visibility private
   class SubscriptionFeeder
     extend Forwardable
 
@@ -15,7 +16,11 @@ module PgEventstore
     # @param subscriptions_lifecycle [PgEventstore::SubscriptionsLifecycle]
     def initialize(config_name:, subscriptions_set_lifecycle:, subscriptions_lifecycle:)
       @config_name = config_name
-      @basic_runner = BasicRunner.new(0.2, 0)
+      @basic_runner = BasicRunner.new(
+        run_interval: 0.2,
+        async_shutdown_time: 0,
+        recovery_strategies: recovery_strategies(config_name, subscriptions_set_lifecycle)
+      )
       @subscriptions_set_lifecycle = subscriptions_set_lifecycle
       @subscriptions_lifecycle = subscriptions_lifecycle
       @commands_handler = CommandsHandler.new(@config_name, self, @subscriptions_lifecycle.runners)
@@ -71,10 +76,6 @@ module PgEventstore
         :after_runner_died, :before,
         SubscriptionFeederHandlers.setup_handler(:persist_error_info, @subscriptions_set_lifecycle)
       )
-      @basic_runner.define_callback(
-        :after_runner_died, :before,
-        SubscriptionFeederHandlers.setup_handler(:restart_runner, @subscriptions_set_lifecycle, @basic_runner)
-      )
 
       @basic_runner.define_callback(
         :process_async, :before,
@@ -106,6 +107,18 @@ module PgEventstore
         :before_runner_restored, :after,
         SubscriptionFeederHandlers.setup_handler(:update_subscriptions_set_restarts, @subscriptions_set_lifecycle)
       )
+    end
+
+    # @param config_name [Symbol]
+    # @param subscriptions_set_lifecycle [PgEventstore::SubscriptionsSetLifecycle]
+    # @return [Array<PgEventstore::RunnerRecoveryStrategy>]
+    def recovery_strategies(config_name, subscriptions_set_lifecycle)
+      [
+        RunnerRecoveryStrategies::RestoreConnection.new(config_name),
+        RunnerRecoveryStrategies::RestoreSubscriptionFeeder.new(
+          subscriptions_set_lifecycle: subscriptions_set_lifecycle
+        ),
+      ]
     end
   end
 end

@@ -177,52 +177,6 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
   end
 
-  describe '.restart_runner' do
-    subject { described_class.restart_runner(subscriptions_set_lifecycle, basic_runner, error) }
-
-    let(:subscriptions_set_lifecycle) do
-      PgEventstore::SubscriptionsSetLifecycle.new(
-        :default,
-        { name: 'Foo', max_restarts_number: 10, time_between_restarts: 0 }
-      )
-    end
-    let(:basic_runner) { PgEventstore::BasicRunner.new(0.1, 0) }
-    let(:error) { StandardError.new }
-
-    before do
-      should_raise = true
-      handler = proc do
-        if should_raise
-          should_raise = false
-          raise error
-        end
-      end
-      basic_runner.define_callback(:process_async, :before, handler)
-      basic_runner.start
-      sleep 0.2 # Wait until the runner dies
-    end
-
-    after do
-      basic_runner.stop_async.wait_for_finish
-    end
-
-    context 'when max number of restarts is not reached' do
-      it 'restarts the runner' do
-        expect { subject; sleep 0.1 }.to change { basic_runner.state }.from('dead').to('running')
-      end
-    end
-
-    context 'when max number of restarts has reached' do
-      before do
-        subscriptions_set_lifecycle.persisted_subscriptions_set.update(restart_count: 10)
-      end
-
-      it 'does not restart the runner' do
-        expect { subject; sleep 0.1 }.not_to change { basic_runner.state }
-      end
-    end
-  end
-
   describe '.ping_subscriptions_set' do
     subject { described_class.ping_subscriptions_set(subscriptions_set_lifecycle) }
 

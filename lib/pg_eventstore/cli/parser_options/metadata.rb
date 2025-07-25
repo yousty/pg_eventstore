@@ -3,6 +3,7 @@
 module PgEventstore
   module CLI
     module ParserOptions
+      # @!visibility private
       class Metadata
         include Extensions::OptionsExtension
 

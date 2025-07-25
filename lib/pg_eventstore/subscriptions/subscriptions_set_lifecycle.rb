@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # @!visibility private
   class SubscriptionsSetLifecycle
     # @return [Integer] number of seconds between heartbeat updates
     HEARTBEAT_INTERVAL = 10 # seconds

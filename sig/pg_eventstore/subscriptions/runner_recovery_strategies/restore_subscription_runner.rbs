@@ -1,0 +1,17 @@
+module PgEventstore
+  module RunnerRecoveryStrategies
+    class RestoreSubscriptionRunner
+      include RunnerRecoveryStrategy
+
+      @failed_subscription_notifier: _FailedSubscriptionNotifier?
+      @restart_terminator: _RestartTerminator?
+      @subscription: Subscription
+
+      def initialize: (
+          subscription: Subscription,
+          restart_terminator: _RestartTerminator?,
+          failed_subscription_notifier: _FailedSubscriptionNotifier?
+        )-> untyped
+    end
+  end
+end

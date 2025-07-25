@@ -2,6 +2,7 @@
 
 module PgEventstore
   module Extensions
+    # @!visibility private
     module CallbackHandlersExtension
       def self.included(klass)
         klass.extend(ClassMethods)

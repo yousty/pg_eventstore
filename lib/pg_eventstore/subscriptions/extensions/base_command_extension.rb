@@ -2,6 +2,7 @@
 
 module PgEventstore
   module Extensions
+    # @!visibility private
     module BaseCommandExtension
       def self.included(klass)
         super

@@ -5,6 +5,7 @@ require 'base64'
 
 module PgEventstore
   module Web
+    # @!visibility private
     class Application < Sinatra::Base
       # @return [Symbol]
       DEFAULT_ADMIN_UI_CONFIG = :admin_web_ui

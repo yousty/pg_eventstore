@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # @!visibility private
   class SubscriptionFeederHandlers
     include Extensions::CallbackHandlersExtension
 
@@ -37,20 +38,6 @@ module PgEventstore
         subscriptions_set_lifecycle.persisted_subscriptions_set.update(
           last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc
         )
-      end
-
-      # @param subscriptions_set_lifecycle [PgEventstore::SubscriptionsSetLifecycle]
-      # @param basic_runner [PgEventstore::BasicRunner]
-      # @param _error [StandardError]
-      # @return [void]
-      def restart_runner(subscriptions_set_lifecycle, basic_runner, _error)
-        subscriptions_set = subscriptions_set_lifecycle.persisted_subscriptions_set
-        return if subscriptions_set.restart_count >= subscriptions_set.max_restarts_number
-
-        Thread.new do
-          sleep subscriptions_set.time_between_restarts
-          basic_runner.restore
-        end
       end
 
       # @param subscriptions_set_lifecycle [PgEventstore::SubscriptionsSetLifecycle]

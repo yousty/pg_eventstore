@@ -3,6 +3,8 @@
 require 'forwardable'
 require_relative 'runner_state'
 require_relative 'basic_runner'
+require_relative 'runner_recovery_strategy'
+require_relative 'runner_recovery_strategies'
 require_relative 'subscription'
 require_relative 'events_processor'
 require_relative 'subscription_handler_performance'
@@ -102,11 +104,11 @@ module PgEventstore
       runner = SubscriptionRunner.new(
         stats: SubscriptionHandlerPerformance.new,
         events_processor: EventsProcessor.new(
-          create_raw_event_handler(middlewares, handler), graceful_shutdown_timeout: graceful_shutdown_timeout
+          create_raw_event_handler(middlewares, handler),
+          graceful_shutdown_timeout: graceful_shutdown_timeout,
+          recovery_strategies: recovery_strategies(subscription, restart_terminator, failed_subscription_notifier)
         ),
         subscription: subscription,
-        restart_terminator: restart_terminator,
-        failed_subscription_notifier: failed_subscription_notifier
       )
 
       @subscriptions_lifecycle.runners.push(runner)
@@ -169,6 +171,21 @@ module PgEventstore
       return config.middlewares.values unless middlewares
 
       config.middlewares.slice(*middlewares).values
+    end
+
+    # @param subscription [PgEventstore::Subscription]
+    # @param restart_terminator [#call, nil]
+    # @param failed_subscription_notifier [#call, nil]
+    # @return [Array<PgEventstore::RunnerRecoveryStrategy>]
+    def recovery_strategies(subscription, restart_terminator, failed_subscription_notifier)
+      [
+        RunnerRecoveryStrategies::RestoreConnection.new(config_name),
+        RunnerRecoveryStrategies::RestoreSubscriptionRunner.new(
+          subscription: subscription,
+          restart_terminator: restart_terminator,
+          failed_subscription_notifier: failed_subscription_notifier,
+        ),
+      ]
     end
   end
 end

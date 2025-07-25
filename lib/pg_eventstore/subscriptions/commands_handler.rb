@@ -10,8 +10,6 @@ module PgEventstore
   class CommandsHandler
     extend Forwardable
 
-    # @return [Integer] the delay in seconds between runner restarts
-    RESTART_DELAY = 5
     # @return [Integer] seconds, how often to check for new commands
     PULL_INTERVAL = 1
 
@@ -24,7 +22,11 @@ module PgEventstore
       @config_name = config_name
       @subscription_feeder = subscription_feeder
       @runners = runners
-      @basic_runner = BasicRunner.new(PULL_INTERVAL, 0)
+      @basic_runner = BasicRunner.new(
+        run_interval: PULL_INTERVAL,
+        async_shutdown_time: 0,
+        recovery_strategies: [RunnerRecoveryStrategies::RestoreConnection.new(config_name)]
+      )
       attach_runner_callbacks
     end
 
@@ -38,11 +40,6 @@ module PgEventstore
       @basic_runner.define_callback(
         :process_async, :before,
         CommandsHandlerHandlers.setup_handler(:process_runners_commands, @config_name, @runners, @subscription_feeder)
-      )
-
-      @basic_runner.define_callback(
-        :after_runner_died, :before,
-        CommandsHandlerHandlers.setup_handler(:restore_runner, @basic_runner, RESTART_DELAY)
       )
     end
   end

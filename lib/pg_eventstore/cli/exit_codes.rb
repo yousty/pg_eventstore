@@ -2,6 +2,7 @@
 
 module PgEventstore
   module CLI
+    # @!visibility private
     module ExitCodes
       # @return [Integer]
       SUCCESS = 0

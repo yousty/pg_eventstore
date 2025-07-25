@@ -4,6 +4,7 @@ module PgEventstore
   module CLI
     module Commands
       module CallbackHandlers
+        # @!visibility private
         class StartCmdHandlers
           include Extensions::CallbackHandlersExtension
 

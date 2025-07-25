@@ -2,6 +2,7 @@
 
 module PgEventstore
   module CLI
+    # @!visibility private
     class WaitForSubscriptionsSetShutdown
       class << self
         def wait_for_shutdown(...)

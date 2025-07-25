@@ -1,9 +1,16 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::BasicRunner do
-  let(:instance) { described_class.new(run_interval, async_shutdown_time) }
+  let(:instance) do
+    described_class.new(
+      run_interval: run_interval,
+      async_shutdown_time: async_shutdown_time,
+      recovery_strategies: recovery_strategies
+    )
+  end
   let(:run_interval) { 1 }
   let(:async_shutdown_time) { 1 }
+  let(:recovery_strategies) { [] }
 
   describe 'instance' do
     subject { instance }
@@ -170,6 +177,31 @@ RSpec.describe PgEventstore::BasicRunner do
         expect(before_cbx_task).not_to have_received(:run)
       end
     end
+
+    describe 'error in :change_state callback' do
+      subject do
+        super()
+      rescue error_class
+      end
+
+      let(:error_class) { Class.new(StandardError) }
+
+      before do
+        should_raise = true
+        instance.define_callback(
+          :change_state, :before,
+          proc {
+            if should_raise
+              should_raise = false
+              raise error_class, "That's unexpected!"
+            end
+          }
+        )
+        callbacks_definitions
+      end
+
+      it_behaves_like 'asynchronous execution'
+    end
   end
 
   describe '#stop' do
@@ -297,94 +329,219 @@ RSpec.describe PgEventstore::BasicRunner do
   describe '#stop_async' do
     subject { instance.stop_async }
 
-    let(:after_stopped_task) { double('After runner is stopped') }
-    let(:perform_async_results) { [] }
-    let(:run_interval) { 0.2 }
     let(:async_shutdown_time) { 0.5 }
-    let(:callbacks_definitions) do
-      instance.define_callback(:after_runner_stopped, :before, proc { after_stopped_task.run })
-      instance.define_callback(:process_async, :before, proc { perform_async_results.push(:the_result) })
-    end
-
-    before do
-      allow(after_stopped_task).to receive(:run)
-    end
+    let(:run_interval) { 0.2 }
 
     after do
       instance.wait_for_finish
     end
 
-    context 'when state is "initial"' do
-      it 'does not spawn another async job to stop the runner' do
-        expect { subject }.not_to change { Thread.list }
+    describe 'normal execution' do
+      let(:after_stopped_task) { double('After runner is stopped') }
+      let(:perform_async_results) { [] }
+      let(:callbacks_definitions) do
+        instance.define_callback(:after_runner_stopped, :before, proc { after_stopped_task.run })
+        instance.define_callback(:process_async, :before, proc { perform_async_results.push(:the_result) })
       end
-      it 'change the state to "halting"' do
-        expect { subject }.not_to change { instance.state }
-      end
-    end
 
-    context 'when state is "stopped"' do
       before do
-        instance.start.stop
-        dv(instance).wait_until(timeout: 0.2) { _1.state == 'stopped' }
+        allow(after_stopped_task).to receive(:run)
       end
 
-      it 'does not spawn another async job to stop the runner' do
-        expect { subject }.not_to change { Thread.list }
+      context 'when state is "initial"' do
+        it 'does not spawn another async job to stop the runner' do
+          expect { subject }.not_to change { Thread.list }
+        end
+        it 'change the state to "halting"' do
+          expect { subject }.not_to change { instance.state }
+        end
       end
-      it 'change the state to "halting"' do
-        expect { subject }.not_to change { instance.state }
+
+      context 'when state is "stopped"' do
+        before do
+          instance.start.stop
+          dv(instance).wait_until(timeout: 0.2) { _1.state == 'stopped' }
+        end
+
+        it 'does not spawn another async job to stop the runner' do
+          expect { subject }.not_to change { Thread.list }
+        end
+        it 'change the state to "halting"' do
+          expect { subject }.not_to change { instance.state }
+        end
+      end
+
+      context 'when state is "hating"' do
+        before do
+          instance.start.stop_async
+        end
+
+        it 'does not spawn another async job to stop the runner' do
+          expect { subject }.not_to change { Thread.list }
+        end
+        it 'change the state to "halting"' do
+          expect { subject }.not_to change { instance.state }
+        end
+      end
+
+      context 'when state is "running"' do
+        # Adds some extra time needed ruby to apply changes from background thread to current thread
+        let(:test_adjustment_time) { 0.2 }
+
+        before do
+          callbacks_definitions
+          instance.start
+          dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
+        end
+
+        it 'spawns another thread to stop the current runner' do
+          expect { subject }.to change { Thread.list.size }.by(1)
+        end
+        it 'executes :after_runner_stopped action asynchronous' do
+          subject
+          aggregate_failures do
+            expect(after_stopped_task).not_to have_received(:run)
+            sleep async_shutdown_time + test_adjustment_time
+            expect(after_stopped_task).to have_received(:run)
+          end
+        end
+        it 'changes the state to "halting"' do
+          expect { subject }.to change { instance.state }.from("running").to("halting")
+        end
+        it 'changes the state to "stopped" after async_shutdown_time seconds' do
+          timeout = async_shutdown_time + test_adjustment_time
+          expect { subject }.to change {
+            dv(instance).deferred_wait(timeout: timeout) { _1.state == 'stopped' }.state
+          }.from("running").to("stopped")
+        end
+        it "releases runner's thread pointer after async_shutdown_time seconds" do
+          timeout = async_shutdown_time + test_adjustment_time
+          expect { subject }.to change {
+            dv(instance).deferred_wait(timeout: timeout) {
+              _1.instance_variable_get(:@runner).nil?
+            }.instance_variable_get(:@runner)
+          }.from(instance_of(Thread)).to(nil)
+        end
+        it "removes runner's thread" do
+          subject
+          thread = instance.instance_variable_get(:@runner)
+          aggregate_failures do
+            expect(Thread.list).to include(thread)
+            sleep async_shutdown_time
+            expect(Thread.list).not_to include(thread)
+          end
+        end
+        it 'stops runners from processing further' do
+          subject
+          sleep async_shutdown_time
+          expect { sleep run_interval }.not_to change { perform_async_results.size }
+        end
+      end
+
+      context 'when state is "dead"' do
+        before do
+          callbacks_definitions
+          instance.define_callback(:process_async, :before, proc { raise "You shall not pass!" })
+          instance.start
+          # The thread which spawns to stop the current runner is to fast. It uses #loop method internally - slow it down
+          # a bit to give tests the time to perform assertions
+          allow(instance).to receive(:loop).and_wrap_original do |orig_method, *args, **kwargs, &blk|
+            sleep 0.2
+            orig_method.call(*args, **kwargs, &blk)
+          end
+          instance.wait_for_finish # let the runner die
+        end
+
+        it 'spawns another thread to stop the current runner' do
+          expect { subject }.to change { Thread.list.size }.by(1)
+        end
+        it 'executes :after_runner_stopped action asynchronous' do
+          subject
+          aggregate_failures do
+            expect(after_stopped_task).not_to have_received(:run)
+            sleep async_shutdown_time
+            expect(after_stopped_task).to have_received(:run)
+          end
+        end
+        it 'changes the state to "halting"' do
+          expect { subject }.to change { instance.state }.from("dead").to("halting")
+        end
+        it 'changes the state to "stopped" after async_shutdown_time seconds' do
+          expect { subject }.to change {
+            dv(instance).deferred_wait(timeout: async_shutdown_time) { _1.state == 'stopped' }.state
+          }.from('dead').to('stopped')
+        end
+        it "releases runner's thread pointer after async_shutdown_time seconds" do
+          expect { subject }.to change {
+            dv(instance).deferred_wait(timeout: async_shutdown_time) {
+              _1.instance_variable_get(:@runner).nil?
+            }.instance_variable_get(:@runner)
+          }.from(instance_of(Thread)).to(nil)
+        end
+        it "does not include runner's thread in the threads list" do
+          subject
+          thread = instance.instance_variable_get(:@runner)
+          expect(Thread.list).not_to include(thread)
+        end
       end
     end
 
-    context 'when state is "hating"' do
-      before do
-        instance.start.stop_async
+    describe 'error in :change_state callback' do
+      subject do
+        super()
+      rescue error_class
       end
 
-      it 'does not spawn another async job to stop the runner' do
-        expect { subject }.not_to change { Thread.list }
-      end
-      it 'change the state to "halting"' do
-        expect { subject }.not_to change { instance.state }
-      end
-    end
+      let(:after_stopped_task) { double('After runner is stopped') }
+      let(:perform_async_results) { [] }
 
-    context 'when state is "running"' do
+      let(:error_class) { Class.new(StandardError) }
+
       # Adds some extra time needed ruby to apply changes from background thread to current thread
       let(:test_adjustment_time) { 0.2 }
 
       before do
-        callbacks_definitions
+        allow(after_stopped_task).to receive(:run)
+        instance.define_callback(:after_runner_stopped, :before, proc { after_stopped_task.run })
+        instance.define_callback(:process_async, :before, proc { perform_async_results.push(:the_result) })
         instance.start
+        instance.define_callback(
+          :change_state, :before,
+          proc {
+            # Disable stderr outputs
+            Thread.report_on_exception = false
+            raise error_class, "That's unexpected!"
+          }
+        )
         dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       end
 
       it 'spawns another thread to stop the current runner' do
         expect { subject }.to change { Thread.list.size }.by(1)
       end
-      it 'executes :after_runner_stopped action asynchronous' do
+      it 'does not executes :after_runner_stopped action' do
         subject
-        aggregate_failures do
-          expect(after_stopped_task).not_to have_received(:run)
-          sleep async_shutdown_time + test_adjustment_time
-          expect(after_stopped_task).to have_received(:run)
-        end
+        dv(instance).wait_until(timeout: async_shutdown_time) { instance.stopped? }
+        expect(after_stopped_task).not_to have_received(:run)
       end
       it 'changes the state to "halting"' do
         expect { subject }.to change { instance.state }.from("running").to("halting")
       end
       it 'changes the state to "stopped" after async_shutdown_time seconds' do
-        expect { subject; sleep async_shutdown_time + test_adjustment_time }.to change {
-          instance.state
+        timeout = async_shutdown_time + test_adjustment_time
+        expect { subject }.to change {
+          dv(instance).deferred_wait(timeout: timeout) { _1.state == 'stopped' }.state
         }.from("running").to("stopped")
       end
-      it "releases runner's thread after async_shutdown_time seconds" do
-        expect { subject; sleep async_shutdown_time + test_adjustment_time }.to change {
-          instance.instance_variable_get(:@runner)
+      it "releases runner's thread pointer after async_shutdown_time seconds" do
+        timeout = async_shutdown_time + test_adjustment_time
+        expect { subject }.to change {
+          dv(instance).deferred_wait(timeout: timeout) {
+            _1.instance_variable_get(:@runner).nil?
+          }.instance_variable_get(:@runner)
         }.from(instance_of(Thread)).to(nil)
       end
-      it 'stops runners from processing further' do
+      it "removes runner's thread" do
         subject
         thread = instance.instance_variable_get(:@runner)
         aggregate_failures do
@@ -393,51 +550,10 @@ RSpec.describe PgEventstore::BasicRunner do
           expect(Thread.list).not_to include(thread)
         end
       end
-    end
-
-    context 'when state is "dead"' do
-      before do
-        callbacks_definitions
-        instance.define_callback(:process_async, :before, proc { raise "You shall not pass!" })
-        instance.start
-        # The thread which spawns to stop the current runner is to fast. It uses #loop method internally - slow it down
-        # a bit to give tests the time to perform assertions
-        allow(instance).to receive(:loop).and_wrap_original do |orig_method, *args, **kwargs, &blk|
-          sleep 0.2
-          orig_method.call(*args, **kwargs, &blk)
-        end
-        instance.wait_for_finish # let the runner die
-      end
-
-      it 'spawns another thread to stop the current runner' do
-        expect { subject }.to change { Thread.list.size }.by(1)
-      end
-      it 'executes :after_runner_stopped action asynchronous' do
-        subject
-        aggregate_failures do
-          expect(after_stopped_task).not_to have_received(:run)
-          sleep async_shutdown_time
-          expect(after_stopped_task).to have_received(:run)
-        end
-      end
-      it 'changes the state to "halting"' do
-        expect { subject }.to change { instance.state }.from("dead").to("halting")
-      end
-      it 'changes the state to "stopped" after async_shutdown_time seconds' do
-        expect { subject }.to change {
-          dv(instance).deferred_wait(timeout: async_shutdown_time) { _1.state == 'stopped' }.state
-        }.from('dead').to('stopped')
-      end
-      it "releases runner's thread after async_shutdown_time seconds" do
-        expect { subject; sleep async_shutdown_time }.to change {
-          instance.instance_variable_get(:@runner)
-        }.from(instance_of(Thread)).to(nil)
-      end
       it 'stops runners from processing further' do
         subject
-        thread = instance.instance_variable_get(:@runner)
-        sleep 0.1
-        expect(Thread.list).not_to include(thread)
+        sleep async_shutdown_time
+        expect { sleep run_interval }.not_to change { perform_async_results.size }
       end
     end
   end
@@ -721,6 +837,206 @@ RSpec.describe PgEventstore::BasicRunner do
 
       it 'raises error' do
         expect { subject }.to raise_error(KeyError, 'key not found: :foo')
+      end
+    end
+  end
+
+  describe 'self-recovery' do
+    subject { sleep 0.4 }
+
+    let(:before_restore_task) { double('Before runner restored') }
+    let(:after_error_task) { double('After error happened') }
+    let(:callbacks_definitions) do
+      instance.define_callback(:before_runner_restored, :before, proc { before_restore_task.run })
+      instance.define_callback(:process_async, :before, async_action)
+      instance.define_callback(:after_runner_died, :before, proc { |error| after_error_task.run(error) })
+    end
+    let(:async_action) do
+      should_raise = true
+      proc do
+        if should_raise
+          should_raise = false
+          raise error
+        end
+      end
+    end
+
+    let(:error) { StandardError.new("Regular") }
+
+    let(:run_interval) { 0.1 }
+    let(:seconds_before_recovery) { 0.2 }
+
+    let(:start_runner) do
+      # #let does not play well with threads. Thus, additionally wrap async function into a proc to call it lazily later
+      proc do
+        instance.start
+        dv(instance).wait_until(timeout: run_interval) { _1.state == 'dead' }
+      end
+    end
+
+    before do
+      allow(before_restore_task).to receive(:run)
+      allow(after_error_task).to receive(:run)
+      callbacks_definitions
+    end
+
+    after do
+      instance.stop_async.wait_for_finish
+    end
+
+    context 'when there is no recovery strategy from the given error' do
+      before { start_runner.call }
+
+      it 'does not recover the error' do
+        expect { subject }.not_to change { instance.state }.from('dead')
+      end
+      it 'runs :after_runner_died callbacks' do
+        subject
+        expect(after_error_task).to have_received(:run).with(error)
+      end
+      it 'does not run :before_runner_restored callback' do
+        subject
+        expect(before_restore_task).not_to have_received(:run)
+      end
+    end
+
+    context 'when there is a recovery strategy from the given error' do
+      let(:recovery_strategies) do
+        [
+          DummyErrorRecovery.new(
+            seconds_before_recovery: seconds_before_recovery,
+            mocked_action: recovery_task,
+            recoverable_message: error.message
+          )
+        ]
+      end
+      let(:recovery_task) { double('Additional recovery steps') }
+
+      before do
+        allow(recovery_task).to receive(:run)
+        start_runner.call
+      end
+
+      it 'runs :after_runner_died callbacks' do
+        subject
+        expect(after_error_task).to have_received(:run).with(error)
+      end
+      it 'runs :before_runner_restored callback' do
+        subject
+        expect(before_restore_task).to have_received(:run)
+      end
+      it 'recovers from the error' do
+        expect { subject }.to change { instance.state }.from('dead').to('running')
+      end
+      it 'runs recovery function' do
+        subject
+        expect(recovery_task).to have_received(:run)
+      end
+    end
+
+    context 'when there are several recovery strategies' do
+      let(:recovery_strategies) { [strategy1, strategy2, strategy3] }
+
+      let(:strategy1) do
+        DummyErrorRecovery.new(
+          seconds_before_recovery: seconds_before_recovery,
+          mocked_action: recovery_task1,
+          recoverable_message: 'Some error'
+        )
+      end
+      let(:strategy2) do
+        DummyErrorRecovery.new(
+          seconds_before_recovery: seconds_before_recovery,
+          mocked_action: recovery_task2,
+          recoverable_message: error.message
+        )
+      end
+      let(:strategy3) do
+        DummyErrorRecovery.new(
+          seconds_before_recovery: seconds_before_recovery,
+          mocked_action: recovery_task3,
+          recoverable_message: error.message
+        )
+      end
+
+      let(:recovery_task1) { double('Additional recovery steps 1') }
+      let(:recovery_task2) { double('Additional recovery steps 2') }
+      let(:recovery_task3) { double('Additional recovery steps 3') }
+
+      before do
+        allow(recovery_task1).to receive(:run)
+        allow(recovery_task2).to receive(:run)
+        allow(recovery_task3).to receive(:run)
+        start_runner.call
+        #p "here"
+      end
+
+      it 'runs :after_runner_died callbacks' do
+        subject
+        expect(after_error_task).to have_received(:run).with(error)
+      end
+      it 'runs :before_runner_restored callback' do
+        subject
+        expect(before_restore_task).to have_received(:run)
+      end
+      it 'recovers from the error' do
+        expect { subject }.to change { instance.state }.from('dead').to('running')
+      end
+      it 'runs recovery function of first suitable strategy' do
+        subject
+        aggregate_failures do
+          expect(recovery_task1).not_to have_received(:run)
+          expect(recovery_task2).to have_received(:run)
+          expect(recovery_task3).not_to have_received(:run)
+        end
+      end
+    end
+
+    context 'when error happens when starting the runner after recovery' do
+      subject { sleep 0.6 }
+
+      let(:recovery_strategies) do
+        [
+          DummyErrorRecovery.new(
+            seconds_before_recovery: seconds_before_recovery,
+            mocked_action: recovery_task,
+            recoverable_message: error.message
+          )
+        ]
+      end
+      let(:recovery_task) { double('Additional recovery steps') }
+
+      let(:deadly_change_state) do
+        should_raise = true
+        proc do
+          if should_raise
+            should_raise = false
+            raise error
+          end
+        end
+      end
+
+      before do
+        allow(recovery_task).to receive(:run)
+        start_runner.call
+        # This will trigger exception first time it is called inside a restore action
+        instance.define_callback(:change_state, :before, deadly_change_state)
+      end
+
+      it 'runs :after_runner_died callbacks' do
+        subject
+        expect(after_error_task).to have_received(:run).with(error).twice
+      end
+      it 'runs :before_runner_restored callback' do
+        subject
+        expect(before_restore_task).to have_received(:run).twice
+      end
+      it 'recovers from the error' do
+        expect { subject }.to change { instance.state }.from('dead').to('running')
+      end
+      it 'runs recovery function' do
+        subject
+        expect(recovery_task).to have_received(:run).twice
       end
     end
   end

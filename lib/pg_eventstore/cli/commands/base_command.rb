@@ -3,7 +3,9 @@
 module PgEventstore
   module CLI
     module Commands
+      # @!visibility private
       class BaseCommand
+        # @!visibility private
         module BaseCommandActions
           # @return [Integer] exit code
           def call

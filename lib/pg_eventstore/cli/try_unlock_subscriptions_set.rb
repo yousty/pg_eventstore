@@ -5,6 +5,7 @@ require_relative 'wait_for_subscriptions_set_shutdown'
 
 module PgEventstore
   module CLI
+    # @!visibility private
     class TryUnlockSubscriptionsSet
       class << self
         def try_unlock(...)

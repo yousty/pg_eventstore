@@ -2,6 +2,7 @@
 
 module PgEventstore
   module CLI
+    # @!visibility private
     class TryToDeleteSubscriptionsSet
       class << self
         def try_to_delete(...)
@@ -30,7 +31,7 @@ module PgEventstore
         # Potentially CommandsHandler can be dead exactly at the same moment we expect it to process "Ping" command.
         # Wait for potential recover plus run interval and plus another second to allow potential processing of
         # "Ping" command. "Ping" command comes in prio, so it is guaranteed it will be processed as a first command.
-        sleep CommandsHandler::RESTART_DELAY + CommandsHandler::PULL_INTERVAL + 1
+        sleep RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES + CommandsHandler::PULL_INTERVAL + 1
         if subscriptions_set_commands_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: cmd_name)
           # "Ping" command wasn't consumed. Related process must be dead.
           subscriptions_set_queries.delete(subscriptions_set_id)

@@ -17,7 +17,9 @@ RSpec.describe PgEventstore::CLI::TryUnlockSubscriptionsSet do
       before do
         stub_const("PgEventstore::CommandsHandler::RESTART_DELAY", 0)
         stub_const("PgEventstore::CommandsHandler::PULL_INTERVAL", 0)
-        PgEventstore.config.subscription_graceful_shutdown_timeout = 0
+        PgEventstore.configure do |c|
+          c.subscription_graceful_shutdown_timeout = 0
+        end
       end
 
       around do |example|
@@ -31,10 +33,6 @@ RSpec.describe PgEventstore::CLI::TryUnlockSubscriptionsSet do
         end
         example.run
         thread.exit
-      end
-
-      after do
-        PgEventstore.send(:init_variables)
       end
 
       it { is_expected.to eq(false) }

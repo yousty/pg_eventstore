@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # @!visibility private
   class PgConnection < PG::Connection
     def exec(sql)
       log(sql, [])

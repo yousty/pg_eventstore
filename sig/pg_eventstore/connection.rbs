@@ -12,6 +12,8 @@ module PgEventstore
     # _@param_ `pool_timeout` — Connection pool timeout in seconds
     def initialize: (uri: String, ?pool_size: Integer, ?pool_timeout: Integer) -> void
 
+    def shutdown: -> untyped
+
     def with: () { (PG::Connection connection) -> untyped } -> untyped
 
     def init_pool: () -> ConnectionPool[untyped]

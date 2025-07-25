@@ -101,11 +101,15 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
 
     context 'when middleware is registered' do
       before do
-        PgEventstore.config.middlewares = { dummy: DummyMiddleware.new }
+        PgEventstore.configure do |c|
+          c.middlewares = { dummy: DummyMiddleware.new }
+        end
       end
 
       after do
-        PgEventstore.config.middlewares = {}
+        PgEventstore.configure do |c|
+          c.middlewares = {}
+        end
       end
 
       it 'recognizes it' do

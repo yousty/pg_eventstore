@@ -111,49 +111,4 @@ RSpec.describe PgEventstore::CommandsHandler do
       end
     end
   end
-
-  describe 'auto restart' do
-    subject { instance.start }
-
-    before do
-      stub_const("#{described_class}::RESTART_DELAY", 1)
-      should_raise = true
-      allow(PgEventstore::CommandsHandlerHandlers).to receive(:process_feeder_commands).and_wrap_original do |original_method, *args, **kwargs, &blk|
-        if should_raise
-          should_raise = false
-          raise "Something went wrong!"
-        end
-        original_method.call(*args, **kwargs, &blk)
-      end
-    end
-
-    after do
-      instance.stop_async.wait_for_finish
-    end
-
-    it 'restarts the runner after RESTART_DELAY seconds' do
-      subject
-      aggregate_failures do
-        expect(instance.state).to eq("running")
-        sleep described_class::PULL_INTERVAL + 0.2 # wait for runner to run async action and fail afterwards
-        expect(instance.state).to eq("dead")
-        sleep described_class::RESTART_DELAY
-        expect(instance.state).to eq("running")
-      end
-    end
-
-    describe 'error output' do
-      before do
-        PgEventstore.logger = Logger.new(STDOUT)
-      end
-
-      after do
-        PgEventstore.logger = nil
-      end
-
-      it 'outputs the information about error' do
-        expect { subject; sleep 1.2 }.to output(/Error occurred:/).to_stdout_from_any_process
-      end
-    end
-  end
 end

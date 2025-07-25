@@ -13,10 +13,6 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       end
     end
 
-    after do
-      PgEventstore.send(:init_variables)
-    end
-
     context 'when admin web ui config is defined' do
       before do
         PgEventstore.configure(name: described_class::DEFAULT_ADMIN_UI_CONFIG) do |config|
@@ -249,10 +245,6 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         end
       end
 
-      after do
-        PgEventstore.send(:init_variables)
-      end
-
       it 'does not include unescaped content' do
         subject
         expect(last_response.body).not_to include('<script xss>')
@@ -348,10 +340,6 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     subject { post '/change_config', params }
 
     let(:params) { { config: :some_config } }
-
-    after do
-      PgEventstore.send(:init_variables)
-    end
 
     context 'when config is recognizable' do
       before do

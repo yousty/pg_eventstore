@@ -2,6 +2,7 @@
 
 module PgEventstore
   module Extensions
+    # @!visibility private
     module CommandClassLookupExtension
       # @param cmd_name [String, Symbol]
       # @return [Class]
