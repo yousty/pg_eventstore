@@ -82,7 +82,7 @@ module PgEventstore
         # @return [Array<String>]
         def extract_event_types_filter(options)
           options in { filter: { event_types: Array => event_types } }
-          event_types&.select! do
+          event_types = event_types&.select do
             _1.is_a?(String)
           end
           event_types || []
