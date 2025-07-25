@@ -28,14 +28,10 @@ module PgEventstore
 
     def read_grouped: (Stream stream, ?options: Hash[untyped, untyped], ?middlewares: ::Array[::Symbol]?) -> ::Array[PgEventstore::Event]
 
-    # _@param_ `stream`
-    #
-    # _@param_ `options` — request options
-    #
-    # _@param_ `middlewares`
-    #
-    # _@return_ — enumerator will yield PgEventstore::Event
-    def read_paginated: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[::Symbol]?) -> ::Enumerator[Array[PgEventstore::Event], void]
+    # Temporary skip RBS checks of this method. It doesn't play well with Enumerator under certain circumstances
+    %a{rbs:test:skip} def read_paginated: (
+        PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped], ?middlewares: ::Array[::Symbol]?
+      ) -> ::Enumerator[Array[PgEventstore::Event], void]
 
     # _@param_ `stream`
     #
