@@ -30,13 +30,16 @@ module PgEventstore
 
       helpers(Paginator::Helpers, Subscriptions::Helpers) do
         # @return [Array<Hash>, nil]
+        # rubocop:disable Style/HashConversion
         def streams_filter
           streams = QueryBuilders::EventsFiltering.extract_streams_filter(params)
-          streams = streams.select { _1 in { context: String, stream_name: String, stream_id: String } }.map do
-            Hash[_1.reject { |_, value| value == '' }].transform_keys(&:to_sym)
+          streams = streams.select { _1 in { context: String, stream_name: String, stream_id: String } }
+          streams = streams.map do |stream_attrs|
+            Hash[stream_attrs.reject { |_, value| value == '' }].transform_keys(&:to_sym)
           end
           streams.reject(&:empty?)
         end
+        # rubocop:enable Style/HashConversion
 
         # @return [String, nil]
         def system_stream

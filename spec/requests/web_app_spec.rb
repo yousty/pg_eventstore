@@ -237,7 +237,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     describe 'XSS protection in config name' do
       let(:params) { { config: config_name } }
-      let(:config_name) { :"<script xss>" }
+      let(:config_name) { :'<script xss>' }
 
       before do
         PgEventstore.configure(name: config_name) do |config|

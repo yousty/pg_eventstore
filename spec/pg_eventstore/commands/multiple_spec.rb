@@ -76,7 +76,7 @@ RSpec.describe PgEventstore::Commands::Multiple do
       iterations_number.times.flat_map do |i|
         patterns.values.map do |pattern|
           Thread.new do
-            sleep 0.1 + i / 10.0
+            sleep 0.1 + (i / 10.0)
             instance.call do
               pattern.group_by { |h| h[:stream] }.each do |stream, attrs|
                 PgEventstore.client.append_to_stream(stream, attrs.map { |h| h[:event] })

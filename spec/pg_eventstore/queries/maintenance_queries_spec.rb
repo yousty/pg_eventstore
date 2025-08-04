@@ -117,7 +117,7 @@ RSpec.describe PgEventstore::MaintenanceQueries do
         event = PgEventstore.client.append_to_stream(stream, event)
         # Use custom class and custom stream_revision to show that an event attributes are grabbed from the db and the
         # default event class is used to deserialize those attributes
-        event_class.new(**event.options_hash.merge(stream_revision: 10))
+        event_class.new(**event.options_hash, stream_revision: 10)
       end
       let(:event_class) { Class.new(PgEventstore::Event) }
       let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }

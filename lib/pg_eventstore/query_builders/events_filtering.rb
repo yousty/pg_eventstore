@@ -82,9 +82,7 @@ module PgEventstore
         # @return [Array<String>]
         def extract_event_types_filter(options)
           options in { filter: { event_types: Array => event_types } }
-          event_types = event_types&.select do
-            _1.is_a?(String)
-          end
+          event_types = event_types&.select { _1.is_a?(String) }
           event_types || []
         end
 
@@ -92,10 +90,10 @@ module PgEventstore
         # @return [Array<Hash[Symbol, String]>]
         def extract_streams_filter(options)
           options in { filter: { streams: Array => streams } }
-          streams = streams&.map do
-            _1 in { context: String | NilClass => context }
-            _1 in { stream_name: String | NilClass => stream_name }
-            _1 in { stream_id: String | NilClass => stream_id }
+          streams = streams&.map do |stream_attrs|
+            stream_attrs in { context: String | NilClass => context }
+            stream_attrs in { stream_name: String | NilClass => stream_name }
+            stream_attrs in { stream_id: String | NilClass => stream_id }
             { context: context, stream_name: stream_name, stream_id: stream_id }
           end
           streams || []

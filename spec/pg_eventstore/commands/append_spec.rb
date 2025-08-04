@@ -372,15 +372,15 @@ RSpec.describe PgEventstore::Commands::Append do
     it 'checks it' do
       iterations_number.times.flat_map do |i|
         t1 = Thread.new do
-          sleep 0.1 + i / 10.0
+          sleep 0.1 + (i / 10.0)
           instance.call(stream, *([event1] * events_count_mapping['some-event']))
         end
         t2 = Thread.new do
-          sleep 0.1 + i / 10.0
+          sleep 0.1 + (i / 10.0)
           instance.call(stream, *([event2] * events_count_mapping['some-event2']))
         end
         t3 = Thread.new do
-          sleep 0.1 + i / 10.0
+          sleep 0.1 + (i / 10.0)
           instance.call(stream, *([event3] * events_count_mapping['some-event3']))
         end
         [t1, t2, t3]

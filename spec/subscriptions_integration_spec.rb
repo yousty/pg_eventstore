@@ -113,7 +113,7 @@ RSpec.describe 'Subscriptions integration' do
     it 'retries custom number of times' do
       subject
       # max_retries + 1 comes from the neediness to wait for the initial try
-      sleep 0.6 + (max_retries + 1) * PgEventstore.config.subscription_retries_interval
+      sleep 0.6 + ((max_retries + 1) * PgEventstore.config.subscription_retries_interval)
       aggregate_failures do
         expect(manager.subscriptions.first.state).to eq('dead')
         expect(manager.subscriptions.first.restart_count).to eq(max_retries)
@@ -254,7 +254,7 @@ RSpec.describe 'Subscriptions integration' do
       # - max_retries + 1 comes from the neediness to wait for the initial try
       # - PgEventstore.config.subscriptions_set_retries_interval + 1 comes from the neediness to wait for runner's run
       #   interval which is always 1 second
-      sleep 0.6 + (max_retries + 1) * (PgEventstore.config.subscriptions_set_retries_interval + 1)
+      sleep 0.6 + ((max_retries + 1) * (PgEventstore.config.subscriptions_set_retries_interval + 1))
       aggregate_failures do
         expect(queries.find_by(name: set_name)&.dig(:state)).to eq('dead')
         expect(queries.find_by(name: set_name)&.dig(:restart_count)).to eq(max_retries)
