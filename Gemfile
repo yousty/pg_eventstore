@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-source "https://rubygems.org"
+source 'https://rubygems.org'
 
 # Specify your gem's dependencies in pg_eventstore.gemspec
 gemspec
 
-gem "rake", "~> 13.0", require: false
+gem 'rake', '~> 13.0', require: false
 
-gem "rspec", "~> 3.0", require: false
+gem 'rspec', '~> 3.0', require: false
 
 gem 'yard', '~> 0.9.34', require: false
 
@@ -32,3 +32,7 @@ gem 'timecop', '~> 0.9.9', require: false
 gem 'nokogiri', '~> 1.16', '>= 1.16.6', require: false
 
 gem 'rbs', '~> 3.5', '>= 3.5.2', require: false
+
+gem 'rubocop', '~> 1.79', '>= 1.79.1', require: false
+
+gem 'rubocop-rspec', '~> 3.6', require: false

@@ -7,6 +7,8 @@ module PgEventstore
 
       EMPTY_STRING_SIGN: String
 
+      LOGGING_ENVS: Array[Symbol]
+
       def asset_url: (String path) -> String
 
       def connection: -> PgEventstore::Connection

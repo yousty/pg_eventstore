@@ -49,17 +49,15 @@ class CLIHelper
     end
 
     def processed_events
-      begin
-        JSON.parse(redis.get("processed-events").to_s, symbolize_names: true)
-      rescue JSON::ParserError
-        []
-      end
+      JSON.parse(redis.get('processed-events').to_s, symbolize_names: true)
+    rescue JSON::ParserError
+      []
     end
 
     def process_event(event)
       events = processed_events
       events.push(event.attributes_hash)
-      redis.set("processed-events", events.to_json)
+      redis.set('processed-events', events.to_json)
     end
 
     def clean_up

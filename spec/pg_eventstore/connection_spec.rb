@@ -10,6 +10,7 @@ RSpec.describe PgEventstore::Connection do
     end
 
     describe 'behaviour after fork' do
+      # rubocop:disable RSpec/MultipleExpectations
       it 'recovers itself' do
         results = ConnectionHelper.test_forking(instance)
         aggregate_failures do
@@ -36,6 +37,7 @@ RSpec.describe PgEventstore::Connection do
         end
         expect(exception).to be_nil, "Connection was not auto-recovered correctly: #{exception}"
       end
+      # rubocop:enable RSpec/MultipleExpectations
     end
   end
 end

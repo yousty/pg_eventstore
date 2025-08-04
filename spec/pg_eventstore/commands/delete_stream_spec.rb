@@ -11,7 +11,7 @@ RSpec.describe PgEventstore::Commands::DeleteStream do
   describe '#call' do
     subject { instance.call(stream) }
 
-    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '1') }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
 
     context 'when stream exists' do
       let!(:events) do
@@ -52,7 +52,7 @@ RSpec.describe PgEventstore::Commands::DeleteStream do
     end
 
     context 'when stream does not exist' do
-      let(:another_stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '2') }
+      let(:another_stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '2') }
       let!(:events) do
         events = Array.new(2) { PgEventstore::Event.new }
         PgEventstore.client.append_to_stream(another_stream, events)

@@ -7,7 +7,7 @@ module PgEventstore
         # @return [Hash<String => Symbol>] SQL directions, string-to-symbol mapping
         SQL_DIRECTIONS = {
           'asc' => :asc,
-          'desc' => :desc
+          'desc' => :desc,
         }.tap do |directions|
           directions.default = :desc
         end.freeze
@@ -32,7 +32,7 @@ module PgEventstore
 
         # @return [Array<PgEventstore::Event>]
         def collection
-          @_collection ||= PgEventstore.client(config_name).read(
+          @collection ||= PgEventstore.client(config_name).read(
             @stream,
             options: options.merge(from_position: starting_id, max_count: per_page, direction: order)
           )
@@ -59,18 +59,17 @@ module PgEventstore
           ).to_sql_builder.unselect.select('global_position').offset(1)
           sql, params = sql_builder.to_exec_params
           sql = "SELECT * FROM (#{sql}) events ORDER BY global_position #{order} LIMIT 1"
-          connection.with  do |conn|
+          connection.with do |conn|
             conn.exec_params(sql, params)
           end.to_a.dig(0, 'global_position')
         end
 
         # @return [Integer]
         def total_count
-          @_total_count ||=
+          @total_count ||=
             begin
-              sql_builder =
-                QueryBuilders::EventsFiltering.events_filtering(@stream, options).
-                  to_sql_builder.remove_limit.remove_group.remove_order
+              sql_builder = QueryBuilders::EventsFiltering.events_filtering(@stream, options).to_sql_builder
+              sql_builder.remove_limit.remove_group.remove_order
               count = estimate_count(sql_builder)
               return count if count > MAX_NUMBER_TO_COUNT
 

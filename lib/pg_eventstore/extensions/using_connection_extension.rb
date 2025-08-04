@@ -23,7 +23,7 @@ module PgEventstore
           Class.new(original_class).tap do |klass|
             klass.define_singleton_method(:connection) { PgEventstore.connection(config_name) }
             klass.class_eval do
-              [:to_s, :inspect, :name].each do |m|
+              %i[to_s inspect name].each do |m|
                 define_singleton_method(m, &original_class.method(m))
               end
             end

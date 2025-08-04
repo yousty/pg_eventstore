@@ -120,6 +120,7 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
           end
         }.not_to change { raw_events }
       end
+      # rubocop:disable RSpec/MultipleExpectations
       it 'raises the error' do
         expect { subject }.to raise_error(PgEventstore::WrappedException) do |error|
           aggregate_failures do
@@ -129,10 +130,12 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
           end
         end
       end
+      # rubocop:enable RSpec/MultipleExpectations
 
       context 'when event which caused an exception is a link event' do
         let(:raw_event1) { { 'global_position' => 123, 'link' => { 'global_position' => 321 } } }
 
+        # rubocop:disable RSpec/MultipleExpectations
         it 'raises the error with correct global position' do
           expect { subject }.to raise_error(PgEventstore::WrappedException) do |error|
             aggregate_failures do
@@ -142,6 +145,7 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
             end
           end
         end
+        # rubocop:enable RSpec/MultipleExpectations
       end
     end
   end

@@ -28,7 +28,9 @@ RSpec.describe PgEventstore::EventSerializer do
       end
 
       it 'passes the given event through all middlewares' do
-        expect { subject }.to change { event.metadata }.to('dummy_secret' => DummyMiddleware::ENCR_SECRET, 'foo' => 'bar')
+        expect { subject }.to change {
+          event.metadata
+        }.to('dummy_secret' => DummyMiddleware::ENCR_SECRET, 'foo' => 'bar')
       end
     end
   end

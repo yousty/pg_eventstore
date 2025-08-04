@@ -9,9 +9,9 @@ module PgEventstore
           def banner
             <<~TEXT
               Usage: pg-eventstore subscriptions [command] [options]
-                
+
                 Commands:
-                  start     Start subscriptions. Example: pg-eventstore subscriptions start -r lib/my_subscriptions.rb 
+                  start     Start subscriptions. Example: pg-eventstore subscriptions start -r lib/my_subscriptions.rb
                   stop      Stop subscriptions. Example: pg-eventstore subscriptions stop
 
                 Options:

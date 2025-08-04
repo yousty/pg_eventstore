@@ -63,7 +63,7 @@ module PgEventstore
     # A shorthand from ConnectionPool#with.
     # @yieldparam connection [PG::Connection] PostgreSQL connection instance
     # @return [Object] a value of a given block
-    def with(&blk)
+    def with(&)
       should_retry = true
       @pool.with do |conn|
         yield conn
@@ -72,6 +72,7 @@ module PgEventstore
         # delay.
         conn.sync_reset
         raise unless should_retry
+
         should_retry = false
         retry
       end
@@ -85,6 +86,7 @@ module PgEventstore
     private
 
     # @return [ConnectionPool]
+    # rubocop:disable Naming/MemoizedInstanceVariableName
     def init_pool
       @pool ||= ConnectionPool.new(size: pool_size, timeout: pool_timeout) do
         PgConnection.new(uri).tap do |conn|
@@ -93,6 +95,7 @@ module PgEventstore
         end
       end
     end
+    # rubocop:enable Naming/MemoizedInstanceVariableName
 
     # @return [PG::BasicTypeRegistry]
     def pg_type_registry

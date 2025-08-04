@@ -12,6 +12,6 @@ RSpec.describe PgEventstore::CLI::Parsers::DefaultParser do
   describe '.banners' do
     subject { described_class.banner }
 
-    it { is_expected.to match(a_string_including("Usage: pg-eventstore [options]")) }
+    it { is_expected.to match(a_string_including('Usage: pg-eventstore [options]')) }
   end
 end

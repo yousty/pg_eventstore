@@ -17,7 +17,7 @@ module PgEventstore
             end
 
             next_revision = calc_next_revision(events, options[:direction])
-            raise StopIteration if next_revision.negative?
+            raise StopIteration if next_revision < 0
           end
         end
       end

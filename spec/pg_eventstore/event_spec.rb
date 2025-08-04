@@ -31,7 +31,7 @@ RSpec.describe PgEventstore::Event do
 
     context 'when some attribute does not match' do
       before do
-        another_instance.data = { foo: :bar}
+        another_instance.data = { foo: :bar }
       end
 
       it { is_expected.to eq(false) }

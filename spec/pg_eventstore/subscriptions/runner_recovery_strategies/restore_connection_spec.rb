@@ -22,7 +22,7 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreConnection do
       it { is_expected.to eq(true) }
     end
 
-    context 'when error is a PG::UnableToSend' do
+    context 'when error is a ConnectionPool::TimeoutError' do
       let(:error) { ConnectionPool::TimeoutError.new }
 
       it { is_expected.to eq(true) }
@@ -41,7 +41,7 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreConnection do
     before do
       stub_const("#{described_class}::TIME_BETWEEN_RETRIES", 1)
       PgEventstore.configure do |c|
-        c.pg_uri = "postgresql://localhost:1234/eventstore"
+        c.pg_uri = 'postgresql://localhost:1234/eventstore'
       end
     end
 

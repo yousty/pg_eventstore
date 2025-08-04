@@ -39,7 +39,7 @@ module PgEventstore
         def running_subscriptions?
           return true if @subscription_managers.any?(&:running?)
 
-          PgEventstore.logger&.warn("No subscriptions start ups were detected. Existing...")
+          PgEventstore.logger&.warn('No subscriptions start ups were detected. Existing...')
           false
         end
 
@@ -47,7 +47,7 @@ module PgEventstore
         def setup_killsig
           Kernel.trap('TERM') do
             Thread.new do
-              PgEventstore.logger&.info("Received TERM signal, stopping subscriptions and exiting...")
+              PgEventstore.logger&.info('Received TERM signal, stopping subscriptions and exiting...')
             end.join
             # Because the implementation uses Mutex - wrap it into Thread to bypass the limitations of Kernel#trap
             @subscription_managers.map do |manager|
@@ -69,14 +69,15 @@ module PgEventstore
 
         # @return [void]
         def keep_process_alive
-          PgEventstore.logger&.info("Startup is successful. Processing subscriptions...")
+          PgEventstore.logger&.info('Startup is successful. Processing subscriptions...')
           loop do
             # SubscriptionsManager#subscriptions_set becomes nil when everything gets stopped.
             if @subscription_managers.all? { |manager| manager.subscriptions_set.nil? }
-              PgEventstore.logger&.info("All subscriptions were gracefully shut down. Exiting now...")
+              PgEventstore.logger&.info('All subscriptions were gracefully shut down. Exiting now...')
               break
             end
             break unless @running
+
             sleep KEEP_ALIVE_INTERVAL
           end
         end

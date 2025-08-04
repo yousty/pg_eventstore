@@ -1,15 +1,15 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "pg_eventstore"
-require "pg_eventstore/cli"
-require "logger"
+require 'pg_eventstore'
+require 'pg_eventstore/cli'
+require 'logger'
 
-logger = Logger.new(STDOUT)
+logger = Logger.new($stdout)
 logger.level = :info
-logger.progname = "pg_eventstore"
+logger.progname = 'pg_eventstore'
 logger.formatter = proc do |severity, time, progname, msg|
-  "\e[36m#{progname} | \e[0m#{time.utc.strftime("%FT%TZ")} #{severity}: #{msg}\n"
+  "\e[36m#{progname} | \e[0m#{time.utc.strftime('%FT%TZ')} #{severity}: #{msg}\n"
 end
 
 PgEventstore.logger = logger

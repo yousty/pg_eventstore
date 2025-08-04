@@ -13,6 +13,7 @@ module PgEventstore
           @partitions = {}
           @partition_queries = partition_queries
         end
+
         # @param event [PgEventstore::Event]
         # @param revision [Integer]
         # @return [PgEventstore::Event]

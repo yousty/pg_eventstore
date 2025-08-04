@@ -74,8 +74,8 @@ RSpec.describe PgEventstore do
       it 'accumulates those changes' do
         expect { subject }.to change {
           described_class.config.options_hash
-        }.from(a_hash_including(pg_uri: 'postgresql://localhost:5432/', max_count: 10))
-         .to(a_hash_including(pg_uri: 'postgresql://some.pg.host:5432/', max_count: 123))
+        }.from(a_hash_including(pg_uri: 'postgresql://localhost:5432/', max_count: 10)).
+          to(a_hash_including(pg_uri: 'postgresql://some.pg.host:5432/', max_count: 123))
       end
     end
 

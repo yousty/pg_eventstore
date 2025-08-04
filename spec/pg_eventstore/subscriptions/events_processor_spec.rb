@@ -102,7 +102,7 @@ RSpec.describe PgEventstore::EventsProcessor do
       instance.stop_async.wait_for_finish
     end
 
-    it "returns the size of raw events in the queue" do
+    it 'returns the size of raw events in the queue' do
       is_expected.to eq(1)
     end
   end
@@ -241,7 +241,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     let(:raw_events) do
       [
         { 'id' => SecureRandom.uuid, 'global_position' => 123 },
-        { 'id' => SecureRandom.uuid, 'global_position' => 124, 'link' => { 'global_position' => 125 } }
+        { 'id' => SecureRandom.uuid, 'global_position' => 124, 'link' => { 'global_position' => 125 } },
       ]
     end
 

@@ -12,7 +12,7 @@ class ConfigHelper
     end
 
     def test_db_uri
-      ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore_test' }
+      ENV.fetch('PG_EVENTSTORE_URI', 'postgresql://postgres:postgres@localhost:5532/eventstore_test')
     end
   end
 end

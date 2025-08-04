@@ -206,10 +206,10 @@ RSpec.describe 'Subscriptions integration' do
           dv(processed_events1).deferred_wait(timeout: pull_interval) { _1.size == 1 }.size
         }.to(1)
         expect(processed_events1).to(
-          all satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::DECR_SECRET }
+          all(satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::DECR_SECRET })
         )
         expect(processed_events1).to(
-          all satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET }
+          all(satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET })
         )
       end
     end
@@ -220,10 +220,10 @@ RSpec.describe 'Subscriptions integration' do
           dv(processed_events2).deferred_wait(timeout: pull_interval) { _1.size == 1 }.size
         }.to(2)
         expect(processed_events2).to(
-          all satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::ENCR_SECRET }
+          all(satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::ENCR_SECRET })
         )
         expect(processed_events2).to(
-          all satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET }
+          all(satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET })
         )
       end
     end
@@ -556,7 +556,7 @@ RSpec.describe 'Subscriptions integration' do
       simulate_disconnect = Thread.new do
         sleep seconds_before_disaster
         PgEventstore.configure do |c|
-          c.pg_uri = "postgresql://localhost:1234/eventstore"
+          c.pg_uri = 'postgresql://localhost:1234/eventstore'
         end
         restore_job = Thread.new do
           sleep seconds_before_recovery
@@ -572,7 +572,7 @@ RSpec.describe 'Subscriptions integration' do
 
     before do
       manager.subscribe('Sub 1', handler: handler, **subscription_opts)
-      stub_const("PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES", 1)
+      stub_const('PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES', 1)
     end
 
     after do

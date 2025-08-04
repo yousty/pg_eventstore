@@ -9,11 +9,11 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     let(:attrs) { { name: 'BarCtx' } }
 
     describe 'when SubscriptionsSets exists' do
-      let!(:subscriptions_set_1) { SubscriptionsSetHelper.create(name: 'BarCtx') }
-      let!(:subscriptions_set_2) { SubscriptionsSetHelper.create(name: 'BarCtx') }
+      let!(:subscriptions_set1) { SubscriptionsSetHelper.create(name: 'BarCtx') }
+      let!(:subscriptions_set2) { SubscriptionsSetHelper.create(name: 'BarCtx') }
 
       it 'returns array of their attributes attributes' do
-        is_expected.to eq([subscriptions_set_1.options_hash, subscriptions_set_2.options_hash])
+        is_expected.to eq([subscriptions_set1.options_hash, subscriptions_set2.options_hash])
       end
     end
 
@@ -64,12 +64,12 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
   describe '#set_names' do
     subject { instance.set_names }
 
-    let!(:subscriptions_set_1) { SubscriptionsSetHelper.create(name: 'FooCtx') }
-    let!(:subscriptions_set_2) { SubscriptionsSetHelper.create(name: 'BarCtx') }
-    let!(:subscriptions_set_3) { SubscriptionsSetHelper.create(name: 'BarCtx') }
+    let!(:subscriptions_set1) { SubscriptionsSetHelper.create(name: 'FooCtx') }
+    let!(:subscriptions_set2) { SubscriptionsSetHelper.create(name: 'BarCtx') }
+    let!(:subscriptions_set3) { SubscriptionsSetHelper.create(name: 'BarCtx') }
 
     it 'returns names of all sets' do
-      is_expected.to eq(['BarCtx', 'FooCtx'])
+      is_expected.to eq(%w[BarCtx FooCtx])
     end
   end
 

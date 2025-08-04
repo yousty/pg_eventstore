@@ -27,9 +27,11 @@ module PgEventstore
     end
 
     # @return [PgEventstore::SubscriptionsSet]
+    # rubocop:disable Naming/MemoizedInstanceVariableName
     def persisted_subscriptions_set
       @subscriptions_set ||= SubscriptionsSet.using_connection(@config_name).create(@subscriptions_set_attrs)
     end
+    # rubocop:enable Naming/MemoizedInstanceVariableName
 
     # @return [void]
     def reset_subscriptions_set

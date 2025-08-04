@@ -82,5 +82,7 @@ module PgEventstore
         _RestartTerminator? restart_terminator,
         _FailedSubscriptionNotifier? failed_subscription_notifier
       ) -> Array[RunnerRecoveryStrategy]
+
+    def run_cli_callbacks: () { () -> untyped } -> untyped
   end
 end

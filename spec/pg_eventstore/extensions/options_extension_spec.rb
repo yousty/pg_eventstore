@@ -100,7 +100,7 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
             [
               described_class::Option.new(:parent_opt),
               described_class::Option.new(:child_opt),
-              described_class::Option.new(:child_of_child_opt)
+              described_class::Option.new(:child_of_child_opt),
             ]
           )
         )
@@ -140,12 +140,12 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
     subject { instance.options_hash }
 
     before do
-      dummy_class.option(:opt_1) { 'opt-1-value' }
-      dummy_class.option(:opt_2) { 'opt-2-value' }
+      dummy_class.option(:opt1) { 'opt-1-value' }
+      dummy_class.option(:opt2) { 'opt-2-value' }
     end
 
     it 'returns hash representation of options' do
-      is_expected.to eq(opt_1: 'opt-1-value', opt_2: 'opt-2-value')
+      is_expected.to eq(opt1: 'opt-1-value', opt2: 'opt-2-value')
     end
   end
 

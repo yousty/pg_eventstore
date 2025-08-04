@@ -50,7 +50,7 @@ module PgEventstore
         {
           class: original_error.class,
           message: original_error.message,
-          backtrace: original_error.backtrace
+          backtrace: original_error.backtrace,
         }.tap do |attrs|
           attrs.merge!(error.extra) if error.is_a?(WrappedException)
         end
@@ -61,7 +61,7 @@ module PgEventstore
       def underscore_str(str)
         str = str.dup
         str[0] = str[0].downcase
-        str.gsub!(/[A-Z]/) { |letter| '_' + letter.downcase }
+        str.gsub!(/[A-Z]/) { |letter| "_#{letter.downcase}" }
         str
       end
 
@@ -83,7 +83,7 @@ module PgEventstore
       # @param content [String]
       # @return [void]
       def write_to_file(file_path, content)
-        file = File.open(file_path, "w")
+        file = File.open(file_path, 'w')
         file.write(content)
       ensure
         file&.close
@@ -91,20 +91,24 @@ module PgEventstore
 
       # @param file_path [String]
       # @return [void]
+      # rubocop:disable Lint/SuppressedException
       def remove_file(file_path)
         File.delete(file_path)
       rescue Errno::ENOENT
       end
+      # rubocop:enable Lint/SuppressedException
 
       # @param file_path [String]
       # @return [String, nil]
+      # rubocop:disable Lint/SuppressedException
       def read_pid(file_path)
-        file = File.open(file_path, "r")
+        file = File.open(file_path, 'r')
         file.readline.strip
       rescue Errno::ENOENT
       ensure
         file&.close
       end
+      # rubocop:enable Lint/SuppressedException
 
       # @param exception [StandardError]
       # @param extra [Hash] additional exception info

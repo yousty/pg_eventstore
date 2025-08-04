@@ -26,10 +26,11 @@ module PgEventstore
     #     the list of available options
     attribute(:options)
     # @!attribute current_position
-    #   @return [Integer, nil] current Subscription's position. It is updated automatically each time an event is processed
+    #   @return [Integer, nil] current Subscription's position. It is updated automatically each time an event is
+    #     processed
     attribute(:current_position)
     # @!attribute state
-    #   @return [String, nil] current Subscription's state. It is updated automatically during Subscription's life cycle.
+    #   @return [String, nil] current Subscription's state. It is updated automatically during Subscription's life cycle
     #     See {RunnerState::STATES} for possible values.
     attribute(:state)
     # @!attribute average_event_processing_time
@@ -141,20 +142,20 @@ module PgEventstore
       id.hash
     end
 
-    # @param another [Object]
+    # @param other [Object]
     # @return [Boolean]
-    def eql?(another)
-      return false unless another.is_a?(Subscription)
+    def eql?(other)
+      return false unless other.is_a?(Subscription)
 
-      hash == another.hash
+      hash == other.hash
     end
 
-    # @param another [Object]
+    # @param other [Object]
     # @return [Boolean]
-    def ==(another)
-      return false unless another.is_a?(Subscription)
+    def ==(other)
+      return false unless other.is_a?(Subscription)
 
-      id == another.id
+      id == other.id
     end
 
     private

@@ -22,7 +22,7 @@ RSpec.configure do |config|
   end
 
   # Enable flags like --only-failures and --next-failure
-  config.example_status_persistence_file_path = "log/rspec_status.log"
+  config.example_status_persistence_file_path = 'log/rspec_status.log'
 
   # Disable RSpec exposing methods globally on `Module` and `main`
   config.disable_monkey_patching!
@@ -43,7 +43,7 @@ RSpec.configure do |config|
     # Use the documentation formatter for detailed output,
     # unless a formatter has already been configured
     # (e.g. via a command-line flag).
-    config.default_formatter = "doc"
+    config.default_formatter = 'doc'
   end
 
   # Run specs in random order to surface order dependencies. If you find an

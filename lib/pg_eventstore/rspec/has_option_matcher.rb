@@ -27,9 +27,7 @@ RSpec::Matchers.define :has_option do |option_name|
       is_correct &&=
         RSpec::Matchers::BuiltIn::Match.new(@default_value).matches?(obj.class.allocate.public_send(option_name))
     end
-    if defined?(@metadata)
-      is_correct &&= RSpec::Matchers::BuiltIn::Match.new(@metadata).matches?(option.metadata)
-    end
+    is_correct &&= RSpec::Matchers::BuiltIn::Match.new(@metadata).matches?(option.metadata) if defined?(@metadata)
     is_correct
   end
 
@@ -42,23 +40,24 @@ RSpec::Matchers.define :has_option do |option_name|
     message = "Expected #{obj.class} to have `#{option_name.inspect}' option"
     message += " #{default_value_message}," if defined?(@default_value)
     message += " #{metadata_message}," if defined?(@metadata)
-    message += "," unless defined?(@metadata) || defined?(@default_value)
+    message += ',' unless defined?(@metadata) || defined?(@default_value)
     if option_presence
       actual_default_value = obj.class.allocate.public_send(option_name)
       actual_metadata = option.metadata
       default_value_matches = RSpec::Matchers::BuiltIn::Match.new(@default_value).matches?(actual_default_value)
       metadata_matches = RSpec::Matchers::BuiltIn::Match.new(@metadata).matches?(actual_metadata)
 
-      case [default_value_matches, metadata_matches]
-      when [false, true]
-        message += " but default value is #{actual_default_value.inspect}"
-      when [true, false]
-        message += " but metadata is #{actual_metadata.inspect}"
-      else
-        message += " but default value is #{actual_default_value.inspect} and metadata is #{actual_metadata.inspect}"
-      end
+      message +=
+        case [default_value_matches, metadata_matches]
+        when [false, true]
+          " but default value is #{actual_default_value.inspect}"
+        when [true, false]
+          " but metadata is #{actual_metadata.inspect}"
+        else
+          " but default value is #{actual_default_value.inspect} and metadata is #{actual_metadata.inspect}"
+        end
     else
-      message += " but there is no option found with the given name"
+      message += ' but there is no option found with the given name'
     end
     message
   end

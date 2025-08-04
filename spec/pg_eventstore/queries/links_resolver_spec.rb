@@ -43,7 +43,7 @@ RSpec.describe PgEventstore::LinksResolver do
           [
             raw_event1,
             raw_event1.merge('runner_id' => 123, 'link' => raw_link),
-            raw_event2
+            raw_event2,
           ]
         )
       )

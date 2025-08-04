@@ -17,9 +17,10 @@ module PgEventstore
       end
 
       def recovers?(error)
-        EXCEPTIONS_TO_HANDLE.any? {error.is_a?(_1) }
+        EXCEPTIONS_TO_HANDLE.any? { error.is_a?(_1) }
       end
 
+      # rubocop:disable Lint/SuppressedException
       def recover(_error)
         loop do
           sleep TIME_BETWEEN_RETRIES
@@ -32,6 +33,7 @@ module PgEventstore
         rescue *EXCEPTIONS_TO_HANDLE
         end
       end
+      # rubocop:enable Lint/SuppressedException
 
       private
 

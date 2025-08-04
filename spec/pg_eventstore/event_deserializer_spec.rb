@@ -43,7 +43,9 @@ RSpec.describe PgEventstore::EventDeserializer do
       end
 
       it 'transforms events using those middlewares' do
-        expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET, 'foo' => 'bar', 'bar' => 'baz')
+        expect(subject.first.metadata).to(
+          eq('dummy_secret' => DummyMiddleware::DECR_SECRET, 'foo' => 'bar', 'bar' => 'baz')
+        )
       end
     end
 

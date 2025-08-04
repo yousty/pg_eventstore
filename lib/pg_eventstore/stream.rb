@@ -83,20 +83,20 @@ module PgEventstore
       to_hash.hash
     end
 
-    # @param another [Object]
+    # @param other [Object]
     # @return [Boolean]
-    def eql?(another)
-      return false unless another.is_a?(Stream)
+    def eql?(other)
+      return false unless other.is_a?(Stream)
 
-      hash == another.hash
+      hash == other.hash
     end
 
-    # @param other_stream [Object]
+    # @param other [Object]
     # @return [Boolean]
-    def ==(other_stream)
-      return false unless other_stream.is_a?(Stream)
+    def ==(other)
+      return false unless other.is_a?(Stream)
 
-      to_hash == other_stream.to_hash
+      to_hash == other.to_hash
     end
   end
 end

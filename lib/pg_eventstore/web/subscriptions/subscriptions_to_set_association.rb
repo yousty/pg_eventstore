@@ -19,6 +19,7 @@ module PgEventstore
         end
 
         # @return [Hash{PgEventstore::SubscriptionsSet => Array<PgEventstore::Subscription>}]
+        # rubocop:disable Lint/RedundantWithObject
         def association
           @association ||=
             begin
@@ -31,6 +32,7 @@ module PgEventstore
               end
             end
         end
+        # rubocop:enable Lint/RedundantWithObject
       end
     end
   end

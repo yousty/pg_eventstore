@@ -177,23 +177,21 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           end
 
           it 'raises error' do
-            expect { subject }.to(
-              raise_error(
-                PgEventstore::WrongExpectedRevisionError,
-                "#{projection_stream.to_hash.inspect} stream revision #{expected_revision} is expected, but actual stream revision is 0."
-              )
-            )
+            error_message = <<~TEXT.strip
+              #{projection_stream.to_hash.inspect} stream revision #{expected_revision} is expected, but actual stream \
+              revision is 0.
+            TEXT
+            expect { subject }.to raise_error(PgEventstore::WrongExpectedRevisionError, error_message)
           end
         end
 
-        context "when stream does not exist" do
+        context 'when stream does not exist' do
           it 'raises error' do
-            expect { subject }.to(
-              raise_error(
-                PgEventstore::WrongExpectedRevisionError,
-                "#{projection_stream.to_hash.inspect} stream revision #{expected_revision} is expected, but stream does not exist."
-              )
-            )
+            error_message = <<~TEXT.strip
+              #{projection_stream.to_hash.inspect} stream revision #{expected_revision} is expected, but stream does \
+              not exist.
+            TEXT
+            expect { subject }.to raise_error(PgEventstore::WrongExpectedRevisionError, error_message)
           end
         end
       end

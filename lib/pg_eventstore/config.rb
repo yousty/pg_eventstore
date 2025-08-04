@@ -10,7 +10,7 @@ module PgEventstore
     #   @return [String] PostgreSQL connection URI docs
     #     https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
     option(:pg_uri) do
-      ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5432/eventstore' }
+      ENV.fetch('PG_EVENTSTORE_URI', 'postgresql://postgres:postgres@localhost:5432/eventstore')
     end
     # @!attribute max_count
     #   @return [Integer] Number of events to return in one response when reading from a stream

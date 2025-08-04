@@ -8,14 +8,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
   let(:runner1) do
     PgEventstore::SubscriptionRunner.new(
       stats: PgEventstore::SubscriptionHandlerPerformance.new,
-      events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+      events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
       subscription: SubscriptionsHelper.create_with_connection(name: 'Subscr1')
     )
   end
   let(:runner2) do
     PgEventstore::SubscriptionRunner.new(
       stats: PgEventstore::SubscriptionHandlerPerformance.new,
-      events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+      events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
       subscription: SubscriptionsHelper.create_with_connection(name: 'Subscr2')
     )
   end
@@ -167,14 +167,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
     context 'when an unhandled command is given' do
       let!(:command) do
         command_queries.create(
-          subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: "FooCmd", data: {}
+          subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: 'FooCmd', data: {}
         )
       end
 
       it 'deletes it' do
         expect { subject }.to change {
           command_queries.find_by(
-            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: "FooCmd"
+            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: 'FooCmd'
           )
         }.to(nil)
       end

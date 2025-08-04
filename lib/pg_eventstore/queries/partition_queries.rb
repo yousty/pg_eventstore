@@ -55,7 +55,7 @@ module PgEventstore
       end
 
       partition_sql = <<~SQL
-        INSERT INTO partitions (#{attributes.keys.join(', ')}) 
+        INSERT INTO partitions (#{attributes.keys.join(', ')})
           VALUES (#{Utils.positional_vars(attributes.values)}) RETURNING *
       SQL
       partition = connection.with do |conn|
@@ -87,7 +87,7 @@ module PgEventstore
       end
 
       partition_sql = <<~SQL
-        INSERT INTO partitions (#{attributes.keys.join(', ')}) 
+        INSERT INTO partitions (#{attributes.keys.join(', ')})
           VALUES (#{Utils.positional_vars(attributes.values)}) RETURNING *
       SQL
       partition = connection.with do |conn|
@@ -116,8 +116,8 @@ module PgEventstore
       return unless partition_required?(stream, event_type)
 
       context_partition = context_partition(stream) || create_context_partition(stream)
-      stream_name_partition = stream_name_partition(stream) ||
-        create_stream_name_partition(stream, context_partition['table_name'])
+      stream_name_partition =
+        stream_name_partition(stream) || create_stream_name_partition(stream, context_partition['table_name'])
 
       create_event_type_partition(stream, event_type, stream_name_partition['table_name'])
     end

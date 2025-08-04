@@ -49,7 +49,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     let!(:subscription3) { SubscriptionsHelper.create(set: 'FooSet', name: 'Baz', state: 'dead') }
 
     it 'returns all set names' do
-      is_expected.to eq(['BarSet', 'FooSet'])
+      is_expected.to eq(%w[BarSet FooSet])
     end
 
     context 'when state is provided' do
@@ -78,7 +78,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     describe 'when subscription does not exist' do
       it 'raises error' do
         expect { subject }.to(
-          raise_error(PgEventstore::RecordNotFound, "Could not find/update \"subscriptions\" record with 123 id.")
+          raise_error(PgEventstore::RecordNotFound, 'Could not find/update "subscriptions" record with 123 id.')
         )
       end
     end
@@ -158,7 +158,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
 
       it 'raises error' do
         expect { subject }.to(
-          raise_error(PgEventstore::RecordNotFound, "Could not find/update \"subscriptions\" record with -1 id.")
+          raise_error(PgEventstore::RecordNotFound, 'Could not find/update "subscriptions" record with -1 id.')
         )
       end
     end
@@ -177,7 +177,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
       let(:query_options) do
         {
           runner_id1 => { filter: { event_types: ['Foo'] } },
-          runner_id2 => { filter: { streams: [{ context: 'BarCtx' }] } }
+          runner_id2 => { filter: { streams: [{ context: 'BarCtx' }] } },
         }
       end
       let(:runner_id1) { 1 }
@@ -211,7 +211,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
                 a_hash_including(
                   'id' => event3.id, 'runner_id' => runner_id1, 'type' => 'Foo',
                   **stream2.to_hash.transform_keys(&:to_s)
-                )
+                ),
               ],
               runner_id2 => [
                 a_hash_including(
@@ -226,7 +226,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
                   'id' => link.id, 'runner_id' => runner_id2, 'type' => PgEventstore::Event::LINK_TYPE,
                   **stream1.to_hash.transform_keys(&:to_s)
                 ),
-              ]
+              ],
             }
           )
         )
@@ -235,7 +235,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
       context 'when :resolve_link_tos option is given' do
         let(:query_options) do
           {
-            runner_id2 => { filter: { streams: [{ context: 'BarCtx' }] }, resolve_link_tos: true }
+            runner_id2 => { filter: { streams: [{ context: 'BarCtx' }] }, resolve_link_tos: true },
           }
         end
 
@@ -363,7 +363,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     it 'does not update #updated_at of another Subscription from the same SubscriptionsSet' do
       expect { subject }.not_to change { subscription3.reload.updated_at }
     end
-    it 'returns id/Time association', timecop: true do
+    it 'returns id/Time association', :timecop do
       is_expected.to eq(subscription1.id => Time.now.utc.round(6))
     end
   end

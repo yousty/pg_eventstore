@@ -61,7 +61,6 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
         }.to(subscriptions_set_lifecycle.persisted_subscriptions_set.id)
         expect(subscription1.id).to be_an(Integer)
       end
-
     end
     it 'locks second subscription' do
       aggregate_failures do
@@ -160,7 +159,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
       )
     end
     let(:error) do
-      StandardError.new("something happened").tap do |err|
+      StandardError.new('something happened').tap do |err|
         err.set_backtrace([])
       end
     end
@@ -170,7 +169,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
         { 'class' => 'StandardError', 'message' => 'something happened', 'backtrace' => [] }
       )
     end
-    it 'updates SubscriptionsSet#last_error_occurred_at', timecop: true do
+    it 'updates SubscriptionsSet#last_error_occurred_at', :timecop do
       expect { subject }.to change {
         subscriptions_set_lifecycle.persisted_subscriptions_set.reload.last_error_occurred_at
       }.to(Time.now.round(6))
@@ -187,7 +186,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
       )
     end
 
-    it 'updates SubscriptionsSet#updated_at', timecop: true do
+    it 'updates SubscriptionsSet#updated_at', :timecop do
       expect { subject }.to change {
         subscriptions_set_lifecycle.persisted_subscriptions_set.reload.updated_at
       }.to(Time.now.round(6))
@@ -316,10 +315,10 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
       subscriptions_lifecycle.runners.each(&:stop_async).each(&:wait_for_finish)
     end
 
-    it 'updates #updated_at of first subscription', timecop: true do
+    it 'updates #updated_at of first subscription', :timecop do
       expect { subject }.to change { subscription1.reload.updated_at }.to(Time.now.round(6))
     end
-    it 'updates #updated_at of second subscription', timecop: true do
+    it 'updates #updated_at of second subscription', :timecop do
       expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.round(6))
     end
   end
@@ -367,10 +366,10 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
 
     it 'stops first runner' do
-      expect { subject }.to change { subscription_runner1.state }.from("running").to("stopped")
+      expect { subject }.to change { subscription_runner1.state }.from('running').to('stopped')
     end
     it 'stops second runner' do
-      expect { subject }.to change { subscription_runner2.state }.from("running").to("stopped")
+      expect { subject }.to change { subscription_runner2.state }.from('running').to('stopped')
     end
   end
 
@@ -430,7 +429,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
 
     it 'stops commands handler' do
-      expect { subject }.to change { cmds_handler.state }.from("running").to("stopped")
+      expect { subject }.to change { cmds_handler.state }.from('running').to('stopped')
     end
   end
 
@@ -444,7 +443,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
       )
     end
 
-    it 'updates SubscriptionsSet#last_restarted_at', timecop: true do
+    it 'updates SubscriptionsSet#last_restarted_at', :timecop do
       expect { subject }.to change {
         subscriptions_set_lifecycle.persisted_subscriptions_set.reload.last_restarted_at
       }.to(Time.now.round(6))

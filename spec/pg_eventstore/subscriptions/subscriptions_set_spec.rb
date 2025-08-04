@@ -36,7 +36,7 @@ RSpec.describe PgEventstore::SubscriptionsSet do
     subject { subscriptions_set.update(attrs) }
 
     let(:subscriptions_set) do
-      PgEventstore::SubscriptionsSet.using_connection(:default).new(**queries.create(name: 'Foo'))
+      described_class.using_connection(:default).new(**queries.create(name: 'Foo'))
     end
     let(:attrs) { { state: 'stopped', name: 'Bar' } }
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
@@ -61,7 +61,7 @@ RSpec.describe PgEventstore::SubscriptionsSet do
 
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
     let!(:subscriptions_set) do
-      PgEventstore::SubscriptionsSet.using_connection(:default).new(**queries.create(name: 'Foo'))
+      described_class.using_connection(:default).new(**queries.create(name: 'Foo'))
     end
 
     context 'when SubscriptionsSet exists' do
@@ -71,7 +71,7 @@ RSpec.describe PgEventstore::SubscriptionsSet do
     end
 
     context 'when SubscriptionsSet does not exist' do
-      let(:subscriptions_set) { PgEventstore::SubscriptionsSet.using_connection(:default).new(id: 1) }
+      let(:subscriptions_set) { described_class.using_connection(:default).new(id: 1) }
 
       it 'does nothing' do
         expect { subject }.not_to raise_error
@@ -83,7 +83,7 @@ RSpec.describe PgEventstore::SubscriptionsSet do
     subject { subscriptions_set.dup }
 
     let(:subscriptions_set) do
-      PgEventstore::SubscriptionsSet.new(
+      described_class.new(
         **queries.create(
           name: 'Foo',
           last_error: { 'class' => 'StandardError', 'message' => 'Oops', 'backtrace' => ['1.rb'] }
@@ -94,7 +94,7 @@ RSpec.describe PgEventstore::SubscriptionsSet do
 
     it 'returns the copy of the given SubscriptionsSet' do
       aggregate_failures do
-        is_expected.to be_a(PgEventstore::SubscriptionsSet)
+        is_expected.to be_a(described_class)
         expect(subject.options_hash).to eq(subscriptions_set.options_hash)
         expect(subject.__id__).not_to eq(subscriptions_set.__id__)
       end
@@ -111,7 +111,7 @@ RSpec.describe PgEventstore::SubscriptionsSet do
     subject { subscriptions_set.reload }
 
     let(:subscriptions_set) do
-      PgEventstore::SubscriptionsSet.using_connection(:default).new(**queries.create(name: 'Foo'))
+      described_class.using_connection(:default).new(**queries.create(name: 'Foo'))
     end
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
 

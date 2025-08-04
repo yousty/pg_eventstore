@@ -71,6 +71,7 @@ RSpec.describe PgEventstore::Commands::Multiple do
     let(:patterns) { { 'pattern1' => pattern1, 'pattern2' => pattern2, 'pattern3' => pattern3 } }
     let(:iterations_number) { 3 }
 
+    # rubocop:disable RSpec/MultipleExpectations
     it 'checks it' do
       iterations_number.times.flat_map do |i|
         patterns.values.map do |pattern|
@@ -87,7 +88,8 @@ RSpec.describe PgEventstore::Commands::Multiple do
 
       [events_stream1, events_stream2, events_stream3].each do |stream|
         events = PgEventstore.client.read(stream)
-        events_count = [pattern1, pattern2, pattern3].flatten.group_by { |h| h[:stream] }[stream].size * iterations_number
+        grouped_events = [pattern1, pattern2, pattern3].flatten.group_by { |h| h[:stream] }
+        events_count = grouped_events[stream].size * iterations_number
         expect(events.map(&:stream_revision)).to(
           eq((0...events_count).to_a), "Stream #{stream.inspect} has incorrect revisions sequence!"
         )
@@ -99,11 +101,12 @@ RSpec.describe PgEventstore::Commands::Multiple do
       position = 0
 
       human_readable_sequence = events.map { |e| [e.stream.stream_id, e.data['event']] }
-      while position < events.size do
+      while position < events.size
         # Detect the pattern by the event at the given position. If you ever modify patterns definitions - make sure
         # they all have uniq combination of event and stream at index 0.
-        pattern_name, pattern = patterns.find do |name, info|
-          events[position].stream == info.first[:stream] && events[position].data['event'] == info.first[:event].data[:event]
+        pattern_name, pattern = patterns.find do |_name, info|
+          events[position].stream == info.first[:stream] &&
+            events[position].data['event'] == info.first[:event].data[:event]
         end
 
         unless pattern
@@ -111,7 +114,9 @@ RSpec.describe PgEventstore::Commands::Multiple do
         end
 
         events[position...(position + pattern.size)].each.with_index do |event, index|
-          human_readable_events = events[position...(position + pattern.size)].map { |e| [e.stream.stream_id, e.data['event']] }
+          human_readable_events = events[position...(position + pattern.size)].map do |e|
+            [e.stream.stream_id, e.data['event']]
+          end
           error_message = "Expected to see #{pattern_name} at position #{position}, but got #{human_readable_events}."
           expect({ stream: event.stream.stream_id, event: event.data['event'] }).to(
             eq({ stream: pattern[index][:stream].stream_id, event: pattern[index][:event].data[:event] }),
@@ -121,5 +126,6 @@ RSpec.describe PgEventstore::Commands::Multiple do
         position += pattern.size
       end
     end
+    # rubocop:enable RSpec/MultipleExpectations
   end
 end

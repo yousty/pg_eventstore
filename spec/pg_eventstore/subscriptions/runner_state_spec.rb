@@ -61,8 +61,8 @@ RSpec.describe PgEventstore::RunnerState do
     describe 'STATES' do
       subject { described_class::STATES }
 
-      it { expect(subject.keys).to eq(%i(initial running halting stopped dead)) }
-      it { expect(subject.values).to eq(%w(initial running halting stopped dead)) }
+      it { expect(subject.keys).to eq(%i[initial running halting stopped dead]) }
+      it { expect(subject.values).to eq(%w[initial running halting stopped dead]) }
       it { expect(subject.values).to all be_frozen }
       it { is_expected.to be_frozen }
     end

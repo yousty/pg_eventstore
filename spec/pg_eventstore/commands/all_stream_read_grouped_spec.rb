@@ -253,9 +253,9 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
           filter: {
             streams: [
               { context: 'SomeAnotherContext', stream_name: 'some-stream1' },
-              { context: 'SomeContext', stream_name: 'some-stream1' }
-            ]
-          }
+              { context: 'SomeContext', stream_name: 'some-stream1' },
+            ],
+          },
         }
       end
 

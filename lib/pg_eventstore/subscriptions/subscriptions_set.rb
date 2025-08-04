@@ -92,20 +92,20 @@ module PgEventstore
       id.hash
     end
 
-    # @param another [Object]
+    # @param other [Object]
     # @return [Boolean]
-    def eql?(another)
-      return false unless another.is_a?(SubscriptionsSet)
+    def eql?(other)
+      return false unless other.is_a?(SubscriptionsSet)
 
-      hash == another.hash
+      hash == other.hash
     end
 
-    # @param another [Object]
+    # @param other [Object]
     # @return [Boolean]
-    def ==(another)
-      return false unless another.is_a?(SubscriptionsSet)
+    def ==(other)
+      return false unless other.is_a?(SubscriptionsSet)
 
-      id == another.id
+      id == other.id
     end
 
     private

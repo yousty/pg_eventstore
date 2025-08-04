@@ -118,7 +118,7 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
         PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fok', stream_id: '1'),
         PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Faz', stream_id: '1'),
         PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1'),
-        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1')
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1'),
       ]
     end
 
@@ -229,7 +229,7 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
             PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baf', stream_id: '1'),
             PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Faz', stream_id: '1'),
             PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1'),
-            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1')
+            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1'),
           ]
         end
 

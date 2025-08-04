@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'set'
-
 module PgEventstore
   module Extensions
     # A very simple extension that implements a DSL for adding attr_accessors with default values,
@@ -50,20 +48,20 @@ module PgEventstore
           @metadata = metadata
         end
 
-        # @param other_option [Object]
+        # @param other [Object]
         # @return [Boolean]
-        def ==(other_option)
-          return false unless other_option.is_a?(Option)
+        def ==(other)
+          return false unless other.is_a?(Option)
 
-          name == other_option.name
+          name == other.name
         end
 
-        # @param other_option [Object]
+        # @param other [Object]
         # @return [Boolean]
-        def eql?(other_option)
-          return false unless other_option.is_a?(Option)
+        def eql?(other)
+          return false unless other.is_a?(Option)
 
-          name.eql?(other_option.name)
+          name.eql?(other.name)
         end
 
         # @return [Integer]
@@ -73,8 +71,8 @@ module PgEventstore
       end
 
       class Options < Set
-        def add(o)
-          @hash[o] = o
+        def add(option)
+          @hash[option] = option
           self
         end
 

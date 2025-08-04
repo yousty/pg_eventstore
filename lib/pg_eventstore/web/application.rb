@@ -13,15 +13,18 @@ module PgEventstore
       COOKIES_CONFIG_KEY = 'current_config'
       # @return [String]
       COOKIES_FLASH_MESSAGE_KEY = 'flash_message'
+      # @return [Array<Symbol>]
+      LOGGING_ENVS = %i[development test].freeze
+      private_constant :LOGGING_ENVS
 
       # Defines a replacement for empty string value in a stream attributes filter or in an event type filter. This
       # replacement is needed to differentiate a user selection vs default placeholder value.
       # @return [String]
-      EMPTY_STRING_SIGN = "\x00".freeze
+      EMPTY_STRING_SIGN = "\x00"
 
-      set :static_cache_control, [:private, max_age: 86400]
+      set :static_cache_control, [:private, { max_age: 86_400 }]
       set :environment, -> { (ENV['RACK_ENV'] || ENV['RAILS_ENV'] || ENV['APP_ENV'])&.to_sym || :development }
-      set :logging, -> { environment == :development || environment == :test }
+      set :logging, -> { LOGGING_ENVS.include?(environment) }
       set :erb, layout: :'layouts/application'
       set :host_authorization, { allow_if: ->(_env) { true } }
 
@@ -29,9 +32,10 @@ module PgEventstore
         # @return [Array<Hash>, nil]
         def streams_filter
           streams = QueryBuilders::EventsFiltering.extract_streams_filter(params)
-          streams&.select { _1 in { context: String, stream_name: String, stream_id: String } }&.map do
+          streams = streams.select { _1 in { context: String, stream_name: String, stream_id: String } }.map do
             Hash[_1.reject { |_, value| value == '' }].transform_keys(&:to_sym)
-          end&.reject { _1.empty? }
+          end
+          streams.reject(&:empty?)
         end
 
         # @return [String, nil]
@@ -44,7 +48,7 @@ module PgEventstore
         def events_filter
           event_filters = { filter: { event_types: params.dig(:filter, :events) } }
           events = QueryBuilders::EventsFiltering.extract_event_types_filter(event_filters)
-          events&.reject { _1 == '' }
+          events.reject { _1 == '' }
         end
 
         # @return [Symbol]
@@ -81,7 +85,7 @@ module PgEventstore
           end
           halt 200, {
             results: results,
-            pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id }
+            pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id },
           }.to_json
         end
 
@@ -144,7 +148,7 @@ module PgEventstore
           order: Paginator::EventsCollection::SQL_DIRECTIONS[params[:order]],
           options: {
             filter: { event_types: events_filter, streams: streams_filter },
-            resolve_link_tos: resolve_link_tos?
+            resolve_link_tos: resolve_link_tos?,
           },
           system_stream: system_stream
         )
@@ -154,7 +158,7 @@ module PgEventstore
           halt 200, {
             events: erb(:'home/partials/events', { layout: false }, { events: @collection.collection }),
             total_count: total_count(@collection.total_count),
-            pagination: erb(:'home/partials/pagination_links', { layout: false }, { collection: @collection })
+            pagination: erb(:'home/partials/pagination_links', { layout: false }, { collection: @collection }),
           }.to_json
         else
           erb :'home/dashboard'
@@ -223,7 +227,7 @@ module PgEventstore
           options: {
             query: params[:term],
             context: unescape_empty_string(params[:context]),
-            stream_name: unescape_empty_string(params[:stream_name])
+            stream_name: unescape_empty_string(params[:stream_name]),
           }
         )
         paginated_json_response(collection)
@@ -297,7 +301,7 @@ module PgEventstore
             PgEventstore.maintenance(current_config).delete_event(event, force: force)
             self.flash_message = {
               message: "An event at global position #{event.global_position} has been deleted successfully.",
-              kind: 'success'
+              kind: 'success',
             }
           rescue TooManyRecordsToLockError => e
             text = <<~TEXT
@@ -319,10 +323,10 @@ module PgEventstore
           stream_id: params[:stream_id]&.to_s,
         }
 
-        err_message = ->(attrs) {
+        err_message = lambda { |attrs|
           self.flash_message = {
             message: "Could not delete #{attrs}. It is not valid stream for deletion.",
-            kind: 'error'
+            kind: 'error',
           }
         }
 
@@ -334,7 +338,7 @@ module PgEventstore
             PgEventstore.maintenance(current_config).delete_stream(stream)
             self.flash_message = {
               message: "Stream #{stream.to_hash} has been successfully deleted.",
-              kind: 'success'
+              kind: 'success',
             }
           end
         else

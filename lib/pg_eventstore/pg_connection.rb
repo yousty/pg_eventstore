@@ -18,11 +18,13 @@ module PgEventstore
     def log(sql, params)
       return unless PgEventstore.logger&.debug?
 
-      sql = sql.gsub(/\$\d+/).each do |matched|
-        value = params[matched[1..].to_i - 1]
-        value = encode_value(value)
-        normalize_value(value)
-      end unless params&.empty?
+      unless params&.empty?
+        sql = sql.gsub(/\$\d+/).each do |matched|
+          value = params[matched[1..].to_i - 1]
+          value = encode_value(value)
+          normalize_value(value)
+        end
+      end
       PgEventstore.logger.debug(sql)
     end
 

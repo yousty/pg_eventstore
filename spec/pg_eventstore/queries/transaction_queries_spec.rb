@@ -36,7 +36,7 @@ RSpec.describe PgEventstore::TransactionQueries do
           end
         end
 
-        it 'it uses serializable isolation level' do
+        it 'uses serializable isolation level' do
           is_expected.to eq('serializable')
         end
       end
@@ -77,7 +77,7 @@ RSpec.describe PgEventstore::TransactionQueries do
         context 'when level is unhandled' do
           let(:isolation_level) { :some_value }
 
-          it 'it falls back to serializable isolation level' do
+          it 'falls back to serializable isolation level' do
             is_expected.to eq('serializable')
           end
         end

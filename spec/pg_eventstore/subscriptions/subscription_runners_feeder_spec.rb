@@ -10,14 +10,14 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
     let(:runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.create_with_connection(name: 'Foo', options: options1)
       )
     end
     let(:runner2) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.create_with_connection(name: 'Bar', options: options2)
       )
     end
@@ -27,7 +27,6 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
     let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
     let(:event2) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar') }
-
 
     before do
       allow(runner1).to receive(:feed).and_call_original

@@ -47,7 +47,7 @@ module PgEventstore
         stream_attrs.compact!
         sql = stream_attrs.map do |attr, _|
           "#{to_table_name}.#{attr} = ?"
-        end.join(" AND ")
+        end.join(' AND ')
         @sql_builder.where_or(sql, *stream_attrs.values)
       end
 
@@ -72,7 +72,7 @@ module PgEventstore
         result = (stream_attrs in { context: String, stream_name: String } | { context: String, stream_name: nil })
         return true if result
 
-        PgEventstore&.logger&.debug(<<~TEXT)
+        PgEventstore.logger&.debug(<<~TEXT)
           Ignoring unsupported stream filter format for grouped read #{stream_attrs.compact.inspect}. \
           See docs/reading_events.md docs for supported formats.
         TEXT

@@ -29,6 +29,7 @@ module PgEventstore
                 TEXT
               )
               raise unless TryUnlockSubscriptionsSet.try_unlock(manager.config_name, error.lock_id)
+
               retry
             end
           end

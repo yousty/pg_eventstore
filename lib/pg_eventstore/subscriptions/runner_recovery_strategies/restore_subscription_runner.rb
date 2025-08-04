@@ -21,6 +21,7 @@ module PgEventstore
 
       def recover(error)
         return false if @restart_terminator&.call(@subscription.dup)
+
         if @subscription.restart_count >= @subscription.max_restarts_number
           @failed_subscription_notifier&.call(@subscription.dup, Utils.unwrap_exception(error))
           return false

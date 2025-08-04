@@ -8,7 +8,7 @@ RSpec.describe PgEventstore::Callbacks do
 
     let(:action) { :my_action }
     let(:filter) { :before }
-    let(:callback) { proc { } }
+    let(:callback) { proc {} }
     let(:callbacks) { instance.instance_variable_get(:@callbacks) }
 
     it 'memorizes it' do
@@ -31,7 +31,7 @@ RSpec.describe PgEventstore::Callbacks do
       context 'when no block is given' do
         subject { instance.run_callbacks(action) }
 
-        it { is_expected.to be_nil}
+        it { is_expected.to be_nil }
       end
 
       context 'when block is given' do
@@ -47,24 +47,24 @@ RSpec.describe PgEventstore::Callbacks do
 
     context 'when there are registered callbacks' do
       let(:call_stack) { [] }
-      let(:before_callback1) { proc { call_stack.push(:before_1) } }
-      let(:before_callback2) { proc { call_stack.push(:before_2) } }
+      let(:before_callback1) { proc { call_stack.push(:before1) } }
+      let(:before_callback2) { proc { call_stack.push(:before2) } }
       let(:around_callback1) do
         proc do |action|
-          call_stack.push(:around_1_before)
+          call_stack.push(:around1_before)
           action.call
-          call_stack.push(:around_1_after)
+          call_stack.push(:around1_after)
         end
       end
       let(:around_callback2) do
         proc do |action|
-          call_stack.push(:around_2_before)
+          call_stack.push(:around2_before)
           action.call
-          call_stack.push(:around_2_after)
+          call_stack.push(:around2_after)
         end
       end
-      let(:after_callback1) { proc { call_stack.push(:after_1) } }
-      let(:after_callback2) { proc { call_stack.push(:after_2) } }
+      let(:after_callback1) { proc { call_stack.push(:after1) } }
+      let(:after_callback2) { proc { call_stack.push(:after2) } }
 
       before do
         instance.define_callback(action, :before, before_callback1)
@@ -81,7 +81,7 @@ RSpec.describe PgEventstore::Callbacks do
         it 'executes callbacks in the correct order' do
           subject
           expect(call_stack).to(
-            eq(%i[before_1 before_2 around_1_before around_2_before around_2_after around_1_after after_1 after_2])
+            eq(%i[before1 before2 around1_before around2_before around2_after around1_after after1 after2])
           )
         end
       end

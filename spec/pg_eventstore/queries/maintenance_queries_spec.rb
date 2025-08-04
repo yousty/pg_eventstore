@@ -7,7 +7,7 @@ RSpec.describe PgEventstore::MaintenanceQueries do
   describe '#delete_stream' do
     subject { instance.delete_stream(stream) }
 
-    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '1') }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
 
     context 'when stream exists' do
       let!(:events) do
@@ -24,7 +24,7 @@ RSpec.describe PgEventstore::MaintenanceQueries do
     end
 
     context 'when stream does not exist' do
-      let(:another_stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '2') }
+      let(:another_stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '2') }
       let!(:events) do
         events = Array.new(2) { PgEventstore::Event.new }
         PgEventstore.client.append_to_stream(another_stream, events)
@@ -43,7 +43,7 @@ RSpec.describe PgEventstore::MaintenanceQueries do
     subject { instance.delete_event(event) }
 
     let(:event) { PgEventstore::Event.new(stream: stream) }
-    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '1') }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
 
     context 'when event exists' do
       let!(:event) do
@@ -77,7 +77,7 @@ RSpec.describe PgEventstore::MaintenanceQueries do
   describe '#adjust_stream_revisions' do
     subject { instance.adjust_stream_revisions(stream, after_revision) }
 
-    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '1') }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
     let(:events) do
       PgEventstore.client.append_to_stream(stream, Array.new(4) { PgEventstore::Event.new })
     end
@@ -98,7 +98,7 @@ RSpec.describe PgEventstore::MaintenanceQueries do
     let!(:events) do
       PgEventstore.client.append_to_stream(stream, Array.new(4) { PgEventstore::Event.new })
     end
-    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '1') }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
     let(:after_revision) { 1 }
 
     it 'returns an approximate amount of events in the given stream after the given revision' do
@@ -120,7 +120,7 @@ RSpec.describe PgEventstore::MaintenanceQueries do
         event_class.new(**event.options_hash.merge(stream_revision: 10))
       end
       let(:event_class) { Class.new(PgEventstore::Event) }
-      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '1') }
+      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
 
       it 'reloads it from the database' do
         aggregate_failures do

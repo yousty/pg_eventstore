@@ -28,12 +28,11 @@ module PgEventstore
       # @return [void]
       def check_events_presence(events)
         ids_from_db = queries.events.ids_from_db(events)
-        (events.map(&:id) - ids_from_db).tap do |missing_ids|
-          return if missing_ids.empty?
+        missing_ids = events.map(&:id) - ids_from_db
+        return if missing_ids.empty?
 
-          missing_event = events.find { |event| event.id == missing_ids.first }
-          raise NotPersistedEventError, missing_event
-        end
+        missing_event = events.find { |event| event.id == missing_ids.first }
+        raise NotPersistedEventError, missing_event
       end
     end
   end

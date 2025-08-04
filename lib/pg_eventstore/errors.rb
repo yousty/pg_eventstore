@@ -220,6 +220,7 @@ module PgEventstore
     def initialize(stream, event_types)
       @stream = stream
       @event_types = event_types
+      super("Missing partitions for stream #{stream.inspect}, event types #{event_types.inspect}")
     end
   end
 
@@ -244,13 +245,14 @@ module PgEventstore
     end
   end
 
-  class WrappedException < Error
+  class WrappedException < StandardError
     attr_reader :original_exception
     attr_reader :extra
 
     def initialize(original_exception, extra)
       @original_exception = original_exception
       @extra = extra
+      super()
     end
   end
 end
