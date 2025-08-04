@@ -38,7 +38,7 @@ module PgEventstore
     # @param level [String] PostgreSQL transaction isolation level
     # @param pg_connection [PG::Connection]
     # @return [void]
-    def pg_transaction(level, pg_connection, &)
+    def pg_transaction(level, pg_connection, &_blk)
       pg_connection.transaction do
         pg_connection.exec("SET TRANSACTION ISOLATION LEVEL #{level}")
         yield

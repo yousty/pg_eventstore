@@ -63,7 +63,7 @@ module PgEventstore
     # A shorthand from ConnectionPool#with.
     # @yieldparam connection [PG::Connection] PostgreSQL connection instance
     # @return [Object] a value of a given block
-    def with(&)
+    def with(&_blk)
       should_retry = true
       @pool.with do |conn|
         yield conn

@@ -121,7 +121,7 @@ module PgEventstore
     end
 
     # @return [Object] the result of the passed block
-    def run_around_callbacks(action, *args, **kwargs, &)
+    def run_around_callbacks(action, *args, **kwargs, &_blk)
       result = nil
       stack = [proc { result = yield if block_given? }]
       @callbacks[action][:around]&.reverse_each&.with_index do |callback, index|

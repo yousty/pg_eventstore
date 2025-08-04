@@ -224,7 +224,7 @@ module PgEventstore
 
     # @param state [Symbol]
     # @return [Object, nil] a result of evaluating of passed block
-    def within_state(state, &)
+    def within_state(state, &_blk)
       synchronize do
         return unless @state.public_send("#{RunnerState::STATES.fetch(state)}?")
 
