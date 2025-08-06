@@ -5,7 +5,7 @@ RSpec.describe PgEventstore::Web::Subscriptions::WithState::Subscriptions do
   let(:current_set) { 'FooSet' }
   let(:state) { 'stopped' }
 
-  context '#subscriptions' do
+  describe '#subscriptions' do
     subject { instance.subscriptions }
 
     let!(:subscription1) { SubscriptionsHelper.create(name: 'Sub1', set: 'FooSet', state: 'running') }

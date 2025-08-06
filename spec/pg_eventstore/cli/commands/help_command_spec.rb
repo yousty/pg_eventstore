@@ -8,11 +8,11 @@ RSpec.describe PgEventstore::CLI::Commands::HelpCommand do
     subject { instance.call }
 
     before do
-      options.help = "This is a help message"
+      options.help = 'This is a help message'
     end
 
     it 'prints help' do
-      expect { subject }.to output(a_string_including("This is a help message")).to_stdout
+      expect { subject }.to output(a_string_including('This is a help message')).to_stdout
     end
     it { is_expected.to eq(PgEventstore::CLI::ExitCodes::SUCCESS) }
   end

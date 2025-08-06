@@ -14,7 +14,7 @@ RSpec.describe PgEventstore::SubscriptionsSetCommandQueries do
         instance.create(subscriptions_set_id: subscriptions_set.id, command_name: command_name, data: {})
       end
 
-      it 'returns it ' do
+      it 'returns it' do
         is_expected.to eq(command)
       end
     end

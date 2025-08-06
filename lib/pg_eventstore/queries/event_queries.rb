@@ -48,18 +48,18 @@ module PgEventstore
         sql_builder.where_or('context = ? and stream_name = ? and type = ?', context, stream_name, event_type)
       end
       sql_builder.where('id = ANY(?::uuid[])', events.map(&:id))
-      PgEventstore.connection.with do |conn|
+      raw_events = PgEventstore.connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
-      end.to_a.map { |attrs| attrs['id'] }
+      end.to_a
+      raw_events.map { |attrs| attrs['id'] }
     end
 
     # @param stream [PgEventstore::Stream]
     # @return [Integer, nil]
     def stream_revision(stream)
-      sql_builder = SQLBuilder.new.from('events').select('stream_revision').
-        where('context = ? and stream_name = ? and stream_id = ?', *stream.to_a).
-        order('stream_revision DESC').
-        limit(1)
+      sql_builder = SQLBuilder.new.from('events').select('stream_revision')
+      sql_builder.where('context = ? and stream_name = ? and stream_id = ?', *stream.to_a)
+      sql_builder.order('stream_revision DESC').limit(1)
       connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end.to_a.dig(0, 'stream_revision')
@@ -86,14 +86,15 @@ module PgEventstore
       columns = %w[id data metadata stream_revision link_id link_partition_id type context stream_name stream_id]
 
       sql = <<~SQL
-        INSERT INTO events (#{columns.join(', ')}) 
-          VALUES #{sql_rows_for_insert.join(", ")} 
+        INSERT INTO events (#{columns.join(', ')})
+          VALUES #{sql_rows_for_insert.join(', ')}
           RETURNING *
       SQL
 
-      connection.with do |conn|
+      raw_events = connection.with do |conn|
         conn.exec_params(sql, values)
-      end.map do |raw_event|
+      end
+      raw_events.map do |raw_event|
         deserializer.without_middlewares.deserialize(raw_event)
       end
     end

@@ -17,7 +17,7 @@ module PgEventstore
         :asc => 'ASC',
         :desc => 'DESC',
         'Forwards' => 'ASC',
-        'Backwards' => 'DESC'
+        'Backwards' => 'DESC',
       }.tap do |directions|
         directions.default = 'ASC'
       end.freeze
@@ -82,9 +82,7 @@ module PgEventstore
         # @return [Array<String>]
         def extract_event_types_filter(options)
           options in { filter: { event_types: Array => event_types } }
-          event_types = event_types&.select do
-            _1.is_a?(String)
-          end
+          event_types = event_types&.select { _1.is_a?(String) }
           event_types || []
         end
 
@@ -92,10 +90,10 @@ module PgEventstore
         # @return [Array<Hash[Symbol, String]>]
         def extract_streams_filter(options)
           options in { filter: { streams: Array => streams } }
-          streams = streams&.map do
-            _1 in { context: String | NilClass => context }
-            _1 in { stream_name: String | NilClass => stream_name }
-            _1 in { stream_id: String | NilClass => stream_id }
+          streams = streams&.map do |stream_attrs|
+            stream_attrs in { context: String | NilClass => context }
+            stream_attrs in { stream_name: String | NilClass => stream_name }
+            stream_attrs in { stream_id: String | NilClass => stream_id }
             { context: context, stream_name: stream_name, stream_id: stream_id }
           end
           streams || []
@@ -123,7 +121,7 @@ module PgEventstore
         stream_attrs.compact!
         sql = stream_attrs.map do |attr, _|
           "#{to_table_name}.#{attr} = ?"
-        end.join(" AND ")
+        end.join(' AND ')
         @sql_builder.where_or(sql, *stream_attrs.values)
       end
 
@@ -133,8 +131,8 @@ module PgEventstore
         return if event_types.empty?
 
         sql = event_types.size.times.map do
-          "?"
-        end.join(", ")
+          '?'
+        end.join(', ')
         @sql_builder.where("#{to_table_name}.type IN (#{sql})", *event_types)
       end
 
@@ -178,9 +176,11 @@ module PgEventstore
 
       # @param table_name [String] system stream view name
       # @return [void]
+      # rubocop:disable Naming/AccessorMethodName
       def set_source(table_name)
-        @sql_builder.from(%{ "#{PG::Connection.escape(table_name)}" #{to_table_name} })
+        @sql_builder.from(%( "#{PG::Connection.escape(table_name)}" #{to_table_name} ))
       end
+      # rubocop:enable Naming/AccessorMethodName
 
       private
 
@@ -192,7 +192,7 @@ module PgEventstore
           { context: String, stream_name: nil, stream_id: nil })
         return true if result
 
-        PgEventstore&.logger&.debug(<<~TEXT)
+        PgEventstore.logger&.debug(<<~TEXT)
           Ignoring unsupported stream filter format for searching #{stream_attrs.compact.inspect}. \
           See docs/reading_events.md docs for supported formats.
         TEXT

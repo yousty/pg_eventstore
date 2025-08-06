@@ -61,13 +61,13 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
       subscription_runner.stop_async.wait_for_finish
     end
 
-    it "sets subscription#current_position to the given position" do
+    it 'sets subscription#current_position to the given position' do
       expect { subject }.to change { subscription.reload.current_position }.to(position)
     end
-    it "resets subscription#last_chunk_greatest_position" do
+    it 'resets subscription#last_chunk_greatest_position' do
       expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(nil)
     end
-    it "resets subscription#total_processed_events" do
+    it 'resets subscription#total_processed_events' do
       expect { subject }.to change { subscription.reload.total_processed_events }.to(0)
     end
     it "resets current runner's chunk" do

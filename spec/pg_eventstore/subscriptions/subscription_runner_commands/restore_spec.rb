@@ -34,7 +34,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::Restore do
         subscription: subscription
       )
     end
-    let(:handler) { proc { } }
+    let(:handler) { proc {} }
     let(:processed_events) { [] }
 
     before do
@@ -65,7 +65,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::Restore do
           expect(processed_events.size).to eq(1)
         end
       end
-      it "resets subscription's error-related attributes", timecop: true do
+      it "resets subscription's error-related attributes", :timecop do
         expect { subject }.to change { subscription.reload.options_hash }.to(
           hash_including(
             restart_count: 1,
@@ -79,7 +79,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::Restore do
 
     context 'when state is something else' do
       it "does not update subscription's error-related attributes" do
-        expect { subject }.to_not change {
+        expect { subject }.not_to change {
           subscription.reload.options_hash.
             slice(:restart_count, :last_restarted_at, :last_error, :last_error_occurred_at)
         }

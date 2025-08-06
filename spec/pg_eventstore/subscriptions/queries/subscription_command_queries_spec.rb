@@ -22,7 +22,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
         )
       end
 
-      it 'returns it ' do
+      it 'returns it' do
         is_expected.to eq(command)
       end
     end

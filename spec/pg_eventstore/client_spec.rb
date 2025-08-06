@@ -35,12 +35,12 @@ RSpec.describe PgEventstore::Client do
         options: {
           filter: {
             event_types: ['Foo'].freeze,
-            streams: [{ context: 'FooCtx', stream_name: 'Foo', stream_id: 'Bar' }.freeze].freeze
+            streams: [{ context: 'FooCtx', stream_name: 'Foo', stream_id: 'Bar' }.freeze].freeze,
           }.freeze,
           max_count: 1,
           # from_position: 0,
           resolve_link_tos: true,
-          direction: 'Forwards'
+          direction: 'Forwards',
         }.freeze
       ).flat_map(&:itself)
     end

@@ -28,15 +28,12 @@ module PgEventstore
     # @param command_name [String]
     # @return [PgEventstore::SubscriptionFeederCommands::Base, nil]
     def find_by(subscriptions_set_id:, command_name:)
-      sql_builder =
-        SQLBuilder.new.
-          select('*').
-          from('subscriptions_set_commands').
-          where('subscriptions_set_id = ? AND name = ?', subscriptions_set_id, command_name)
+      sql_builder = SQLBuilder.new.select('*').from('subscriptions_set_commands')
+      sql_builder.where('subscriptions_set_id = ? AND name = ?', subscriptions_set_id, command_name)
       pg_result = connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end
-      return if pg_result.ntuples.zero?
+      return if pg_result.ntuples == 0
 
       deserialize(pg_result.to_a.first)
     end
@@ -47,7 +44,7 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionFeederCommands::Base]
     def create(subscriptions_set_id:, command_name:, data:)
       sql = <<~SQL
-        INSERT INTO subscriptions_set_commands (name, subscriptions_set_id, data) 
+        INSERT INTO subscriptions_set_commands (name, subscriptions_set_id, data)#{' '}
           VALUES ($1, $2, $3)
           RETURNING *
       SQL
@@ -56,17 +53,15 @@ module PgEventstore
       end
       deserialize(pg_result.to_a.first)
     rescue PG::ForeignKeyViolation
-      raise RecordNotFound.new("subscriptions_set", subscriptions_set_id)
+      raise RecordNotFound.new('subscriptions_set', subscriptions_set_id)
     end
 
     # @param subscriptions_set_id [Integer, nil]
     # @return [Array<PgEventstore::SubscriptionFeederCommands::Base>]
     def find_commands(subscriptions_set_id)
-      sql_builder =
-        SQLBuilder.new.select('*').
-          from('subscriptions_set_commands').
-          where("subscriptions_set_id = ?", subscriptions_set_id).
-          order('id ASC')
+      sql_builder = SQLBuilder.new.select('*').from('subscriptions_set_commands')
+      sql_builder.where('subscriptions_set_id = ?', subscriptions_set_id)
+      sql_builder.order('id ASC')
       pg_result = connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end

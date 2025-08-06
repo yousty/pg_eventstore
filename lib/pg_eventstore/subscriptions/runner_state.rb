@@ -7,7 +7,7 @@ module PgEventstore
     include Extensions::CallbacksExtension
 
     # @return [Hash<Symbol => String>]
-    STATES = %i(initial running halting stopped dead).to_h { [_1, _1.to_s.freeze] }.freeze
+    STATES = %i[initial running halting stopped dead].to_h { [_1, _1.to_s.freeze] }.freeze
 
     def initialize
       initial!
@@ -36,11 +36,13 @@ module PgEventstore
 
     # @param state [String]
     # @return [String]
+    # rubocop:disable Naming/AccessorMethodName
     def set_state(state)
       old_state = @state
       @state = state
       callbacks.run_callbacks(:change_state, @state) unless old_state == @state
       @state
     end
+    # rubocop:enable Naming/AccessorMethodName
   end
 end

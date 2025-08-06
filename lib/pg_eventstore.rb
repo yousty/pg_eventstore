@@ -31,6 +31,9 @@ module PgEventstore
     attr_reader :mutex
     private :mutex
 
+    # @return [Logger, nil]
+    attr_accessor :logger
+
     # Creates a Config if not exists and yields it to the given block.
     # @param name [Symbol] a name to assign to a config
     # @return [Object] a result of the given block
@@ -105,17 +108,6 @@ module PgEventstore
     # @return [PgEventstore::Maintenance]
     def maintenance(name = DEFAULT_CONFIG)
       Maintenance.new(config(name))
-    end
-
-    # @return [Logger, nil]
-    def logger
-      @logger
-    end
-
-    # @param logger [Logger, nil]
-    # @return [Logger, nil]
-    def logger=(logger)
-      @logger = logger
     end
 
     private

@@ -43,7 +43,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
     let(:subscription) { SubscriptionsHelper.create_with_connection(total_processed_events: 2) }
     let(:error) { PgEventstore::WrappedException.new(original_error, { foo: 'bar' }) }
     let(:original_error) do
-      StandardError.new("something happened").tap do |err|
+      StandardError.new('something happened').tap do |err|
         err.set_backtrace([])
       end
     end
@@ -53,7 +53,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
         { 'class' => 'StandardError', 'message' => 'something happened', 'backtrace' => [], 'foo' => 'bar' }
       )
     end
-    it 'updates Subscription#last_error_occurred_at', timecop: true do
+    it 'updates Subscription#last_error_occurred_at', :timecop do
       expect { subject }.to change { subscription.reload.last_error_occurred_at }.to(Time.now.round(6))
     end
   end
@@ -64,7 +64,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
     let(:subscription) { SubscriptionsHelper.create_with_connection }
     let(:global_position) { 123 }
 
-    it 'updates Subscription#last_chunk_fed_at', timecop: true do
+    it 'updates Subscription#last_chunk_fed_at', :timecop do
       expect { subject }.to change { subscription.reload.last_chunk_fed_at }.to(Time.now.round(6))
     end
     it 'updates Subscription#last_chunk_greatest_position' do
@@ -77,7 +77,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
 
     let(:subscription) { SubscriptionsHelper.create_with_connection }
 
-    it 'updates Subscription#last_restarted_at', timecop: true do
+    it 'updates Subscription#last_restarted_at', :timecop do
       expect { subject }.to change { subscription.reload.last_restarted_at }.to(Time.now.round(6))
     end
     it 'updates Subscription#restart_count' do

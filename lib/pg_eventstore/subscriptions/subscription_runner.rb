@@ -58,7 +58,7 @@ module PgEventstore
 
     # @return [Integer]
     def estimate_events_number
-      return INITIAL_EVENTS_PER_CHUNK if @stats.average_event_processing_time.zero?
+      return INITIAL_EVENTS_PER_CHUNK if @stats.average_event_processing_time == 0
 
       events_per_chunk = (@subscription.chunk_query_interval / @stats.average_event_processing_time).round
       events_to_fetch = [events_per_chunk, MAX_EVENTS_PER_CHUNK].min - @events_processor.events_left_in_chunk

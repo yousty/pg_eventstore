@@ -121,7 +121,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
     end
 
     context 'when reading from "$streams" system stream' do
-      let(:system_stream) { "$streams" }
+      let(:system_stream) { '$streams' }
 
       it 'returns 0-stream revision events according to the page limit and in the given order' do
         is_expected.to eq([event1, event3])
@@ -211,7 +211,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
       end
     end
 
-    context 'resolving next page id from link event' do
+    describe 'resolving next page id from link event' do
       let!(:link) { PgEventstore.client.link_to(stream3, event1) }
 
       let(:starting_id) { event4.global_position }
@@ -231,7 +231,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
     end
 
     context 'when reading from "$streams" system stream' do
-      let(:system_stream) { "$streams" }
+      let(:system_stream) { '$streams' }
 
       it 'returns next page id for 0-stream revision events according to the page limit and in the given order' do
         is_expected.to eq(event4.global_position)
@@ -319,7 +319,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:system_stream) { "$streams" }
+        let(:system_stream) { '$streams' }
         let(:starting_id) { event4.global_position }
 
         it 'returns prev page id for 0-stream revision events relative to the starting_id' do
@@ -328,7 +328,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
       end
     end
 
-    context 'resolving prev page id from link event' do
+    describe 'resolving prev page id from link event' do
       let!(:link) { PgEventstore.client.link_to(stream3, event1) }
       let(:starting_id) { event4.global_position }
       let(:order) { :desc }
@@ -390,7 +390,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
     end
 
     describe '"$streams" system stream' do
-      let(:system_stream) { "$streams" }
+      let(:system_stream) { '$streams' }
 
       context 'when number of records does not exceed the limit' do
         before do

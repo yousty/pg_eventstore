@@ -4,7 +4,7 @@ RSpec.describe PgEventstore::Web::Subscriptions::Subscriptions do
   let(:instance) { described_class.new(PgEventstore.connection, current_set) }
   let(:current_set) { 'FooSet' }
 
-  context '#subscriptions' do
+  describe '#subscriptions' do
     subject { instance.subscriptions }
 
     let!(:subscription1) { SubscriptionsHelper.create(name: 'Sub1', set: 'FooSet') }

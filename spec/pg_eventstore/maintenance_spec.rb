@@ -7,7 +7,7 @@ RSpec.describe PgEventstore::Maintenance do
   describe '#delete_stream' do
     subject { instance.delete_stream(stream) }
 
-    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar',  stream_id: '1') }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
     let!(:events) do
       events = Array.new(2) { PgEventstore::Event.new }
       PgEventstore.client.append_to_stream(stream, events)
@@ -28,7 +28,7 @@ RSpec.describe PgEventstore::Maintenance do
     end
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
 
-    shared_context 'event gets deleted' do
+    shared_examples 'event gets deleted' do
       it 'deletes it' do
         expect { subject }.to change { safe_read(stream).map(&:id) }.to(rest_events.map(&:id))
       end
@@ -40,7 +40,7 @@ RSpec.describe PgEventstore::Maintenance do
         let(:another_event) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
 
         before do
-          stub_const("PgEventstore::Commands::DeleteEvent::MAX_RECORDS_TO_LOCK", 0)
+          stub_const('PgEventstore::Commands::DeleteEvent::MAX_RECORDS_TO_LOCK', 0)
           event
           another_event
         end

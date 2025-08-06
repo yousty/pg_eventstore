@@ -155,21 +155,29 @@ RSpec.describe PgEventstore::Commands::Append do
           end
 
           it 'raises error' do
+            error_message = <<~TEXT.strip
+              #{stream.to_hash.inspect} stream revision #{expected_revision.inspect} is expected, but actual stream \
+              revision is 0.
+            TEXT
             expect { subject }.to(
               raise_error(
                 PgEventstore::WrongExpectedRevisionError,
-                "#{stream.to_hash.inspect} stream revision #{expected_revision.inspect} is expected, but actual stream revision is 0."
+                error_message
               )
             )
           end
         end
 
-        context "when stream does not exist" do
+        context 'when stream does not exist' do
           it 'raises error' do
+            error_message = <<~TEXT.strip
+              #{stream.to_hash.inspect} stream revision #{expected_revision.inspect} is expected, but stream does not \
+              exist.
+            TEXT
             expect { subject }.to(
               raise_error(
                 PgEventstore::WrongExpectedRevisionError,
-                "#{stream.to_hash.inspect} stream revision #{expected_revision.inspect} is expected, but stream does not exist."
+                error_message
               )
             )
           end
@@ -360,18 +368,19 @@ RSpec.describe PgEventstore::Commands::Append do
     let(:events_count_mapping) { { 'some-event' => 5, 'some-event2' => 3, 'some-event3' => 2 } }
     let(:iterations_number) { 5 }
 
+    # rubocop:disable RSpec/MultipleExpectations
     it 'checks it' do
       iterations_number.times.flat_map do |i|
         t1 = Thread.new do
-          sleep 0.1 + i / 10.0
+          sleep 0.1 + (i / 10.0)
           instance.call(stream, *([event1] * events_count_mapping['some-event']))
         end
         t2 = Thread.new do
-          sleep 0.1 + i / 10.0
+          sleep 0.1 + (i / 10.0)
           instance.call(stream, *([event2] * events_count_mapping['some-event2']))
         end
         t3 = Thread.new do
-          sleep 0.1 + i / 10.0
+          sleep 0.1 + (i / 10.0)
           instance.call(stream, *([event3] * events_count_mapping['some-event3']))
         end
         [t1, t2, t3]
@@ -396,5 +405,6 @@ RSpec.describe PgEventstore::Commands::Append do
         expect(seq.size % count_mapping).to(be_zero, failure_message)
       end
     end
+    # rubocop:enable RSpec/MultipleExpectations
   end
 end

@@ -8,14 +8,14 @@ module PgEventstore
           # @return [String]
           def banner
             <<~TEXT
-            Usage: pg-eventstore [options]
-                   pg-eventstore [command]
-        
-              Commands:
-                subscriptions     Start, stop subscriptions
-  
-              Options:
-          TEXT
+              Usage: pg-eventstore [options]
+                     pg-eventstore [command]
+
+                Commands:
+                  subscriptions     Start, stop subscriptions
+
+                Options:
+            TEXT
           end
         end
       end

@@ -1,0 +1,126 @@
+plugins:
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: '3.0'
+  NewCops: enable
+  Exclude:
+    - 'benchmark/*'
+    - 'dev_scripts/**/*'
+
+Layout/LineLength:
+  Max: 120
+
+Layout/DotPosition:
+  EnforcedStyle: 'trailing'
+
+Naming/PredicateMethod:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/NestedGroups:
+  Max: 6
+
+RSpec/LetSetup:
+  Enabled: false
+
+RSpec/MatchArray:
+  Enabled: false
+
+RSpec/NamedSubject:
+  Enabled: false
+
+RSpec/EmptyLineAfterExample:
+  Enabled: false
+
+RSpec/ImplicitSubject:
+  Enabled: false
+
+RSpec/BeEq:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/ExpectChange:
+  Enabled: false
+
+RSpec/VerifiedDoubles:
+  Enabled: false
+
+RSpec/DescribeClass:
+  Enabled: false
+
+Metrics:
+  Enabled: false
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/Semicolon:
+  Exclude:
+    - 'spec/**/*.rb'
+
+Style/BlockDelimiters:
+  Exclude:
+    - 'spec/**/*.rb'
+
+Style/RescueStandardError:
+  Enabled: false
+
+Style/NumericPredicate:
+  EnforcedStyle: comparison
+
+Style/AccessorGrouping:
+  Enabled: false
+
+Style/RaiseArgs:
+  Enabled: false
+
+Style/RescueModifier:
+  Exclude:
+    - 'spec/**/*.rb'
+
+Style/EmptyMethod:
+  EnforcedStyle: expanded
+
+Style/FetchEnvVar:
+  Enabled: false
+
+Style/NumberedParameters:
+  Exclude:
+    - 'spec/**/*.rb'
+
+Lint/NoReturnInBeginEndBlocks:
+  Enabled: false
+
+Naming/RescuedExceptionsVariableName:
+  Enabled: false
+
+Lint/SuppressedException:
+  Exclude:
+    - 'spec/**/*.rb'
+
+Lint/AmbiguousBlockAssociation:
+  Exclude:
+    - 'spec/**/*.rb'
+
+Gemspec/RequiredRubyVersion:
+  Enabled: false
+
+Gemspec/RequireMFA:
+  Enabled: false

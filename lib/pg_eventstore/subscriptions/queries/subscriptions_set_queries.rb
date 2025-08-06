@@ -46,9 +46,10 @@ module PgEventstore
     def set_names
       builder = SQLBuilder.new.select('name').from('subscriptions_set').group('name').order('name ASC')
 
-      connection.with do |conn|
+      raw_set = connection.with do |conn|
         conn.exec_params(*builder.to_exec_params)
-      end.map { |attrs| attrs['name'] }
+      end
+      raw_set.map { |attrs| attrs['name'] }
     end
 
     # The same as #find_all, but returns first result
@@ -61,15 +62,15 @@ module PgEventstore
     # @return [Hash]
     # @raise [PgEventstore::RecordNotFound]
     def find!(id)
-      find_by(id: id) || raise(RecordNotFound.new("subscriptions_set", id))
+      find_by(id: id) || raise(RecordNotFound.new('subscriptions_set', id))
     end
 
     # @param attrs [Hash]
     # @return [Hash]
     def create(attrs)
       sql = <<~SQL
-        INSERT INTO subscriptions_set (#{attrs.keys.join(', ')}) 
-          VALUES (#{Utils.positional_vars(attrs.values)}) 
+        INSERT INTO subscriptions_set (#{attrs.keys.join(', ')})#{' '}
+          VALUES (#{Utils.positional_vars(attrs.values)})#{' '}
           RETURNING *
       SQL
       pg_result = connection.with do |conn|
@@ -92,7 +93,7 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(sql, [*attrs.values, id])
       end
-      raise(RecordNotFound.new("subscriptions_set", id)) if pg_result.ntuples.zero?
+      raise(RecordNotFound.new('subscriptions_set', id)) if pg_result.ntuples == 0
 
       deserialize(pg_result.to_a.first)
     end

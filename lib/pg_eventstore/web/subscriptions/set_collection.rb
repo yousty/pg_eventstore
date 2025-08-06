@@ -16,7 +16,7 @@ module PgEventstore
 
         # @return [Array<String>]
         def names
-          @set_collection ||= (subscription_queries.set_collection | subscriptions_set_queries.set_names).sort
+          @names ||= (subscription_queries.set_collection | subscriptions_set_queries.set_names).sort
         end
 
         private

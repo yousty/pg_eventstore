@@ -9,12 +9,11 @@ module PgEventstore
 
         # @return [Array<Hash<String => String>>]
         def collection
-          @_collection ||=
+          @collection ||=
             begin
-              sql_builder =
-                SQLBuilder.new.select('stream_id').from('events').
-                  where('context = ? and stream_name = ?', options[:context], options[:stream_name]).
-                  where('stream_id like ?', "#{options[:query]}%")
+              sql_builder = SQLBuilder.new.select('stream_id').from('events')
+              sql_builder.where('context = ? and stream_name = ?', options[:context], options[:stream_name])
+              sql_builder.where('stream_id like ?', "#{options[:query]}%")
               sql_builder.where("stream_id #{direction_operator} ?", starting_id) if starting_id
               sql_builder.group('stream_id').limit(per_page).order("stream_id #{order}")
               connection.with do |conn|
@@ -28,11 +27,11 @@ module PgEventstore
           return unless collection.size == per_page
 
           starting_id = collection.first['stream_id']
-          sql_builder =
-            SQLBuilder.new.select('stream_id').from('events').
-              where("stream_id #{direction_operator} ?", starting_id).where('stream_id like ?', "#{options[:query]}%").
-              where('context = ? and stream_name = ?', options[:context], options[:stream_name]).
-              group('stream_id').limit(1).offset(per_page).order("stream_id #{order}")
+          sql_builder = SQLBuilder.new.select('stream_id').from('events')
+          sql_builder.where("stream_id #{direction_operator} ?", starting_id)
+          sql_builder.where('stream_id like ?', "#{options[:query]}%")
+          sql_builder.where('context = ? and stream_name = ?', options[:context], options[:stream_name])
+          sql_builder.group('stream_id').limit(1).offset(per_page).order("stream_id #{order}")
 
           connection.with do |conn|
             conn.exec_params(*sql_builder.to_exec_params)

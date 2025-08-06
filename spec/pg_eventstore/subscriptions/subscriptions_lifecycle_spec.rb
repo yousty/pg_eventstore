@@ -42,7 +42,6 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
         }.to(subscriptions_set_lifecycle.persisted_subscriptions_set.id)
         expect(subscription1.id).to be_an(Integer)
       end
-
     end
     it 'locks second subscription' do
       aggregate_failures do
@@ -154,10 +153,10 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
           subscription2.update(updated_at: Time.now.utc - PgEventstore::SubscriptionsLifecycle::HEARTBEAT_INTERVAL - 1)
         end
 
-        it 'updates #updated_at of first subscription', timecop: true do
+        it 'updates #updated_at of first subscription', :timecop do
           expect { subject }.to change { subscription1.reload.updated_at }.to(Time.now.round(6))
         end
-        it 'updates #updated_at of second subscription', timecop: true do
+        it 'updates #updated_at of second subscription', :timecop do
           expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.round(6))
         end
       end
@@ -171,7 +170,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
         it 'does not update #updated_at of first subscription' do
           expect { subject }.not_to change { subscription1.reload.updated_at }
         end
-        it 'updates #updated_at of second subscription', timecop: true do
+        it 'updates #updated_at of second subscription', :timecop do
           expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.round(6))
         end
       end
@@ -186,7 +185,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
         it 'does not update #updated_at of first subscription' do
           expect { subject }.not_to change { subscription1.reload.updated_at }
         end
-        it 'updates #updated_at of second subscription', timecop: true do
+        it 'updates #updated_at of second subscription', :timecop do
           expect { subject }.to change { subscription2.reload.updated_at }.to(Time.now.round(6))
         end
       end

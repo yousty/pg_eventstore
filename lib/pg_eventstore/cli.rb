@@ -10,14 +10,14 @@ require_relative 'cli/commands'
 module PgEventstore
   module CLI
     OPTIONS_PARSER = {
-      "subscriptions" => [Parsers::SubscriptionParser, ParserOptions::SubscriptionOptions].freeze
+      'subscriptions' => [Parsers::SubscriptionParser, ParserOptions::SubscriptionOptions].freeze,
     }.tap do |directions|
       directions.default = [Parsers::DefaultParser, ParserOptions::DefaultOptions].freeze
     end.freeze
 
     COMMANDS = {
-      ["subscriptions", "start"].freeze => Commands::StartSubscriptionsCommand,
-      ["subscriptions", "stop"].freeze => Commands::StopSubscriptionsCommand
+      %w[subscriptions start].freeze => Commands::StartSubscriptionsCommand,
+      %w[subscriptions stop].freeze => Commands::StopSubscriptionsCommand,
     }.freeze
 
     class << self

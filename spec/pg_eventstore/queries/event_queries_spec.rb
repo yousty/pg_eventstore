@@ -177,7 +177,7 @@ RSpec.describe PgEventstore::EventQueries do
         [
           { filter: { event_types: ['Foo'] }, max_count: 1 },
           { filter: { event_types: ['Bar'] }, max_count: 1 },
-          { filter: { event_types: [PgEventstore::Event::LINK_TYPE] }, max_count: 1 }
+          { filter: { event_types: [PgEventstore::Event::LINK_TYPE] }, max_count: 1 },
         ]
       end
       let(:resolve_link_tos) { false }
@@ -238,7 +238,7 @@ RSpec.describe PgEventstore::EventQueries do
         [
           { filter: { event_types: ['Foo'] }, max_count: 1 },
           { filter: { event_types: ['Bar'] }, max_count: 1 },
-          { filter: { event_types: [PgEventstore::Event::LINK_TYPE] }, max_count: 1 }
+          { filter: { event_types: [PgEventstore::Event::LINK_TYPE] }, max_count: 1 },
         ]
       end
       let(:resolve_link_tos) { false }

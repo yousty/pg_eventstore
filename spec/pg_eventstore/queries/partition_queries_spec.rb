@@ -291,7 +291,9 @@ RSpec.describe PgEventstore::PartitionQueries do
       it 'does not create stream name partition record' do
         expect { subject }.not_to change {
           PgEventstore.connection.with do |c|
-            c.exec('select * from partitions where context is not null and stream_name is not null and event_type is null')
+            c.exec(
+              'select * from partitions where context is not null and stream_name is not null and event_type is null'
+            )
           end.to_a
         }
       end
@@ -308,7 +310,10 @@ RSpec.describe PgEventstore::PartitionQueries do
       it 'does not create event type partition record' do
         expect { subject }.not_to change {
           PgEventstore.connection.with do |c|
-            c.exec('select * from partitions where context is not null and stream_name is not null and event_type is not null')
+            c.exec(<<~SQL)
+              select * from partitions
+                where context is not null and stream_name is not null and event_type is not null
+            SQL
           end.to_a
         }
       end
@@ -399,8 +404,8 @@ RSpec.describe PgEventstore::PartitionQueries do
       it 'returns it' do
         is_expected.to(
           eq(
-            'id' => stream_name_partition['id'], 'context' => 'SomeCtx', 'stream_name' => 'SomeStream', 'event_type' => nil,
-            'table_name' => 'stream_names_ecb803'
+            'id' => stream_name_partition['id'], 'context' => 'SomeCtx', 'stream_name' => 'SomeStream',
+            'event_type' => nil, 'table_name' => 'stream_names_ecb803'
           )
         )
       end
@@ -543,7 +548,7 @@ RSpec.describe PgEventstore::PartitionQueries do
         PgEventstore.client.append_to_stream(stream2, event)
       end
 
-      it 'returns two different partitions with the given event filters, but different context/stream name combination' do
+      it 'returns 2 different partitions with the given event filters, but different context/stream name combination' do
         aggregate_failures do
           expect(subject.size).to eq(2)
           is_expected.to all be_a(PgEventstore::Partition)
@@ -601,7 +606,7 @@ RSpec.describe PgEventstore::PartitionQueries do
 
     context 'when streams filter is empty' do
       let(:stream_filters) { [] }
-      let(:event_filters) { ['Foo', 'Bar'] }
+      let(:event_filters) { %w[Foo Bar] }
 
       let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
       let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }

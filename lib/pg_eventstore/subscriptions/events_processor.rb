@@ -28,7 +28,7 @@ module PgEventstore
     # @param raw_events [Array<Hash>]
     # @return [void]
     def feed(raw_events)
-      raise EmptyChunkFedError.new("Empty chunk was fed!") if raw_events.empty?
+      raise EmptyChunkFedError.new('Empty chunk was fed!') if raw_events.empty?
 
       within_state(:running) do
         callbacks.run_callbacks(:feed, Utils.original_global_position(raw_events.last))

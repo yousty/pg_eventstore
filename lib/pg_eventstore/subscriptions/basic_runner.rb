@@ -184,6 +184,7 @@ module PgEventstore
                 halt = true
               end
               break if halt
+
               sleep 0.1
             end
           end
@@ -223,7 +224,7 @@ module PgEventstore
 
     # @param state [Symbol]
     # @return [Object, nil] a result of evaluating of passed block
-    def within_state(state, &blk)
+    def within_state(state, &_blk)
       synchronize do
         return unless @state.public_send("#{RunnerState::STATES.fetch(state)}?")
 
@@ -247,8 +248,8 @@ module PgEventstore
 
     private
 
-    def synchronize
-      @mutex.synchronize { yield }
+    def synchronize(&blk)
+      @mutex.synchronize(&blk)
     end
 
     # @return [void]

@@ -34,7 +34,7 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionFeederCommands do
 
     context 'when there is a "StopAll" command' do
       let!(:command) do
-        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: "StopAll", data: {})
+        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: 'StopAll', data: {})
       end
 
       before do
@@ -47,14 +47,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionFeederCommands do
       end
       it 'deletes it' do
         expect { subject }.to change {
-          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: "StopAll")
+          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: 'StopAll')
         }.to(nil)
       end
     end
 
     context 'when there is a "StartAll" command' do
       let!(:command) do
-        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: "StartAll", data: {})
+        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: 'StartAll', data: {})
       end
 
       before do
@@ -67,14 +67,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionFeederCommands do
       end
       it 'deletes it' do
         expect { subject }.to change {
-          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: "StartAll")
+          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: 'StartAll')
         }.to(nil)
       end
     end
 
     context 'when there is a "Restore" command' do
       let!(:command) do
-        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: "Restore", data: {})
+        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: 'Restore', data: {})
       end
 
       before do
@@ -87,14 +87,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionFeederCommands do
       end
       it 'deletes it' do
         expect { subject }.to change {
-          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: "Restore")
+          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: 'Restore')
         }.to(nil)
       end
     end
 
     context 'when there is a "Stop" command' do
       let!(:command) do
-        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: "Stop", data: {})
+        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: 'Stop', data: {})
       end
 
       before do
@@ -107,19 +107,19 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionFeederCommands do
       end
       it 'deletes it' do
         expect { subject }.to change {
-          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: "Stop")
+          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: 'Stop')
         }.to(nil)
       end
     end
 
     context 'when there is an unhandled command' do
       let!(:command) do
-        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: "FooCmd", data: {})
+        command_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: 'FooCmd', data: {})
       end
 
       it 'deletes it' do
         expect { subject }.to change {
-          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: "FooCmd")
+          command_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: 'FooCmd')
         }.to(nil)
       end
     end

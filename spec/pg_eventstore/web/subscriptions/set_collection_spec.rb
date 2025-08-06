@@ -12,7 +12,7 @@ RSpec.describe PgEventstore::Web::Subscriptions::SetCollection do
     let!(:subscriptions_set2) { SubscriptionsSetHelper.create(name: 'Baz') }
 
     it 'returns sets names of Subscription-s and SubscriptionsSet-s' do
-      is_expected.to eq(['Bar', 'Baz', 'Foo'])
+      is_expected.to eq(%w[Bar Baz Foo])
     end
   end
 end

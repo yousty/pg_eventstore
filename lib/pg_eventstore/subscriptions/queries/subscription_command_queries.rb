@@ -20,8 +20,17 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionRunnerCommands::Base]
     def find_or_create_by(subscription_id:, subscriptions_set_id:, command_name:, data:)
       transaction_queries.transaction do
-        find_by(subscription_id: subscription_id, subscriptions_set_id: subscriptions_set_id, command_name: command_name) ||
-          create(subscription_id: subscription_id, subscriptions_set_id: subscriptions_set_id, command_name: command_name, data: data)
+        existing = find_by(
+          subscription_id: subscription_id, subscriptions_set_id: subscriptions_set_id, command_name: command_name
+        )
+        next existing if existing
+
+        create(
+          subscription_id: subscription_id,
+          subscriptions_set_id: subscriptions_set_id,
+          command_name: command_name,
+          data: data
+        )
       end
     end
 
@@ -30,18 +39,15 @@ module PgEventstore
     # @param command_name [String]
     # @return [PgEventstore::SubscriptionRunnerCommands::Base, nil]
     def find_by(subscription_id:, subscriptions_set_id:, command_name:)
-      sql_builder =
-        SQLBuilder.new.
-          select('*').
-          from('subscription_commands').
-          where(
-            'subscription_id = ? AND subscriptions_set_id = ? AND name = ?',
-            subscription_id, subscriptions_set_id, command_name
-          )
+      sql_builder = SQLBuilder.new.select('*').from('subscription_commands')
+      sql_builder.where(
+        'subscription_id = ? AND subscriptions_set_id = ? AND name = ?',
+        subscription_id, subscriptions_set_id, command_name
+      )
       pg_result = connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end
-      return if pg_result.ntuples.zero?
+      return if pg_result.ntuples == 0
 
       deserialize(pg_result.to_a.first)
     end
@@ -53,7 +59,7 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionRunnerCommands::Base]
     def create(subscription_id:, subscriptions_set_id:, command_name:, data:)
       sql = <<~SQL
-        INSERT INTO subscription_commands (name, subscription_id, subscriptions_set_id, data) 
+        INSERT INTO subscription_commands (name, subscription_id, subscriptions_set_id, data)
           VALUES ($1, $2, $3, $4)
           RETURNING *
       SQL
@@ -69,15 +75,11 @@ module PgEventstore
     def find_commands(subscription_ids, subscriptions_set_id:)
       return [] if subscription_ids.empty?
 
-      sql = subscription_ids.size.times.map do
-        "?"
-      end.join(", ")
-      sql_builder =
-        SQLBuilder.new.select('*').
-          from('subscription_commands').
-          where("subscription_id IN (#{sql})", *subscription_ids).
-          where("subscriptions_set_id = ?", subscriptions_set_id).
-          order('id ASC')
+      sql = subscription_ids.size.times.map { '?' }.join(', ')
+      sql_builder = SQLBuilder.new.select('*').from('subscription_commands')
+      sql_builder.where("subscription_id IN (#{sql})", *subscription_ids)
+      sql_builder.where('subscriptions_set_id = ?', subscriptions_set_id)
+      sql_builder.order('id ASC')
       pg_result = connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end

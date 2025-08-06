@@ -70,15 +70,15 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     describe 'events filtering' do
       let!(:events1) do
-        events = [PgEventstore::Event.new(type: "Foo")] * 2
+        events = [PgEventstore::Event.new(type: 'Foo')] * 2
         PgEventstore.client.append_to_stream(stream1, events)
       end
       let!(:events2) do
-        events = [PgEventstore::Event.new(type: "Baz")] * 3
+        events = [PgEventstore::Event.new(type: 'Baz')] * 3
         PgEventstore.client.append_to_stream(stream1, events)
       end
       let!(:events3) do
-        events = [PgEventstore::Event.new(type: "Bar")] * 6
+        events = [PgEventstore::Event.new(type: 'Bar')] * 6
         PgEventstore.client.append_to_stream(stream2, events)
       end
       let(:events) { events1 + events2 + events3 }
@@ -162,7 +162,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       end
 
       context 'when filtering by "$streams" system stream' do
-        let(:params) { { filter: { system_stream: "$streams" } } }
+        let(:params) { { filter: { system_stream: '$streams' } } }
 
         it 'displays 0-stream revision events' do
           subject
@@ -176,7 +176,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
 
       let!(:events1) do
-        PgEventstore.client.append_to_stream(stream1, [PgEventstore::Event.new(type: "Foo")])
+        PgEventstore.client.append_to_stream(stream1, [PgEventstore::Event.new(type: 'Foo')])
       end
       let!(:events2) do
         PgEventstore.client.link_to(stream2, [events1.first])
@@ -237,7 +237,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     describe 'XSS protection in config name' do
       let(:params) { { config: config_name } }
-      let(:config_name) { :"<script xss>" }
+      let(:config_name) { :'<script xss>' }
 
       before do
         PgEventstore.configure(name: config_name) do |config|
@@ -302,10 +302,10 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
                 {
                   context: described_class::EMPTY_STRING_SIGN,
                   stream_name: described_class::EMPTY_STRING_SIGN,
-                  stream_id: described_class::EMPTY_STRING_SIGN
-                }
-              ]
-            }
+                  stream_id: described_class::EMPTY_STRING_SIGN,
+                },
+              ],
+            },
         }
       end
 
@@ -484,7 +484,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
               [
                 { 'context' => described_class::EMPTY_STRING_SIGN },
                 { 'context' => 'FabCtx' },
-                { 'context' => 'FbcCtx' }
+                { 'context' => 'FbcCtx' },
               ]
             )
           )
@@ -594,14 +594,14 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
           eq(
             'results' => [
               { 'stream_name' => described_class::EMPTY_STRING_SIGN },
-              { 'stream_name' => 'Fbc' }
+              { 'stream_name' => 'Fbc' },
             ],
             'pagination' => { 'more' => false, 'starting_id' => nil }
           )
         )
       end
 
-      context "when :context param is an empty-string sign" do
+      context 'when :context param is an empty-string sign' do
         let(:params) { { context: described_class::EMPTY_STRING_SIGN } }
 
         it 'returns stream names from that context and correctly escapes empty strings' do
@@ -621,7 +621,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
             eq(
               [
                 { 'stream_name' => described_class::EMPTY_STRING_SIGN },
-                { 'stream_name' => 'Fbc' }
+                { 'stream_name' => 'Fbc' },
               ]
             )
           )
@@ -730,7 +730,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         expect(parsed_body).to(
           eq(
             'results' => [
-              { 'stream_id' => described_class::EMPTY_STRING_SIGN }
+              { 'stream_id' => described_class::EMPTY_STRING_SIGN },
             ],
             'pagination' => { 'more' => false, 'starting_id' => nil }
           )
@@ -763,7 +763,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
           expect(parsed_body['results']).to(
             eq(
               [
-                { 'stream_id' => described_class::EMPTY_STRING_SIGN }
+                { 'stream_id' => described_class::EMPTY_STRING_SIGN },
               ]
             )
           )
@@ -850,7 +850,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
             'results' => [
               { 'event_type' => described_class::EMPTY_STRING_SIGN },
               { 'event_type' => 'Fac' },
-              { 'event_type' => 'Fbc' }
+              { 'event_type' => 'Fbc' },
             ],
             'pagination' => { 'more' => false, 'starting_id' => nil }
           )
@@ -867,7 +867,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
               [
                 { 'event_type' => described_class::EMPTY_STRING_SIGN },
                 { 'event_type' => 'Fac' },
-                { 'event_type' => 'Fbc' }
+                { 'event_type' => 'Fbc' },
               ]
             )
           )
@@ -942,8 +942,8 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         ).first
         aggregate_failures do
           expect(last_response.body).to include(subscription2.name)
-          expect(start_btn).not_to be_nil, "Start button must be present"
-          expect(reset_position_btn).not_to be_nil, "Reset position button must be present"
+          expect(start_btn).not_to be_nil, 'Start button must be present'
+          expect(reset_position_btn).not_to be_nil, 'Reset position button must be present'
         end
       end
     end
@@ -963,8 +963,8 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         ).first
         aggregate_failures do
           expect(last_response.body).to include(subscription2.name)
-          expect(stop_btn).not_to be_nil, "Stop button must be present"
-          expect(restore_btn).not_to be_nil, "Restore button must be present"
+          expect(stop_btn).not_to be_nil, 'Stop button must be present'
+          expect(restore_btn).not_to be_nil, 'Restore button must be present'
         end
       end
     end
@@ -981,7 +981,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         ).first
         aggregate_failures do
           expect(last_response.body).to include(subscription2.name)
-          expect(stop_btn).not_to be_nil, "Stop button must be present"
+          expect(stop_btn).not_to be_nil, 'Stop button must be present'
         end
       end
     end
@@ -999,7 +999,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         ).first
         aggregate_failures do
           expect(last_response.body).to include(subscription2.name)
-          expect(delete_btn).not_to be_nil, "Delete button must be present"
+          expect(delete_btn).not_to be_nil, 'Delete button must be present'
         end
       end
     end
@@ -1043,7 +1043,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         expect(last_response.body).to include(subscription2.name)
       end
     end
-    it 'it displays sets which relates to the subscriptions with the given state' do
+    it 'displays sets which relates to the subscriptions with the given state' do
       subject
       aggregate_failures do
         expect(last_response.body).not_to include(set1.name)
@@ -1225,7 +1225,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         subject
         message = {
           message: "An event at global position #{event.global_position} has been deleted successfully.",
-          kind: 'success'
+          kind: 'success',
         }
         expect(flash_message).to eq(message)
       end
@@ -1253,7 +1253,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
             message: a_string_including(
               "Could not delete an event at global position #{event.global_position} - too many records"
             ),
-            kind: 'error'
+            kind: 'error',
           }
           expect(flash_message).to match(message)
         end
@@ -1277,7 +1277,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
           subject
           message = {
             message: "An event at global position #{event.global_position} has been deleted successfully.",
-            kind: 'success'
+            kind: 'success',
           }
           expect(flash_message).to eq(message)
         end
@@ -1303,7 +1303,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
   end
 
   describe 'POST /delete_stream' do
-    subject { post "/delete_stream", params }
+    subject { post '/delete_stream', params }
 
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
     let(:params) { stream.to_hash }
@@ -1325,7 +1325,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       end
 
       context 'when unaccepted stream attributes are passed' do
-        let(:params) { PgEventstore::Stream.system_stream("$some-stream").to_hash }
+        let(:params) { PgEventstore::Stream.system_stream('$some-stream').to_hash }
 
         it 'flashes error message' do
           subject

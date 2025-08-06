@@ -71,6 +71,7 @@ module PgEventstore
         # @param action [String, Symbol]
         # @param method_name [Symbol]
         # @return [void]
+        # rubocop:disable Naming/PredicatePrefix
         def has_callbacks(action, method_name)
           visibility_method = visibility_method(method_name)
           m = Module.new do
@@ -81,6 +82,7 @@ module PgEventstore
           end
           prepend m
         end
+        # rubocop:enable Naming/PredicatePrefix
 
         private
 

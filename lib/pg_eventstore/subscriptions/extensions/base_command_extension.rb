@@ -18,9 +18,11 @@ module PgEventstore
       module ClassMethods
         # @param data [Hash]
         # @return [Hash]
+        # rubocop:disable Lint/UnusedMethodArgument
         def parse_data(data)
           {}
         end
+        # rubocop:enable Lint/UnusedMethodArgument
       end
 
       # @return [Integer]
@@ -28,20 +30,20 @@ module PgEventstore
         options_hash.hash
       end
 
-      # @param another [Object]
+      # @param other [Object]
       # @return [Boolean]
-      def eql?(another)
-        return false unless another.is_a?(self.class)
+      def eql?(other)
+        return false unless other.is_a?(self.class)
 
-        hash == another.hash
+        hash == other.hash
       end
 
-      # @param another [Object]
+      # @param other [Object]
       # @return [Boolean]
-      def ==(another)
-        return false unless another.is_a?(self.class)
+      def ==(other)
+        return false unless other.is_a?(self.class)
 
-        options_hash == another.options_hash
+        options_hash == other.options_hash
       end
     end
   end

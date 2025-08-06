@@ -14,7 +14,7 @@ module PgEventstore
     end
 
     def call(*, **)
-      raise NotImplementedError, "Implement #call in your child class."
+      raise NotImplementedError, 'Implement #call in your child class.'
     end
   end
 end

@@ -7,7 +7,7 @@ module PgEventstore
     ISOLATION_LEVELS = {
       read_committed: 'READ COMMITTED',
       repeatable_read: 'REPEATABLE READ',
-      serializable: 'SERIALIZABLE'
+      serializable: 'SERIALIZABLE',
     }.tap do |h|
       h.default = h[:serializable]
     end.freeze
@@ -24,16 +24,12 @@ module PgEventstore
 
     # @param level [Symbol] transaction isolation level
     # @return [void]
-    def transaction(level = :serializable)
+    def transaction(level = :serializable, &blk)
       connection.with do |conn|
         # We are inside a transaction already - no need to start another one
-        if [PG::PQTRANS_ACTIVE, PG::PQTRANS_INTRANS].include?(conn.transaction_status)
-          next yield
-        end
+        next yield if [PG::PQTRANS_ACTIVE, PG::PQTRANS_INTRANS].include?(conn.transaction_status)
 
-        pg_transaction(ISOLATION_LEVELS[level], conn) do
-          yield
-        end
+        pg_transaction(ISOLATION_LEVELS[level], conn, &blk)
       end
     end
 
@@ -42,7 +38,7 @@ module PgEventstore
     # @param level [String] PostgreSQL transaction isolation level
     # @param pg_connection [PG::Connection]
     # @return [void]
-    def pg_transaction(level, pg_connection)
+    def pg_transaction(level, pg_connection, &_blk)
       pg_connection.transaction do
         pg_connection.exec("SET TRANSACTION ISOLATION LEVEL #{level}")
         yield

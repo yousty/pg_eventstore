@@ -19,7 +19,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
         PgEventstore::Event.new(type: 'fok'),
         PgEventstore::Event.new(type: 'faz'),
         PgEventstore::Event.new(type: 'bar'),
-        PgEventstore::Event.new(type: 'baz')
+        PgEventstore::Event.new(type: 'baz'),
       ]
       PgEventstore.client.append_to_stream(stream, events)
     end
@@ -104,7 +104,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
         PgEventstore::Event.new(type: 'fok'),
         PgEventstore::Event.new(type: 'faz'),
         PgEventstore::Event.new(type: 'bar'),
-        PgEventstore::Event.new(type: 'baz')
+        PgEventstore::Event.new(type: 'baz'),
       ]
       PgEventstore.client.append_to_stream(stream, events)
     end

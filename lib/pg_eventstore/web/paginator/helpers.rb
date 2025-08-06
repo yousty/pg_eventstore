@@ -10,10 +10,10 @@ module PgEventstore
           id = collection.prev_page_starting_id
           disabled = id ? '' : 'disabled'
           <<~HTML
-          <li class="page-item #{disabled}">
-            <a class="page-link" href="#{build_starting_id_link(id)}" tabindex="-1">Previous</a>
-          </li>
-        HTML
+            <li class="page-item #{disabled}">
+              <a class="page-link" href="#{build_starting_id_link(id)}" tabindex="-1">Previous</a>
+            </li>
+          HTML
         end
 
         # @param collection [PgEventstore::Web::Paginator::BaseCollection]
@@ -22,20 +22,20 @@ module PgEventstore
           id = collection.next_page_starting_id
           disabled = id ? '' : 'disabled'
           <<~HTML
-          <li class="page-item #{disabled}">
-            <a class="page-link" href="#{build_starting_id_link(id)}" tabindex="-1">Next</a>
-          </li>
-        HTML
+            <li class="page-item #{disabled}">
+              <a class="page-link" href="#{build_starting_id_link(id)}" tabindex="-1">Next</a>
+            </li>
+          HTML
         end
 
         # @return [String]
         def first_page_link
           path = build_path(params.slice(*(params.keys - ['starting_id'])))
           <<~HTML
-          <li class="page-item">
-            <a class="page-link" href="#{path}" tabindex="-1">First</a>
-          </li>
-        HTML
+            <li class="page-item">
+              <a class="page-link" href="#{path}" tabindex="-1">First</a>
+            </li>
+          HTML
         end
 
         # @param per_page [String] string representation of items per page. E.g. "10", "20", etc.
@@ -59,9 +59,9 @@ module PgEventstore
         def total_count(number)
           prefix =
             if number > Paginator::EventsCollection::MAX_NUMBER_TO_COUNT
-              "Estimate count: "
+              'Estimate count: '
             else
-              "Total count: "
+              'Total count: '
             end
           number = number_with_delimiter(number)
           prefix + number
@@ -75,7 +75,7 @@ module PgEventstore
           number = number.to_s
           symbols_to_skip = number.size % 3
           parts = []
-          parts.push(number[0...symbols_to_skip]) unless symbols_to_skip.zero?
+          parts.push(number[0...symbols_to_skip]) unless symbols_to_skip == 0
           parts.push(*number[symbols_to_skip..].scan(/\d{3}/))
           parts.join(delimiter)
         end
@@ -90,10 +90,10 @@ module PgEventstore
                   {
                     context: escape_empty_string(event.stream.context),
                     stream_name: escape_empty_string(event.stream.stream_name),
-                    stream_id: escape_empty_string(event.stream.stream_id)
-                  }
-                ]
-              }
+                    stream_id: escape_empty_string(event.stream.stream_id),
+                  },
+                ],
+              },
             }
           )
         end

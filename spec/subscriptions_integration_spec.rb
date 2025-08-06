@@ -113,7 +113,7 @@ RSpec.describe 'Subscriptions integration' do
     it 'retries custom number of times' do
       subject
       # max_retries + 1 comes from the neediness to wait for the initial try
-      sleep 0.6 + (max_retries + 1) * PgEventstore.config.subscription_retries_interval
+      sleep 0.6 + ((max_retries + 1) * PgEventstore.config.subscription_retries_interval)
       aggregate_failures do
         expect(manager.subscriptions.first.state).to eq('dead')
         expect(manager.subscriptions.first.restart_count).to eq(max_retries)
@@ -206,10 +206,10 @@ RSpec.describe 'Subscriptions integration' do
           dv(processed_events1).deferred_wait(timeout: pull_interval) { _1.size == 1 }.size
         }.to(1)
         expect(processed_events1).to(
-          all satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::DECR_SECRET }
+          all(satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::DECR_SECRET })
         )
         expect(processed_events1).to(
-          all satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET }
+          all(satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET })
         )
       end
     end
@@ -220,10 +220,10 @@ RSpec.describe 'Subscriptions integration' do
           dv(processed_events2).deferred_wait(timeout: pull_interval) { _1.size == 1 }.size
         }.to(2)
         expect(processed_events2).to(
-          all satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::ENCR_SECRET }
+          all(satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::ENCR_SECRET })
         )
         expect(processed_events2).to(
-          all satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET }
+          all(satisfy { |event| event.metadata['dummy2_secret'] == Dummy2Middleware::DECR_SECRET })
         )
       end
     end
@@ -254,7 +254,7 @@ RSpec.describe 'Subscriptions integration' do
       # - max_retries + 1 comes from the neediness to wait for the initial try
       # - PgEventstore.config.subscriptions_set_retries_interval + 1 comes from the neediness to wait for runner's run
       #   interval which is always 1 second
-      sleep 0.6 + (max_retries + 1) * (PgEventstore.config.subscriptions_set_retries_interval + 1)
+      sleep 0.6 + ((max_retries + 1) * (PgEventstore.config.subscriptions_set_retries_interval + 1))
       aggregate_failures do
         expect(queries.find_by(name: set_name)&.dig(:state)).to eq('dead')
         expect(queries.find_by(name: set_name)&.dig(:restart_count)).to eq(max_retries)
@@ -556,7 +556,7 @@ RSpec.describe 'Subscriptions integration' do
       simulate_disconnect = Thread.new do
         sleep seconds_before_disaster
         PgEventstore.configure do |c|
-          c.pg_uri = "postgresql://localhost:1234/eventstore"
+          c.pg_uri = 'postgresql://localhost:1234/eventstore'
         end
         restore_job = Thread.new do
           sleep seconds_before_recovery
@@ -572,7 +572,7 @@ RSpec.describe 'Subscriptions integration' do
 
     before do
       manager.subscribe('Sub 1', handler: handler, **subscription_opts)
-      stub_const("PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES", 1)
+      stub_const('PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES', 1)
     end
 
     after do

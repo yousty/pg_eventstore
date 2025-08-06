@@ -18,7 +18,7 @@ class SubscriptionsHelper
         set: 'FooSet', name: 'FooSubscription', options: {}, max_restarts_number: 0, chunk_query_interval: 1,
         time_between_restarts: 1
       }
-      PgEventstore::Subscription.using_connection(config_name).new(**defaults.merge(attrs))
+      PgEventstore::Subscription.using_connection(config_name).new(**defaults, **attrs)
     end
   end
 end

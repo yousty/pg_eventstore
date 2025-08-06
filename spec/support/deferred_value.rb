@@ -67,8 +67,8 @@ end
 
 module DeferredValueExt
   def dv(*args)
-    puts "More than one argument in #dv is ignored!" if args.size > 1
-    obj = args.size.zero? ? Object.new : args.first
+    puts 'More than one argument in #dv is ignored!' if args.size > 1
+    obj = args.empty? ? Object.new : args.first
     DeferredValue.get_dv(obj)
   end
 end

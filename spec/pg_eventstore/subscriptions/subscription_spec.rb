@@ -105,7 +105,7 @@ RSpec.describe PgEventstore::Subscription do
     subject { subscription.lock!(lock_id) }
 
     let(:subscription) do
-      PgEventstore::Subscription.using_connection(:default).
+      described_class.using_connection(:default).
         new(
           set: set, name: name, options: { resolve_link_tos: true }, max_restarts_number: 12, chunk_query_interval: 34,
           time_between_restarts: 1
@@ -123,13 +123,13 @@ RSpec.describe PgEventstore::Subscription do
       it 'assigns persisted attributes' do
         subject
         expect(subscription.options_hash).to(
-          eq(PgEventstore::Subscription.new(**queries.find_by(set: set, name: name)).options_hash)
+          eq(described_class.new(**queries.find_by(set: set, name: name)).options_hash)
         )
       end
       it { is_expected.to eq(subscription) }
 
       describe 'created Subscription' do
-        subject { super(); PgEventstore::Subscription.new(**queries.find_by(set: set, name: name)) }
+        subject { super(); described_class.new(**queries.find_by(set: set, name: name)) }
 
         it 'has correct attributes' do
           aggregate_failures do
@@ -233,7 +233,7 @@ RSpec.describe PgEventstore::Subscription do
 
     it 'returns the copy of the given subscription' do
       aggregate_failures do
-        is_expected.to be_a(PgEventstore::Subscription)
+        is_expected.to be_a(described_class)
         expect(subject.options_hash).to eq(subscription.options_hash)
         expect(subject.__id__).not_to eq(subscription.__id__)
       end

@@ -32,7 +32,10 @@ module PgEventstore
         # Wait for potential recover plus run interval and plus another second to allow potential processing of
         # "Ping" command. "Ping" command comes in prio, so it is guaranteed it will be processed as a first command.
         sleep RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES + CommandsHandler::PULL_INTERVAL + 1
-        if subscriptions_set_commands_queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: cmd_name)
+        existing_cmd = subscriptions_set_commands_queries.find_by(
+          subscriptions_set_id: subscriptions_set_id, command_name: cmd_name
+        )
+        if existing_cmd
           # "Ping" command wasn't consumed. Related process must be dead.
           subscriptions_set_queries.delete(subscriptions_set_id)
           PgEventstore.logger&.info(

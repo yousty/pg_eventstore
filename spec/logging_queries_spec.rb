@@ -14,7 +14,7 @@ RSpec.describe 'Logging PostgreSQL queries' do
   end
 
   context 'when PgEventstore.logger is defined' do
-    let(:logger) { Logger.new(STDOUT) }
+    let(:logger) { Logger.new($stdout) }
 
     before do
       PgEventstore.logger = logger

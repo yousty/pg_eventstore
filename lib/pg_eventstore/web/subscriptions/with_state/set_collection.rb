@@ -19,7 +19,7 @@ module PgEventstore
 
           # @return [Array<String>]
           def names
-            @set_collection ||= subscription_queries.set_collection(@state)
+            @names ||= subscription_queries.set_collection(@state)
           end
 
           private

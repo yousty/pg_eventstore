@@ -23,7 +23,7 @@ RSpec.describe PgEventstore::CommandsHandler do
   let(:runner) do
     PgEventstore::SubscriptionRunner.new(
       stats: PgEventstore::SubscriptionHandlerPerformance.new,
-      events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+      events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
       subscription: SubscriptionsHelper.create_with_connection
     )
   end
@@ -96,7 +96,7 @@ RSpec.describe PgEventstore::CommandsHandler do
         runner.stop_async.wait_for_finish
       end
 
-      it "does not run commands from previous run" do
+      it 'does not run commands from previous run' do
         subject
         sleep described_class::PULL_INTERVAL + 0.2
         aggregate_failures do

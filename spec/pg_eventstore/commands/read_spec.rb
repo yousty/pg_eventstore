@@ -99,7 +99,7 @@ RSpec.describe PgEventstore::Commands::Read do
     end
 
     describe 'reading from "$streams" system stream' do
-      let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
       it 'returns 0-stream revision events' do
         expect(subject.map(&:id)).to eq([event1.id, event4.id])
@@ -114,7 +114,7 @@ RSpec.describe PgEventstore::Commands::Read do
     end
 
     describe 'reading from system stream when no events match the filter' do
-      let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
       let(:options) { { filter: { event_types: ['NonExisting'] } } }
 
       it { is_expected.to eq([]) }
@@ -216,7 +216,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'returns 0-stream revision events within the given context' do
           expect(subject.map(&:id)).to eq([event1.id, event3.id])
@@ -252,7 +252,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'ignores it, returning 0-stream revision events' do
           expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
@@ -278,7 +278,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'returns 0-stream revision events within the given contexts' do
           expect(subject.map(&:id)).to eq([event2.id, event4.id, event5.id])
@@ -289,7 +289,7 @@ RSpec.describe PgEventstore::Commands::Read do
     describe 'filtering by stream name and context as a part of the same filter' do
       let(:options) { { filter: { streams: [{ context: 'SomeAnotherContext', stream_name: 'some-stream1' }] } } }
 
-      context 'ignores it, returning events of the given stream' do
+      context 'when reading from regular stream' do
         it 'ignores it, returning events of the given stream' do
           expect(subject.map(&:id)).to eq([event1.id, event6.id])
         end
@@ -304,7 +304,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'returns 0-stream revision events within the given context and stream name' do
           expect(subject.map(&:id)).to eq([event2.id, event5.id])
@@ -318,9 +318,9 @@ RSpec.describe PgEventstore::Commands::Read do
           filter: {
             streams: [
               { context: 'SomeAnotherContext', stream_name: 'some-stream1' },
-              { context: 'SomeContext', stream_name: 'some-stream1' }
-            ]
-          }
+              { context: 'SomeContext', stream_name: 'some-stream1' },
+            ],
+          },
         }
       end
 
@@ -339,7 +339,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'returns 0-stream revision events within the given contexts and stream names' do
           expect(subject.map(&:id)).to eq([event1.id, event2.id, event5.id])
@@ -365,7 +365,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'returns 0-stream revision events that match context only, ignoring stream_name' do
           expect(subject.map(&:id)).to eq([event2.id, event5.id])
@@ -391,7 +391,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'returns 0-stream revision events of those streams' do
           expect(subject.map(&:id)).to eq([event1.id, event4.id])
@@ -427,7 +427,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'ignores it, returning 0-stream revision events' do
           expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
@@ -453,7 +453,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'returns 0-stream revision events that match the given context only, ignoring stream id' do
           expect(subject.map(&:id)).to eq([event4.id])
@@ -489,7 +489,7 @@ RSpec.describe PgEventstore::Commands::Read do
       end
 
       context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
         it 'ignores it, returning 0-stream revision events' do
           expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
@@ -535,7 +535,7 @@ RSpec.describe PgEventstore::Commands::Read do
     end
 
     context 'when reading from "$streams" system stream' do
-      let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
       it 'returns 0-stream revision events according to the given types' do
         expect(subject.map(&:id)).to eq([event1.id, event3.id])
@@ -587,7 +587,7 @@ RSpec.describe PgEventstore::Commands::Read do
     end
 
     context 'when reading from "$streams" system stream' do
-      let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
       it 'returns 0-stream revision events according to the given types and stream parts' do
         expect(subject.map(&:id)).to eq([event1.id, event5.id])
@@ -767,7 +767,7 @@ RSpec.describe PgEventstore::Commands::Read do
     end
 
     context 'when reading from "$streams" system stream' do
-      let(:stream) { PgEventstore::Stream.system_stream("$streams") }
+      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
 
       shared_examples 'historical events order' do
         it 'reads 0-stream revision events in historical order' do

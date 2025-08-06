@@ -41,7 +41,7 @@ RSpec.describe PgEventstore::BasicRunner do
       instance.stop_async.wait_for_finish
     end
 
-    shared_examples "asynchronous execution" do
+    shared_examples 'asynchronous execution' do
       it 'changes state to "running"' do
         expect { subject }.to change { instance.state }.to('running')
       end
@@ -83,7 +83,9 @@ RSpec.describe PgEventstore::BasicRunner do
           end
         end
         it 'changes the state to "dead"' do
-          expect { subject }.to change { dv(instance).deferred_wait(timeout: 0.5) { _1.state == 'dead' }.state }.to('dead')
+          expect { subject }.to change {
+            dv(instance).deferred_wait(timeout: 0.5) { _1.state == 'dead' }.state
+          }.to('dead')
         end
       end
     end
@@ -110,7 +112,7 @@ RSpec.describe PgEventstore::BasicRunner do
 
       before do
         should_raise = true
-        instance.define_callback(:process_async, :before, proc { raise("Something bad happened!") if should_raise })
+        instance.define_callback(:process_async, :before, proc { raise('Something bad happened!') if should_raise })
         instance.start.wait_for_finish
         # Turn off the possible error raise. It will allow to potentially run another :perform_async action and prevent
         # false-positive test result
@@ -121,7 +123,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { dv(instance).deferred_wait(timeout: 0.1) { _1.state == 'dead' }.state }
-          expect(instance.state).to eq("dead")
+          expect(instance.state).to eq('dead')
         end
       end
       it 'does not run :before_runner_started action' do
@@ -151,7 +153,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("halting")
+          expect(instance.state).to eq('halting')
         end
       end
       it 'does not run :before_runner_started action' do
@@ -169,7 +171,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("running")
+          expect(instance.state).to eq('running')
         end
       end
       it 'does not run :before_runner_started action' do
@@ -231,7 +233,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("initial")
+          expect(instance.state).to eq('initial')
         end
       end
     end
@@ -249,7 +251,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("stopped")
+          expect(instance.state).to eq('stopped')
         end
       end
     end
@@ -273,7 +275,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("halting")
+          expect(instance.state).to eq('halting')
         end
       end
     end
@@ -290,7 +292,7 @@ RSpec.describe PgEventstore::BasicRunner do
         expect(after_stopped_task).to have_received(:run)
       end
       it 'changes the state to "stopped"' do
-        expect { subject }.to change { instance.state }.from("running").to("stopped")
+        expect { subject }.to change { instance.state }.from('running').to('stopped')
       end
       it "releases runner's thread" do
         expect { subject }.to change { instance.instance_variable_get(:@runner) }.from(instance_of(Thread)).to(nil)
@@ -304,7 +306,7 @@ RSpec.describe PgEventstore::BasicRunner do
     context 'when state is "dead"' do
       before do
         callbacks_definitions
-        instance.define_callback(:process_async, :before, proc { raise "You shall not pass!" })
+        instance.define_callback(:process_async, :before, proc { raise 'You shall not pass!' })
         instance.start
         dv(instance).wait_until(timeout: run_interval + 0.1) { _1.state == 'dead' }
       end
@@ -314,7 +316,7 @@ RSpec.describe PgEventstore::BasicRunner do
         expect(after_stopped_task).to have_received(:run)
       end
       it 'changes the state to "stopped"' do
-        expect { subject }.to change { instance.state }.from("dead").to("stopped")
+        expect { subject }.to change { instance.state }.from('dead').to('stopped')
       end
       it "releases runner's thread" do
         expect { subject }.to change { instance.instance_variable_get(:@runner) }.from(instance_of(Thread)).to(nil)
@@ -406,13 +408,13 @@ RSpec.describe PgEventstore::BasicRunner do
           end
         end
         it 'changes the state to "halting"' do
-          expect { subject }.to change { instance.state }.from("running").to("halting")
+          expect { subject }.to change { instance.state }.from('running').to('halting')
         end
         it 'changes the state to "stopped" after async_shutdown_time seconds' do
           timeout = async_shutdown_time + test_adjustment_time
           expect { subject }.to change {
             dv(instance).deferred_wait(timeout: timeout) { _1.state == 'stopped' }.state
-          }.from("running").to("stopped")
+          }.from('running').to('stopped')
         end
         it "releases runner's thread pointer after async_shutdown_time seconds" do
           timeout = async_shutdown_time + test_adjustment_time
@@ -441,10 +443,10 @@ RSpec.describe PgEventstore::BasicRunner do
       context 'when state is "dead"' do
         before do
           callbacks_definitions
-          instance.define_callback(:process_async, :before, proc { raise "You shall not pass!" })
+          instance.define_callback(:process_async, :before, proc { raise 'You shall not pass!' })
           instance.start
-          # The thread which spawns to stop the current runner is to fast. It uses #loop method internally - slow it down
-          # a bit to give tests the time to perform assertions
+          # The thread which spawns to stop the current runner is to fast. It uses #loop method internally - slow it
+          # down a bit to give tests the time to perform assertions
           allow(instance).to receive(:loop).and_wrap_original do |orig_method, *args, **kwargs, &blk|
             sleep 0.2
             orig_method.call(*args, **kwargs, &blk)
@@ -464,7 +466,7 @@ RSpec.describe PgEventstore::BasicRunner do
           end
         end
         it 'changes the state to "halting"' do
-          expect { subject }.to change { instance.state }.from("dead").to("halting")
+          expect { subject }.to change { instance.state }.from('dead').to('halting')
         end
         it 'changes the state to "stopped" after async_shutdown_time seconds' do
           expect { subject }.to change {
@@ -525,13 +527,13 @@ RSpec.describe PgEventstore::BasicRunner do
         expect(after_stopped_task).not_to have_received(:run)
       end
       it 'changes the state to "halting"' do
-        expect { subject }.to change { instance.state }.from("running").to("halting")
+        expect { subject }.to change { instance.state }.from('running').to('halting')
       end
       it 'changes the state to "stopped" after async_shutdown_time seconds' do
         timeout = async_shutdown_time + test_adjustment_time
         expect { subject }.to change {
           dv(instance).deferred_wait(timeout: timeout) { _1.state == 'stopped' }.state
-        }.from("running").to("stopped")
+        }.from('running').to('stopped')
       end
       it "releases runner's thread pointer after async_shutdown_time seconds" do
         timeout = async_shutdown_time + test_adjustment_time
@@ -589,7 +591,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("initial")
+          expect(instance.state).to eq('initial')
         end
       end
       it 'does not run :before_runner_restored action' do
@@ -607,7 +609,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("stopped")
+          expect(instance.state).to eq('stopped')
         end
       end
       it 'does not run :before_runner_restored action' do
@@ -619,7 +621,7 @@ RSpec.describe PgEventstore::BasicRunner do
     context 'when state is "dead"' do
       before do
         should_raise = true
-        instance.define_callback(:process_async, :before, proc { raise("Something bad happened!") if should_raise })
+        instance.define_callback(:process_async, :before, proc { raise('Something bad happened!') if should_raise })
         instance.start.wait_for_finish
         # Turn off the possible error raise. It will allow to potentially run another :perform_async action and prevent
         # false-positive test result
@@ -628,7 +630,7 @@ RSpec.describe PgEventstore::BasicRunner do
       end
 
       it 'changes state to "running"' do
-        expect { subject }.to change { instance.state }.from("dead").to("running")
+        expect { subject }.to change { instance.state }.from('dead').to('running')
       end
       it 'executes :before_runner_restored action' do
         subject
@@ -690,7 +692,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("halting")
+          expect(instance.state).to eq('halting')
         end
       end
       it 'does not run :before_runner_restored action' do
@@ -708,7 +710,7 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'does not change the state' do
         aggregate_failures do
           expect { subject }.not_to change { instance.state }
-          expect(instance.state).to eq("running")
+          expect(instance.state).to eq('running')
         end
       end
       it 'does not run :before_runner_restored action' do
@@ -861,7 +863,7 @@ RSpec.describe PgEventstore::BasicRunner do
       end
     end
 
-    let(:error) { StandardError.new("Regular") }
+    let(:error) { StandardError.new('Regular') }
 
     let(:run_interval) { 0.1 }
     let(:seconds_before_recovery) { 0.2 }
@@ -907,7 +909,7 @@ RSpec.describe PgEventstore::BasicRunner do
             seconds_before_recovery: seconds_before_recovery,
             mocked_action: recovery_task,
             recoverable_message: error.message
-          )
+          ),
         ]
       end
       let(:recovery_task) { double('Additional recovery steps') }
@@ -968,7 +970,6 @@ RSpec.describe PgEventstore::BasicRunner do
         allow(recovery_task2).to receive(:run)
         allow(recovery_task3).to receive(:run)
         start_runner.call
-        #p "here"
       end
 
       it 'runs :after_runner_died callbacks' do
@@ -1001,7 +1002,7 @@ RSpec.describe PgEventstore::BasicRunner do
             seconds_before_recovery: seconds_before_recovery,
             mocked_action: recovery_task,
             recoverable_message: error.message
-          )
+          ),
         ]
       end
       let(:recovery_task) { double('Additional recovery steps') }

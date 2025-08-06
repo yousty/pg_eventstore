@@ -35,7 +35,7 @@ module PgEventstore
     def attach_runner_callbacks
       @basic_runner.define_callback(
         :process_async, :before,
-      CommandsHandlerHandlers.setup_handler(:process_feeder_commands, @config_name, @subscription_feeder)
+        CommandsHandlerHandlers.setup_handler(:process_feeder_commands, @config_name, @subscription_feeder)
       )
       @basic_runner.define_callback(
         :process_async, :before,

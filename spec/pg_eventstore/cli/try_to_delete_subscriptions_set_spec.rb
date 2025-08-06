@@ -16,8 +16,8 @@ RSpec.describe PgEventstore::CLI::TryToDeleteSubscriptionsSet do
       let!(:subscriptions_set) { SubscriptionsSetHelper.create(id: subscriptions_set_id) }
 
       before do
-        stub_const("PgEventstore::CommandsHandler::RESTART_DELAY", 0)
-        stub_const("PgEventstore::CommandsHandler::PULL_INTERVAL", 0)
+        stub_const('PgEventstore::CommandsHandler::RESTART_DELAY', 0)
+        stub_const('PgEventstore::CommandsHandler::PULL_INTERVAL', 0)
       end
 
       context 'when SubscriptionsSet is alive' do

@@ -54,7 +54,7 @@ module PgEventstore
         {
           name: set_name,
           max_restarts_number: max_retries || config.subscriptions_set_max_retries,
-          time_between_restarts: retries_interval || config.subscriptions_set_retries_interval
+          time_between_restarts: retries_interval || config.subscriptions_set_retries_interval,
         }
       )
       @subscriptions_lifecycle = SubscriptionsLifecycle.new(
@@ -108,7 +108,7 @@ module PgEventstore
           graceful_shutdown_timeout: graceful_shutdown_timeout,
           recovery_strategies: recovery_strategies(subscription, restart_terminator, failed_subscription_notifier)
         ),
-        subscription: subscription,
+        subscription: subscription
       )
 
       @subscriptions_lifecycle.runners.push(runner)
@@ -149,12 +149,10 @@ module PgEventstore
     private
 
     # @return [Object] the result of the passed block
-    def run_cli_callbacks
+    def run_cli_callbacks(&blk)
       return yield unless defined?(::PgEventstore::CLI)
 
-      PgEventstore::CLI.callbacks.run_callbacks(:start_manager, self) do
-        yield
-      end
+      PgEventstore::CLI.callbacks.run_callbacks(:start_manager, self, &blk)
     end
 
     # @param middlewares [Array<Symbol>, nil]
@@ -183,7 +181,7 @@ module PgEventstore
         RunnerRecoveryStrategies::RestoreSubscriptionRunner.new(
           subscription: subscription,
           restart_terminator: restart_terminator,
-          failed_subscription_notifier: failed_subscription_notifier,
+          failed_subscription_notifier: failed_subscription_notifier
         ),
       ]
     end

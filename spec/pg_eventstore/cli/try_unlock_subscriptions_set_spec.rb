@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::CLI::TryUnlockSubscriptionsSet do
-  describe ".try_unlock" do
+  describe '.try_unlock' do
     subject { described_class.try_unlock(config_name, subscriptions_set_id) }
 
     let(:config_name) { :default }
@@ -15,8 +15,8 @@ RSpec.describe PgEventstore::CLI::TryUnlockSubscriptionsSet do
       let(:subscriptions_set_id) { SubscriptionsSetHelper.create.id }
 
       before do
-        stub_const("PgEventstore::CommandsHandler::RESTART_DELAY", 0)
-        stub_const("PgEventstore::CommandsHandler::PULL_INTERVAL", 0)
+        stub_const('PgEventstore::CommandsHandler::RESTART_DELAY', 0)
+        stub_const('PgEventstore::CommandsHandler::PULL_INTERVAL', 0)
         PgEventstore.configure do |c|
           c.subscription_graceful_shutdown_timeout = 0
         end

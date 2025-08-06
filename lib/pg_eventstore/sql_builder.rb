@@ -14,6 +14,13 @@ module PgEventstore
       end
     end
 
+    # @return [Array<Object>] sql positional values
+    attr_reader :positional_values
+    # @return [Integer]
+    attr_writer :positional_values_size
+
+    protected :positional_values, :positional_values_size=
+
     def initialize
       @select_values = []
       @from_value = nil
@@ -134,17 +141,6 @@ module PgEventstore
 
     protected
 
-    # @return [Array<Object>] sql positional values
-    def positional_values
-      @positional_values
-    end
-
-    # @param val [Integer]
-    # @return [Integer]
-    def positional_values_size=(val)
-      @positional_values_size = val
-    end
-
     # @return [Array<String, Array<Object>>]
     def _to_exec_params
       return [single_query_sql, @positional_values] if @union_values.empty?
@@ -196,7 +192,7 @@ module PgEventstore
 
     # @return [String]
     def join_sql
-      @join_values.map { |sql, args| extract_positional_args(sql, *args) }.join(" ")
+      @join_values.map { |sql, args| extract_positional_args(sql, *args) }.join(' ')
     end
 
     # @return [String]
@@ -208,7 +204,7 @@ module PgEventstore
     # @param sql [String]
     # @return [String]
     def extract_positional_args(sql, *arguments)
-      sql.gsub("?").each_with_index do |_, index|
+      sql.gsub('?').each_with_index do |_, index|
         @positional_values.push(arguments[index])
         @positional_values_size += 1
         "$#{@positional_values_size}"

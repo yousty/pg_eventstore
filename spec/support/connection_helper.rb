@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "tempfile"
+require 'tempfile'
 
 class ConnectionHelper
   class << self
@@ -10,7 +10,7 @@ class ConnectionHelper
       pids = 2.times.map do
         fork do
           captured_stderr = Tempfile.new('err')
-          STDERR.reopen(captured_stderr)
+          $stderr.reopen(captured_stderr)
 
           begin
             connection.with do |c|
@@ -20,7 +20,7 @@ class ConnectionHelper
               end
             end
 
-            REDIS.set("process-#{Process.pid}", "OK")
+            REDIS.set("process-#{Process.pid}", 'OK')
           rescue => e
             REDIS.set("process-#{Process.pid}", e.inspect)
           ensure

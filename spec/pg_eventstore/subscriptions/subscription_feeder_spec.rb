@@ -28,14 +28,14 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     let(:subscription_runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.init_with_connection
       )
     end
     let(:subscription_runner2) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.init_with_connection(name: 'Bar')
       )
     end
@@ -138,14 +138,14 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     let(:subscription_runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.init_with_connection
       )
     end
     let(:subscription_runner2) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.init_with_connection(name: 'Bar')
       )
     end
@@ -303,14 +303,14 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     let(:subscription_runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: subscription1
       )
     end
     let(:subscription_runner2) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: subscription2
       )
     end
@@ -417,13 +417,14 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
 
       should_raise = true
       error = self.error
-      allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_wrap_original do |orig_meth, *args, **kwargs, &blk|
+      wrapper = proc do |orig_meth, *args, **kwargs, &blk|
         if should_raise
           should_raise = false
           raise error
         end
         orig_meth.call(*args, **kwargs, &blk)
       end
+      allow(PgEventstore::SubscriptionFeederHandlers).to receive(:ping_subscriptions_set).and_wrap_original(&wrapper)
     end
 
     after do
@@ -440,7 +441,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         )
       end
     end
-    it "updates SubscriptionsSet#last_error_occurred_at" do
+    it 'updates SubscriptionsSet#last_error_occurred_at' do
       expect { subject }.to change {
         queries.find_by(name: set_name)&.dig(:last_error_occurred_at)
       }.to(be_between(Time.now.utc, Time.now.utc + 2))
@@ -530,8 +531,8 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     before do
       subscriptions_lifecycle.runners.push(subscription_runner1)
       subscriptions_lifecycle.runners.push(subscription_runner2)
-      stub_const("PgEventstore::SubscriptionsLifecycle::HEARTBEAT_INTERVAL", 1.5)
-      stub_const("PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL", 1.5)
+      stub_const('PgEventstore::SubscriptionsLifecycle::HEARTBEAT_INTERVAL', 1.5)
+      stub_const('PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL', 1.5)
     end
 
     after do
@@ -580,14 +581,14 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     let(:subscription_runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.create_with_connection(name: 'Foo')
       )
     end
     let(:subscription_runner2) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.create_with_connection(name: 'Bar')
       )
     end
@@ -631,7 +632,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       cmd_lookup_attrs = {
         subscription_id: cmd.subscription_id,
         subscriptions_set_id: cmd.subscriptions_set_id,
-        command_name: cmd.name
+        command_name: cmd.name,
       }
       # Wait until the created command is consumed
       dv.wait_until(timeout: 1.1) { subscription_cmd_queries.find_by(**cmd_lookup_attrs).nil? }
@@ -645,7 +646,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       cmd = set_cmd_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: 'Stop', data: {})
       cmd_lookup_attrs = {
         subscriptions_set_id: cmd.subscriptions_set_id,
-        command_name: cmd.name
+        command_name: cmd.name,
       }
       # Wait until the created command is consumed
       dv.wait_until(timeout: PgEventstore::CommandsHandler::PULL_INTERVAL * 2) do
@@ -657,14 +658,14 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     let(:subscription_runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.create_with_connection(name: 'Foo')
       )
     end
     let(:subscription_runner2) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc { }, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
         subscription: SubscriptionsHelper.create_with_connection(name: 'Bar')
       )
     end

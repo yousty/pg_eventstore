@@ -21,12 +21,12 @@ module PgEventstore
           to_parser_opts.hash
         end
 
-        # @param another [Object]
+        # @param other [Object]
         # @return [Boolean]
-        def ==(another)
-          return false unless another.is_a?(Metadata)
+        def ==(other)
+          return false unless other.is_a?(Metadata)
 
-          to_parser_opts == another.to_parser_opts
+          to_parser_opts == other.to_parser_opts
         end
         alias eql? ==
       end

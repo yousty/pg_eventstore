@@ -28,7 +28,7 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(*builder.to_exec_params)
       end
-      return if pg_result.ntuples.zero?
+      return if pg_result.ntuples == 0
 
       deserialize(pg_result.to_a.first)
     end
@@ -40,7 +40,7 @@ module PgEventstore
       pg_result = connection.with do |conn|
         conn.exec_params(*builder.to_exec_params)
       end
-      return [] if pg_result.ntuples.zero?
+      return [] if pg_result.ntuples == 0
 
       pg_result.map(&method(:deserialize))
     end
@@ -50,24 +50,25 @@ module PgEventstore
     def set_collection(state = nil)
       builder = SQLBuilder.new.from('subscriptions').select('set').group('set').order('set ASC')
       builder.where('state = ?', state) if state
-      connection.with do |conn|
+      raw_subscriptions = connection.with do |conn|
         conn.exec_params(*builder.to_exec_params)
-      end.map { |attrs| attrs['set'] }
+      end
+      raw_subscriptions.map { |attrs| attrs['set'] }
     end
 
     # @param id [Integer]
     # @return [Hash]
     # @raise [PgEventstore::RecordNotFound]
     def find!(id)
-      find_by(id: id) || raise(RecordNotFound.new("subscriptions", id))
+      find_by(id: id) || raise(RecordNotFound.new('subscriptions', id))
     end
 
     # @param attrs [Hash]
     # @return [Hash]
     def create(attrs)
       sql = <<~SQL
-        INSERT INTO subscriptions (#{attrs.keys.join(', ')}) 
-          VALUES (#{Utils.positional_vars(attrs.values)}) 
+        INSERT INTO subscriptions (#{attrs.keys.join(', ')})#{' '}
+          VALUES (#{Utils.positional_vars(attrs.values)})#{' '}
           RETURNING *
       SQL
       pg_result = connection.with do |conn|
@@ -93,13 +94,14 @@ module PgEventstore
         pg_result = connection.with do |conn|
           conn.exec_params(sql, [*attrs.values, id])
         end
-        raise(RecordNotFound.new("subscriptions", id)) if pg_result.ntuples.zero?
+        raise(RecordNotFound.new('subscriptions', id)) if pg_result.ntuples == 0
 
         updated_attrs = pg_result.to_a.first
         unless updated_attrs['locked_by'] == locked_by
           # Subscription is force-locked by someone else. We have to roll back such transaction
           raise(WrongLockIdError.new(updated_attrs['set'], updated_attrs['name'], updated_attrs['locked_by']))
         end
+
         updated_attrs
       end
 
@@ -152,6 +154,7 @@ module PgEventstore
         if attrs[:locked_by] && !force
           raise SubscriptionAlreadyLockedError.new(attrs[:set], attrs[:name], attrs[:locked_by])
         end
+
         connection.with do |conn|
           conn.exec_params('UPDATE subscriptions SET locked_by = $1 WHERE id = $2', [lock_id, id])
         end
