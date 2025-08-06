@@ -67,8 +67,8 @@ module PgEventstore
     # @return [Hash]
     def create(attrs)
       sql = <<~SQL
-        INSERT INTO subscriptions (#{attrs.keys.join(', ')})#{' '}
-          VALUES (#{Utils.positional_vars(attrs.values)})#{' '}
+        INSERT INTO subscriptions (#{attrs.keys.join(', ')})
+          VALUES (#{Utils.positional_vars(attrs.values)})
           RETURNING *
       SQL
       pg_result = connection.with do |conn|

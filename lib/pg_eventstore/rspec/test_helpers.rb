@@ -20,8 +20,8 @@ module PgEventstore
       def clean_up_data
         tables_to_purge = PgEventstore.connection.with do |conn|
           conn.exec(<<~SQL)
-            SELECT tablename#{' '}
-            FROM pg_catalog.pg_tables#{' '}
+            SELECT tablename
+            FROM pg_catalog.pg_tables
             WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND tablename != 'migrations'
           SQL
         end

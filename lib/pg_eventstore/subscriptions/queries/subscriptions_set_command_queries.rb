@@ -44,7 +44,7 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionFeederCommands::Base]
     def create(subscriptions_set_id:, command_name:, data:)
       sql = <<~SQL
-        INSERT INTO subscriptions_set_commands (name, subscriptions_set_id, data)#{' '}
+        INSERT INTO subscriptions_set_commands (name, subscriptions_set_id, data)
           VALUES ($1, $2, $3)
           RETURNING *
       SQL
