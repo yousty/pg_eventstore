@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.13.2]
+
+- Fix a bug that prevents correct processing of CLI commands using public API
+
 ## [1.13.1]
 
 - Do not modify public methods arguments
