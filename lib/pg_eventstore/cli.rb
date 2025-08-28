@@ -30,7 +30,7 @@ module PgEventstore
       # @return [Integer] exit code
       def execute(args)
         options_parser_class, options_class = OPTIONS_PARSER[args[0]]
-        command, parsed_options = options_parser_class.new(ARGV, options_class.new).parse
+        command, parsed_options = options_parser_class.new(args, options_class.new).parse
         return Commands::HelpCommand.new(parsed_options).call if parsed_options.help
         return COMMANDS[command].new(parsed_options).call if COMMANDS[command]
 
