@@ -3,10 +3,6 @@
 RSpec.describe 'Logging PostgreSQL queries' do
   subject { PgEventstore.client.read(PgEventstore::Stream.all_stream) }
 
-  after do
-    PgEventstore.logger = nil
-  end
-
   context 'when PgEventstore.logger is not defined' do
     it 'does not log anything' do
       expect { subject }.not_to output.to_stdout_from_any_process

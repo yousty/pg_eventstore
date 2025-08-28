@@ -9,6 +9,7 @@ class ConfigHelper
         pg_conf.pg_uri = test_db_uri
         pg_conf.connection_pool_size = 20
       end
+      PgEventstore.logger = nil
     end
 
     def test_db_uri
