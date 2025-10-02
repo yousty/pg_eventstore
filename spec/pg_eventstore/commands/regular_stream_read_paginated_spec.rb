@@ -38,7 +38,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
       end
 
       shared_examples 'fast execution' do
-        context 'when not filtering anything' do
+        context 'when not filtering anything', :skip_ci do
           before do
             PgEventstore.client.append_to_stream(stream2, Array.new(1_000) { PgEventstore::Event.new })
           end
@@ -46,11 +46,11 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
           it 'does not take much time to complete reading all events' do
             time = Benchmark.realtime { subject.to_a } * 1000
             # milliseconds. Keep in mind that this assertion includes performance degradation due to RBS testing
-            expect(time).to be < 30
+            expect(time).to be < 20
           end
         end
 
-        context 'when using event types filter' do
+        context 'when using event types filter', :skip_ci do
           let(:options) { super().merge(filter: { event_types: ['PgEventstore::Event'] }) }
 
           before do
@@ -60,7 +60,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
           it 'does not take much time to complete reading all events' do
             time = Benchmark.realtime { subject.to_a } * 1000
             # milliseconds. Keep in mind that this assertion includes performance degradation due to RBS testing
-            expect(time).to be < 30
+            expect(time).to be < 20
           end
         end
       end

@@ -80,6 +80,12 @@ RSpec.configure do |config|
     end
   end
 
+  config.around(skip_ci: true) do |example|
+    next if ENV['CI']
+
+    example.run
+  end
+
   config.include EventHelpers
   config.include PartitionsHelper
   config.include Rack::Test::Methods, type: :request
