@@ -2,14 +2,14 @@ version: "3.5"
 
 services:
   postgres:
-    image: postgres:16
+    image: postgres:18
     ports:
       - 5532:5432
     environment:
       - POSTGRES_PASSWORD=postgres
     command: ["postgres", "-c", "log_statement=all"]
     volumes:
-      - "./db/postgresql/data:/var/lib/postgresql/data"
+      - "./db/postgresql/data:/var/lib/postgresql/18/data"
   redis:
     image: redis:6
     ports:
