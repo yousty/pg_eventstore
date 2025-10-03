@@ -217,7 +217,7 @@ RSpec.describe 'Subscriptions integration' do
     it 'processes events of second subscription taking into account overridden middlewares' do
       aggregate_failures do
         expect { subject }.to change {
-          dv(processed_events2).deferred_wait(timeout: pull_interval) { _1.size == 1 }.size
+          dv(processed_events2).deferred_wait(timeout: pull_interval) { _1.size == 2 }.size
         }.to(2)
         expect(processed_events2).to(
           all(satisfy { |event| event.metadata['dummy_secret'] == DummyMiddleware::ENCR_SECRET })
