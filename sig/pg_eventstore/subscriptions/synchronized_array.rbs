@@ -1,0 +1,4 @@
+module PgEventstore
+  class SynchronizedArray < Array[Hash[untyped, untyped]]
+  end
+end

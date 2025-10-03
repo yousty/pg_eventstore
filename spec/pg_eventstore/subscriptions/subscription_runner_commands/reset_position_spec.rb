@@ -51,13 +51,13 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
     let(:subscription) do
       SubscriptionsHelper.create_with_connection(last_chunk_greatest_position: 321, total_processed_events: 120)
     end
-    let(:handler) { proc {} }
+    let(:handler) { proc { sleep 0.5 } }
 
     before do
       # Feeding is only available when runner is running. So start it, put some events into a chunk and stop it.
       subscription_runner.start
       dv(subscription_runner).wait_until(timeout: 0.1) { _1.state == 'running' }
-      subscription_runner.feed([{ 'global_position' => 1 }])
+      subscription_runner.feed(Array.new(5) { |i| { 'global_position' => i } })
       subscription_runner.stop_async.wait_for_finish
     end
 
@@ -71,7 +71,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
       expect { subject }.to change { subscription.reload.total_processed_events }.to(0)
     end
     it "resets current runner's chunk" do
-      expect { subject }.to change { events_processor.events_left_in_chunk }.from(1).to(0)
+      expect { subject }.to change { events_processor.events_left_in_chunk }.from(be > 0).to(0)
     end
   end
 end

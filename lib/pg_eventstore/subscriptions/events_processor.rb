@@ -16,7 +16,8 @@ module PgEventstore
     # @param recovery_strategies [Array<PgEventstore::RunnerRecoveryStrategy>]
     def initialize(handler, graceful_shutdown_timeout:, recovery_strategies: [])
       @handler = handler
-      @raw_events = []
+      @raw_events = SynchronizedArray.new
+      @raw_events_cond = @raw_events.new_cond
       @basic_runner = BasicRunner.new(
         run_interval: 0,
         async_shutdown_time: graceful_shutdown_timeout,
@@ -32,7 +33,10 @@ module PgEventstore
 
       within_state(:running) do
         callbacks.run_callbacks(:feed, Utils.original_global_position(raw_events.last))
-        @raw_events.push(*raw_events)
+        @raw_events.synchronize do
+          @raw_events.push(*raw_events)
+          @raw_events_cond.broadcast
+        end
       end
     end
 
@@ -52,7 +56,7 @@ module PgEventstore
     def attach_runner_callbacks
       @basic_runner.define_callback(
         :process_async, :before,
-        EventsProcessorHandlers.setup_handler(:process_event, @callbacks, @handler, @raw_events)
+        EventsProcessorHandlers.setup_handler(:process_event, @callbacks, @handler, @raw_events, @raw_events_cond)
       )
 
       @basic_runner.define_callback(

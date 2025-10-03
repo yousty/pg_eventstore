@@ -1,6 +1,7 @@
 module PgEventstore
   class EventsProcessorHandlers
-    def self.process_event: (PgEventstore::Callbacks callbacks, _RawEventHandler handler, Array[Hash[untyped, untyped]] raw_events) -> void
+    def self.process_event: (PgEventstore::Callbacks callbacks, _RawEventHandler handler, SynchronizedArray raw_events,
+        MonitorMixin::ConditionVariable raw_events_cond) -> void
 
     def self.after_runner_died: (PgEventstore::Callbacks callbacks, StandardError error) -> void
 

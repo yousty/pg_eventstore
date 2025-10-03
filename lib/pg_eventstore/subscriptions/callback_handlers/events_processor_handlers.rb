@@ -10,9 +10,13 @@ module PgEventstore
       # @param handler [#call]
       # @param raw_events [Array<Hash>]
       # @return [void]
-      def process_event(callbacks, handler, raw_events)
-        raw_event = raw_events.shift
-        return sleep 0.5 if raw_event.nil?
+      def process_event(callbacks, handler, raw_events, raw_events_cond)
+        raw_event = nil
+        raw_events.synchronize do
+          raw_events_cond.wait(0.5) if raw_events.empty?
+          raw_event = raw_events.shift
+        end
+        return if raw_event.nil?
 
         callbacks.run_callbacks(:process, Utils.original_global_position(raw_event)) do
           handler.call(raw_event)

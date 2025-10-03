@@ -16,17 +16,20 @@ RSpec.describe PgEventstore::EventsProcessor do
     subject { instance.feed(raw_events) }
 
     let(:raw_events) { [event1, event2] }
-    let(:event1) { { 'id' => SecureRandom.uuid, 'global_position' => 2 } }
-    let(:event2) { { 'id' => SecureRandom.uuid, 'global_position' => 3 } }
-    let(:event_in_queue) { { 'id' => SecureRandom.uuid, 'global_position' => 1 } }
+    let(:event1) { { 'id' => SecureRandom.uuid, 'global_position' => 3 } }
+    let(:event2) { { 'id' => SecureRandom.uuid, 'global_position' => 4 } }
+    let(:event_in_queue1) { { 'id' => SecureRandom.uuid, 'global_position' => 1 } }
+    let(:event_in_queue2) { { 'id' => SecureRandom.uuid, 'global_position' => 2 } }
     let(:feed_callback) { proc { |latest_global_position| global_position_receiver.call(latest_global_position) } }
     let(:global_position_receiver) { double('Global position receiver') }
+    let(:handler) { proc { |raw_event| sleep 0.5; processed_events.push(raw_event['id']) } }
 
     before do
       instance.start
       # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
       dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-      instance.feed([event_in_queue])
+      instance.feed([event_in_queue1, event_in_queue2])
+      dv(processed_events).wait_until(timeout: 0.1) { _1.size > 0 }
       allow(global_position_receiver).to receive(:call)
       instance.define_callback(:feed, :after, feed_callback)
     end
@@ -39,11 +42,11 @@ RSpec.describe PgEventstore::EventsProcessor do
       it 'adds the given events to the queue' do
         expect { subject }.to change {
           instance.instance_variable_get(:@raw_events)
-        }.from([event_in_queue]).to([event_in_queue, event1, event2])
+        }.from([event_in_queue2]).to([event_in_queue2, event1, event2])
       end
       it 'executes :feed action' do
         subject
-        expect(global_position_receiver).to have_received(:call).with(3)
+        expect(global_position_receiver).to have_received(:call).with(4)
       end
 
       context 'when no events are fed' do
@@ -55,7 +58,7 @@ RSpec.describe PgEventstore::EventsProcessor do
         it 'does not change the queue' do
           expect { subject rescue nil }.not_to change {
             instance.instance_variable_get(:@raw_events)
-          }.from([event_in_queue])
+          }.from([event_in_queue2])
         end
         it 'does not execute :feed action' do
           subject rescue nil
@@ -64,7 +67,7 @@ RSpec.describe PgEventstore::EventsProcessor do
       end
 
       context 'when last event is a link event' do
-        let(:event2) { { 'id' => SecureRandom.uuid, 'global_position' => 3, 'link' => { 'global_position' => 5 } } }
+        let(:event2) { { 'id' => SecureRandom.uuid, 'global_position' => 4, 'link' => { 'global_position' => 5 } } }
 
         it "passes link's global position into :feed action" do
           subject
@@ -110,11 +113,13 @@ RSpec.describe PgEventstore::EventsProcessor do
   describe '#clear_chunk' do
     subject { instance.clear_chunk }
 
+    let(:handler) { proc { sleep 0.5 } }
+
     before do
       instance.start
       # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
       dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-      instance.feed([{ 'id' => SecureRandom.uuid, 'global_position' => 1 }])
+      instance.feed(Array.new(5) { |i| { 'global_position' => i } })
     end
 
     after do
@@ -122,7 +127,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     end
 
     it 'clears current chunk' do
-      expect { subject }.to change { instance.events_left_in_chunk }.from(1).to(0)
+      expect { subject }.to change { instance.events_left_in_chunk }.from(be > 0).to(0)
     end
   end
 
@@ -155,7 +160,7 @@ RSpec.describe PgEventstore::EventsProcessor do
     let(:error_receiver) { double('Error receiver') }
     let(:error) { StandardError.new('Oops!') }
     let(:handler) do
-      proc { raise error }
+      proc { sleep 0.2; raise error }
     end
 
     before do

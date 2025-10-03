@@ -4,12 +4,13 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
   it { is_expected.to be_a(PgEventstore::Extensions::CallbackHandlersExtension) }
 
   describe '.process_event' do
-    subject { described_class.process_event(callbacks, handler, raw_events) }
+    subject { described_class.process_event(callbacks, handler, raw_events, raw_events_cond) }
 
     let(:callbacks) { PgEventstore::Callbacks.new }
     let(:handler) { proc { |raw_event| raw_event_handler.call(raw_event) } }
     let(:raw_event_handler) { double('RawEventHandler') }
-    let(:raw_events) { [] }
+    let(:raw_events) { PgEventstore::SynchronizedArray.new }
+    let(:raw_events_cond) { raw_events.new_cond }
     let(:on_process_cbx) do
       proc do |action, global_position|
         position_handler_before.call(global_position)
@@ -45,7 +46,7 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
     end
 
     context 'when there are some events' do
-      let(:raw_events) { [raw_event1, raw_event2] }
+      let(:raw_events) { PgEventstore::SynchronizedArray.new([raw_event1, raw_event2]) }
       let(:raw_event1) { { 'global_position' => 123 } }
       let(:raw_event2) { { 'global_position' => 125 } }
 
@@ -80,7 +81,7 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
     end
 
     context 'when handler raises an error' do
-      let(:raw_events) { [raw_event1, raw_event2] }
+      let(:raw_events) { PgEventstore::SynchronizedArray.new([raw_event1, raw_event2]) }
       let(:raw_event1) { { 'global_position' => 123 } }
       let(:raw_event2) { { 'global_position' => 125 } }
 
