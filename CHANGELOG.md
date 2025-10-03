@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.13.3]
+
+- Reduce subscription delays for newly published events
+
 ## [1.13.2]
 
 - Fix a bug that prevents correct processing of CLI commands using public API
