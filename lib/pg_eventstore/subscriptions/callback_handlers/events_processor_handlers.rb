@@ -9,6 +9,7 @@ module PgEventstore
       # @param callbacks [PgEventstore::Callbacks]
       # @param handler [#call]
       # @param raw_events [Array<Hash>]
+      # @param raw_events_cond [MonitorMixin::ConditionVariable]
       # @return [void]
       def process_event(callbacks, handler, raw_events, raw_events_cond)
         raw_event = nil

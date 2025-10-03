@@ -16,6 +16,8 @@ path: .gem_rbs_collection
 gems:
   - name: sinatra
     ignore: true
+  - name: monitor
+  - name: forwardable
 
 # gems:
 #   # If you want to avoid installing rbs files for gems, you can specify them here.

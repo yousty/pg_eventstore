@@ -6,9 +6,17 @@ gems:
   source:
     type: git
     name: ruby/gem_rbs_collection
-    revision: ac8b33799c494ea5b22e7dc850d53f99dc4849e9
+    revision: 0cb6351d218704700cf4df797ff8966b3a418fcd
     remote: https://github.com/ruby/gem_rbs_collection.git
     repo_dir: gems
+- name: forwardable
+  version: '0'
+  source:
+    type: stdlib
+- name: monitor
+  version: '0'
+  source:
+    type: stdlib
 - name: timeout
   version: '0'
   source:
