@@ -177,6 +177,7 @@ module PgEventstore
     # @return [PgEventstore::SQLBuilder]
     def query_builder(id, options)
       builder = PgEventstore::QueryBuilders::EventsFiltering.subscriptions_events_filtering(options).to_sql_builder
+      builder.where('global_position <= ?', options[:to_position]) if options[:to_position]
       builder.select("#{id} as runner_id")
     end
 

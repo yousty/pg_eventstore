@@ -6,6 +6,9 @@ module PgEventstore
     include Extensions::UsingConnectionExtension
     include Extensions::OptionsExtension
 
+    MIN_CHUNK_QUERY_INTERVAL = 0.2
+    private_constant :MIN_CHUNK_QUERY_INTERVAL
+
     # @return [Time]
     DEFAULT_TIMESTAMP = Time.at(0).utc.freeze
 
@@ -167,7 +170,7 @@ module PgEventstore
         restart_count: 0,
         last_restarted_at: nil,
         max_restarts_number: max_restarts_number,
-        chunk_query_interval: chunk_query_interval,
+        chunk_query_interval: [chunk_query_interval, MIN_CHUNK_QUERY_INTERVAL].max,
         last_chunk_fed_at: DEFAULT_TIMESTAMP,
         last_chunk_greatest_position: nil,
         last_error: nil,

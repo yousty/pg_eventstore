@@ -178,14 +178,41 @@ module PgEventstore
 
     # @param stream_filters [Array<Hash[Symbol, String]>]
     # @param event_filters [Array<String>]
+    # @param scope [Symbol] what kind of partition we want to receive. Available options are :event_type, :context,
+    #   :stream_name and :auto. In :auto mode the scope will be calculated based on stream_filters and event_filters.
     # @return [Array<PgEventstore::Partition>]
-    def partitions(stream_filters, event_filters)
-      partitions_filter = QueryBuilders::PartitionsFiltering.new
-      stream_filters.each { |attrs| partitions_filter.add_stream_attrs(**attrs) }
-      partitions_filter.add_event_types(event_filters)
-      partitions_filter.with_event_types
+    def partitions(stream_filters, event_filters, scope: :event_type)
+      stream_filters = stream_filters.select { QueryBuilders::PartitionsFiltering.correct_stream_filter?(_1) }
+      sql_builder =
+        if event_filters.any?
+          # When event type filters are present - they apply constraints to any stream filter. Thus, we can't look up
+          # partitions by stream attributes separately.
+          filter = QueryBuilders::PartitionsFiltering.new
+          stream_filters.each { |attrs| filter.add_stream_attrs(**attrs) }
+          filter.add_event_types(event_filters)
+          set_partitions_scope(filter, stream_filters, event_filters, scope)
+        else
+          # When event type filters are absent - we can look up partitions by context and context/stream_name separately,
+          # thus potentially producing one-to-one mapping of filter-to-partition with :auto scope. For example, let's say
+          # we have stream attributes filter like [{ context: 'FooCtx', stream_name: 'Bar'}, { context: 'BarCtx' }], then
+          # we would be able to look up partitions by the exact match, returning only two of them according to the
+          # provided filters
+          builders = stream_filters.map do |attrs|
+            filter = QueryBuilders::PartitionsFiltering.new
+            filter.add_stream_attrs(**attrs)
+            set_partitions_scope(filter, [attrs], event_filters, scope)
+          end
+
+          sql_builder = SQLBuilder.union_builders(builders) if builders.any?
+          sql_builder ||
+            begin
+              builder = QueryBuilders::PartitionsFiltering.new
+              set_partitions_scope(builder, stream_filters, event_filters, scope)
+            end
+        end
+
       connection.with do |conn|
-        conn.exec_params(*partitions_filter.to_exec_params)
+        conn.exec_params(*sql_builder.to_exec_params)
       end.map(&method(:deserialize))
     end
 
@@ -209,6 +236,43 @@ module PgEventstore
     end
 
     private
+
+    # @param partitions_filter [PgEventstore::QueryBuilders::PartitionsFiltering]
+    # @param stream_filters [Array<Hash[Symbol, String]>]
+    # @param event_filters [Array<String>]
+    # @param scope [Symbol]
+    # @return [PgEventstore::SQLBuilder]
+    def set_partitions_scope(partitions_filter, stream_filters, event_filters, scope)
+      case scope
+      when :event_type
+        partitions_filter.with_event_types
+      when :stream_name
+        filter = QueryBuilders::PartitionsFiltering.new
+        filter.without_event_types
+        filter.with_stream_names
+        builder = filter.to_sql_builder
+        builder.where(
+          '(context, stream_name) in ?',
+          partitions_filter.to_sql_builder.unselect.select('context, stream_name').group('context, stream_name')
+        )
+      when :context
+        filter = QueryBuilders::PartitionsFiltering.new
+        filter.without_event_types
+        filter.without_stream_names
+        builder = filter.to_sql_builder
+        builder.where('context in ?', partitions_filter.to_sql_builder.unselect.select('context').group('context'))
+      when :auto
+        if event_filters.any?
+          set_partitions_scope(partitions_filter, stream_filters, event_filters, :event_type)
+        elsif stream_filters.any? { _1[:stream_name] }
+          set_partitions_scope(partitions_filter, stream_filters, event_filters, :stream_name)
+        else
+          set_partitions_scope(partitions_filter, stream_filters, event_filters, :context)
+        end
+      else
+        raise NotImplementedError, "Don't know how to handle #{scope.inspect} scope!"
+      end
+    end
 
     # @param attrs [Hash]
     # @return [PgEventstore::Partition]

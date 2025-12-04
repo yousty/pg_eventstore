@@ -39,7 +39,8 @@ module PgEventstore
     # _@return_ — partition attributes
     def context_partition: (PgEventstore::Stream stream) -> ::Hash[untyped, untyped]?
 
-    def partitions: (Array[Hash[Symbol, String | nil]] stream_filters, Array[String] event_filters)-> Array[Partition]
+    def partitions: (Array[Hash[Symbol, String | nil]] stream_filters, Array[String] event_filters,
+        ?scope: Symbol) -> Array[Partition]
 
     # _@param_ `stream`
     #
@@ -76,5 +77,8 @@ module PgEventstore
     private
 
     def deserialize: (Hash[untyped, untyped] attrs)-> Partition
+
+    def set_partitions_scope: (QueryBuilders::PartitionsFiltering partitions_filter, Array[untyped] stream_filters,
+        Array[untyped] event_filters, Symbol scope) -> SQLBuilder
   end
 end

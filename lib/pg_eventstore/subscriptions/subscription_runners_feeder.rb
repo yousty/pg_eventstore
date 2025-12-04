@@ -12,7 +12,7 @@ module PgEventstore
     # @param runners [Array<PgEventstore::SubscriptionRunner>]
     # @return [void]
     def feed(runners)
-      runners = runners.select(&:running?).select(&:time_to_feed?)
+      runners = runners.select(&:running?).select(&:time_to_feed?).select(&:next_chunk_safe?)
       return if runners.empty?
 
       runners_query_options = runners.to_h { |runner| [runner.id, runner.next_chunk_query_opts] }

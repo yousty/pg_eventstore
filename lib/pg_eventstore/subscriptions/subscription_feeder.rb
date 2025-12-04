@@ -17,7 +17,7 @@ module PgEventstore
     def initialize(config_name:, subscriptions_set_lifecycle:, subscriptions_lifecycle:)
       @config_name = config_name
       @basic_runner = BasicRunner.new(
-        run_interval: 0.2,
+        run_interval: 0.1,
         async_shutdown_time: 0,
         recovery_strategies: recovery_strategies(config_name, subscriptions_set_lifecycle)
       )

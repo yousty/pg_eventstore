@@ -573,6 +573,7 @@ RSpec.describe 'Subscriptions integration' do
     before do
       manager.subscribe('Sub 1', handler: handler, **subscription_opts)
       stub_const('PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES', 1)
+      stub_const('PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL', 1)
     end
 
     after do
@@ -588,6 +589,95 @@ RSpec.describe 'Subscriptions integration' do
         sleep seconds_before_recovery + PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES
         expect(processed_events.size).to eq(2)
         expect(manager).to be_running
+      end
+    end
+  end
+
+  describe 'processing concurrent events at the edge position' do
+    subject { manager.start }
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+
+    let(:handler1) { proc { |event| processed_events1.push(event) } }
+    let(:handler2) { proc { |event| processed_events2.push(event) } }
+    let(:handler3) { proc { |event| processed_events3.push(event) } }
+    let(:handler4) { proc { |event| processed_events4.push(event) } }
+
+    let(:processed_events1) { [] }
+    let(:processed_events2) { [] }
+    let(:processed_events3) { [] }
+    let(:processed_events4) { [] }
+
+    let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
+    let(:event2) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar') }
+    let(:event3) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Baz') }
+
+    before do
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0.2
+        c.connection_pool_size = 10
+      end
+      manager.subscribe(
+        'Subscription 1', handler: handler1, options: { filter: { event_types: %w[Foo Bar Baz] } }
+      )
+      manager.subscribe(
+        'Subscription 2', handler: handler2
+      )
+      manager.subscribe(
+        'Subscription 3', handler: handler3, options: { filter: { streams: [{ context: 'FooCtx' }] } }
+      )
+      manager.subscribe(
+        'Subscription 4',
+        handler: handler4,
+        options: { filter: { streams: [{ context: 'FooCtx', stream_name: 'Foo' }] } }
+      )
+    end
+
+    after do
+      manager.stop
+    end
+
+    it 'processes all published events' do
+      subject
+      # Start asynchronous event producers. The goal is to have subscriptions that consume events as they appear in the
+      # database. The events must be processed in strict order which correspond to order by global_position. There must
+      # be no gaps in processed events comparing to the events list in the database.
+      async_events_publishing =
+        [event1, event2, event3].map.with_index do |event, index|
+          Thread.new do
+            loop do
+              stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: SecureRandom.uuid)
+              PgEventstore.client.multiple do
+                PgEventstore.client.append_to_stream(stream, event)
+                sleep(0.3 + (index * 0.1))
+              end
+              Thread.current.exit if Thread.current[:exit]
+            end
+          end
+        end
+
+      sleep 4
+      # Stop producers
+      async_events_publishing.each { _1[:exit] = true }.each(&:join)
+      expected_events = PgEventstore.client.read(PgEventstore::Stream.all_stream)
+      # Give subscriptions a chance to pick up last events
+      dv([processed_events1, processed_events2, processed_events3, processed_events4]).
+        wait_until(timeout: 2) do |chunks|
+        chunks.all? { |events| events.size == expected_events.size }
+      end
+
+      aggregate_failures do
+        [processed_events1, processed_events2, processed_events3, processed_events4].each.with_index(1) do |events, i|
+          expect(events.size).to(
+            eq(expected_events.size),
+            <<~TEXT
+              "Subscription #{i}" haven't picked up some events. Processed: #{events.size}, events in \
+              db: #{expected_events.size}
+            TEXT
+          )
+          expect(events.map(&:global_position)).to eq(expected_events.map(&:global_position))
+        end
       end
     end
   end

@@ -1,0 +1,15 @@
+module PgEventstore
+  class ServiceQueries
+    @connection: Connection
+
+    def initialize: (Connection connection) -> void
+
+    def max_global_position: (Array[String] table_names) -> Integer
+
+    def relation_ids_by_names: (Array[String] table_names) -> Hash[String, Integer]
+
+    def relation_transaction_ids: (Array[Integer] relation_oids) -> Array[String]
+
+    def transactions_in_progress?: (relation_ids: Array[Integer], transaction_ids: Array[String]) -> bool
+  end
+end

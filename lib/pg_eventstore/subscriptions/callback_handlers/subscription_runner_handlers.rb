@@ -52,6 +52,15 @@ module PgEventstore
       def update_subscription_state(subscription, state)
         subscription.update(state: state)
       end
+
+      # @param subscription_position_evaluation [PgEventstore::SubscriptionPositionEvaluation]
+      # @param state [String]
+      # @return [void]
+      def stop_position_evaluation(subscription_position_evaluation, state)
+        return if state == 'running'
+
+        subscription_position_evaluation.stop_evaluation
+      end
     end
   end
 end

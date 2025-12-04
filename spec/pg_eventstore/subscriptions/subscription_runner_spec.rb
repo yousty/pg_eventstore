@@ -2,13 +2,21 @@
 
 RSpec.describe PgEventstore::SubscriptionRunner do
   let(:instance) do
-    described_class.new(stats: stats, events_processor: events_processor, subscription: subscription)
+    described_class.new(
+      stats: stats,
+      events_processor: events_processor,
+      subscription: subscription,
+      position_evaluation: position_evaluation
+    )
   end
   let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
   let(:events_processor) do
     PgEventstore::EventsProcessor.new(handler, graceful_shutdown_timeout: 5)
   end
   let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo') }
+  let(:position_evaluation) do
+    PgEventstore::SubscriptionPositionEvaluation.new(config_name: :default, filter_options: {})
+  end
   let(:handler) { proc {} }
 
   describe '#next_chunk_query_opts' do
@@ -215,7 +223,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             filter: { event_types: ['Foo'] },
             resolve_link_tos: true,
             from_position: 124,
-            max_count: described_class::INITIAL_EVENTS_PER_CHUNK
+            max_count: described_class::INITIAL_EVENTS_PER_CHUNK,
+            to_position: nil
           )
         )
       end

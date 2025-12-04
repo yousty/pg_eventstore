@@ -9,14 +9,20 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
     PgEventstore::SubscriptionRunner.new(
       stats: PgEventstore::SubscriptionHandlerPerformance.new,
       events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
-      subscription: SubscriptionsHelper.create_with_connection(name: 'Subscr1')
+      subscription: SubscriptionsHelper.create_with_connection(name: 'Subscr1'),
+      position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
+        config_name: :default, filter_options: {}
+      )
     )
   end
   let(:runner2) do
     PgEventstore::SubscriptionRunner.new(
       stats: PgEventstore::SubscriptionHandlerPerformance.new,
       events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
-      subscription: SubscriptionsHelper.create_with_connection(name: 'Subscr2')
+      subscription: SubscriptionsHelper.create_with_connection(name: 'Subscr2'),
+      position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
+        config_name: :default, filter_options: {}
+      )
     )
   end
 

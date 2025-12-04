@@ -2,6 +2,8 @@ module PgEventstore
   class SQLBuilder
     def initialize: () -> void
 
+    def from_sql: -> String
+
     # _@param_ `sql`
     def select: (String sql) -> self
 
@@ -18,7 +20,7 @@ module PgEventstore
     def where_or: (String sql, *Object arguments) -> self
 
     # _@param_ `table_name`
-    def from: (String table_name) -> self
+    def from: (String | SQLBuilder table_name) -> self
 
     # _@param_ `sql`
     #
@@ -53,7 +55,7 @@ module PgEventstore
     # _@param_ `val`
     def positional_values_size=: (Integer val) -> Integer
 
-    def _to_exec_params: () -> ::Array[(String | ::Array[untyped])]
+    def _to_exec_params: () -> [String, ::Array[untyped]]
 
     def single_query_sql: () -> String
 
@@ -70,5 +72,9 @@ module PgEventstore
 
     # _@param_ `sql`
     def extract_positional_args: (String sql, *untyped arguments) -> String
+
+    private
+
+    def merge: (SQLBuilder builder)-> String
   end
 end

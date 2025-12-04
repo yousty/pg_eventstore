@@ -28,7 +28,8 @@ module PgEventstore
     def event_exists?(event)
       return false if event.id.nil? || event.stream.nil?
 
-      sql_builder = SQLBuilder.new.select('1 as exists').from('events').where('id = ?', event.id).limit(1)
+      sql_builder = SQLBuilder.new.select('1 as exists').from(Event::PRIMARY_TABLE_NAME).where('id = ?', event.id)
+      sql_builder.limit(1)
       sql_builder.where(
         'context = ? and stream_name = ? and type = ?', event.stream.context, event.stream.stream_name, event.type
       )
@@ -42,7 +43,7 @@ module PgEventstore
     # @param events [Array<PgEventstore::Event>]
     # @return [Array<String>]
     def ids_from_db(events)
-      sql_builder = SQLBuilder.new.from('events').select('id')
+      sql_builder = SQLBuilder.new.from(Event::PRIMARY_TABLE_NAME).select('id')
       partition_attrs = events.map { |event| [event.stream&.context, event.stream&.stream_name, event.type] }.uniq
       partition_attrs.each do |context, stream_name, event_type|
         sql_builder.where_or('context = ? and stream_name = ? and type = ?', context, stream_name, event_type)
@@ -57,7 +58,7 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @return [Integer, nil]
     def stream_revision(stream)
-      sql_builder = SQLBuilder.new.from('events').select('stream_revision')
+      sql_builder = SQLBuilder.new.from(Event::PRIMARY_TABLE_NAME).select('stream_revision')
       sql_builder.where('context = ? and stream_name = ? and stream_id = ?', *stream.to_a)
       sql_builder.order('stream_revision DESC').limit(1)
       connection.with do |conn|

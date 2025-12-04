@@ -12,11 +12,12 @@ module PgEventstore
         stats: SubscriptionHandlerPerformance,
         events_processor: EventsProcessor,
         subscription: Subscription,
-        ?restart_terminator: _RestartTerminator?,
-        ?failed_subscription_notifier: _FailedSubscriptionNotifier?
+        position_evaluation: SubscriptionPositionEvaluation,
       ) -> void
 
     def next_chunk_query_opts: () -> ::Hash[untyped, untyped]
+
+    def next_chunk_safe?: -> bool
 
     def time_to_feed?: () -> bool
 
