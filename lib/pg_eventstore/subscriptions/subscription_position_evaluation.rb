@@ -9,18 +9,20 @@ module PgEventstore
   # - transaction holding event2 commits first
   # - a subscription picks event2 and sets next position to 11
   # - transaction holding event1 commits
-  # Time → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → →
+  # Illustration:
+  #   Time → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → →
   #
-  # T1:  BEGIN
-  #        INSERT INTO events(...);
-  #      --------------------global_position#9------------------->
-  #      COMMIT
-  # T2:       BEGIN
-  #             INSERT INTO events(...);
-  #           --------------global_position#10-------->
-  #           COMMIT
-  # Query events:                                       SELECT * FROM event WHERE global_position >= 8
-  #                                                     --------------Picks #8, #10, but never #9-------->
+  #   T1:  BEGIN
+  #          INSERT INTO events(...);
+  #        --------------------global_position#9------------------->
+  #       COMMIT
+  #   T2:       BEGIN
+  #               INSERT INTO events(...);
+  #             --------------global_position#10-------->
+  #             COMMIT
+  #   Query events:                                       SELECT * FROM event WHERE global_position >= 8
+  #                                                       --------------Picks #8, #10, but never #9-------->
+  #
   # To solve this problem we can:
   # 1. pause events fetching for the subscription
   # 2. fetch latest global position that matches subscription's filter
@@ -154,6 +156,7 @@ module PgEventstore
           end
         end
       rescue
+        # Clean up the state immediately in case of error
         _stop_evaluation(nil)
       end
     end

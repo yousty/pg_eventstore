@@ -108,6 +108,7 @@ module PgEventstore
         :change_state, :after,
         SubscriptionRunnerHandlers.setup_handler(:update_subscription_state, @subscription)
       )
+      # Prevent dangling position evaluation runner when subscription changes the state to something except 'running'
       @events_processor.define_callback(
         :change_state, :after,
         SubscriptionRunnerHandlers.setup_handler(:stop_position_evaluation, @position_evaluation)
