@@ -681,4 +681,87 @@ RSpec.describe 'Subscriptions integration' do
       end
     end
   end
+
+  describe 'stoping and starting subscription again' do
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+
+    let(:handler) { proc { |event| processed_events.push(event) } }
+
+    let(:processed_events) { [] }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:event) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
+
+    let(:stop_cmd) do
+      cmd_class = PgEventstore::SubscriptionRunnerCommands.command_class('Stop')
+      PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection).find_or_create_by(
+        subscriptions_set_id: manager.subscriptions_set.id,
+        subscription_id: manager.subscriptions.first.id,
+        command_name: cmd_class.new.name,
+        data: {}
+      )
+    end
+
+    let(:start_cmd) do
+      cmd_class = PgEventstore::SubscriptionRunnerCommands.command_class('Start')
+      PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection).find_or_create_by(
+        subscriptions_set_id: manager.subscriptions_set.id,
+        subscription_id: manager.subscriptions.first.id,
+        command_name: cmd_class.new.name,
+        data: {}
+      )
+    end
+
+    let(:publish_event) do
+      proc do
+        PgEventstore.client.append_to_stream(stream, event)
+      end
+    end
+
+    before do
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0.2
+        c.connection_pool_size = 10
+      end
+      manager.subscribe('Subscription 1', handler: handler)
+    end
+
+    after do
+      manager.stop
+    end
+
+    # rubocop:disable Style/ZeroLengthPredicate
+    it 'processes events after the restart' do
+      aggregate_failures do
+        # Run subscriptions
+        expect { manager.start }.to change {
+          dv(manager).deferred_wait(timeout: 1) {
+            _1.subscriptions.all? { |sub| sub.state == 'running' }
+          }.subscriptions.map(&:state)
+        }.to(['running'])
+        # Publish one event and ensure it is picked by the subscription
+        expect { publish_event.call }.to change {
+          dv(processed_events).deferred_wait(timeout: 1) { _1.size > 0 }.size
+        }.to(1)
+        # Issue Stop command and ensure the subscription has been stopped
+        expect { stop_cmd }.to change {
+          dv(manager).deferred_wait(timeout: 2) {
+            _1.subscriptions.all? { |sub| sub.state == 'stopped' }
+          }.subscriptions.map(&:state)
+        }.to(['stopped'])
+        # Issue Start command and ensure the subscription has been run
+        expect { start_cmd }.to change {
+          dv(manager).deferred_wait(timeout: 2) {
+            _1.subscriptions.all? { |sub| sub.state == 'running' }
+          }.subscriptions.map(&:state)
+        }.to(['running'])
+        # Publish one event and ensure it is picked by the subscription after the start
+        expect { publish_event.call }.to change {
+          dv(processed_events).deferred_wait(timeout: 1) { _1.size > 1 }.size
+        }.to(2)
+      end
+    end
+    # rubocop:enable Style/ZeroLengthPredicate
+  end
 end
