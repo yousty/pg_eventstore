@@ -1,8 +1,36 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # When subscription pulls events at the edge of the events list and several events arrives concurrently - there is a
+  # chance some events will never be picked. Example:
+  # - event1 has been assigned global_position#9
+  # - event2 has been assigned global_position#10
+  # - event1 and event2 are currently in concurrent transactions, but those transactions does not block each other
+  # - transaction holding event2 commits first
+  # - a subscription picks event2 and sets next position to 11
+  # - transaction holding event1 commits
+  # Time → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → → →
+  #
+  # T1:  BEGIN
+  #        INSERT INTO events(...);
+  #      --------------------global_position#9------------------->
+  #      COMMIT
+  # T2:       BEGIN
+  #             INSERT INTO events(...);
+  #           --------------global_position#10-------->
+  #           COMMIT
+  # Query events:                                       SELECT * FROM event WHERE global_position >= 8
+  #                                                     --------------Picks #8, #10, but never #9-------->
+  # To solve this problem we can:
+  # 1. pause events fetching for the subscription
+  # 2. fetch latest global position that matches subscription's filter
+  # 3. wait for all currently running transactions that affects on the subscription to finish
+  # 4. unpause events fetching and use this position as a right hand limiter, because we can now confidently say there
+  #   are no uncommited events that would be lost otherwise
+  # This class is responsible for the step 2 and step 3, and persists the last safe position to be used in step 4.
   # @!visibility private
   class SubscriptionPositionEvaluation
+    # Determines how often to check the list of currently running transactions
     # @return [Float]
     TRANSACTIONS_STATUS_REFRESH_INTERVAL = 0.05 # seconds
     private_constant :TRANSACTIONS_STATUS_REFRESH_INTERVAL
@@ -58,26 +86,35 @@ module PgEventstore
       self.position_to_evaluate = nil
     end
 
+    # @return [Integer, nil]
     def position_to_evaluate
       @mutex.synchronize { @position_to_evaluate }
     end
 
+    # @return [Boolean, nil]
     def position_is_safe
       @mutex.synchronize { @position_is_safe }
     end
 
+    # @param val [Integer, nil]
+    # @return [Integer, nil]
     def last_safe_position=(val)
       @mutex.synchronize { @last_safe_position = val }
     end
 
+    # @param val [Integer, nil]
+    # @return [Integer, nil]
     def position_to_evaluate=(val)
       @mutex.synchronize { @position_to_evaluate = val }
     end
 
+    # @param val [Boolean, nil]
+    # @return [Boolean, nil]
     def position_is_safe=(val)
       @mutex.synchronize { @position_is_safe = val }
     end
 
+    # @return [Array<String>]
     def affected_tables
       if @stream_filters.empty? && @event_type_filters.empty?
         [Event::PRIMARY_TABLE_NAME]
@@ -86,6 +123,7 @@ module PgEventstore
       end
     end
 
+    # @return [void]
     def calculate_safe_position
       @runner = Thread.new do
         tables_to_track = affected_tables
@@ -115,7 +153,7 @@ module PgEventstore
             @position_to_evaluate = nil
           end
         end
-      rescue => e
+      rescue
         _stop_evaluation(nil)
       end
     end

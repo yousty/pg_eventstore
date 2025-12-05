@@ -192,11 +192,12 @@ module PgEventstore
           filter.add_event_types(event_filters)
           set_partitions_scope(filter, stream_filters, event_filters, scope)
         else
-          # When event type filters are absent - we can look up partitions by context and context/stream_name separately,
-          # thus potentially producing one-to-one mapping of filter-to-partition with :auto scope. For example, let's say
-          # we have stream attributes filter like [{ context: 'FooCtx', stream_name: 'Bar'}, { context: 'BarCtx' }], then
-          # we would be able to look up partitions by the exact match, returning only two of them according to the
-          # provided filters
+          # When event type filters are absent - we can look up partitions by context and context/stream_name
+          # separately, thus potentially producing one-to-one mapping of filter-to-partition with :auto scope. For
+          # example, let's say we have stream attributes filter like
+          # [{ context: 'FooCtx', stream_name: 'Bar'}, { context: 'BarCtx' }], then we would be able to look up
+          # partitions by the exact match, returning only two of them according to the provided filters - stream
+          # partition for first filter and context partition for second filter.
           builders = stream_filters.map do |attrs|
             filter = QueryBuilders::PartitionsFiltering.new
             filter.add_stream_attrs(**attrs)

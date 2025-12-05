@@ -7,6 +7,12 @@ module PgEventstore
   class SubscriptionFeeder
     extend Forwardable
 
+    # Determines how often to fetch events from the event store.
+    # @see PgEventstore::Subscription::MIN_EVENTS_PULL_INTERVAL
+    # @return [Float]
+    EVENTS_PULL_INTERVAL = 0.1 # seconds
+    private_constant :EVENTS_PULL_INTERVAL
+
     attr_reader :config_name
 
     def_delegators :@basic_runner, :start, :stop, :restore, :state, :wait_for_finish, :stop_async, :running?
@@ -17,7 +23,7 @@ module PgEventstore
     def initialize(config_name:, subscriptions_set_lifecycle:, subscriptions_lifecycle:)
       @config_name = config_name
       @basic_runner = BasicRunner.new(
-        run_interval: 0.1,
+        run_interval: EVENTS_PULL_INTERVAL,
         async_shutdown_time: 0,
         recovery_strategies: recovery_strategies(config_name, subscriptions_set_lifecycle)
       )

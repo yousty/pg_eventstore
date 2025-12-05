@@ -2,6 +2,8 @@ module PgEventstore
   class Subscription
     DEFAULT_TIMESTAMP: Time
 
+    MIN_EVENTS_PULL_INTERVAL: Float
+
     include PgEventstore::Extensions::UsingConnectionExtension
     include PgEventstore::Extensions::OptionsExtension
 

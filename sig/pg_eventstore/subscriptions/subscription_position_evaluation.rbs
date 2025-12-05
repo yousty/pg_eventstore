@@ -30,6 +30,8 @@ module PgEventstore
 
     def calculate_safe_position: -> void
 
+    def connection: -> Connection
+
     def last_safe_position=: (Integer? val) -> Integer?
 
     def partition_queries: -> PartitionQueries

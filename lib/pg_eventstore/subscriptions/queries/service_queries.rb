@@ -12,7 +12,7 @@ module PgEventstore
     # @return [Array<String>]
     def relation_transaction_ids(relation_oids)
       result = @connection.with do |conn|
-        # RowExclusiveLock mode is for commands changing the table - UPDATE, DELETE, INSERT and MERGE
+        # Look up transactions that change table's content
         conn.exec_params(
           <<~SQL,
             SELECT virtualtransaction AS trx_id FROM pg_locks

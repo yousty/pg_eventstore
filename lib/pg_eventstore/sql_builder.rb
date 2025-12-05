@@ -148,6 +148,7 @@ module PgEventstore
       [union_query_sql, @positional_values]
     end
 
+    # @return [String]
     def from_sql
       return @from_value if @from_value.is_a?(String)
 
@@ -203,6 +204,8 @@ module PgEventstore
       @order_values.join(', ')
     end
 
+    # @param builder [PgEventstore::SQLBuilder]
+    # @return [String]
     def merge(builder)
       builder.positional_values_size = @positional_values_size
       sql_query, positional_values = builder._to_exec_params

@@ -6,8 +6,15 @@ module PgEventstore
     include Extensions::UsingConnectionExtension
     include Extensions::OptionsExtension
 
-    MIN_CHUNK_QUERY_INTERVAL = 0.2
-    private_constant :MIN_CHUNK_QUERY_INTERVAL
+    # Determines the minimal allowed value of events pull frequency of the particular subscription. You can find similar
+    # constant - SubscriptionFeeder::EVENTS_PULL_INTERVAL. Unlike it - this one is responsible to detect whether the
+    # subscription should be included in the subscriptions list to query next chunk of events. Thus, this setting only
+    # determines whether it is time to make a request, but how frequent would be the actual request - determines
+    # SubscriptionFeeder::EVENTS_PULL_INTERVAL.
+    # @see PgEventstore::SubscriptionFeeder::EVENTS_PULL_INTERVAL
+    # @return [Float]
+    MIN_EVENTS_PULL_INTERVAL = 0.2
+    private_constant :MIN_EVENTS_PULL_INTERVAL
 
     # @return [Time]
     DEFAULT_TIMESTAMP = Time.at(0).utc.freeze
@@ -170,7 +177,7 @@ module PgEventstore
         restart_count: 0,
         last_restarted_at: nil,
         max_restarts_number: max_restarts_number,
-        chunk_query_interval: [chunk_query_interval, MIN_CHUNK_QUERY_INTERVAL].max,
+        chunk_query_interval: [chunk_query_interval, MIN_EVENTS_PULL_INTERVAL].max,
         last_chunk_fed_at: DEFAULT_TIMESTAMP,
         last_chunk_greatest_position: nil,
         last_error: nil,

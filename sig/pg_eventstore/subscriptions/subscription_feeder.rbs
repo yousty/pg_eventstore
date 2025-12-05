@@ -1,5 +1,7 @@
 module PgEventstore
   class SubscriptionFeeder
+    EVENTS_PULL_INTERVAL: Float
+
     extend Forwardable
 
     @basic_runner: PgEventstore::BasicRunner
