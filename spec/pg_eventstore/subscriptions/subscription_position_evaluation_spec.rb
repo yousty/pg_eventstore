@@ -225,5 +225,65 @@ RSpec.describe PgEventstore::SubscriptionPositionEvaluation do
         it_behaves_like 'does not wait for the current transaction'
       end
     end
+
+    context 'when connection lose happens during the evaluation' do
+      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:event) do
+        PgEventstore::Event.new(type: 'Foo')
+      end
+      let(:disconnect_simulator) do
+        proc do
+          PgEventstore.configure do |config|
+            config.pg_uri = 'postgres://127.0.0.1:1234/eventstore'
+          end
+        end
+      end
+
+      before do
+        @publisher = Thread.new do
+          PgEventstore.client.multiple do
+            PgEventstore.client.append_to_stream(stream, event)
+            loop do
+              sleep 0.05
+              break if Thread.current[:terminate]
+            end
+          end
+        end
+        # let the thread time to start
+        sleep 0.1
+      end
+
+      after do
+        @publisher[:terminate] = true
+        @publisher.join
+      end
+
+      it 'resets #position_to_evaluate' do
+        subject
+        expect { disconnect_simulator.call }.to change {
+          dv(instance).deferred_wait(timeout: 0.5) {
+            _1.send(:position_to_evaluate).nil?
+          }.send(:position_to_evaluate)
+        }.to(nil)
+      end
+      it 'resets #last_safe_position' do
+        subject
+        instance.send(:last_safe_position=, 1)
+        expect { disconnect_simulator.call }.to change {
+          dv(instance).deferred_wait(timeout: 0.5) {
+            _1.last_safe_position.nil?
+          }.last_safe_position
+        }.to(nil)
+      end
+      it 'resets #position_is_safe' do
+        subject
+        instance.send(:position_is_safe=, true)
+        expect { disconnect_simulator.call }.to change {
+          dv(instance).deferred_wait(timeout: 0.5) {
+            _1.send(:position_is_safe).nil?
+          }.send(:position_is_safe)
+        }.to(nil)
+      end
+    end
   end
 end

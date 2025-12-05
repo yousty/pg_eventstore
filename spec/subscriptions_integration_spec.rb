@@ -571,16 +571,20 @@ RSpec.describe 'Subscriptions integration' do
     end
 
     before do
-      manager.subscribe('Sub 1', handler: handler, **subscription_opts)
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0
+      end
       stub_const('PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES', 1)
       stub_const('PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL', 1)
+      stub_const('PgEventstore::Subscription::MIN_EVENTS_PULL_INTERVAL', 0)
+      manager.subscribe('Sub 1', handler: handler, **subscription_opts)
     end
 
     after do
       manager.stop
     end
 
-    it 'recovers a broken connection' do
+    it 'recovers a broken connection and processes events further' do
       subject
       sleep seconds_before_disaster
       aggregate_failures do
