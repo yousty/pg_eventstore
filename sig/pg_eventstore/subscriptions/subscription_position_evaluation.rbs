@@ -1,0 +1,53 @@
+module PgEventstore
+  class SubscriptionPositionEvaluation
+    TRANSACTIONS_STATUS_REFRESH_INTERVAL: Float
+
+    @config_name: Symbol
+    @event_type_filters: Array[String]
+    @last_safe_position: Integer?
+    @mutex: Mutex
+    @position_is_safe: bool?
+    @position_to_evaluate: Integer?
+    @relation_ids_cache: Hash[String, Integer]
+    @runner: Thread?
+    @stream_filters: Array[Hash[untyped, untyped]]
+
+    def initialize: (config_name: Symbol, filter_options: Hash[untyped, untyped]) -> void
+
+    def evaluate: (Integer position_to_evaluate) -> self
+
+    def last_safe_position: -> Integer?
+
+    def safe?: -> bool
+
+    def stop_evaluation: -> void
+
+    private
+
+    def _stop_evaluation: (Thread? runner)-> void
+
+    def affected_tables: -> Array[String]
+
+    def calculate_safe_position: -> void
+
+    def connection: -> Connection
+
+    def last_safe_position=: (Integer? val) -> Integer?
+
+    def partition_queries: -> PartitionQueries
+
+    def position_is_safe: -> bool?
+
+    def position_is_safe=: (bool? val) -> bool?
+
+    def position_to_evaluate: -> Integer?
+
+    def position_to_evaluate=: (Integer? val) -> Integer?
+
+    def service_queries: -> ServiceQueries
+
+    def transaction_queries: -> TransactionQueries
+
+    def update_relation_ids_cache: (Array[String] tables_to_track) -> void
+  end
+end

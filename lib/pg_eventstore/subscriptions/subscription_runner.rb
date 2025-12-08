@@ -28,22 +28,33 @@ module PgEventstore
     # @param stats [PgEventstore::SubscriptionHandlerPerformance]
     # @param events_processor [PgEventstore::EventsProcessor]
     # @param subscription [PgEventstore::Subscription]
-    def initialize(stats:, events_processor:, subscription:)
+    # @param position_evaluation [PgEventstore::SubscriptionPositionEvaluation]
+    def initialize(stats:, events_processor:, subscription:, position_evaluation:)
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
+      @position_evaluation = position_evaluation
 
       attach_callbacks
     end
 
     # @return [Hash]
     def next_chunk_query_opts
-      @subscription.options.merge(from_position: next_chunk_global_position, max_count: estimate_events_number)
+      @subscription.options.merge(
+        from_position: next_chunk_global_position,
+        max_count: estimate_events_number,
+        to_position: @position_evaluation.last_safe_position
+      )
     end
 
     # @return [Boolean]
     def time_to_feed?
       @subscription.last_chunk_fed_at + @subscription.chunk_query_interval <= Time.now.utc
+    end
+
+    # @return [Boolean]
+    def next_chunk_safe?
+      estimate_events_number == 0 ? false : @position_evaluation.evaluate(next_chunk_global_position).safe?
     end
 
     private
@@ -96,6 +107,11 @@ module PgEventstore
       @events_processor.define_callback(
         :change_state, :after,
         SubscriptionRunnerHandlers.setup_handler(:update_subscription_state, @subscription)
+      )
+      # Prevent dangling position evaluation runner when subscription changes the state to something except 'running'
+      @events_processor.define_callback(
+        :change_state, :after,
+        SubscriptionRunnerHandlers.setup_handler(:stop_position_evaluation, @position_evaluation)
       )
     end
   end

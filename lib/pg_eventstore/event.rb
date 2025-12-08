@@ -6,6 +6,8 @@ module PgEventstore
 
     # @return [String] a type of link event
     LINK_TYPE = '$>'
+    # @return [String]
+    PRIMARY_TABLE_NAME = 'events'
 
     # @!attribute id
     #   @return [String] UUIDv4 string

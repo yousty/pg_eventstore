@@ -64,7 +64,7 @@ module PgEventstore
       self
     end
 
-    # @param table_name [String]
+    # @param table_name [String | SQLBuilder]
     # @return [self]
     def from(table_name)
       @from_value = table_name
@@ -132,7 +132,7 @@ module PgEventstore
       self
     end
 
-    # @return [Array<String, Array<Object>>]
+    # @return [[String, Array<_>]]
     def to_exec_params
       @positional_values.clear
       @positional_values_size = 0
@@ -141,11 +141,19 @@ module PgEventstore
 
     protected
 
-    # @return [Array<String, Array<Object>>]
+    # @return [[String, Array<_>]]
     def _to_exec_params
       return [single_query_sql, @positional_values] if @union_values.empty?
 
       [union_query_sql, @positional_values]
+    end
+
+    # @return [String]
+    def from_sql
+      return @from_value if @from_value.is_a?(String)
+
+      sql = merge(@from_value)
+      "(#{sql}) #{@from_value.from_sql}"
     end
 
     private
@@ -153,7 +161,7 @@ module PgEventstore
     # @return [String]
     def single_query_sql
       where_sql = [where_sql('OR'), where_sql('AND')].reject(&:empty?).map { |sql| "(#{sql})" }.join(' AND ')
-      sql = "SELECT #{select_sql} FROM #{@from_value}"
+      sql = "SELECT #{select_sql} FROM #{from_sql}"
       sql += " #{join_sql}" unless @join_values.empty?
       sql += " WHERE #{where_sql}" unless where_sql.empty?
       sql += " GROUP BY #{@group_values.join(', ')}" unless @group_values.empty?
@@ -168,11 +176,7 @@ module PgEventstore
       sql = single_query_sql
       union_parts = ["(#{sql})"]
       union_parts += @union_values.map do |builder|
-        builder.positional_values_size = @positional_values_size
-        builder_sql, values = builder._to_exec_params
-        @positional_values.push(*values)
-        @positional_values_size += values.size
-        "(#{builder_sql})"
+        "(#{merge(builder)})"
       end
       union_parts.join(' UNION ALL ')
     end
@@ -200,14 +204,28 @@ module PgEventstore
       @order_values.join(', ')
     end
 
+    # @param builder [PgEventstore::SQLBuilder]
+    # @return [String]
+    def merge(builder)
+      builder.positional_values_size = @positional_values_size
+      sql_query, positional_values = builder._to_exec_params
+      @positional_values.push(*positional_values)
+      @positional_values_size += positional_values.size
+      sql_query
+    end
+
     # Replaces "?" signs in the given string with positional variables and memorize positional values they refer to.
     # @param sql [String]
     # @return [String]
     def extract_positional_args(sql, *arguments)
       sql.gsub('?').each_with_index do |_, index|
-        @positional_values.push(arguments[index])
-        @positional_values_size += 1
-        "$#{@positional_values_size}"
+        if arguments[index].is_a?(SQLBuilder)
+          "(#{merge(arguments[index])})"
+        else
+          @positional_values.push(arguments[index])
+          @positional_values_size += 1
+          "$#{@positional_values_size}"
+        end
       end
     end
   end

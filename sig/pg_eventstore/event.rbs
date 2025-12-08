@@ -1,7 +1,9 @@
 module PgEventstore
   class Event
-    include PgEventstore::Extensions::OptionsExtension
+    include Extensions::OptionsExtension
+
     LINK_TYPE: String
+    PRIMARY_TABLE_NAME: String
 
     def ==: ((Object | PgEventstore::Event) other) -> bool
 

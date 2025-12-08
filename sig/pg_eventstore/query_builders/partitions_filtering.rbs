@@ -7,15 +7,19 @@ module PgEventstore
 
       def self.extract_streams_filter: (Hash[untyped, untyped] options) -> Array[Hash[untyped, untyped]]
 
-      def add_event_types: (::Array[String] event_types) -> void
+      def self.correct_stream_filter?: (::Hash[untyped, untyped] stream_attrs) -> bool
 
-      def add_stream_attrs: (?context: String?, ?stream_name: String?) -> void
+      def add_event_types: (::Array[String] event_types) -> SQLBuilder
 
-      def with_event_types: -> void
+      def add_stream_attrs: (?context: String?, ?stream_name: String?) -> SQLBuilder
 
-      private
+      def with_event_types: -> SQLBuilder
 
-      def correct_stream_filter?: (::Hash[untyped, untyped] stream_attrs) -> bool
+      def with_stream_names: -> SQLBuilder
+
+      def without_event_types: -> SQLBuilder
+
+      def without_stream_names: -> SQLBuilder
     end
   end
 end

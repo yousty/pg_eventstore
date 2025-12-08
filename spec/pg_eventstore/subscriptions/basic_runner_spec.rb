@@ -1033,7 +1033,10 @@ RSpec.describe PgEventstore::BasicRunner do
         expect(before_restore_task).to have_received(:run).twice
       end
       it 'recovers from the error' do
-        expect { subject }.to change { instance.state }.from('dead').to('running')
+        recover_count = 0
+        expect { subject }.to change {
+          dv(instance).deferred_wait(timeout: 1) { recover_count += 1; recover_count == 2 }.state
+        }.from('dead').to('running')
       end
       it 'runs recovery function' do
         subject

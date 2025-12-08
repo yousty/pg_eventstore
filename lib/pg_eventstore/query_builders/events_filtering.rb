@@ -4,10 +4,6 @@ module PgEventstore
   module QueryBuilders
     # @!visibility private
     class EventsFiltering < BasicFiltering
-      # @return [String]
-      TABLE_NAME = 'events'
-      private_constant :TABLE_NAME
-
       # @return [Integer]
       DEFAULT_LIMIT = 1_000
       # @return [Hash<String => String, Symbol => String>]
@@ -107,7 +103,7 @@ module PgEventstore
 
       # @return [String]
       def to_table_name
-        TABLE_NAME
+        Event::PRIMARY_TABLE_NAME
       end
 
       # @param context [String, nil]

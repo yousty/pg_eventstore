@@ -11,7 +11,7 @@ module PgEventstore
         def collection
           @collection ||=
             begin
-              sql_builder = SQLBuilder.new.select('stream_id').from('events')
+              sql_builder = SQLBuilder.new.select('stream_id').from(Event::PRIMARY_TABLE_NAME)
               sql_builder.where('context = ? and stream_name = ?', options[:context], options[:stream_name])
               sql_builder.where('stream_id like ?', "#{options[:query]}%")
               sql_builder.where("stream_id #{direction_operator} ?", starting_id) if starting_id
@@ -27,7 +27,7 @@ module PgEventstore
           return unless collection.size == per_page
 
           starting_id = collection.first['stream_id']
-          sql_builder = SQLBuilder.new.select('stream_id').from('events')
+          sql_builder = SQLBuilder.new.select('stream_id').from(Event::PRIMARY_TABLE_NAME)
           sql_builder.where("stream_id #{direction_operator} ?", starting_id)
           sql_builder.where('stream_id like ?', "#{options[:query]}%")
           sql_builder.where('context = ? and stream_name = ?', options[:context], options[:stream_name])

@@ -24,7 +24,10 @@ RSpec.describe PgEventstore::CommandsHandler do
     PgEventstore::SubscriptionRunner.new(
       stats: PgEventstore::SubscriptionHandlerPerformance.new,
       events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
-      subscription: SubscriptionsHelper.create_with_connection
+      subscription: SubscriptionsHelper.create_with_connection,
+      position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
+        config_name: :default, filter_options: {}
+      )
     )
   end
 

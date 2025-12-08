@@ -58,7 +58,7 @@ module PgEventstore
             options.merge(from_position: from_position, max_count: per_page, direction: order == :asc ? :desc : :asc)
           ).to_sql_builder.unselect.select('global_position').offset(1)
           sql, params = sql_builder.to_exec_params
-          sql = "SELECT * FROM (#{sql}) events ORDER BY global_position #{order} LIMIT 1"
+          sql = "SELECT * FROM (#{sql}) #{Event::PRIMARY_TABLE_NAME} ORDER BY global_position #{order} LIMIT 1"
           connection.with do |conn|
             conn.exec_params(sql, params)
           end.to_a.dig(0, 'global_position')

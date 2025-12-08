@@ -571,15 +571,20 @@ RSpec.describe 'Subscriptions integration' do
     end
 
     before do
-      manager.subscribe('Sub 1', handler: handler, **subscription_opts)
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0
+      end
       stub_const('PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES', 1)
+      stub_const('PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL', 1)
+      stub_const('PgEventstore::Subscription::MIN_EVENTS_PULL_INTERVAL', 0)
+      manager.subscribe('Sub 1', handler: handler, **subscription_opts)
     end
 
     after do
       manager.stop
     end
 
-    it 'recovers a broken connection' do
+    it 'recovers a broken connection and processes events further' do
       subject
       sleep seconds_before_disaster
       aggregate_failures do
@@ -590,5 +595,177 @@ RSpec.describe 'Subscriptions integration' do
         expect(manager).to be_running
       end
     end
+  end
+
+  describe 'processing concurrent events at the edge position' do
+    subject { manager.start }
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+
+    let(:handler1) { proc { |event| processed_events1.push(event) } }
+    let(:handler2) { proc { |event| processed_events2.push(event) } }
+    let(:handler3) { proc { |event| processed_events3.push(event) } }
+    let(:handler4) { proc { |event| processed_events4.push(event) } }
+
+    let(:processed_events1) { [] }
+    let(:processed_events2) { [] }
+    let(:processed_events3) { [] }
+    let(:processed_events4) { [] }
+
+    let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
+    let(:event2) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar') }
+    let(:event3) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Baz') }
+
+    before do
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0.2
+        c.connection_pool_size = 10
+      end
+      manager.subscribe(
+        'Subscription 1', handler: handler1, options: { filter: { event_types: %w[Foo Bar Baz] } }
+      )
+      manager.subscribe(
+        'Subscription 2', handler: handler2
+      )
+      manager.subscribe(
+        'Subscription 3', handler: handler3, options: { filter: { streams: [{ context: 'FooCtx' }] } }
+      )
+      manager.subscribe(
+        'Subscription 4',
+        handler: handler4,
+        options: { filter: { streams: [{ context: 'FooCtx', stream_name: 'Foo' }] } }
+      )
+    end
+
+    after do
+      manager.stop
+    end
+
+    it 'processes all published events' do
+      subject
+      # Start asynchronous event producers. The goal is to have subscriptions that consume events as they appear in the
+      # database. The events must be processed in strict order which correspond to order by global_position. There must
+      # be no gaps in processed events comparing to the events list in the database.
+      async_events_publishing =
+        [event1, event2, event3].map.with_index do |event, index|
+          Thread.new do
+            loop do
+              stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: SecureRandom.uuid)
+              PgEventstore.client.multiple do
+                PgEventstore.client.append_to_stream(stream, event)
+                sleep(0.3 + (index * 0.1))
+              end
+              Thread.current.exit if Thread.current[:exit]
+            end
+          end
+        end
+
+      sleep 4
+      # Stop producers
+      async_events_publishing.each { _1[:exit] = true }.each(&:join)
+      expected_events = PgEventstore.client.read(PgEventstore::Stream.all_stream)
+      # Give subscriptions a chance to pick up last events
+      dv([processed_events1, processed_events2, processed_events3, processed_events4]).
+        wait_until(timeout: 2) do |chunks|
+        chunks.all? { |events| events.size == expected_events.size }
+      end
+
+      aggregate_failures do
+        [processed_events1, processed_events2, processed_events3, processed_events4].each.with_index(1) do |events, i|
+          expect(events.size).to(
+            eq(expected_events.size),
+            <<~TEXT
+              "Subscription #{i}" haven't picked up some events. Processed: #{events.size}, events in \
+              db: #{expected_events.size}
+            TEXT
+          )
+          expect(events.map(&:global_position)).to eq(expected_events.map(&:global_position))
+        end
+      end
+    end
+  end
+
+  describe 'stoping and starting subscription again' do
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+
+    let(:handler) { proc { |event| processed_events.push(event) } }
+
+    let(:processed_events) { [] }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:event) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
+
+    let(:stop_cmd) do
+      cmd_class = PgEventstore::SubscriptionRunnerCommands.command_class('Stop')
+      PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection).find_or_create_by(
+        subscriptions_set_id: manager.subscriptions_set.id,
+        subscription_id: manager.subscriptions.first.id,
+        command_name: cmd_class.new.name,
+        data: {}
+      )
+    end
+
+    let(:start_cmd) do
+      cmd_class = PgEventstore::SubscriptionRunnerCommands.command_class('Start')
+      PgEventstore::SubscriptionCommandQueries.new(PgEventstore.connection).find_or_create_by(
+        subscriptions_set_id: manager.subscriptions_set.id,
+        subscription_id: manager.subscriptions.first.id,
+        command_name: cmd_class.new.name,
+        data: {}
+      )
+    end
+
+    let(:publish_event) do
+      proc do
+        PgEventstore.client.append_to_stream(stream, event)
+      end
+    end
+
+    before do
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0.2
+        c.connection_pool_size = 10
+      end
+      manager.subscribe('Subscription 1', handler: handler)
+    end
+
+    after do
+      manager.stop
+    end
+
+    # rubocop:disable Style/ZeroLengthPredicate
+    it 'processes events after the restart' do
+      aggregate_failures do
+        # Run subscriptions
+        expect { manager.start }.to change {
+          dv(manager).deferred_wait(timeout: 1) {
+            _1.subscriptions.all? { |sub| sub.state == 'running' }
+          }.subscriptions.map(&:state)
+        }.to(['running'])
+        # Publish one event and ensure it is picked by the subscription
+        expect { publish_event.call }.to change {
+          dv(processed_events).deferred_wait(timeout: 1) { _1.size > 0 }.size
+        }.to(1)
+        # Issue Stop command and ensure the subscription has been stopped
+        expect { stop_cmd }.to change {
+          dv(manager).deferred_wait(timeout: 2) {
+            _1.subscriptions.all? { |sub| sub.state == 'stopped' }
+          }.subscriptions.map(&:state)
+        }.to(['stopped'])
+        # Issue Start command and ensure the subscription has been run
+        expect { start_cmd }.to change {
+          dv(manager).deferred_wait(timeout: 2) {
+            _1.subscriptions.all? { |sub| sub.state == 'running' }
+          }.subscriptions.map(&:state)
+        }.to(['running'])
+        # Publish one event and ensure it is picked by the subscription after the start
+        expect { publish_event.call }.to change {
+          dv(processed_events).deferred_wait(timeout: 1) { _1.size > 1 }.size
+        }.to(2)
+      end
+    end
+    # rubocop:enable Style/ZeroLengthPredicate
   end
 end
