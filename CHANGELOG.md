@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.13.4]
+
+- Fix subscriptions potentially skipping events when multiple events are appended in concurrent transactions
+
 ## [1.13.3]
 
 - Reduce subscription delays for newly published events
@@ -118,7 +122,7 @@ subscriptions_manager.subscribe(
 ```
 
 ## [1.1.5]
-- Review the way to handle SubscriptionAlreadyLockedError error. This removes noise when attempting to lock an already locked subscription. 
+- Review the way to handle SubscriptionAlreadyLockedError error. This removes noise when attempting to lock an already locked subscription.
 
 ## [1.1.4]
 - Add rbs signatures
@@ -167,7 +171,7 @@ subscriptions_manager.subscribe(
 
 ## [0.10.2] - 2024-03-13
 
-- Review the approach to resolve link events 
+- Review the approach to resolve link events
 - Fix subscriptions restart interval option not being processed correctly
 
 ## [0.10.1] - 2024-03-12
@@ -230,7 +234,7 @@ subscriptions_manager.subscribe(
 
 ## [0.3.0] - 2024-01-24
 
-- Log SQL queries when `PgEvenstore.logger` is set and it is in `:debug` mode 
+- Log SQL queries when `PgEvenstore.logger` is set and it is in `:debug` mode
 
 ## [0.2.6] - 2023-12-20
 
