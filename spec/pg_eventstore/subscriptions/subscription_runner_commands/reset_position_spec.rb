@@ -45,10 +45,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
       PgEventstore::SubscriptionRunner.new(
         stats: stats,
         events_processor: events_processor,
-        subscription: subscription,
-        position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
-          config_name: :default, filter_options: {}
-        )
+        subscription: subscription
       )
     end
 

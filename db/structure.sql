@@ -2,12 +2,15 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.0 (Debian 16.0-1.pgdg120+1)
--- Dumped by pg_dump version 16.0 (Debian 16.0-1.pgdg120+1)
+\restrict wsI9nLcucDpeBlVdv38oGhqwpgxpRGByZR4lLTShBrqUJES4jWNCUA4fNQtMZtL
+
+-- Dumped from database version 18.1 (Debian 18.1-1.pgdg12+2)
+-- Dumped by pg_dump version 18.1 (Debian 18.1-1.pgdg12+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -15,6 +18,20 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: nextval_with_xact_lock; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS nextval_with_xact_lock WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION nextval_with_xact_lock; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION nextval_with_xact_lock IS 'nextval_with_xact_lock:  Created by pgrx';
+
 
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
@@ -304,7 +321,7 @@ ALTER SEQUENCE public.subscriptions_set_id_seq OWNED BY public.subscriptions_set
 -- Name: events global_position; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT nextval('public.events_global_position_seq'::regclass);
+ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT public.nextval_with_xact_lock(('public.events_global_position_seq'::regclass)::oid);
 
 
 --
@@ -530,4 +547,6 @@ ALTER TABLE ONLY public.subscriptions
 --
 -- PostgreSQL database dump complete
 --
+
+\unrestrict wsI9nLcucDpeBlVdv38oGhqwpgxpRGByZR4lLTShBrqUJES4jWNCUA4fNQtMZtL
 

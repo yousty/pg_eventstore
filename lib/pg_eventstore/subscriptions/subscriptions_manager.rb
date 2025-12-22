@@ -10,7 +10,6 @@ require_relative 'synchronized_array'
 require_relative 'events_processor'
 require_relative 'subscription_handler_performance'
 require_relative 'subscription_runner'
-require_relative 'subscription_position_evaluation'
 require_relative 'subscriptions_set'
 require_relative 'subscription_runners_feeder'
 require_relative 'subscriptions_set_lifecycle'
@@ -28,7 +27,6 @@ require_relative 'queries/subscription_command_queries'
 require_relative 'queries/subscription_queries'
 require_relative 'queries/subscriptions_set_command_queries'
 require_relative 'queries/subscriptions_set_queries'
-require_relative 'queries/service_queries'
 require_relative 'commands_handler'
 
 module PgEventstore
@@ -111,11 +109,7 @@ module PgEventstore
           graceful_shutdown_timeout: graceful_shutdown_timeout,
           recovery_strategies: recovery_strategies(subscription, restart_terminator, failed_subscription_notifier)
         ),
-        subscription: subscription,
-        position_evaluation: SubscriptionPositionEvaluation.new(
-          config_name: config.name,
-          filter_options: options[:filter] || {}
-        )
+        subscription: subscription
       )
 
       @subscriptions_lifecycle.runners.push(runner)

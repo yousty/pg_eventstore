@@ -12,10 +12,16 @@ module PgEventstore
     # @param runners [Array<PgEventstore::SubscriptionRunner>]
     # @return [void]
     def feed(runners)
-      runners = runners.select(&:running?).select(&:time_to_feed?).select(&:next_chunk_safe?)
+      runners = runners.select(&:running?).select(&:time_to_feed?)
       return if runners.empty?
 
-      runners_query_options = runners.to_h { |runner| [runner.id, runner.next_chunk_query_opts] }
+      safe_pos = connection.with do |conn|
+        conn.exec("select ((classid::bigint << 32) | objid::bigint) as global_position from pg_locks where locktype = 'advisory' order by classid asc, objid asc limit 1")
+      end.first&.dig('global_position')
+
+      runners_query_options = runners.to_h do |runner|
+        [runner.id, runner.next_chunk_query_opts.merge(to_position: safe_pos)]
+      end
       grouped_events = subscription_queries.subscriptions_events(runners_query_options)
 
       runners.each do |runner|

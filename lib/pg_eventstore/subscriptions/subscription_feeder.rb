@@ -10,7 +10,7 @@ module PgEventstore
     # Determines how often to fetch events from the event store.
     # @see PgEventstore::Subscription::MIN_EVENTS_PULL_INTERVAL
     # @return [Float]
-    EVENTS_PULL_INTERVAL = 0.1 # seconds
+    EVENTS_PULL_INTERVAL = 0.2 # seconds
     private_constant :EVENTS_PULL_INTERVAL
 
     attr_reader :config_name

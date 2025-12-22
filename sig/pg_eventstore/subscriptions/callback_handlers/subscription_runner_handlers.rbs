@@ -1,8 +1,5 @@
 module PgEventstore
   class SubscriptionRunnerHandlers
-    def self.stop_position_evaluation: (SubscriptionPositionEvaluation subscription_position_evaluation,
-        String state) -> void
-
     def self.track_exec_time: (PgEventstore::SubscriptionHandlerPerformance stats, ^() -> void, Integer _current_position) -> void
 
     def self.update_subscription_stats: (PgEventstore::Subscription subscription, PgEventstore::SubscriptionHandlerPerformance stats, Integer current_position) -> void

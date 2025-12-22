@@ -2,7 +2,7 @@ version: "3.5"
 
 services:
   postgres:
-    image: postgres:18
+    image: idzyzenko/postresql-nextval_with_xact_lock:18
     ports:
       - 5532:5432
     environment:

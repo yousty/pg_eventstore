@@ -1,0 +1,1 @@
+CREATE EXTENSION nextval_with_xact_lock;

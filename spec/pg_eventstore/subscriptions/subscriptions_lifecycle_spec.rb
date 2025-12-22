@@ -17,10 +17,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 0),
-        subscription: subscription1,
-        position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
-          config_name: :default, filter_options: {}
-        )
+        subscription: subscription1
       )
     end
     let(:subscription1) { SubscriptionsHelper.init_with_connection(set: 'Foo', name: 'Bar') }
@@ -28,10 +25,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 0),
-        subscription: subscription2,
-        position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
-          config_name: :default, filter_options: {}
-        )
+        subscription: subscription2
       )
     end
     let(:subscription2) { SubscriptionsHelper.init_with_connection(set: 'Foo', name: 'Baz') }
@@ -116,10 +110,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 0),
-        subscription: subscription1,
-        position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
-          config_name: :default, filter_options: {}
-        )
+        subscription: subscription1
       )
     end
     let(:subscription1) do
@@ -131,10 +122,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 0),
-        subscription: subscription2,
-        position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
-          config_name: :default, filter_options: {}
-        )
+        subscription: subscription2
       )
     end
     let(:subscription2) do
@@ -226,10 +214,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 0),
-        subscription: subscription1,
-        position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
-          config_name: :default, filter_options: {}
-        )
+        subscription: subscription1
       )
     end
     let(:subscription1) { SubscriptionsHelper.init_with_connection(set: 'Foo', name: 'Bar') }
@@ -237,10 +222,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 0),
-        subscription: subscription2,
-        position_evaluation: PgEventstore::SubscriptionPositionEvaluation.new(
-          config_name: :default, filter_options: {}
-        )
+        subscription: subscription2
       )
     end
     let(:subscription2) { SubscriptionsHelper.init_with_connection(set: 'Foo', name: 'Baz') }
