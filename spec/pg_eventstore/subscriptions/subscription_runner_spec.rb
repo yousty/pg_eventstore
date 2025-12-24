@@ -229,16 +229,31 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   describe '#time_to_feed?' do
     subject { instance.time_to_feed? }
 
-    context 'when it is not time to feed' do
+    context 'when #estimate_events_number is greater than zero' do
+      context 'when last feed was more than Subscription#chunk_query_interval seconds ago' do
+        before do
+          subscription.update(last_chunk_fed_at: Time.now.utc - subscription.chunk_query_interval)
+        end
+
+        it { is_expected.to eq(true) }
+      end
+
+      context 'when last feed was less than Subscription#chunk_query_interval seconds ago' do
+        before do
+          subscription.update(last_chunk_fed_at: Time.now.utc)
+        end
+
+        it { is_expected.to eq(false) }
+      end
+    end
+
+    context 'when #estimate_events_number is zero' do
       before do
-        subscription.update(last_chunk_fed_at: Time.now.utc)
+        subscription.update(last_chunk_fed_at: Time.now.utc - subscription.chunk_query_interval)
+        allow(instance).to receive(:estimate_events_number).and_return(0)
       end
 
       it { is_expected.to eq(false) }
-    end
-
-    context 'when it is time to feed' do
-      it { is_expected.to eq(true) }
     end
   end
 

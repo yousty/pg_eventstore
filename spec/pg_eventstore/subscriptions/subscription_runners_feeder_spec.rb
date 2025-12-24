@@ -85,5 +85,34 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
 
       it_behaves_like 'does not feed first runner, feeds second runner'
     end
+
+    context 'when safe position is behind last matching event' do
+      before do
+        @publisher = Thread.new do
+          PgEventstore.client.multiple do
+            PgEventstore.client.append_to_stream(stream, event1)
+            sleep 0.5
+          end
+        end
+        # Let the async publisher to start and then produce another event which will have unsafe global_position
+        sleep 0.1
+        PgEventstore.client.append_to_stream(stream, event1)
+      end
+
+      after do
+        @publisher.join
+      end
+
+      it 'feeds first runner with events until the safe position' do
+        subject
+        expect(runner1).to have_received(:feed).with([a_hash_including('type' => 'Foo')])
+      end
+      it 'feeds second runner with events until the safe position' do
+        subject
+        expect(runner2).to(
+          have_received(:feed).with([a_hash_including('type' => 'Foo'), a_hash_including('type' => 'Bar')])
+        )
+      end
+    end
   end
 end

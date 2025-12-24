@@ -1,0 +1,11 @@
+module PgEventstore
+  class SubscriptionServiceQueries
+    attr_reader connection: Connection
+
+    def initialize: (Connection connection) -> void
+
+    def current_database_id: -> Integer
+
+    def smallest_uncommitted_global_position: (Integer database_id)-> Integer?
+  end
+end

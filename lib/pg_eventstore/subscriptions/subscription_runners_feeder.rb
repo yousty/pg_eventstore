@@ -15,10 +15,7 @@ module PgEventstore
       runners = runners.select(&:running?).select(&:time_to_feed?)
       return if runners.empty?
 
-      safe_pos = connection.with do |conn|
-        conn.exec("select ((classid::bigint << 32) | objid::bigint) as global_position from pg_locks where locktype = 'advisory' order by classid asc, objid asc limit 1")
-      end.first&.dig('global_position')
-
+      safe_pos = subscription_service_queries.smallest_uncommitted_global_position(current_database_id)
       runners_query_options = runners.to_h do |runner|
         [runner.id, runner.next_chunk_query_opts.merge(to_position: safe_pos)]
       end
@@ -31,6 +28,11 @@ module PgEventstore
 
     private
 
+    # @return [Integer]
+    def current_database_id
+      @current_database_id ||= subscription_service_queries.current_database_id
+    end
+
     # @return [PgEventstore::Connection]
     def connection
       PgEventstore.connection(@config_name)
@@ -39,6 +41,11 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionQueries]
     def subscription_queries
       SubscriptionQueries.new(connection)
+    end
+
+    # @return [PgEventstore::SubscriptionServiceQueries]
+    def subscription_service_queries
+      SubscriptionServiceQueries.new(connection)
     end
   end
 end
