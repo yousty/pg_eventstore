@@ -7,7 +7,7 @@ services:
       - 5532:5432
     environment:
       - POSTGRES_PASSWORD=postgres
-    command: ["postgres", "-c", "log_statement=all"]
+    command: ["postgres", "-c", "log_statement=all", "-c", "max_connections=300"]
     volumes:
       - "./db/postgresql/data:/var/lib/postgresql/18/data"
   redis:
