@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+- **Breaking change**: `pg_eventstore` now requires [nextval_with_xact_lock](https://github.com/intale/nextval_with_xact_lock/) extension
+- **Breaking change**: `pg_eventstore` now requires PostgreSQL v16+
+- Greatly decreased the number of connections, used by `pg_eventstore` subscriptions
+
 ## [1.13.4]
 
 - Fix subscriptions potentially skipping events when multiple events are appended in concurrent transactions

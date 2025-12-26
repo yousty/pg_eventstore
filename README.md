@@ -4,8 +4,9 @@ Implements database and API to store and read events in event sourced systems.
 
 ## Requirements
 
-- `pg_eventstore` requires a PostgreSQL database with jsonb data type support (which means you need to have v9.2+). However it is recommended to use a non [EOL](https://www.postgresql.org/support/versioning/) PostgreSQL version, because the development of this gem is targeted at current PostgreSQL versions. 
-- It is recommended you to have the default value set for `default_transaction_isolation` PostgreSQL config setting(`"read committed"`) as the implementation relies on it. All other transaction isolation levels(`"repeatable read"` and `"serializable"`) may cause unexpected serialization errors.
+- `pg_eventstore` requires a PostgreSQL v16+ with [nextval_with_xact_lock](https://github.com/intale/nextval_with_xact_lock/) extension installed. 
+- `pg_evenstore` requires a separate detabase. However, it is recommended that you spin it up on a separate PostgreSQL instance in a production environment.
+- `pg_eventstore` requires `default_transaction_isolation` server config option to be set to `'read committed'` (default behavior). Having this value set to move strict isolation level may result in unexpected behavior.
 - It is recommended to use a connection pooler (for example [PgBouncer](https://www.pgbouncer.org/)) in `transaction` pool mode to lower the load on a database.
 - `pg_eventstore` requires ruby v3+. The development of this gem is targeted at [current](https://endoflife.date/ruby) ruby versions.
 
