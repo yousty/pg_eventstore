@@ -21,7 +21,7 @@ module PgEventstore
       @basic_runner = BasicRunner.new(
         run_interval: 0,
         async_shutdown_time: graceful_shutdown_timeout,
-        recovery_strategies: recovery_strategies
+        recovery_strategies:
       )
       attach_runner_callbacks
     end

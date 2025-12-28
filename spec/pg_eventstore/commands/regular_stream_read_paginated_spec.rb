@@ -18,7 +18,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
 
   describe '#call' do
     context 'when reading from existing stream' do
-      subject { instance.call(stream1, options: options) }
+      subject { instance.call(stream1, options:) }
 
       let(:options) { { max_count: 2 } }
 

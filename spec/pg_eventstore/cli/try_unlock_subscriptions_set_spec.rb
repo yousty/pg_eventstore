@@ -28,7 +28,7 @@ RSpec.describe PgEventstore::CLI::TryUnlockSubscriptionsSet do
         thread = Thread.new do
           sleep 0.2
           queries = PgEventstore::SubscriptionsSetCommandQueries.new(PgEventstore.connection)
-          cmd = queries.find_by(subscriptions_set_id: subscriptions_set_id, command_name: 'Ping')
+          cmd = queries.find_by(subscriptions_set_id:, command_name: 'Ping')
           queries.delete(cmd.id)
         end
         example.run

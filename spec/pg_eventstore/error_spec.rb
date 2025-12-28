@@ -24,7 +24,7 @@ RSpec.describe PgEventstore::Error do
     end
 
     it "computes a hash, based on error's details and error's variables" do
-      is_expected.to eq(message: message, backtrace: nil, foo: foo)
+      is_expected.to eq(message:, backtrace: nil, foo:)
     end
   end
 end

@@ -9,7 +9,7 @@ module PgEventstore
         def subscriptions_url(set_name: nil)
           return url('/subscriptions') unless set_name
 
-          encoded_params = Rack::Utils.build_nested_query(set_name: set_name)
+          encoded_params = Rack::Utils.build_nested_query(set_name:)
           url("/subscriptions?#{encoded_params}")
         end
 
@@ -117,7 +117,7 @@ module PgEventstore
         # @param ids [Array<Integer>]
         # @return [String]
         def delete_all_subscriptions_url(ids)
-          encoded_params = Rack::Utils.build_nested_query(ids: ids)
+          encoded_params = Rack::Utils.build_nested_query(ids:)
           url("/delete_all_subscriptions?#{encoded_params}")
         end
 

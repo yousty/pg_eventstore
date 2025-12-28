@@ -60,10 +60,10 @@ module PgEventstore
         }
       )
       @subscriptions_lifecycle = SubscriptionsLifecycle.new(
-        config_name, @subscriptions_set_lifecycle, force_lock: force_lock
+        config_name, @subscriptions_set_lifecycle, force_lock:
       )
       @subscription_feeder = SubscriptionFeeder.new(
-        config_name: config_name,
+        config_name:,
         subscriptions_set_lifecycle: @subscriptions_set_lifecycle,
         subscriptions_lifecycle: @subscriptions_lifecycle
       )
@@ -100,17 +100,17 @@ module PgEventstore
                   failed_subscription_notifier: config.failed_subscription_notifier,
                   graceful_shutdown_timeout: config.subscription_graceful_shutdown_timeout)
       subscription = Subscription.using_connection(config.name).new(
-        set: @set_name, name: subscription_name, options: options, chunk_query_interval: pull_interval,
+        set: @set_name, name: subscription_name, options:, chunk_query_interval: pull_interval,
         max_restarts_number: max_retries, time_between_restarts: retries_interval
       )
       runner = SubscriptionRunner.new(
         stats: SubscriptionHandlerPerformance.new,
         events_processor: EventsProcessor.new(
           create_raw_event_handler(middlewares, handler),
-          graceful_shutdown_timeout: graceful_shutdown_timeout,
+          graceful_shutdown_timeout:,
           recovery_strategies: recovery_strategies(subscription, restart_terminator, failed_subscription_notifier)
         ),
-        subscription: subscription
+        subscription:
       )
 
       @subscriptions_lifecycle.runners.push(runner)
@@ -181,9 +181,9 @@ module PgEventstore
       [
         RunnerRecoveryStrategies::RestoreConnection.new(config_name),
         RunnerRecoveryStrategies::RestoreSubscriptionRunner.new(
-          subscription: subscription,
-          restart_terminator: restart_terminator,
-          failed_subscription_notifier: failed_subscription_notifier
+          subscription:,
+          restart_terminator:,
+          failed_subscription_notifier:
         ),
       ]
     end

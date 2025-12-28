@@ -5,13 +5,13 @@ RSpec.describe PgEventstore::SubscriptionsSetCommandQueries do
   let(:subscriptions_set) { SubscriptionsSetHelper.create }
 
   describe '#find_by' do
-    subject { instance.find_by(subscriptions_set_id: subscriptions_set.id, command_name: command_name) }
+    subject { instance.find_by(subscriptions_set_id: subscriptions_set.id, command_name:) }
 
     let(:command_name) { 'DoSomething' }
 
     context 'when command exists' do
       let!(:command) do
-        instance.create(subscriptions_set_id: subscriptions_set.id, command_name: command_name, data: {})
+        instance.create(subscriptions_set_id: subscriptions_set.id, command_name:, data: {})
       end
 
       it 'returns it' do
@@ -34,14 +34,14 @@ RSpec.describe PgEventstore::SubscriptionsSetCommandQueries do
 
   describe '#create' do
     subject do
-      instance.create(subscriptions_set_id: subscriptions_set.id, command_name: command_name, data: { 'foo' => 'bar' })
+      instance.create(subscriptions_set_id: subscriptions_set.id, command_name:, data: { 'foo' => 'bar' })
     end
 
     let(:command_name) { 'DoSomething' }
 
     context 'when command exists' do
       let!(:command) do
-        instance.create(subscriptions_set_id: subscriptions_set.id, command_name: command_name, data: {})
+        instance.create(subscriptions_set_id: subscriptions_set.id, command_name:, data: {})
       end
 
       it 'raises error' do
@@ -52,7 +52,7 @@ RSpec.describe PgEventstore::SubscriptionsSetCommandQueries do
     context 'when command does not exist' do
       it 'creates it' do
         expect { subject }.to change {
-          instance.find_by(subscriptions_set_id: subscriptions_set.id, command_name: command_name)
+          instance.find_by(subscriptions_set_id: subscriptions_set.id, command_name:)
         }.to(instance_of(PgEventstore::SubscriptionFeederCommands::Base))
       end
       it 'has correct attributes' do
@@ -69,12 +69,12 @@ RSpec.describe PgEventstore::SubscriptionsSetCommandQueries do
     context 'when command with the same name exist, but for different SubscriptionsSet' do
       let(:another_subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarSet') }
       let!(:command) do
-        instance.create(subscriptions_set_id: another_subscriptions_set.id, command_name: command_name, data: {})
+        instance.create(subscriptions_set_id: another_subscriptions_set.id, command_name:, data: {})
       end
 
       it 'creates new command' do
         expect { subject }.to change {
-          instance.find_by(subscriptions_set_id: subscriptions_set.id, command_name: command_name)
+          instance.find_by(subscriptions_set_id: subscriptions_set.id, command_name:)
         }.to(instance_of(PgEventstore::SubscriptionFeederCommands::Base))
       end
     end
@@ -123,7 +123,7 @@ RSpec.describe PgEventstore::SubscriptionsSetCommandQueries do
   describe '#find_or_create_by' do
     subject do
       instance.find_or_create_by(
-        subscriptions_set_id: subscriptions_set.id, command_name: command_name, data: { 'foo' => 'bar' }
+        subscriptions_set_id: subscriptions_set.id, command_name:, data: { 'foo' => 'bar' }
       )
     end
 
@@ -132,7 +132,7 @@ RSpec.describe PgEventstore::SubscriptionsSetCommandQueries do
     describe 'when command does not exists' do
       it 'creates it' do
         expect { subject }.to change {
-          instance.find_by(subscriptions_set_id: subscriptions_set.id, command_name: command_name)
+          instance.find_by(subscriptions_set_id: subscriptions_set.id, command_name:)
         }.to(instance_of(PgEventstore::SubscriptionFeederCommands::Base))
       end
       it 'has correct attributes' do
@@ -147,7 +147,7 @@ RSpec.describe PgEventstore::SubscriptionsSetCommandQueries do
 
     describe 'when command already exists' do
       let!(:command) do
-        instance.create(subscriptions_set_id: subscriptions_set.id, command_name: command_name, data: {})
+        instance.create(subscriptions_set_id: subscriptions_set.id, command_name:, data: {})
       end
 
       it 'returns it' do

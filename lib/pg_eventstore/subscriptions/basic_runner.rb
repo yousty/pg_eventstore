@@ -46,7 +46,7 @@ module PgEventstore
   #
   #     def initialize
   #       @basic_runner = PgEventstore::BasicRunner.new(
-  #         run_interval: 1, async_shutdown_time: 2, recovery_strategies: recovery_strategies
+  #         run_interval: 1, async_shutdown_time: 2, recovery_strategies:
   #       )
   #       @jobs_performed = 0
   #       @jobs_limit = 3

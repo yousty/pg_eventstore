@@ -120,7 +120,7 @@ module PgEventstore
         #   context of your object to determine the default value of the option
         # @return [Symbol]
         def option(opt_name, metadata: nil, &blk)
-          self.options = (options + Options.new([Option.new(opt_name, metadata: metadata)])).freeze
+          self.options = (options + Options.new([Option.new(opt_name, metadata:)])).freeze
           warn_already_defined(opt_name)
           warn_already_defined(:"#{opt_name}=")
           define_method "#{opt_name}=" do |value|

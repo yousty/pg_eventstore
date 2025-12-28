@@ -3,9 +3,9 @@
 RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreSubscriptionRunner do
   let(:instance) do
     described_class.new(
-      subscription: subscription,
-      restart_terminator: restart_terminator,
-      failed_subscription_notifier: failed_subscription_notifier
+      subscription:,
+      restart_terminator:,
+      failed_subscription_notifier:
     )
   end
   let(:subscription) { SubscriptionsHelper.create_with_connection }

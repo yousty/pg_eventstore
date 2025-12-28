@@ -33,7 +33,7 @@ module PgEventstore
             events: event_queries(middlewares(middlewares)),
             transactions: transaction_queries
           )
-        ).call(stream, *events_or_event, options: options)
+        ).call(stream, *events_or_event, options:)
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -138,7 +138,7 @@ module PgEventstore
       cmd_class = stream.all_stream? ? Commands::AllStreamReadGrouped : Commands::RegularStreamReadGrouped
       cmd_class.
         new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
-        call(stream, options: options)
+        call(stream, options:)
     end
 
     # Links event from one stream into another stream. You can later access it by providing :resolve_link_tos option
@@ -160,7 +160,7 @@ module PgEventstore
             events: event_queries(middlewares(middlewares)),
             transactions: transaction_queries
           )
-        ).call(stream, *events_or_event, options: options)
+        ).call(stream, *events_or_event, options:)
       events_or_event.is_a?(Array) ? result : result.first
     end
 

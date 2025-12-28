@@ -10,7 +10,7 @@ module PgEventstore
       # @param state [String]
       # @return [void]
       def update_subscriptions_set_state(subscriptions_set_lifecycle, state)
-        subscriptions_set_lifecycle.persisted_subscriptions_set.update(state: state)
+        subscriptions_set_lifecycle.persisted_subscriptions_set.update(state:)
       end
 
       # @param subscriptions_lifecycle [PgEventstore::SubscriptionsLifecycle]

@@ -17,7 +17,7 @@ RSpec.describe PgEventstore::Commands::SystemStreamReadPaginated do
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
 
   describe '#call' do
-    subject { instance.call(PgEventstore::Stream.all_stream, options: options) }
+    subject { instance.call(PgEventstore::Stream.all_stream, options:) }
 
     let(:options) { { max_count: 2, filter: { streams: [{ context: 'FooCtx' }] } } }
 

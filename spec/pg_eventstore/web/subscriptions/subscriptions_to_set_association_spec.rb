@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::Web::Subscriptions::SubscriptionsToSetAssociation do
-  let(:instance) { described_class.new(subscriptions_set: subscriptions_set, subscriptions: subscriptions) }
+  let(:instance) { described_class.new(subscriptions_set:, subscriptions:) }
 
   let(:subscriptions_set) { [set1, set2, set3] }
   let(:subscriptions) { [subscription1, subscription2, subscription3] }

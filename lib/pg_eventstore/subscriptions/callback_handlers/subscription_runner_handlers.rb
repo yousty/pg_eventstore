@@ -21,7 +21,7 @@ module PgEventstore
       def update_subscription_stats(subscription, stats, current_position)
         subscription.update(
           average_event_processing_time: stats.average_event_processing_time,
-          current_position: current_position,
+          current_position:,
           total_processed_events: subscription.total_processed_events + 1
         )
       end
@@ -50,7 +50,7 @@ module PgEventstore
       # @param state [String]
       # @return [void]
       def update_subscription_state(subscription, state)
-        subscription.update(state: state)
+        subscription.update(state:)
       end
     end
   end

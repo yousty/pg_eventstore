@@ -50,19 +50,19 @@ module PgEventstore
         in [Integer, Integer]
           unless revision == expected_revision
             raise WrongExpectedRevisionError.new(
-              revision: revision, expected_revision: expected_revision, stream: stream
+              revision:, expected_revision:, stream:
             )
           end
 
         in [Integer, Symbol]
           if revision == Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :stream_exists
             raise WrongExpectedRevisionError.new(
-              revision: revision, expected_revision: expected_revision, stream: stream
+              revision:, expected_revision:, stream:
             )
           end
           if revision > Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :no_stream
             raise WrongExpectedRevisionError.new(
-              revision: revision, expected_revision: expected_revision, stream: stream
+              revision:, expected_revision:, stream:
             )
           end
         end

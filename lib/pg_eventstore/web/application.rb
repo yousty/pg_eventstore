@@ -87,7 +87,7 @@ module PgEventstore
             attrs.transform_values { escape_empty_string(_1) }
           end
           halt 200, {
-            results: results,
+            results:,
             pagination: { more: !collection.next_page_starting_id.nil?, starting_id: collection.next_page_starting_id },
           }.to_json
         end
@@ -153,7 +153,7 @@ module PgEventstore
             filter: { event_types: events_filter, streams: streams_filter },
             resolve_link_tos: resolve_link_tos?,
           },
-          system_stream: system_stream
+          system_stream:
         )
 
         if request.xhr?
@@ -188,8 +188,8 @@ module PgEventstore
           connection, @current_set, state: params[:state]
         ).subscriptions
         @association = Subscriptions::SubscriptionsToSetAssociation.new(
-          subscriptions_set: subscriptions_set,
-          subscriptions: subscriptions
+          subscriptions_set:,
+          subscriptions:
         )
         erb :'subscriptions/index'
       end
@@ -301,7 +301,7 @@ module PgEventstore
         ).first
         if event&.global_position == global_position
           begin
-            PgEventstore.maintenance(current_config).delete_event(event, force: force)
+            PgEventstore.maintenance(current_config).delete_event(event, force:)
             self.flash_message = {
               message: "An event at global position #{event.global_position} has been deleted successfully.",
               kind: 'success',

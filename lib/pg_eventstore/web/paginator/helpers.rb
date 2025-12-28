@@ -41,13 +41,13 @@ module PgEventstore
         # @param per_page [String] string representation of items per page. E.g. "10", "20", etc.
         # @return [String]
         def per_page_url(per_page)
-          build_path(params.merge(per_page: per_page))
+          build_path(params.merge(per_page:))
         end
 
         # @param order [String] "asc"/"desc"
         # @return [String]
         def sort_url(order)
-          build_path(params.merge(order: order))
+          build_path(params.merge(order:))
         end
 
         def resolve_link_tos_url(should_resolve)
@@ -113,7 +113,7 @@ module PgEventstore
         def build_starting_id_link(starting_id)
           return 'javascript: void(0);' unless starting_id
 
-          build_path(params.merge(starting_id: starting_id))
+          build_path(params.merge(starting_id:))
         end
 
         # @param params [Hash, Array]

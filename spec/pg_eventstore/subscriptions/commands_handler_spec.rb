@@ -5,9 +5,9 @@ RSpec.describe PgEventstore::CommandsHandler do
   let(:config_name) { :default }
   let(:feeder) do
     PgEventstore::SubscriptionFeeder.new(
-      config_name: config_name,
-      subscriptions_set_lifecycle: subscriptions_set_lifecycle,
-      subscriptions_lifecycle: subscriptions_lifecycle
+      config_name:,
+      subscriptions_set_lifecycle:,
+      subscriptions_lifecycle:
     )
   end
   let(:subscriptions_set_lifecycle) do

@@ -17,7 +17,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
 
   describe '#call' do
-    subject { instance.call(PgEventstore::Stream.all_stream, options: options) }
+    subject { instance.call(PgEventstore::Stream.all_stream, options:) }
 
     let(:options) { {} }
 
@@ -45,7 +45,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
         end
 
         context 'when :from_position option is provided' do
-          let(:options) { { from_position: from_position } }
+          let(:options) { { from_position: } }
           let(:from_position) do
             PgEventstore.client.read(PgEventstore::Stream.all_stream).find do
               _1.id == event2.id
@@ -66,7 +66,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
         end
 
         context 'when :from_position option is provided' do
-          let(:options) { super().merge(from_position: from_position) }
+          let(:options) { super().merge(from_position:) }
           let(:from_position) do
             PgEventstore.client.read(PgEventstore::Stream.all_stream).find do
               _1.id == event2.id
@@ -98,7 +98,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
   end
 
   describe 'reading links' do
-    subject { instance.call(PgEventstore::Stream.all_stream, options: options) }
+    subject { instance.call(PgEventstore::Stream.all_stream, options:) }
 
     let(:options) { {} }
 
@@ -142,7 +142,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
   it_behaves_like 'resolves event class when reading from stream'
 
   describe 'reading using filter by stream parts' do
-    subject { instance.call(PgEventstore::Stream.all_stream, options: options) }
+    subject { instance.call(PgEventstore::Stream.all_stream, options:) }
 
     let(:options) { {} }
     let(:events_stream1) do
@@ -189,7 +189,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
       end
 
       context 'when reading from a certain position' do
-        let(:options) { super().merge(from_position: from_position) }
+        let(:options) { super().merge(from_position:) }
         let(:from_position) do
           PgEventstore.client.read(PgEventstore::Stream.all_stream).find do
             _1.id == event6.id
@@ -209,7 +209,7 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
         end
 
         context 'when reading from a certain position' do
-          let(:options) { super().merge(from_position: from_position) }
+          let(:options) { super().merge(from_position:) }
           let(:from_position) do
             PgEventstore.client.read(PgEventstore::Stream.all_stream).find do
               _1.id == event3.id

@@ -122,7 +122,7 @@ module PgEventstore
       [
         RunnerRecoveryStrategies::RestoreConnection.new(config_name),
         RunnerRecoveryStrategies::RestoreSubscriptionFeeder.new(
-          subscriptions_set_lifecycle: subscriptions_set_lifecycle
+          subscriptions_set_lifecycle:
         ),
       ]
     end

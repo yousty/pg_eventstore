@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.shared_examples 'resolves event class when reading from stream' do
-  subject { instance.call(stream, options: options) }
+  subject { instance.call(stream, options:) }
 
   let(:event_class) { Class.new(PgEventstore::Event) }
   let(:event) { event_class.new }

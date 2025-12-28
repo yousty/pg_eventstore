@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreSubscriptionFeeder do
-  let(:instance) { described_class.new(subscriptions_set_lifecycle: subscriptions_set_lifecycle) }
+  let(:instance) { described_class.new(subscriptions_set_lifecycle:) }
   let(:subscriptions_set_lifecycle) do
     PgEventstore::SubscriptionsSetLifecycle.new(
       :default, { name: 'Set 1', time_between_restarts: 1, max_restarts_number: 10 }

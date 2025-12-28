@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::SubscriptionsLifecycle do
-  let(:instance) { described_class.new(:default, subscriptions_set_lifecycle, force_lock: force_lock) }
+  let(:instance) { described_class.new(:default, subscriptions_set_lifecycle, force_lock:) }
   let(:subscriptions_set_lifecycle) do
     PgEventstore::SubscriptionsSetLifecycle.new(
       :default,

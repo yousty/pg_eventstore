@@ -47,10 +47,10 @@ module PgEventstore
       def build_filter_options_for_streams(partition, stream_ids, options)
         stream_ids.map do |stream_id|
           filter = {
-            streams: [{ context: partition.context, stream_name: partition.stream_name, stream_id: stream_id }],
+            streams: [{ context: partition.context, stream_name: partition.stream_name, stream_id: }],
             event_types: [partition.event_type],
           }
-          options.merge(filter: filter, max_count: 1)
+          options.merge(filter:, max_count: 1)
         end
       end
 
@@ -62,7 +62,7 @@ module PgEventstore
           streams: [{ context: partition.context, stream_name: partition.stream_name }],
           event_types: [partition.event_type],
         }
-        options.merge(filter: filter, max_count: 1)
+        options.merge(filter:, max_count: 1)
       end
     end
   end

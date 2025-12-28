@@ -26,7 +26,7 @@ module PgEventstore
         # @param options [Hash] additional options to filter the collection
         # @param system_stream [String, nil] a name of system stream
         def initialize(config_name, starting_id:, per_page:, order:, options: {}, system_stream: nil)
-          super(config_name, starting_id: starting_id, per_page: per_page, order: order, options: options)
+          super(config_name, starting_id:, per_page:, order:, options:)
           @stream = system_stream ? PgEventstore::Stream.system_stream(system_stream) : PgEventstore::Stream.all_stream
         end
 
@@ -45,7 +45,7 @@ module PgEventstore
           from_position = event_global_position(collection.first)
           sql_builder = QueryBuilders::EventsFiltering.events_filtering(
             @stream,
-            options.merge(from_position: from_position, max_count: 1, direction: order)
+            options.merge(from_position:, max_count: 1, direction: order)
           ).to_sql_builder.unselect.select('global_position').offset(per_page)
           global_position(sql_builder)
         end
@@ -55,7 +55,7 @@ module PgEventstore
           from_position = event_global_position(collection.first) || starting_id
           sql_builder = QueryBuilders::EventsFiltering.events_filtering(
             @stream,
-            options.merge(from_position: from_position, max_count: per_page, direction: order == :asc ? :desc : :asc)
+            options.merge(from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc)
           ).to_sql_builder.unselect.select('global_position').offset(1)
           sql, params = sql_builder.to_exec_params
           sql = "SELECT * FROM (#{sql}) #{Event::PRIMARY_TABLE_NAME} ORDER BY global_position #{order} LIMIT 1"

@@ -10,7 +10,7 @@ module PgEventstore
           next_position = nil
           loop do
             options = options.merge(from_position: next_position) if next_position
-            events = read_cmd.call(stream, options: options)
+            events = read_cmd.call(stream, options:)
             yielder << events if events.any?
             if end_reached?(events, options[:max_count] || QueryBuilders::EventsFiltering::DEFAULT_LIMIT)
               raise StopIteration

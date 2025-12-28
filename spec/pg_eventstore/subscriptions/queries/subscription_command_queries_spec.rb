@@ -8,7 +8,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
   describe '#find_by' do
     subject do
       instance.find_by(
-        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name:
       )
     end
 
@@ -17,7 +17,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
     context 'when command exists' do
       let!(:command) do
         instance.create(
-          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name:,
           data: {}
         )
       end
@@ -46,7 +46,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
       let!(:command) do
         instance.create(
           subscription_id: subscription.id, subscriptions_set_id: another_subscriptions_set.id,
-          command_name: command_name, data: {}
+          command_name:, data: {}
         )
       end
       let(:another_subscriptions_set) { SubscriptionsSetHelper.create(name: 'BarSet') }
@@ -58,7 +58,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
   describe '#create' do
     subject do
       instance.create(
-        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name:,
         data: { foo: :bar }
       )
     end
@@ -69,7 +69,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
       it 'creates new command' do
         expect { subject }.to change {
           instance.find_by(
-            subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+            subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name:
           )
         }.to(instance_of(PgEventstore::SubscriptionRunnerCommands::Base))
       end
@@ -87,7 +87,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
     context 'when command exists' do
       let!(:command) do
         instance.create(
-          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name:,
           data: {}
         )
       end
@@ -100,7 +100,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
     context 'when command for the same subscription, but for the another subscriptions set exists' do
       let!(:command) do
         instance.create(
-          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set2.id, command_name: command_name,
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set2.id, command_name:,
           data: {}
         )
       end
@@ -118,7 +118,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
       let!(:command) do
         instance.create(
           subscription_id: another_subscription.id, subscriptions_set_id: subscriptions_set.id,
-          command_name: command_name, data: {}
+          command_name:, data: {}
         )
       end
 
@@ -201,7 +201,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
   describe '#find_or_create_by' do
     subject do
       instance.find_or_create_by(
-        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+        subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name:,
         data: { 'foo' => 'bar' }
       )
     end
@@ -212,7 +212,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
       it 'creates it' do
         expect { subject }.to change {
           instance.find_by(
-            subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+            subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name:
           )
         }.to(instance_of(PgEventstore::SubscriptionRunnerCommands::Base))
       end
@@ -229,7 +229,7 @@ RSpec.describe PgEventstore::SubscriptionCommandQueries do
     describe 'when command already exists' do
       let!(:command) do
         instance.create(
-          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
+          subscription_id: subscription.id, subscriptions_set_id: subscriptions_set.id, command_name:,
           data: {}
         )
       end

@@ -39,7 +39,7 @@ module PgEventstore
     # @return [Object] a result of the given block
     def configure(name: DEFAULT_CONFIG)
       mutex.synchronize do
-        @config[name] = @config[name] ? Config.new(name: name, **@config[name].options_hash) : Config.new(name: name)
+        @config[name] = @config[name] ? Config.new(name:, **@config[name].options_hash) : Config.new(name:)
         connection_config_was = @config[name].connection_options
 
         yield(@config[name]).tap do
@@ -92,9 +92,9 @@ module PgEventstore
       SubscriptionsManager.new(
         config: config(config_name),
         set_name: subscription_set,
-        max_retries: max_retries,
-        retries_interval: retries_interval,
-        force_lock: force_lock
+        max_retries:,
+        retries_interval:,
+        force_lock:
       )
     end
 

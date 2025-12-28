@@ -26,7 +26,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
     end
 
     describe 'linking persisted event' do
-      subject { instance.call(projection_stream, event, options: options) }
+      subject { instance.call(projection_stream, event, options:) }
 
       let(:event) do
         PgEventstore.client.append_to_stream(
@@ -149,7 +149,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
       end
 
       context 'when :expected_revision is a number' do
-        let(:options) { { expected_revision: expected_revision } }
+        let(:options) { { expected_revision: } }
         let(:expected_revision) { 0 }
 
         context "when expected revision matches stream's revision" do
@@ -343,7 +343,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
     end
 
     describe 'linking multiple events' do
-      subject { instance.call(projection_stream, event1, event2, options: options) }
+      subject { instance.call(projection_stream, event1, event2, options:) }
 
       let(:event1) do
         PgEventstore.client.append_to_stream(

@@ -56,7 +56,7 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
   end
 
   describe 'defining option with metadata' do
-    subject { dummy_class.option(option, metadata: metadata) }
+    subject { dummy_class.option(option, metadata:) }
 
     let(:option) { :some_opt }
     let(:metadata) { :my_awesome_metadata }

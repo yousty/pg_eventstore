@@ -16,7 +16,7 @@ module PgEventstore
         check_events_presence(events)
         append_cmd = Append.new(queries)
         append_cmd.call(
-          stream, *events, options: options, event_modifier: EventModifiers::PrepareLinkEvent.new(queries.partitions)
+          stream, *events, options:, event_modifier: EventModifiers::PrepareLinkEvent.new(queries.partitions)
         )
       end
 

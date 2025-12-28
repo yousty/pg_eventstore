@@ -3,9 +3,9 @@
 RSpec.describe PgEventstore::SubscriptionFeeder do
   let(:instance) do
     described_class.new(
-      config_name: config_name,
-      subscriptions_set_lifecycle: subscriptions_set_lifecycle,
-      subscriptions_lifecycle: subscriptions_lifecycle
+      config_name:,
+      subscriptions_set_lifecycle:,
+      subscriptions_lifecycle:
     )
   end
   let(:subscriptions_set_lifecycle) do
@@ -359,7 +359,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       id = subscription_queries.create(set: set_name, name: subscription2.name)[:id]
       subscriptions_set_id = subscriptions_set_lifecycle.persisted_subscriptions_set.id
       subscription_cmd_queries.create(
-        subscription_id: id, subscriptions_set_id: subscriptions_set_id, command_name: 'Stop', data: {}
+        subscription_id: id, subscriptions_set_id:, command_name: 'Stop', data: {}
       )
       expect { subject }.to change {
         dv(subscription_runner2).deferred_wait(timeout: 2) { _1.state == 'stopped' }.state
@@ -625,7 +625,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       subscriptions_set_id = subscriptions_set_lifecycle.persisted_subscriptions_set.id
       cmd = subscription_cmd_queries.create(
         subscription_id: subscription_runner2.id,
-        subscriptions_set_id: subscriptions_set_id,
+        subscriptions_set_id:,
         command_name: 'Start',
         data: {}
       )
@@ -643,7 +643,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
   describe 'on after runner stopped when stopping via command' do
     subject do
       subscriptions_set_id = subscriptions_set_lifecycle.persisted_subscriptions_set.id
-      cmd = set_cmd_queries.create(subscriptions_set_id: subscriptions_set_id, command_name: 'Stop', data: {})
+      cmd = set_cmd_queries.create(subscriptions_set_id:, command_name: 'Stop', data: {})
       cmd_lookup_attrs = {
         subscriptions_set_id: cmd.subscriptions_set_id,
         command_name: cmd.name,
@@ -706,7 +706,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       # should remain stopped.
       subscription_cmd_queries.create(
         subscription_id: subscription_runner2.id,
-        subscriptions_set_id: subscriptions_set_id,
+        subscriptions_set_id:,
         command_name: 'Start',
         data: {}
       )

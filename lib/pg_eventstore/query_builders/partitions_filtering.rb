@@ -24,7 +24,7 @@ module PgEventstore
           streams = streams&.map do |stream_attrs|
             stream_attrs in { context: String | NilClass => context }
             stream_attrs in { stream_name: String | NilClass => stream_name }
-            { context: context, stream_name: stream_name }
+            { context:, stream_name: }
           end
           streams || []
         end
@@ -52,7 +52,7 @@ module PgEventstore
       # @param stream_name [String, nil]
       # @return [PgEventstore::SQLBuilder]
       def add_stream_attrs(context: nil, stream_name: nil)
-        stream_attrs = { context: context, stream_name: stream_name }
+        stream_attrs = { context:, stream_name: }
         return @sql_builder unless self.class.correct_stream_filter?(stream_attrs)
 
         stream_attrs.compact!

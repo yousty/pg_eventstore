@@ -67,7 +67,7 @@ module PgEventstore
     # @param keys [Array<Symbol>, nil]
     # @return [Hash<Symbol => String>]
     def deconstruct_keys(keys)
-      hash = { context: context, stream_name: stream_name, stream_id: stream_id }
+      hash = { context:, stream_name:, stream_id: }
       return hash unless keys
 
       hash.slice(*keys)
