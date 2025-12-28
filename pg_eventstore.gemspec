@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = 'EventStore implementation using PostgreSQL'
   spec.homepage = 'https://github.com/yousty/pg_eventstore'
   spec.license = 'MIT'
-  spec.required_ruby_version = '>= 3.0'
+  spec.required_ruby_version = '>= 3.2'
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
 

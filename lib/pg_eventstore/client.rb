@@ -48,8 +48,8 @@ module PgEventstore
     #   end
     #
     # @return the result of the given block
-    def multiple(&blk)
-      Commands::Multiple.new(Queries.new(transactions: transaction_queries)).call(&blk)
+    def multiple(&)
+      Commands::Multiple.new(Queries.new(transactions: transaction_queries)).call(&)
     end
 
     # Read events from the specific stream or from "all" stream.

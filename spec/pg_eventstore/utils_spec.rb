@@ -16,4 +16,12 @@ RSpec.describe PgEventstore::Utils do
       end
     end
   end
+
+  describe '.benchmark' do
+    subject { described_class.benchmark { sleep 1.1 } }
+
+    it 'returns time the given block took to execute' do
+      is_expected.to be_between(1.1, 1.2)
+    end
+  end
 end

@@ -26,9 +26,9 @@ class DeferredValue
     reset
   end
 
-  def deferred_wait(timeout: 0, &blk)
+  def deferred_wait(timeout: 0, &)
     if @first_access
-      wait_async(timeout: timeout, &blk)
+      wait_async(timeout: timeout, &)
       @first_access = false
       @object
     else

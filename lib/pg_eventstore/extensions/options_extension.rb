@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'set'
-
 module PgEventstore
   module Extensions
     # A very simple extension that implements a DSL for adding attr_accessors with default values,
@@ -72,16 +70,46 @@ module PgEventstore
         end
       end
 
-      class Options < Set
-        def add(option)
-          @hash[option] = option
-          self
+      class Options
+        include Enumerable
+
+        attr_reader :options
+        protected :options
+
+        # @param options [Array<PgEventstore::Extensions::OptionsExtension::Option>]
+        def initialize(options = [])
+          @options = options.to_h { [_1, true] }
         end
 
-        # @param option [Symbol]
+        # @param option_name [Symbol]
         # @return [PgEventstore::Extensions::OptionsExtension::Option, nil]
-        def [](option)
-          @hash[Option.new(option)]
+        def [](option_name)
+          options.assoc(Option.new(option_name))&.dig(0)
+        end
+
+        # @param other [PgEventstore::Extensions::OptionsExtension::Options]
+        # @return [PgEventstore::Extensions::OptionsExtension::Options]
+        def +(other)
+          self.class.new(options.keys + other.options.keys)
+        end
+
+        # @param option [PgEventstore::Extensions::OptionsExtension::Option]
+        # @return [Boolean]
+        def include?(option)
+          options.key?(option)
+        end
+
+        # @return [Boolean]
+        def dup
+          self.class.new(options.keys)
+        end
+
+        def each(...)
+          options.keys.each(...)
+        end
+
+        def ==(other)
+          options.keys == other.options.keys
         end
       end
 
@@ -112,7 +140,7 @@ module PgEventstore
 
         def inherited(klass)
           super
-          klass.options = Options.new(options).freeze
+          klass.options = options.dup.freeze
         end
 
         private

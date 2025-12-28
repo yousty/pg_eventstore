@@ -36,3 +36,7 @@ gem 'rbs', '~> 3.5', '>= 3.5.2', require: false
 gem 'rubocop', '~> 1.79', '>= 1.79.1', require: false
 
 gem 'rubocop-rspec', '~> 3.6', require: false
+
+gem 'debug', '>= 1.0.0', require: false
+
+gem 'cgi', require: false

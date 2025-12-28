@@ -22,7 +22,7 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
       expect(instance).to respond_to("#{option}=")
     end
     it 'adds that option to the options list' do
-      expect { subject }.to change { dummy_class.options }.to(Set.new([described_class::Option.new(option)]))
+      expect { subject }.to change { dummy_class.options }.to(described_class::Options.new([described_class::Option.new(option)]))
     end
     it 'recognizes the given option when instantiating the class' do
       subject
@@ -71,7 +71,7 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
       it 'does not override it' do
         subject
         aggregate_failures do
-          expect(dummy_class.options).to eq(Set.new([described_class::Option.new(option)]))
+          expect(dummy_class.options).to eq(described_class::Options.new([described_class::Option.new(option)]))
           expect(dummy_class.options.map(&:metadata)).to eq([another_metadata])
         end
       end
@@ -83,33 +83,51 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
     let(:child_of_child) { Class.new(child) }
 
     before do
-      dummy_class.option(:parent_opt)
-      child.option(:child_opt)
-      child_of_child.option(:child_of_child_opt)
+      dummy_class.option(:parent_opt, metadata: :parent_opt_metadata)
+      child.option(:child_opt, metadata: :child_opt_metadata)
+      child_of_child.option(:child_of_child_opt, metadata: :child_of_child_opt_metadata)
     end
 
     it 'inherits all options from parent to the child correctly' do
-      expect(child.options).to(
-        eq(Set.new([described_class::Option.new(:parent_opt), described_class::Option.new(:child_opt)]))
-      )
-    end
-    it 'inherits all options from parent to the child of child correctly' do
-      expect(child_of_child.options).to(
-        eq(
-          Set.new(
-            [
-              described_class::Option.new(:parent_opt),
-              described_class::Option.new(:child_opt),
-              described_class::Option.new(:child_of_child_opt),
-            ]
+      aggregate_failures do
+        expect(child.options).to(
+          eq(
+            described_class::Options.new(
+              [described_class::Option.new(:parent_opt), described_class::Option.new(:child_opt)]
+            )
           )
         )
-      )
+        expect(child.options.map(&:metadata)).to eq(%i[parent_opt_metadata child_opt_metadata])
+      end
+    end
+    it 'inherits all options from parent to the child of child correctly' do
+      aggregate_failures do
+        expect(child_of_child.options).to(
+          eq(
+            described_class::Options.new(
+              [
+                described_class::Option.new(:parent_opt),
+                described_class::Option.new(:child_opt),
+                described_class::Option.new(:child_of_child_opt),
+              ]
+            )
+          )
+        )
+        expect(child_of_child.options.map(&:metadata)).to(
+          eq(%i[parent_opt_metadata child_opt_metadata child_of_child_opt_metadata])
+        )
+      end
     end
     it 'freezes options sets of children' do
       aggregate_failures do
         expect(child.options).to be_frozen
         expect(child_of_child.options).to be_frozen
+      end
+    end
+    it "does not change parent's options" do
+      aggregate_failures do
+        expect(dummy_class.options).to eq described_class::Options.new([described_class::Option.new(:parent_opt)])
+        expect(dummy_class.options.map(&:metadata)).to eq %i[parent_opt_metadata]
       end
     end
   end

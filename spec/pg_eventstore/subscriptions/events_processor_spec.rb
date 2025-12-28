@@ -29,7 +29,7 @@ RSpec.describe PgEventstore::EventsProcessor do
       # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
       dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       instance.feed([event_in_queue1, event_in_queue2])
-      dv(processed_events).wait_until(timeout: 0.1) { _1.size > 0 }
+      dv(processed_events).wait_until(timeout: 0.1) { !_1.empty? }
       allow(global_position_receiver).to receive(:call)
       instance.define_callback(:feed, :after, feed_callback)
     end

@@ -151,10 +151,10 @@ module PgEventstore
     private
 
     # @return [Object] the result of the passed block
-    def run_cli_callbacks(&blk)
+    def run_cli_callbacks(&)
       return yield unless defined?(::PgEventstore::CLI)
 
-      PgEventstore::CLI.callbacks.run_callbacks(:start_manager, self, &blk)
+      PgEventstore::CLI.callbacks.run_callbacks(:start_manager, self, &)
     end
 
     # @param middlewares [Array<Symbol>, nil]

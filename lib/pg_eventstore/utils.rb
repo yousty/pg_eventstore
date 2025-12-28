@@ -124,6 +124,14 @@ module PgEventstore
 
         wrapped_exception
       end
+
+      # Yields the given block and measures its execution time
+      # @return [Float] number of seconds the block took to execute
+      def benchmark
+        start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        yield
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
+      end
     end
   end
 end

@@ -42,7 +42,7 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreSubscriptionRunner
       end
 
       it 'sleeps #time_between_restarts seconds' do
-        seconds = Benchmark.realtime { subject }
+        seconds = PgEventstore::Utils.benchmark { subject }
         expect(seconds).to be_between(1.0, 1.1)
       end
       it { is_expected.to eq(true) }
@@ -51,7 +51,7 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreSubscriptionRunner
     shared_examples 'does not recover' do
       it { is_expected.to eq(false) }
       it 'does not sleep' do
-        seconds = Benchmark.realtime { subject }
+        seconds = PgEventstore::Utils.benchmark { subject }
         expect(seconds).to be < 0.1
       end
     end

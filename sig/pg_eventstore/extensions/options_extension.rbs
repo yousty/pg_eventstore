@@ -15,7 +15,15 @@ module PgEventstore
       end
 
       class Options
-        def []: (Symbol option) -> PgEventstore::Extensions::OptionsExtension::Option?
+        attr_reader options: Hash[Extensions::OptionsExtension::Option, true]
+
+        def initialize: (?Array[Extensions::OptionsExtension::Option] options) -> void
+
+        def +: (Options other) -> Options
+
+        def []: (Symbol option_name) -> Extensions::OptionsExtension::Option?
+
+        def include?: (Extensions::OptionsExtension::Option option) -> bool
       end
 
       def self.included: (untyped klass) -> untyped

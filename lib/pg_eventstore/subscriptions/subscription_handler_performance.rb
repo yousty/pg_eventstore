@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'benchmark'
-
 module PgEventstore
   # This class measures the performance of Subscription's handler and returns the average time required to process an
   # event.
@@ -23,7 +21,7 @@ module PgEventstore
     # @return [Object] the result of yielded block
     def track_exec_time
       result = nil
-      time = Benchmark.realtime { result = yield }
+      time = Utils.benchmark { result = yield }
       synchronize do
         @timings.shift if @timings.size == TIMINGS_TO_KEEP
         @timings.push(time)

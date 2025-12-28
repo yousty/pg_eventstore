@@ -300,7 +300,6 @@ RSpec.describe PgEventstore::Commands::AllStreamReadGrouped do
       let(:options) { { filter: { streams: [{ stream_name: 'some-stream3' }, { stream_id: '1234' }] } } }
 
       it 'ignores it, projection all events' do
-
         expect(subject.map(&:id)).to match_array([event1.id, event2.id, event3.id, event4.id, event5.id])
       end
     end

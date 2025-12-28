@@ -98,7 +98,7 @@ class Benchmarks
   # @param method_name [String, Symbol]
   # @return [void]
   def benchmark(method_name, concurrent_method, &blk)
-    time = Benchmark.realtime(&blk)
+    time = PgEventstore::Utils.benchmark(&blk)
     @stats.update("#{method_name}_#{concurrent_method}", time)
   end
 end
