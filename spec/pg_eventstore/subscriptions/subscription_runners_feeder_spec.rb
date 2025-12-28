@@ -87,20 +87,24 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
     end
 
     context 'when safe position is behind last matching event' do
-      before do
-        @publisher = Thread.new do
+      let(:publisher) do
+        Thread.new do
           PgEventstore.client.multiple do
             PgEventstore.client.append_to_stream(stream, event1)
             sleep 0.5
           end
         end
+      end
+
+      before do
+        publisher
         # Let the async publisher to start and then produce another event which will have unsafe global_position
         sleep 0.1
         PgEventstore.client.append_to_stream(stream, event1)
       end
 
       after do
-        @publisher.join
+        publisher.join
       end
 
       it 'feeds first runner with events until the safe position' do

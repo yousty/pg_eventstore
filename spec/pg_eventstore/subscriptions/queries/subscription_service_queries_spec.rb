@@ -22,8 +22,8 @@ RSpec.describe PgEventstore::SubscriptionServiceQueries do
     let(:db_id) { instance.current_database_id }
 
     context 'when lock originates from current database' do
-      before do
-        @locks = [2**33 + 1, 2**33 + 2, 2**32 + 4, 2**32 + 3].map do |num|
+      let(:locks) do
+        [(2**33) + 1, (2**33) + 2, (2**32) + 4, (2**32) + 3].map do |num|
           Thread.new do
             PgEventstore.connection.with do |c|
               c.transaction do
@@ -35,25 +35,23 @@ RSpec.describe PgEventstore::SubscriptionServiceQueries do
         end
       end
 
+      before do
+        locks
+      end
+
       after do
-        @locks.each(&:join)
+        locks.each(&:join)
       end
 
       it 'returns smallest lock value' do
         sleep 0.1 # let threads to start and acquire locks
-        is_expected.to eq(2**32 + 3)
+        is_expected.to eq((2**32) + 3)
       end
     end
 
     context 'when lock originates from different database' do
-      before do
-        uri = URI.parse(PgEventstore.config.pg_uri)
-        uri.path = '/postgres'
-        PgEventstore.configure(name: :another_db) do |conf|
-          conf.pg_uri = uri.to_s
-        end
-
-        @lock1 = Thread.new do
+      let(:lock1) do
+        Thread.new do
           PgEventstore.connection(:another_db).with do |c|
             c.transaction do
               c.exec('SELECT pg_advisory_lock(1)')
@@ -61,7 +59,9 @@ RSpec.describe PgEventstore::SubscriptionServiceQueries do
             end
           end
         end
-        @lock2 = Thread.new do
+      end
+      let(:lock2) do
+        Thread.new do
           PgEventstore.connection.with do |c|
             c.transaction do
               c.exec('SELECT pg_advisory_lock(2)')
@@ -71,8 +71,18 @@ RSpec.describe PgEventstore::SubscriptionServiceQueries do
         end
       end
 
+      before do
+        uri = URI.parse(PgEventstore.config.pg_uri)
+        uri.path = '/postgres'
+        PgEventstore.configure(name: :another_db) do |conf|
+          conf.pg_uri = uri.to_s
+        end
+        lock1
+        lock2
+      end
+
       after do
-        [@lock1, @lock2].each(&:join)
+        [lock1, lock2].each(&:join)
       end
 
       it 'does not take it into account' do
