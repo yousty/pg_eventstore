@@ -84,7 +84,8 @@ module PgEventstore
         # @param option_name [Symbol]
         # @return [PgEventstore::Extensions::OptionsExtension::Option, nil]
         def [](option_name)
-          options.assoc(Option.new(option_name))&.dig(0)
+          option = Option.new(option_name)
+          options.find { |key, _| key == option }&.dig(0)
         end
 
         # @param other [PgEventstore::Extensions::OptionsExtension::Options]
