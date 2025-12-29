@@ -6,9 +6,9 @@
 - **Breaking change**: drop support of Ruby v3.0 and v3.1. The gem now requires Ruby v3.2+
 - **Breaking change**: `PgEventstore::Extensions::OptionsExtension::Options` class is no longer a child of `Set` class - it has independent implementation now
 - Add support of Ruby v4.0
-- **Breaking change**: rework links implementation. This change boosts performance, but affects on the database structure, so your previous database dumps become incompatible with this change. `PgEventstore::Event#link_id` was replaced by `PgEventstore::Event#link_global_position`
+- **Breaking change**: rework links implementation. This change boosts performance, but affects the database structure, so your previous database dumps become incompatible with this change. `PgEventstore::Event#link_id` was replaced by `PgEventstore::Event#link_global_position`
 
-Changes above require you to run migrations - `bunder exec rake pg_eventstore:migrate`. One of migrations also migrates existing data using several concurrent workers(threads). You can adjust the number of workers using `CONCURRENCY` environment variable. Default number of concurrent workers is `10`. **Migrations require a downtime - no reads/writes should be performed during the time of the migrations, so plan your maintenance downtime accordingly.**
+Changes above require you to run migrations - `bundle exec rake pg_eventstore:migrate`. One of the migrations also migrates existing data using several concurrent workers(threads). You can adjust the number of workers using `CONCURRENCY` environment variable. Default number of concurrent workers is `10`. **Migrations require a downtime - no reads/writes should be performed during the time of the migrations, so plan your maintenance downtime accordingly.**
 
 ## [1.13.4]
 
