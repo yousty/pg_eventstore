@@ -13,7 +13,7 @@ end
 event = SomethingHappened.new(data: { user_id: SecureRandom.uuid, title: "Something happened" })
 stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.append_to_stream(stream, event)
-# => #<SomethingHappened:0x0 @context="MyAwesomeContext", @created_at=2023-11-30 14:47:31.296229 UTC, @data={"title"=>"Something happened", "user_id"=>"be52a81c-ad5b-4cfd-a039-0b7276974e6b"}, @global_position=7, @id="0b01137b-bdd8-4f0d-8ccf-f8c959e3a324", @link_id=nil, @metadata={}, @stream_id="f37b82f2-4152-424d-ab6b-0cc6f0a53aae", @stream_name="SomeStream", @stream_revision=0, @type="SomethingHappened">
+# => #<SomethingHappened:0x0 @context="MyAwesomeContext", @created_at=2023-11-30 14:47:31.296229 UTC, @data={"title"=>"Something happened", "user_id"=>"be52a81c-ad5b-4cfd-a039-0b7276974e6b"}, @global_position=7, @id="0b01137b-bdd8-4f0d-8ccf-f8c959e3a324", @link_global_position=nil, @metadata={}, @stream_id="f37b82f2-4152-424d-ab6b-0cc6f0a53aae", @stream_name="SomeStream", @stream_revision=0, @type="SomethingHappened">
 ```
 
 ## Appending multiple events

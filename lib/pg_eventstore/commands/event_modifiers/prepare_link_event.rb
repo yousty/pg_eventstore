@@ -19,9 +19,12 @@ module PgEventstore
         # @return [PgEventstore::Event]
         def call(event, revision)
           Event.new(
-            link_id: event.id, link_partition_id: partition_id(event), type: Event::LINK_TYPE, stream_revision: revision
+            link_global_position: event.global_position,
+            link_partition_id: partition_id(event),
+            type: Event::LINK_TYPE,
+            stream_revision: revision
           ).tap do |e|
-            %i[link_id link_partition_id type stream_revision].each { |attr| e.readonly!(attr) }
+            %i[link_global_position link_partition_id type stream_revision].each { |attr| e.readonly!(attr) }
           end
         end
 

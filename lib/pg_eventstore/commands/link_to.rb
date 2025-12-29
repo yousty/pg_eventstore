@@ -22,16 +22,16 @@ module PgEventstore
 
       private
 
-      # Checks if the given events are persisted events. This is needed to prevent potentially non-existing id valuess
-      # from appearing in #link_id column.
+      # Checks if the given events are persisted events. This is needed to prevent potentially non-existing
+      # global_position values from appearing in #link_global_position column.
       # @param events [Array<PgEventstore::Event>]
       # @return [void]
       def check_events_presence(events)
-        ids_from_db = queries.events.ids_from_db(events)
-        missing_ids = events.map(&:id) - ids_from_db
+        global_positions_from_db = queries.events.global_positions_from_db(events)
+        missing_ids = events.map(&:global_position) - global_positions_from_db
         return if missing_ids.empty?
 
-        missing_event = events.find { |event| event.id == missing_ids.first }
+        missing_event = events.find { |event| event.global_position == missing_ids.first }
         raise NotPersistedEventError, missing_event
       end
     end

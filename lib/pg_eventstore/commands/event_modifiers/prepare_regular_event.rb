@@ -13,7 +13,7 @@ module PgEventstore
           event.class.new(
             id: event.id, data: event.data, metadata: event.metadata, type: event.type, stream_revision: revision
           ).tap do |e|
-            %i[link_id link_partition_id stream_revision].each { |attr| e.readonly!(attr) }
+            %i[link_global_position link_partition_id stream_revision].each { |attr| e.readonly!(attr) }
           end
         end
       end

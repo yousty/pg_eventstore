@@ -20,9 +20,9 @@ module PgEventstore
       link_events = raw_events.select { _1['link_partition_id'] }.group_by { _1['link_partition_id'] }
       return raw_events if link_events.empty?
 
-      original_events = load_original_events(link_events).to_h { |attrs| [attrs['id'], attrs] }
+      original_events = load_original_events(link_events).to_h { |attrs| [attrs['global_position'], attrs] }
       raw_events.map do |attrs|
-        original_event = original_events[attrs['link_id']]
+        original_event = original_events[attrs['link_global_position']]
         next attrs unless original_event
 
         original_event.merge('link' => attrs).merge(attrs.except(*original_event.keys))
@@ -37,7 +37,10 @@ module PgEventstore
       partitions = partition_queries.find_by_ids(link_events.keys)
       sql_builders = partitions.map do |partition|
         sql_builder = SQLBuilder.new.select('*').from(partition['table_name'])
-        sql_builder.where('id  = ANY(?::uuid[])', link_events[partition['id']].map { _1['link_id'] })
+        sql_builder.where(
+          'global_position = ANY(?::bigint[])',
+          link_events[partition['id']].map { _1['link_global_position'] }
+        )
       end
       sql_builder = sql_builders[1..].each_with_object(sql_builders.first) do |builder, top_builder|
         top_builder.union(builder)

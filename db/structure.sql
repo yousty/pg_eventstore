@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict wsI9nLcucDpeBlVdv38oGhqwpgxpRGByZR4lLTShBrqUJES4jWNCUA4fNQtMZtL
+\restrict yMbaNL6djrnWcZC6RkclMYTVm83OAh0Xf58XWarxzB5RDdPdGlhYEM6peUJyigo
 
 -- Dumped from database version 18.1 (Debian 18.1-1.pgdg12+2)
 -- Dumped by pg_dump version 18.1 (Debian 18.1-1.pgdg12+2)
@@ -76,10 +76,10 @@ CREATE TABLE public.events (
     stream_revision integer NOT NULL,
     data jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
-    link_id uuid,
     link_partition_id bigint,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    type character varying NOT NULL COLLATE pg_catalog."POSIX"
+    type character varying NOT NULL COLLATE pg_catalog."POSIX",
+    link_global_position bigint
 )
 PARTITION BY LIST (context);
 
@@ -97,10 +97,10 @@ CREATE VIEW public."$streams" AS
     stream_revision,
     data,
     metadata,
-    link_id,
     link_partition_id,
     created_at,
-    type
+    type,
+    link_global_position
    FROM public.events
   WHERE (stream_revision = 0);
 
@@ -422,20 +422,6 @@ CREATE INDEX idx_events_global_position ON ONLY public.events USING btree (globa
 
 
 --
--- Name: idx_events_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_id ON ONLY public.events USING btree (id);
-
-
---
--- Name: idx_events_link_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_link_id ON ONLY public.events USING btree (link_id);
-
-
---
 -- Name: idx_events_stream_id_and_global_position; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -548,5 +534,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict wsI9nLcucDpeBlVdv38oGhqwpgxpRGByZR4lLTShBrqUJES4jWNCUA4fNQtMZtL
+\unrestrict yMbaNL6djrnWcZC6RkclMYTVm83OAh0Xf58XWarxzB5RDdPdGlhYEM6peUJyigo
 
