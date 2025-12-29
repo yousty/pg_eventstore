@@ -3,7 +3,7 @@
 RSpec.describe 'Migration to new links implementation' do
   before do
     create_db = <<~BASH
-      docker exec -e PGPASSWORD=postgres -it pg_eventstore-postgres-main psql -U postgres \
+      docker exec -e PGPASSWORD=postgres pg_eventstore-postgres-main psql -U postgres \
       --command="CREATE DATABASE links_migration_tests"
     BASH
     restore_dump = <<~BASH
