@@ -3,6 +3,7 @@ version: "3.5"
 services:
   postgres:
     image: idzyzenko/postresql-nextval_with_xact_lock:18
+    container_name: pg_eventstore-postgres-main
     ports:
       - 5532:5432
     environment:

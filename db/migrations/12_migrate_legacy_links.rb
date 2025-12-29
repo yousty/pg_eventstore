@@ -79,5 +79,5 @@ end
 threads.each(&:join)
 
 PgEventstore.connection.with do |conn|
-  conn.exec('VACUUM (VERBOSE, ANALYZE) events;')
+  conn.exec('VACUUM (ANALYZE) events;')
 end
