@@ -126,8 +126,8 @@ RSpec.describe PgEventstore::SubscriptionQueries do
       it 'updates updated_at column' do
         expect { subject }.to change { instance.find_by(id: id)[:updated_at] }
       end
-      it 'returns updated attributes' do
-        is_expected.to match(a_hash_including(id: id, max_restarts_number: 123))
+      it 'returns updated attributes', :timecop do
+        is_expected.to eq(attrs.merge(updated_at: Time.now))
       end
 
       context 'when subscription is updated by someone else' do
@@ -135,8 +135,8 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           instance.update(id, attrs: { restart_count: 2 }, locked_by: subscriptions_set.id)
         end
 
-        it 'returns those changes as well' do
-          is_expected.to match(a_hash_including(id: id, max_restarts_number: 123, restart_count: 2))
+        it 'does not return those changes' do
+          is_expected.not_to include(:restart_count)
         end
       end
 

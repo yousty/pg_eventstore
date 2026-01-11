@@ -90,7 +90,7 @@ module PgEventstore
       end.join(', ')
       sql =
         "UPDATE subscriptions SET #{attrs_sql} WHERE id = $#{attrs.keys.size + 1} RETURNING *"
-      updated_attrs = transaction_queries.transaction(:read_committed) do
+      transaction_queries.transaction(:read_committed) do
         pg_result = connection.with do |conn|
           conn.exec_params(sql, [*attrs.values, id])
         end
@@ -101,11 +101,9 @@ module PgEventstore
           # Subscription is force-locked by someone else. We have to roll back such transaction
           raise(WrongLockIdError.new(updated_attrs['set'], updated_attrs['name'], updated_attrs['locked_by']))
         end
-
-        updated_attrs
       end
 
-      deserialize(updated_attrs)
+      attrs
     end
 
     # @param subscriptions_set_id [Integer] SubscriptionsSet#id
