@@ -24,7 +24,7 @@ gem install pg_eventstore
 
 ## Usage
 
-Before start using the gem - you have to create the database. **It is important you to create and migrate via provided commands - they also include an important setup of `pg_cron` jobs as well. Even if you would like to restore your db backup on clean PostgreSQL instance - please initialize pg_eventstore via built-in tools first.** Please include this line into your `Rakefile`:
+Before start using the gem - you have to create the database. Please include this line into your `Rakefile`:
 
 ```ruby
 load 'pg_eventstore/tasks/setup.rake'
@@ -64,6 +64,8 @@ You may want to backup your eventstore database. It is important to mention that
 ```bash
 pg_dump --exclude-table-data=events_horizon eventstore -U postgres > eventstore.sql
 ```
+
+Also, it is important you create and migrate new database via provided rake commands - they include an important setup of `pg_cron` jobs as well. **Even if you would like to restore your db backup on clean PostgreSQL instance - please initialize pg_eventstore via built-in tools first.**
 
 ## RSpec
 
