@@ -1,7 +1,7 @@
 module PgEventstore
   module Commands
     class Multiple < PgEventstore::AbstractCommand
-      def call: () { () -> untyped } -> untyped
+      def call: (read_only: bool) { () -> untyped } -> untyped
     end
   end
 end

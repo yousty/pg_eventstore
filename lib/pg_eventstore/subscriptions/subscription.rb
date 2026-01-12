@@ -185,6 +185,7 @@ module PgEventstore
         time_between_restarts:,
         state: RunnerState::STATES[:initial]
       )
+      reload
     end
 
     # @return [PgEventstore::SubscriptionQueries]

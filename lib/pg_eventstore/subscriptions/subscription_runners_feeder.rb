@@ -15,7 +15,7 @@ module PgEventstore
       runners = runners.select(&:running?).select(&:time_to_feed?)
       return if runners.empty?
 
-      safe_pos = subscription_service_queries.smallest_uncommitted_global_position(current_database_id)
+      safe_pos = subscription_service_queries.safe_global_position
       runners_query_options = runners.to_h do |runner|
         [runner.id, runner.next_chunk_query_opts.merge(to_position: safe_pos)]
       end
@@ -27,11 +27,6 @@ module PgEventstore
     end
 
     private
-
-    # @return [Integer]
-    def current_database_id
-      @current_database_id ||= subscription_service_queries.current_database_id
-    end
 
     # @return [PgEventstore::Connection]
     def connection

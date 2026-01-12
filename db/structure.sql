@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict yMbaNL6djrnWcZC6RkclMYTVm83OAh0Xf58XWarxzB5RDdPdGlhYEM6peUJyigo
+\restrict HTATkuOeQTrqxvWFri23ZYY08JRFdcsYctHKgEIA2KcF5oyv87EMb2hvjvQn7hd
 
--- Dumped from database version 18.1 (Debian 18.1-1.pgdg12+2)
--- Dumped by pg_dump version 18.1 (Debian 18.1-1.pgdg12+2)
+-- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
+-- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -18,20 +18,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- Name: nextval_with_xact_lock; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS nextval_with_xact_lock WITH SCHEMA public;
-
-
---
--- Name: EXTENSION nextval_with_xact_lock; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION nextval_with_xact_lock IS 'nextval_with_xact_lock:  Created by pgrx';
-
 
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
@@ -59,6 +45,21 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 --
 
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
+
+
+--
+-- Name: log_events_horizon(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.log_events_horizon() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO events_horizon(global_position)
+    VALUES (NEW.global_position);
+    RETURN NEW;
+END;
+$$;
 
 
 SET default_tablespace = '';
@@ -125,6 +126,23 @@ ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_p
 
 
 SET default_table_access_method = heap;
+
+--
+-- Name: events_horizon; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE UNLOGGED TABLE public.events_horizon (
+    global_position bigint NOT NULL,
+    xact_id xid8 DEFAULT pg_current_xact_id() NOT NULL
+);
+
+
+--
+-- Name: TABLE events_horizon; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.events_horizon IS 'Internal use only. Data is limited to the PostgreSQL cluster in which it was created. DO NOT INCLUDE ITS DATA INTO YOUR DUMP.';
+
 
 --
 -- Name: migrations; Type: TABLE; Schema: public; Owner: -
@@ -321,7 +339,7 @@ ALTER SEQUENCE public.subscriptions_set_id_seq OWNED BY public.subscriptions_set
 -- Name: events global_position; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT public.nextval_with_xact_lock(('public.events_global_position_seq'::regclass)::oid);
+ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT nextval('public.events_global_position_seq'::regclass);
 
 
 --
@@ -499,6 +517,20 @@ CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING
 
 
 --
+-- Name: idx_xact_id_and_created_at_and_global_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_xact_id_and_created_at_and_global_position ON public.events_horizon USING btree (xact_id, global_position);
+
+
+--
+-- Name: events log_events_horizon; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER log_events_horizon AFTER INSERT ON public.events FOR EACH ROW EXECUTE FUNCTION public.log_events_horizon();
+
+
+--
 -- Name: subscription_commands subscription_commands_subscription_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -534,5 +566,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict yMbaNL6djrnWcZC6RkclMYTVm83OAh0Xf58XWarxzB5RDdPdGlhYEM6peUJyigo
+\unrestrict HTATkuOeQTrqxvWFri23ZYY08JRFdcsYctHKgEIA2KcF5oyv87EMb2hvjvQn7hd
 

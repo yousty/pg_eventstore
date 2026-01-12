@@ -6,12 +6,12 @@ module PgEventstore
     def initialize: (PgEventstore::Connection connection) -> void
 
     # _@param_ `level` — transaction isolation level
-    def transaction: (?Symbol level) { () -> untyped } -> void
+    def transaction: (?Symbol level, ?read_only: bool) { () -> untyped } -> void
 
     # _@param_ `level` — PostgreSQL transaction isolation level
     #
     # _@param_ `pg_connection`
-    def pg_transaction: (String level, PG::Connection pg_connection) { () -> untyped } -> void
+    def pg_transaction: (String level, bool read_only, PG::Connection pg_connection) { () -> untyped } -> void
 
     def partition_queries: () -> PgEventstore::PartitionQueries
 

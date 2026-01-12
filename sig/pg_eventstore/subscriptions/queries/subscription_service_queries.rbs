@@ -1,11 +1,19 @@
 module PgEventstore
   class SubscriptionServiceQueries
+    DEFAULT_SAFE_POSITION: Integer
+
     attr_reader connection: Connection
 
     def initialize: (Connection connection) -> void
 
-    def current_database_id: -> Integer
+    def events_horizon_present?: -> bool
 
-    def smallest_uncommitted_global_position: (Integer database_id)-> Integer?
+    def init_events_horizon: -> void
+
+    def safe_global_position: -> Integer
+
+    private
+
+    def transaction_queries: -> TransactionQueries
   end
 end

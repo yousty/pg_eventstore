@@ -300,25 +300,75 @@ RSpec.describe PgEventstore::Client do
   end
 
   describe '#multiple' do
-    subject do
-      instance.multiple do
-        PgEventstore.client.append_to_stream(events_stream1, event1)
-        PgEventstore.client.append_to_stream(events_stream2, event2)
+    context 'when :read_only arg is not present' do
+      subject do
+        instance.multiple do
+          PgEventstore.client.append_to_stream(events_stream1, event1)
+          PgEventstore.client.append_to_stream(events_stream2, event2)
+        end
+      end
+
+      let(:events_stream1) do
+        PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: '123')
+      end
+      let(:events_stream2) do
+        PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '1234')
+      end
+      let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+      let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+
+      it 'processes the given commands' do
+        subject
+        expect(PgEventstore.client.read(PgEventstore::Stream.all_stream).map(&:id)).to eq([event1.id, event2.id])
       end
     end
 
-    let(:events_stream1) do
-      PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: '123')
-    end
-    let(:events_stream2) do
-      PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '1234')
-    end
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+    context 'when :read_only arg is present' do
+      subject { instance.multiple(read_only: read_only) { command } }
 
-    it 'processes the given commands' do
-      subject
-      expect(PgEventstore.client.read(PgEventstore::Stream.all_stream).map(&:id)).to eq([event1.id, event2.id])
+      let(:command) do
+        stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+        PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
+      end
+      let(:read_only) { false }
+
+      context 'when read_only is false' do
+        context 'when command is a write command' do
+          it 'performs it' do
+            expect { subject }.not_to raise_error
+          end
+        end
+
+        context 'when command is a read command' do
+          let(:command) do
+            PgEventstore.client.read(PgEventstore::Stream.all_stream)
+          end
+
+          it 'performs it' do
+            expect { subject }.not_to raise_error
+          end
+        end
+      end
+
+      context 'when read_only is true' do
+        let(:read_only) { true }
+
+        context 'when command is a write command' do
+          it 'raises error' do
+            expect { subject }.to raise_error(PG::ReadOnlySqlTransaction)
+          end
+        end
+
+        context 'when command is a read command' do
+          let(:command) do
+            PgEventstore.client.read(PgEventstore::Stream.all_stream)
+          end
+
+          it 'performs it' do
+            expect { subject }.not_to raise_error
+          end
+        end
+      end
     end
   end
 

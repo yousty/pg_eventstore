@@ -2,16 +2,16 @@
 
 CONCURRENCY = ENV['CONCURRENCY']&.to_i || 10
 
-PgEventstore.configure do |config|
+PgEventstore.configure(name: :_eventstore_db_connection) do |config|
   config.connection_pool_size = CONCURRENCY
 end
 
-partitions = PgEventstore.connection.with do |conn|
+partitions = PgEventstore.connection(:_eventstore_db_connection).with do |conn|
   conn.exec('select id, table_name from partitions')
 end
 partitions = partitions.to_h { |attrs| [attrs['id'], attrs['table_name']] }
 
-total_links = PgEventstore.connection.with do |conn|
+total_links = PgEventstore.connection(:_eventstore_db_connection).with do |conn|
   conn.exec_params(
     'select count(*) all_count from events where events.type = $1 and link_global_position is null',
     [PgEventstore::Event::LINK_TYPE]
@@ -26,7 +26,7 @@ lock = Thread::Mutex.new
 threads = CONCURRENCY.times.map do |t|
   Thread.new do
     loop do
-      link_events = PgEventstore.connection.with do |conn|
+      link_events = PgEventstore.connection(:_eventstore_db_connection).with do |conn|
         conn.exec_params(<<~SQL, [PgEventstore::Event::LINK_TYPE, CONCURRENCY, t])
           select * from events
             where events.type = $1 and events.link_global_position is null and global_position % $2 = $3
@@ -44,7 +44,7 @@ threads = CONCURRENCY.times.map do |t|
       end
       final_builder = PgEventstore::SQLBuilder.union_builders(builders)
 
-      positions_map = PgEventstore.connection.with do |conn|
+      positions_map = PgEventstore.connection(:_eventstore_db_connection).with do |conn|
         conn.exec_params(*final_builder.to_exec_params)
       end.to_a
 
@@ -55,7 +55,7 @@ threads = CONCURRENCY.times.map do |t|
         SQL
       end
 
-      PgEventstore.connection.with do |conn|
+      PgEventstore.connection(:_eventstore_db_connection).with do |conn|
         conn.exec(update_queries.join("\n"))
       end
 
@@ -78,6 +78,6 @@ threads = CONCURRENCY.times.map do |t|
 end
 threads.each(&:join)
 
-PgEventstore.connection.with do |conn|
+PgEventstore.connection(:_eventstore_db_connection).with do |conn|
   conn.exec('VACUUM (ANALYZE) events;')
 end

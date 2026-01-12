@@ -9,13 +9,11 @@ module PgEventstore
     # _@param_ `runners`
     def feed: (::Array[SubscriptionRunner] runners) -> void
 
+    private
+
     def connection: () -> Connection
 
     def subscription_queries: () -> SubscriptionQueries
-
-    private
-
-    def current_database_id: -> Integer
 
     def subscription_service_queries: -> SubscriptionServiceQueries
   end

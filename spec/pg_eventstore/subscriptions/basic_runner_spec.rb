@@ -844,7 +844,7 @@ RSpec.describe PgEventstore::BasicRunner do
   end
 
   describe 'self-recovery' do
-    subject { sleep 0.4 }
+    subject { sleep 0.6 }
 
     let(:before_restore_task) { double('Before runner restored') }
     let(:after_error_task) { double('After error happened') }
