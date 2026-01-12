@@ -4,8 +4,8 @@ module PgEventstore
   module Commands
     # @!visibility private
     class Multiple < AbstractCommand
-      def call(&)
-        queries.transactions.transaction(&)
+      def call(read_only:, &)
+        queries.transactions.transaction(read_only:, &)
       end
     end
   end

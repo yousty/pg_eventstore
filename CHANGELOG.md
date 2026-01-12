@@ -1,11 +1,12 @@
 ## [Unreleased]
 
-- **Breaking change**: `pg_eventstore` now requires [nextval_with_xact_lock](https://github.com/intale/nextval_with_xact_lock/) extension
+- **Breaking change**: `pg_eventstore` now requires [pg_cron](https://github.com/citusdata/pg_cron) extension
 - **Breaking change**: `pg_eventstore` now requires PostgreSQL v16+
 - Greatly decreased the number of connections, used by `pg_eventstore` subscriptions
 - **Breaking change**: drop support of Ruby v3.0 and v3.1. The gem now requires Ruby v3.2+
 - **Breaking change**: `PgEventstore::Extensions::OptionsExtension::Options` class is no longer a child of `Set` class - it has independent implementation now
 - Add support of Ruby v4.0
+- `Client#multiple` method now accepts `read_only` keyword argument. When it is set to true - transaction is run in read-only mode 
 
 ## [1.13.4]
 

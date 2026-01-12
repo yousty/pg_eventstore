@@ -17,7 +17,7 @@ module PgEventstore
         ?middlewares: ::Array[untyped]?
       ) -> (PgEventstore::Event | ::Array[PgEventstore::Event])
 
-    def multiple: () { () -> untyped } -> untyped
+    def multiple: (?read_only: bool) { () -> untyped } -> untyped
 
     # _@param_ `stream`
     #

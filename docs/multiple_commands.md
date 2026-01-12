@@ -1,6 +1,6 @@
 # Multiple commands
 
-`pg_eventstore` implements the `#multiple` method to allow you to make several different commands atomic. Example:
+`pg_eventstore` implements the `#multiple` method to allow you to make several different commands atomic. Internally it executes the given block within PostgreSQL transaction. Example:
 
 ```ruby
 PgEventstore.client.multiple do
@@ -10,6 +10,21 @@ PgEventstore.client.multiple do
   end  
 end
 ```
+
+Optionally, you can provide `read_only: true` argument to run the transaction in read-only mode. This, however, will raise `PG::ReadOnlySqlTransaction` exception if any mutating query is executed within the block. Example:
+
+```ruby
+# Good
+PgEventstore.client.multiple(read_only: true) do
+  PgEventstore.client.read(stream1)
+  PgEventstore.client.read(stream2)
+end
+# Bad. Will raise error
+PgEventstore.client.multiple(read_only: true) do
+  PgEventstore.client.append_to_stream(stream, event)
+end
+```
+
 
 All commands inside a `multiple` block either all succeed or all fail. This allows you to easily implement complex business rules. However, it comes with a price of performance. The more you put in a single block, the higher the chance it will have conflicts with other commands run in parallel, increasing overall time to complete. **Because of this performance implications, do not put more events than needed in a `multple` block.** You may still want to use it though as it could simplify your implementation.
 

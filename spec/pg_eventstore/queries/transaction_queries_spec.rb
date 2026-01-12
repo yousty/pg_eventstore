@@ -83,5 +83,32 @@ RSpec.describe PgEventstore::TransactionQueries do
         end
       end
     end
+
+    context 'when transaction is started in read-only mode' do
+      subject do
+        instance.transaction(read_only: true) { command }
+      end
+
+      let(:command) do
+        PgEventstore.client.read(PgEventstore::Stream.all_stream)
+      end
+
+      context 'when command does not modify database' do
+        it 'executes it' do
+          expect { subject }.not_to raise_error
+        end
+      end
+
+      context 'when command modifies database' do
+        let(:command) do
+          stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+          PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
+        end
+
+        it 'raises error' do
+          expect { subject }.to raise_error(PG::ReadOnlySqlTransaction)
+        end
+      end
+    end
   end
 end
