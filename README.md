@@ -57,6 +57,14 @@ Documentation chapters:
 
 The gem is shipped with its own CLI. Use `pg-eventstore --help` to find out its capabilities.
 
+## Maintenance
+
+You may want to backup your eventstore database. It is important to mention that you don't want to dump/restore records of `events_horizon` table. `events_horizon` table is used to supply subscriptions functionality and contains temporary data which is scoped to the PostgreSQL cluster they were created in. **Thus, it is even may be harmful if you restore records from this table into a new PostgreSQL cluster. Simply exclude that table's data when performing backups.** Example:
+
+```bash
+pg_dump --exclude-table-data=events_horizon eventstore -U postgres > eventstore.sql
+```
+
 ## RSpec
 
 ### Clean up test db
