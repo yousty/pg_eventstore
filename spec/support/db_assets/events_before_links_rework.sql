@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict 4DJml7NlVehQlhc0P6HVX5mRLfNLXrRPHxAKTlHXgOq5NkxLEA15avsO16gEAdy
+\restrict YDhD9jKKgIgEQ0ExMldG0gsSC4a1b2GQHcsY39hiFoBpC4BTekVU03iyDOmLb2c
 
--- Dumped from database version 18.1 (Debian 18.1-1.pgdg12+2)
--- Dumped by pg_dump version 18.1 (Debian 18.1-1.pgdg12+2)
+-- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
+-- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,20 +20,6 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: nextval_with_xact_lock; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS nextval_with_xact_lock WITH SCHEMA public;
-
-
---
--- Name: EXTENSION nextval_with_xact_lock; Type: COMMENT; Schema: -; Owner: 
---
-
-COMMENT ON EXTENSION nextval_with_xact_lock IS 'nextval_with_xact_lock:  Created by pgrx';
-
-
---
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -41,7 +27,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner:
 --
 
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
@@ -55,11 +41,28 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner:
 --
 
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
+
+--
+-- Name: log_events_horizon(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.log_events_horizon() RETURNS trigger
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO events_horizon(global_position)
+    VALUES (NEW.global_position);
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.log_events_horizon() OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -68,20 +71,20 @@ SET default_tablespace = '';
 --
 
 CREATE TABLE public.events (
-    id uuid DEFAULT public.gen_random_uuid() NOT NULL,
-    context character varying NOT NULL COLLATE pg_catalog."POSIX",
-    stream_name character varying NOT NULL COLLATE pg_catalog."POSIX",
-    stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
-    global_position bigint NOT NULL,
-    stream_revision integer NOT NULL,
-    data jsonb DEFAULT '{}'::jsonb NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
-    link_id uuid,
-    link_partition_id bigint,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    type character varying NOT NULL COLLATE pg_catalog."POSIX"
+                               id uuid DEFAULT public.gen_random_uuid() NOT NULL,
+                               context character varying NOT NULL COLLATE pg_catalog."POSIX",
+                               stream_name character varying NOT NULL COLLATE pg_catalog."POSIX",
+                               stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
+                               global_position bigint NOT NULL,
+                               stream_revision integer NOT NULL,
+                               data jsonb DEFAULT '{}'::jsonb NOT NULL,
+                               metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+                               link_partition_id bigint,
+                               created_at timestamp without time zone DEFAULT now() NOT NULL,
+                               type character varying NOT NULL COLLATE pg_catalog."POSIX",
+                               link_global_position bigint
 )
-PARTITION BY LIST (context);
+    PARTITION BY LIST (context);
 
 
 ALTER TABLE public.events OWNER TO postgres;
@@ -91,20 +94,20 @@ ALTER TABLE public.events OWNER TO postgres;
 --
 
 CREATE VIEW public."$streams" AS
- SELECT id,
-    context,
-    stream_name,
-    stream_id,
-    global_position,
-    stream_revision,
-    data,
-    metadata,
-    link_id,
-    link_partition_id,
-    created_at,
-    type
-   FROM public.events
-  WHERE (stream_revision = 0);
+SELECT id,
+       context,
+       stream_name,
+       stream_id,
+       global_position,
+       stream_revision,
+       data,
+       metadata,
+       link_partition_id,
+       created_at,
+       type,
+       link_global_position
+FROM public.events
+WHERE (stream_revision = 0);
 
 
 ALTER VIEW public."$streams" OWNER TO postgres;
@@ -135,20 +138,20 @@ ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_p
 --
 
 CREATE TABLE public.contexts_6879a3 (
-    id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
-    context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    global_position bigint DEFAULT public.nextval_with_xact_lock(('public.events_global_position_seq'::regclass)::oid) CONSTRAINT events_global_position_not_null NOT NULL,
-    stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
-    data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
-    link_id uuid,
-    link_partition_id bigint,
-    created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
-    type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX"
+                                        id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
+                                        context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                        stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                        stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                        global_position bigint DEFAULT nextval('public.events_global_position_seq'::regclass) CONSTRAINT events_global_position_not_null NOT NULL,
+                                        stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
+                                        data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
+                                        metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
+                                        link_partition_id bigint,
+                                        created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
+                                        type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                        link_global_position bigint
 )
-PARTITION BY LIST (stream_name);
+    PARTITION BY LIST (stream_name);
 
 
 ALTER TABLE public.contexts_6879a3 OWNER TO postgres;
@@ -158,20 +161,20 @@ ALTER TABLE public.contexts_6879a3 OWNER TO postgres;
 --
 
 CREATE TABLE public.stream_names_5109b5 (
-    id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
-    context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    global_position bigint DEFAULT public.nextval_with_xact_lock(('public.events_global_position_seq'::regclass)::oid) CONSTRAINT events_global_position_not_null NOT NULL,
-    stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
-    data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
-    link_id uuid,
-    link_partition_id bigint,
-    created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
-    type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX"
+                                            id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
+                                            context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                            stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                            stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                            global_position bigint DEFAULT nextval('public.events_global_position_seq'::regclass) CONSTRAINT events_global_position_not_null NOT NULL,
+                                            stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
+                                            data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
+                                            metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
+                                            link_partition_id bigint,
+                                            created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
+                                            type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                            link_global_position bigint
 )
-PARTITION BY LIST (type);
+    PARTITION BY LIST (type);
 
 
 ALTER TABLE public.stream_names_5109b5 OWNER TO postgres;
@@ -183,18 +186,18 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE public.event_types_5d3abb (
-    id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
-    context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    global_position bigint DEFAULT public.nextval_with_xact_lock(('public.events_global_position_seq'::regclass)::oid) CONSTRAINT events_global_position_not_null NOT NULL,
-    stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
-    data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
-    link_id uuid,
-    link_partition_id bigint,
-    created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
-    type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX"
+                                           id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
+                                           context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                           stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                           stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                           global_position bigint DEFAULT nextval('public.events_global_position_seq'::regclass) CONSTRAINT events_global_position_not_null NOT NULL,
+                                           stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
+                                           data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
+                                           metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
+                                           link_partition_id bigint,
+                                           created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
+                                           type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                           link_global_position bigint
 );
 
 
@@ -205,20 +208,20 @@ ALTER TABLE public.event_types_5d3abb OWNER TO postgres;
 --
 
 CREATE TABLE public.stream_names_db8e87 (
-    id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
-    context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    global_position bigint DEFAULT public.nextval_with_xact_lock(('public.events_global_position_seq'::regclass)::oid) CONSTRAINT events_global_position_not_null NOT NULL,
-    stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
-    data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
-    link_id uuid,
-    link_partition_id bigint,
-    created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
-    type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX"
+                                            id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
+                                            context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                            stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                            stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                            global_position bigint DEFAULT nextval('public.events_global_position_seq'::regclass) CONSTRAINT events_global_position_not_null NOT NULL,
+                                            stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
+                                            data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
+                                            metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
+                                            link_partition_id bigint,
+                                            created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
+                                            type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                            link_global_position bigint
 )
-PARTITION BY LIST (type);
+    PARTITION BY LIST (type);
 
 
 ALTER TABLE public.stream_names_db8e87 OWNER TO postgres;
@@ -228,29 +231,48 @@ ALTER TABLE public.stream_names_db8e87 OWNER TO postgres;
 --
 
 CREATE TABLE public.event_types_a32711 (
-    id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
-    context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
-    global_position bigint DEFAULT public.nextval_with_xact_lock(('public.events_global_position_seq'::regclass)::oid) CONSTRAINT events_global_position_not_null NOT NULL,
-    stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
-    data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
-    link_id uuid,
-    link_partition_id bigint,
-    created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
-    type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX"
+                                           id uuid DEFAULT public.gen_random_uuid() CONSTRAINT events_id_not_null NOT NULL,
+                                           context character varying CONSTRAINT events_context_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                           stream_name character varying CONSTRAINT events_stream_name_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                           stream_id character varying CONSTRAINT events_stream_id_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                           global_position bigint DEFAULT nextval('public.events_global_position_seq'::regclass) CONSTRAINT events_global_position_not_null NOT NULL,
+                                           stream_revision integer CONSTRAINT events_stream_revision_not_null NOT NULL,
+                                           data jsonb DEFAULT '{}'::jsonb CONSTRAINT events_data_not_null NOT NULL,
+                                           metadata jsonb DEFAULT '{}'::jsonb CONSTRAINT events_metadata_not_null NOT NULL,
+                                           link_partition_id bigint,
+                                           created_at timestamp without time zone DEFAULT now() CONSTRAINT events_created_at_not_null NOT NULL,
+                                           type character varying CONSTRAINT events_type_not_null NOT NULL COLLATE pg_catalog."POSIX",
+                                           link_global_position bigint
 );
 
 
 ALTER TABLE public.event_types_a32711 OWNER TO postgres;
 
 --
+-- Name: events_horizon; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE UNLOGGED TABLE public.events_horizon (
+                                                global_position bigint NOT NULL,
+                                                xact_id xid8 DEFAULT pg_current_xact_id() NOT NULL
+);
+
+
+ALTER TABLE public.events_horizon OWNER TO postgres;
+
+--
+-- Name: TABLE events_horizon; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.events_horizon IS 'Internal use only. Data is limited to the PostgreSQL cluster in which it was created. DO NOT INCLUDE ITS DATA INTO YOUR DUMP.';
+
+
+--
 -- Name: migrations; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.migrations (
-    number integer NOT NULL
+                                   number integer NOT NULL
 );
 
 
@@ -261,11 +283,11 @@ ALTER TABLE public.migrations OWNER TO postgres;
 --
 
 CREATE TABLE public.partitions (
-    id bigint NOT NULL,
-    context character varying NOT NULL COLLATE pg_catalog."POSIX",
-    stream_name character varying COLLATE pg_catalog."POSIX",
-    event_type character varying COLLATE pg_catalog."POSIX",
-    table_name character varying NOT NULL COLLATE pg_catalog."POSIX"
+                                   id bigint NOT NULL,
+                                   context character varying NOT NULL COLLATE pg_catalog."POSIX",
+                                   stream_name character varying COLLATE pg_catalog."POSIX",
+                                   event_type character varying COLLATE pg_catalog."POSIX",
+                                   table_name character varying NOT NULL COLLATE pg_catalog."POSIX"
 );
 
 
@@ -297,12 +319,12 @@ ALTER SEQUENCE public.partitions_id_seq OWNED BY public.partitions.id;
 --
 
 CREATE TABLE public.subscription_commands (
-    id bigint NOT NULL,
-    name character varying NOT NULL,
-    subscription_id bigint NOT NULL,
-    subscriptions_set_id bigint NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    data jsonb DEFAULT '{}'::jsonb
+                                              id bigint NOT NULL,
+                                              name character varying NOT NULL,
+                                              subscription_id bigint NOT NULL,
+                                              subscriptions_set_id bigint NOT NULL,
+                                              created_at timestamp without time zone DEFAULT now() NOT NULL,
+                                              data jsonb DEFAULT '{}'::jsonb
 );
 
 
@@ -334,26 +356,26 @@ ALTER SEQUENCE public.subscription_commands_id_seq OWNED BY public.subscription_
 --
 
 CREATE TABLE public.subscriptions (
-    id bigint NOT NULL,
-    set character varying NOT NULL,
-    name character varying NOT NULL,
-    options jsonb DEFAULT '{}'::jsonb NOT NULL,
-    total_processed_events bigint DEFAULT 0 NOT NULL,
-    current_position bigint,
-    average_event_processing_time real,
-    state character varying DEFAULT 'initial'::character varying NOT NULL,
-    restart_count integer DEFAULT 0 NOT NULL,
-    max_restarts_number smallint DEFAULT 100 NOT NULL,
-    time_between_restarts smallint DEFAULT 1 NOT NULL,
-    last_restarted_at timestamp without time zone,
-    last_error jsonb,
-    last_error_occurred_at timestamp without time zone,
-    chunk_query_interval real DEFAULT 1.0 NOT NULL,
-    last_chunk_fed_at timestamp without time zone DEFAULT to_timestamp((0)::double precision) NOT NULL,
-    last_chunk_greatest_position bigint,
-    locked_by bigint,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+                                      id bigint NOT NULL,
+                                      set character varying NOT NULL,
+                                      name character varying NOT NULL,
+                                      options jsonb DEFAULT '{}'::jsonb NOT NULL,
+                                      total_processed_events bigint DEFAULT 0 NOT NULL,
+                                      current_position bigint,
+                                      average_event_processing_time real,
+                                      state character varying DEFAULT 'initial'::character varying NOT NULL,
+                                      restart_count integer DEFAULT 0 NOT NULL,
+                                      max_restarts_number smallint DEFAULT 100 NOT NULL,
+                                      time_between_restarts smallint DEFAULT 1 NOT NULL,
+                                      last_restarted_at timestamp without time zone,
+                                      last_error jsonb,
+                                      last_error_occurred_at timestamp without time zone,
+                                      chunk_query_interval real DEFAULT 1.0 NOT NULL,
+                                      last_chunk_fed_at timestamp without time zone DEFAULT to_timestamp((0)::double precision) NOT NULL,
+                                      last_chunk_greatest_position bigint,
+                                      locked_by bigint,
+                                      created_at timestamp without time zone DEFAULT now() NOT NULL,
+                                      updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -385,17 +407,17 @@ ALTER SEQUENCE public.subscriptions_id_seq OWNED BY public.subscriptions.id;
 --
 
 CREATE TABLE public.subscriptions_set (
-    id bigint NOT NULL,
-    name character varying NOT NULL,
-    state character varying DEFAULT 'initial'::character varying NOT NULL,
-    restart_count integer DEFAULT 0 NOT NULL,
-    max_restarts_number smallint DEFAULT 10 NOT NULL,
-    time_between_restarts smallint DEFAULT 1 NOT NULL,
-    last_restarted_at timestamp without time zone,
-    last_error jsonb,
-    last_error_occurred_at timestamp without time zone,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+                                          id bigint NOT NULL,
+                                          name character varying NOT NULL,
+                                          state character varying DEFAULT 'initial'::character varying NOT NULL,
+                                          restart_count integer DEFAULT 0 NOT NULL,
+                                          max_restarts_number smallint DEFAULT 10 NOT NULL,
+                                          time_between_restarts smallint DEFAULT 1 NOT NULL,
+                                          last_restarted_at timestamp without time zone,
+                                          last_error jsonb,
+                                          last_error_occurred_at timestamp without time zone,
+                                          created_at timestamp without time zone DEFAULT now() NOT NULL,
+                                          updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -406,11 +428,11 @@ ALTER TABLE public.subscriptions_set OWNER TO postgres;
 --
 
 CREATE TABLE public.subscriptions_set_commands (
-    id bigint NOT NULL,
-    name character varying NOT NULL,
-    subscriptions_set_id bigint NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    data jsonb DEFAULT '{}'::jsonb
+                                                   id bigint NOT NULL,
+                                                   name character varying NOT NULL,
+                                                   subscriptions_set_id bigint NOT NULL,
+                                                   created_at timestamp without time zone DEFAULT now() NOT NULL,
+                                                   data jsonb DEFAULT '{}'::jsonb
 );
 
 
@@ -497,7 +519,7 @@ ALTER TABLE ONLY public.contexts_6879a3 ATTACH PARTITION public.stream_names_db8
 -- Name: events global_position; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT public.nextval_with_xact_lock(('public.events_global_position_seq'::regclass)::oid);
+ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT nextval('public.events_global_position_seq'::regclass);
 
 
 --
@@ -539,9 +561,9 @@ ALTER TABLE ONLY public.subscriptions_set_commands ALTER COLUMN id SET DEFAULT n
 -- Data for Name: event_types_5d3abb; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.event_types_5d3abb (id, context, stream_name, stream_id, global_position, stream_revision, data, metadata, link_id, link_partition_id, created_at, type) FROM stdin;
-aa160471-6d46-4d23-be50-5603719cd93a	FooCtx	BarProjection	1	3	0	{}	{}	733fe342-ec8e-4837-ad87-897cbb2fe228	3	2025-12-29 19:16:06.774898	$>
-202c011e-6927-4e25-b080-1c49499dc7c7	FooCtx	BarProjection	1	4	1	{}	{}	5756d3b1-78d4-4846-9cb4-427cd03d1049	3	2025-12-29 19:16:06.774898	$>
+COPY public.event_types_5d3abb (id, context, stream_name, stream_id, global_position, stream_revision, data, metadata, link_partition_id, created_at, type, link_global_position) FROM stdin;
+25d31190-f665-4866-afdf-e200fefe9c18	FooCtx	BarProjection	1	3	0	{}	{}	3	2026-01-12 21:28:54.102308	$>	1
+18265c54-0627-484f-88c7-7c53679881a9	FooCtx	BarProjection	1	4	1	{}	{}	3	2026-01-12 21:28:54.102308	$>	2
 \.
 
 
@@ -549,9 +571,9 @@ aa160471-6d46-4d23-be50-5603719cd93a	FooCtx	BarProjection	1	3	0	{}	{}	733fe342-e
 -- Data for Name: event_types_a32711; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.event_types_a32711 (id, context, stream_name, stream_id, global_position, stream_revision, data, metadata, link_id, link_partition_id, created_at, type) FROM stdin;
-733fe342-ec8e-4837-ad87-897cbb2fe228	FooCtx	Bar	1	1	0	{"foo": "foo"}	{}	\N	\N	2025-12-29 19:16:06.756458	Foo
-5756d3b1-78d4-4846-9cb4-427cd03d1049	FooCtx	Bar	2	2	0	{"foo": "bar"}	{}	\N	\N	2025-12-29 19:16:06.760826	Foo
+COPY public.event_types_a32711 (id, context, stream_name, stream_id, global_position, stream_revision, data, metadata, link_partition_id, created_at, type, link_global_position) FROM stdin;
+da0b7cae-b04a-414b-aea3-58a985709947	FooCtx	Bar	1	1	0	{"foo": "foo"}	{}	\N	2026-01-12 21:28:54.081387	Foo	\N
+d14ee952-cb7b-4d09-b9ce-a53accdb7c55	FooCtx	Bar	2	2	0	{"foo": "bar"}	{}	\N	2026-01-12 21:28:54.08657	Foo	\N
 \.
 
 
@@ -571,6 +593,10 @@ COPY public.migrations (number) FROM stdin;
 8
 9
 10
+11
+12
+13
+14
 \.
 
 
@@ -778,34 +804,6 @@ CREATE INDEX contexts_6879a3_global_position_idx1 ON ONLY public.contexts_6879a3
 
 
 --
--- Name: idx_events_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_events_id ON ONLY public.events USING btree (id);
-
-
---
--- Name: contexts_6879a3_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX contexts_6879a3_id_idx ON ONLY public.contexts_6879a3 USING btree (id);
-
-
---
--- Name: idx_events_link_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_events_link_id ON ONLY public.events USING btree (link_id);
-
-
---
--- Name: contexts_6879a3_link_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX contexts_6879a3_link_id_idx ON ONLY public.contexts_6879a3 USING btree (link_id);
-
-
---
 -- Name: idx_events_stream_id_and_global_position; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -862,34 +860,6 @@ CREATE INDEX event_types_5d3abb_global_position_idx1 ON public.event_types_5d3ab
 
 
 --
--- Name: stream_names_5109b5_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX stream_names_5109b5_id_idx ON ONLY public.stream_names_5109b5 USING btree (id);
-
-
---
--- Name: event_types_5d3abb_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX event_types_5d3abb_id_idx ON public.event_types_5d3abb USING btree (id);
-
-
---
--- Name: stream_names_5109b5_link_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX stream_names_5109b5_link_id_idx ON ONLY public.stream_names_5109b5 USING btree (link_id);
-
-
---
--- Name: event_types_5d3abb_link_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX event_types_5d3abb_link_id_idx ON public.event_types_5d3abb USING btree (link_id);
-
-
---
 -- Name: stream_names_5109b5_stream_id_global_position_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -943,34 +913,6 @@ CREATE INDEX stream_names_db8e87_global_position_idx1 ON ONLY public.stream_name
 --
 
 CREATE INDEX event_types_a32711_global_position_idx1 ON public.event_types_a32711 USING btree (global_position) WHERE (stream_revision = 0);
-
-
---
--- Name: stream_names_db8e87_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX stream_names_db8e87_id_idx ON ONLY public.stream_names_db8e87 USING btree (id);
-
-
---
--- Name: event_types_a32711_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX event_types_a32711_id_idx ON public.event_types_a32711 USING btree (id);
-
-
---
--- Name: stream_names_db8e87_link_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX stream_names_db8e87_link_id_idx ON ONLY public.stream_names_db8e87 USING btree (link_id);
-
-
---
--- Name: event_types_a32711_link_id_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX event_types_a32711_link_id_idx ON public.event_types_a32711 USING btree (link_id);
 
 
 --
@@ -1065,6 +1007,13 @@ CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING
 
 
 --
+-- Name: idx_xact_id_and_created_at_and_global_position; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_xact_id_and_created_at_and_global_position ON public.events_horizon USING btree (xact_id, global_position);
+
+
+--
 -- Name: contexts_6879a3_global_position_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
 --
 
@@ -1076,20 +1025,6 @@ ALTER INDEX public.idx_events_global_position ATTACH PARTITION public.contexts_6
 --
 
 ALTER INDEX public.idx_events_0_stream_revision_global_position ATTACH PARTITION public.contexts_6879a3_global_position_idx1;
-
-
---
--- Name: contexts_6879a3_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.idx_events_id ATTACH PARTITION public.contexts_6879a3_id_idx;
-
-
---
--- Name: contexts_6879a3_link_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.idx_events_link_id ATTACH PARTITION public.contexts_6879a3_link_id_idx;
 
 
 --
@@ -1128,20 +1063,6 @@ ALTER INDEX public.stream_names_5109b5_global_position_idx1 ATTACH PARTITION pub
 
 
 --
--- Name: event_types_5d3abb_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.stream_names_5109b5_id_idx ATTACH PARTITION public.event_types_5d3abb_id_idx;
-
-
---
--- Name: event_types_5d3abb_link_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.stream_names_5109b5_link_id_idx ATTACH PARTITION public.event_types_5d3abb_link_id_idx;
-
-
---
 -- Name: event_types_5d3abb_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
 --
 
@@ -1174,20 +1095,6 @@ ALTER INDEX public.stream_names_db8e87_global_position_idx ATTACH PARTITION publ
 --
 
 ALTER INDEX public.stream_names_db8e87_global_position_idx1 ATTACH PARTITION public.event_types_a32711_global_position_idx1;
-
-
---
--- Name: event_types_a32711_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.stream_names_db8e87_id_idx ATTACH PARTITION public.event_types_a32711_id_idx;
-
-
---
--- Name: event_types_a32711_link_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.stream_names_db8e87_link_id_idx ATTACH PARTITION public.event_types_a32711_link_id_idx;
 
 
 --
@@ -1226,20 +1133,6 @@ ALTER INDEX public.contexts_6879a3_global_position_idx1 ATTACH PARTITION public.
 
 
 --
--- Name: stream_names_5109b5_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.contexts_6879a3_id_idx ATTACH PARTITION public.stream_names_5109b5_id_idx;
-
-
---
--- Name: stream_names_5109b5_link_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.contexts_6879a3_link_id_idx ATTACH PARTITION public.stream_names_5109b5_link_id_idx;
-
-
---
 -- Name: stream_names_5109b5_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
 --
 
@@ -1275,20 +1168,6 @@ ALTER INDEX public.contexts_6879a3_global_position_idx1 ATTACH PARTITION public.
 
 
 --
--- Name: stream_names_db8e87_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.contexts_6879a3_id_idx ATTACH PARTITION public.stream_names_db8e87_id_idx;
-
-
---
--- Name: stream_names_db8e87_link_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
---
-
-ALTER INDEX public.contexts_6879a3_link_id_idx ATTACH PARTITION public.stream_names_db8e87_link_id_idx;
-
-
---
 -- Name: stream_names_db8e87_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
 --
 
@@ -1307,6 +1186,13 @@ ALTER INDEX public.contexts_6879a3_stream_id_global_position_idx ATTACH PARTITIO
 --
 
 ALTER INDEX public.contexts_6879a3_stream_id_stream_revision_idx ATTACH PARTITION public.stream_names_db8e87_stream_id_stream_revision_idx;
+
+
+--
+-- Name: events log_events_horizon; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER log_events_horizon AFTER INSERT ON public.events FOR EACH ROW EXECUTE FUNCTION public.log_events_horizon();
 
 
 --
@@ -1345,5 +1231,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 4DJml7NlVehQlhc0P6HVX5mRLfNLXrRPHxAKTlHXgOq5NkxLEA15avsO16gEAdy
+\unrestrict YDhD9jKKgIgEQ0ExMldG0gsSC4a1b2GQHcsY39hiFoBpC4BTekVU03iyDOmLb2c
 

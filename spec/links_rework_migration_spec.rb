@@ -34,7 +34,7 @@ RSpec.describe 'Migration to new links implementation' do
   it 'migrates links properly' do
     link_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'BarProjection', stream_id: '1')
     link1 = PgEventstore::Event.new(
-      id: 'aa160471-6d46-4d23-be50-5603719cd93a',
+      id: '25d31190-f665-4866-afdf-e200fefe9c18',
       type: '$>',
       global_position: 3,
       stream: PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'BarProjection', stream_id: '1'),
@@ -44,10 +44,10 @@ RSpec.describe 'Migration to new links implementation' do
       link_global_position: 1,
       link_partition_id: 3,
       link: nil,
-      created_at: Time.parse('2025-12-29 19:16:06.774898 UTC')
+      created_at: Time.parse('2026-01-12 21:28:54.102308 UTC')
     )
     link2 = PgEventstore::Event.new(
-      id: '202c011e-6927-4e25-b080-1c49499dc7c7',
+      id: '18265c54-0627-484f-88c7-7c53679881a9',
       type: '$>',
       global_position: 4,
       stream: PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'BarProjection', stream_id: '1'),
@@ -57,7 +57,7 @@ RSpec.describe 'Migration to new links implementation' do
       link_global_position: 2,
       link_partition_id: 3,
       link: nil,
-      created_at: Time.parse('2025-12-29 19:16:06.774898 UTC')
+      created_at: Time.parse('2026-01-12 21:28:54.102308 UTC')
     )
     aggregate_failures do
       expect(PgEventstore.client.read(link_stream)).to eq [link1, link2]
@@ -65,7 +65,7 @@ RSpec.describe 'Migration to new links implementation' do
         eq(
           [
             PgEventstore::Event.new(
-              id: '733fe342-ec8e-4837-ad87-897cbb2fe228',
+              id: 'da0b7cae-b04a-414b-aea3-58a985709947',
               type: 'Foo',
               global_position: 1,
               stream: PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1'),
@@ -75,10 +75,10 @@ RSpec.describe 'Migration to new links implementation' do
               link_global_position: nil,
               link_partition_id: nil,
               link: link1,
-              created_at: Time.parse('2025-12-29 19:16:06.756458 UTC')
+              created_at: Time.parse('2026-01-12 21:28:54.081387 UTC')
             ),
             PgEventstore::Event.new(
-              id: '5756d3b1-78d4-4846-9cb4-427cd03d1049',
+              id: 'd14ee952-cb7b-4d09-b9ce-a53accdb7c55',
               type: 'Foo',
               global_position: 2,
               stream: PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '2'),
@@ -88,7 +88,7 @@ RSpec.describe 'Migration to new links implementation' do
               link_global_position: nil,
               link_partition_id: nil,
               link: link2,
-              created_at: Time.parse('2025-12-29 19:16:06.760826 UTC')
+              created_at: Time.parse('2026-01-12 21:28:54.08657 UTC')
             ),
           ]
         )
