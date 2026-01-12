@@ -13,19 +13,19 @@ jobs:
         ruby-version: ['3.0', '3.1', '3.2', '3.3', '3.4']
 
     steps:
-    - name: Build PostgreSQL image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        push: false
-        tags: pg_eventstore/postgres_with_pg_cron
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: Set up Ruby
       if: ${{ !steps.skip-workflow.outputs.skip }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: true # runs 'bundle install' and caches installed gems automatically
+    - name: Build PostgreSQL image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: false
+        tags: pg_eventstore/postgres_with_pg_cron
     - name: Run PostgreSQL
       if: ${{ !steps.skip-workflow.outputs.skip }}
       run: docker compose up --detach
