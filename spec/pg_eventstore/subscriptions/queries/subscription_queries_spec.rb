@@ -127,7 +127,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
         expect { subject }.to change { instance.find_by(id: id)[:updated_at] }
       end
       it 'returns updated attributes', :timecop do
-        is_expected.to eq(attrs.merge(updated_at: Time.now))
+        is_expected.to eq(attrs.merge(updated_at: Time.now.round(6)))
       end
 
       context 'when subscription is updated by someone else' do

@@ -3,6 +3,10 @@
 module PgEventstore
   # @!visibility private
   class SubscriptionServiceQueries
+    # @return [Integer]
+    DEFAULT_SAFE_POSITION = 0
+    private_constant :DEFAULT_SAFE_POSITION
+
     # @!attribute connection
     #   @return [PgEventstore::Connection]
     attr_reader :connection
@@ -11,29 +15,6 @@ module PgEventstore
     # @param connection [PgEventstore::Connection]
     def initialize(connection)
       @connection = connection
-    end
-
-    # @return [Integer]
-    def current_database_id
-      connection.with do |conn|
-        conn.exec(<<~SQL)
-          SELECT oid FROM pg_database WHERE datname = current_database() LIMIT 1
-        SQL
-      end.first['oid']
-    end
-
-    # @param database_id [Integer]
-    # @return [Integer, nil]
-    def smallest_uncommitted_global_position(database_id)
-      connection.with do |conn|
-        conn.exec_params(<<~SQL, [database_id])
-          SELECT ((classid::bigint << 32) | objid::bigint) AS global_position
-            FROM pg_locks
-            WHERE locktype = 'advisory' AND database = $1
-            ORDER BY classid, objid
-            LIMIT 1
-        SQL
-      end.first&.dig('global_position')
     end
 
     def safe_global_position
@@ -55,10 +36,11 @@ module PgEventstore
         return safe_global_position
       end
       # events_horizon table is not empty, but there is no safe position yet. Thus, we wait for the safe position by
-      # returning 0 which will prevent from fetching events with gaps
-      0
+      # returning default value which will prevent from fetching events with gaps
+      DEFAULT_SAFE_POSITION
     end
 
+    # @return [Boolean]
     def events_horizon_present?
       result = connection.with do |conn|
         conn.exec(<<~SQL)
@@ -68,6 +50,7 @@ module PgEventstore
       result.to_a.first&.dig('presence') || false
     end
 
+    # @return [void]
     def init_events_horizon
       transaction_queries.transaction do
         return if events_horizon_present?
@@ -75,7 +58,7 @@ module PgEventstore
         max_pos = connection.with do |conn|
           conn.exec('SELECT MAX(global_position) FROM events')
         end
-        max_pos = max_pos.to_a.first&.dig('global_position') || 0
+        max_pos = max_pos.to_a.first&.dig('global_position') || DEFAULT_SAFE_POSITION
         connection.with do |conn|
           conn.exec_params(<<~SQL, [max_pos])
             INSERT INTO events_horizon (global_position, xact_id) VALUES ($1, DEFAULT)

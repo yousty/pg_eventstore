@@ -4,7 +4,7 @@ Implements database and API to store and read events in event sourced systems.
 
 ## Requirements
 
-- `pg_eventstore` requires a PostgreSQL v16+ with [nextval_with_xact_lock](https://github.com/intale/nextval_with_xact_lock/) extension installed. 
+- `pg_eventstore` requires a PostgreSQL v16+ with [pg_cron](https://github.com/citusdata/pg_cron) extension installed.
 - `pg_evenstore` requires a separate detabase. However, it is recommended that you spin it up on a separate PostgreSQL instance in a production environment.
 - `pg_eventstore` requires `default_transaction_isolation` server config option to be set to `'read committed'` (default behavior). Having this value set to move strict isolation level may result in unexpected behavior.
 - It is recommended to use a connection pooler (for example [PgBouncer](https://www.pgbouncer.org/)) in `transaction` pool mode to lower the load on a database.
@@ -13,19 +13,21 @@ Implements database and API to store and read events in event sourced systems.
 ## Installation
 
 Install the gem and add to the application's Gemfile by executing:
-
-    $ bundle add pg_eventstore
+```bash
+bundle add pg_eventstore
+```
 
 If bundler is not being used to manage dependencies, install the gem by executing:
-
-    $ gem install pg_eventstore
+```bash
+gem install pg_eventstore
+```
 
 ## Usage
 
-Before start using the gem - you have to create the database. Please include this line into your `Rakefile`:
+Before start using the gem - you have to create the database. **It is important you to create and migrate via provided commands - they also include an important setup of `pg_cron` jobs as well. Even if you would like to restore your db backup on clean PostgreSQL instance - please initialize pg_eventstore via built-in tools first.** Please include this line into your `Rakefile`:
 
 ```ruby
-load "pg_eventstore/tasks/setup.rake"
+load 'pg_eventstore/tasks/setup.rake'
 ```
 
 This will include necessary rake tasks. You can now run 

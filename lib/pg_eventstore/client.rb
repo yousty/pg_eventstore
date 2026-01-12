@@ -47,9 +47,11 @@ module PgEventstore
     #     PgEventstore.client.append_to_stream(...)
     #   end
     #
+    # @param read_only [Boolean] whether transaction is read-only. Running mutation queries within read-only transaction
+    #   will result in exception
     # @return the result of the given block
-    def multiple(&blk)
-      Commands::Multiple.new(Queries.new(transactions: transaction_queries)).call(&blk)
+    def multiple(read_only: false, &blk)
+      Commands::Multiple.new(Queries.new(transactions: transaction_queries)).call(read_only: read_only, &blk)
     end
 
     # Read events from the specific stream or from "all" stream.

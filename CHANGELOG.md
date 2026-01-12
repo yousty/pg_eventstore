@@ -1,8 +1,9 @@
 ## [Unreleased]
 
-- **Breaking change**: `pg_eventstore` now requires [nextval_with_xact_lock](https://github.com/intale/nextval_with_xact_lock/) extension
+- **Breaking change**: `pg_eventstore` now requires [[pg_cron](https://github.com/citusdata/pg_cron) extension
 - **Breaking change**: `pg_eventstore` now requires PostgreSQL v16+
 - Greatly decreased the number of connections, used by `pg_eventstore` subscriptions
+- `Client#multiple` method now accepts `read_only` keyword argument. When it is set to true - transaction is run in read-only mode 
 
 ## [1.13.4]
 

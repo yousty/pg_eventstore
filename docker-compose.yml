@@ -2,16 +2,20 @@ version: "3.5"
 
 services:
   postgres:
-    image: postgres:18
+    image: pg_eventstore/postgres_with_pg_cron
+    build:
+      dockerfile: Dockerfile
+    container_name: pg_eventstore-postgres-main
     ports:
       - 5532:5432
     environment:
       - POSTGRES_PASSWORD=postgres
-    command: ["postgres", "-c", "log_statement=all"]
+    command: ["postgres", "-c", "log_statement=all", "-c", "shared_preload_libraries=pg_cron"]
     volumes:
       - "./db/postgresql/data:/var/lib/postgresql/18/data"
   pgbouncer:
     image: edoburu/pgbouncer
+    container_name: pg_eventstore-pgbouncer-main
     environment:
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 1000
@@ -21,6 +25,8 @@ services:
       AUTH_TYPE: plain
     ports:
       - 6432:5432
+    depends_on:
+      - postgres
   redis:
     image: redis:6
     ports:

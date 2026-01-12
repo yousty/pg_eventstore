@@ -23,6 +23,7 @@ module PgEventstore
     end
 
     # @param level [Symbol] transaction isolation level
+    # @param read_only [Boolean] whether transaction is read-only
     # @return [void]
     def transaction(level = :serializable, read_only: false, &blk)
       connection.with do |conn|

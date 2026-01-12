@@ -4,28 +4,28 @@ module PgEventstore
     def initialize: (PgEventstore::Connection connection) -> void
 
     # _@param_ `attrs`
-    def find_or_create_by: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]
+    def find_or_create_by: (::Hash[untyped, untyped] attrs) -> ::Hash[Symbol, untyped]
 
     # _@param_ `attrs`
-    def find_by: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]?
+    def find_by: (::Hash[untyped, untyped] attrs) -> ::Hash[Symbol, untyped]?
 
     # _@param_ `attrs`
-    def find_all: (::Hash[untyped, untyped] attrs) -> ::Array[::Hash[untyped, untyped]]
+    def find_all: (::Hash[untyped, untyped] attrs) -> ::Array[::Hash[Symbol, untyped]]
 
     def set_collection: (?String? state) -> ::Array[String]
 
     # _@param_ `id`
-    def find!: (Integer id) -> ::Hash[untyped, untyped]
+    def find!: (Integer id) -> ::Hash[Symbol, untyped]
 
     # _@param_ `attrs`
-    def create: (::Hash[untyped, untyped] attrs) -> ::Hash[untyped, untyped]
+    def create: (::Hash[untyped, untyped] attrs) -> ::Hash[Symbol, untyped]
 
     # _@param_ `id`
     #
     # _@param_ `attrs`
     #
     # _@param_ `locked_by`
-    def update: (Integer id, attrs: ::Hash[untyped, untyped], locked_by: Integer?) -> ::Hash[untyped, untyped]
+    def update: (Integer id, attrs: ::Hash[Symbol, untyped], locked_by: Integer?) -> ::Hash[Symbol, untyped]
 
     # _@param_ `subscriptions_set_id` — SubscriptionsSet#id
     #
@@ -52,22 +52,22 @@ module PgEventstore
     # _@param_ `id` — runner id
     #
     # _@param_ `options` — query options
-    def query_builder: (Integer id, ::Hash[untyped, untyped] options) -> PgEventstore::SQLBuilder
+    def query_builder: (Integer id, ::Hash[untyped, untyped] options) -> SQLBuilder
 
     # _@param_ `builders`
-    def union_builders: (::Array[PgEventstore::SQLBuilder] builders) -> PgEventstore::SQLBuilder
+    def union_builders: (::Array[SQLBuilder] builders) -> SQLBuilder
 
-    def transaction_queries: () -> PgEventstore::TransactionQueries
+    def transaction_queries: () -> TransactionQueries
 
-    def links_resolver: () -> PgEventstore::LinksResolver
+    def links_resolver: () -> LinksResolver
 
     # _@param_ `hash`
-    def deserialize: (::Hash[untyped, untyped] hash) -> ::Hash[untyped, untyped]
+    def deserialize: (::Hash[String, untyped] hash) -> ::Hash[Symbol, untyped]
 
     # _@param_ `attrs`
-    def find_by_attrs_builder: (::Hash[untyped, untyped] attrs) -> PgEventstore::SQLBuilder
+    def find_by_attrs_builder: (::Hash[untyped, untyped] attrs) -> SQLBuilder
 
     # Returns the value of attribute connection.
-    attr_accessor connection: PgEventstore::Connection
+    attr_accessor connection: Connection
   end
 end
