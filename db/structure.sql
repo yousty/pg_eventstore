@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict TmMLMi1CiFFiQiGheeHGYGEShTjj3ex995z9LbqyvkkQFImhuHLSwjriIlyJ5XK
+\restrict tDmO4RiofktrMDrXkbCChg5ZWreg0T8M3di04aQOIWF3Map1czYc0InwUr1cJgk
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -135,6 +135,13 @@ CREATE UNLOGGED TABLE public.events_horizon (
     global_position bigint NOT NULL,
     xact_id xid8 DEFAULT pg_current_xact_id() NOT NULL
 );
+
+
+--
+-- Name: TABLE events_horizon; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.events_horizon IS 'Internal use only. Data is limited to the PostgreSQL cluster in which it was created. DO NOT INCLUDE ITS DATA INTO YOUR DUMP.';
 
 
 --
@@ -573,5 +580,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict TmMLMi1CiFFiQiGheeHGYGEShTjj3ex995z9LbqyvkkQFImhuHLSwjriIlyJ5XK
+\unrestrict tDmO4RiofktrMDrXkbCChg5ZWreg0T8M3di04aQOIWF3Map1czYc0InwUr1cJgk
 
