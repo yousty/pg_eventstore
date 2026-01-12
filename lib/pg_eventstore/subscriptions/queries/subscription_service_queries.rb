@@ -17,6 +17,7 @@ module PgEventstore
       @connection = connection
     end
 
+    # @return [Integer]
     def safe_global_position
       result = transaction_queries.transaction(read_only: true) do
         connection.with do |conn|
@@ -69,6 +70,7 @@ module PgEventstore
 
     private
 
+    # @return [PgEventstore::TransactionQueries]
     def transaction_queries
       TransactionQueries.new(connection)
     end

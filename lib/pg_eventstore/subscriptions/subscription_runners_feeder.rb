@@ -28,11 +28,6 @@ module PgEventstore
 
     private
 
-    # @return [Integer]
-    def current_database_id
-      @current_database_id ||= subscription_service_queries.current_database_id
-    end
-
     # @return [PgEventstore::Connection]
     def connection
       PgEventstore.connection(@config_name)

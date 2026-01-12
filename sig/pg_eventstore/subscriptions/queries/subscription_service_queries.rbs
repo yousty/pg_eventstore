@@ -10,7 +10,7 @@ module PgEventstore
 
     def init_events_horizon: -> void
 
-    def safe_global_position: -> untyped
+    def safe_global_position: -> Integer
 
     private
 
