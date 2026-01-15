@@ -112,7 +112,7 @@ RSpec.describe PgEventstore::EventDeserializer do
       end
       let(:link_attrs) do
         {
-          'id' => SecureRandom.uuid, 'link_id' => SecureRandom.uuid, 'type' => PgEventstore::Event::LINK_TYPE,
+          'id' => SecureRandom.uuid, 'link_global_position' => 123, 'type' => PgEventstore::Event::LINK_TYPE,
           'context' => 'MyAwesomeCtx', 'stream_name' => 'Bar', 'stream_id' => 'Baz'
         }
       end
@@ -121,7 +121,7 @@ RSpec.describe PgEventstore::EventDeserializer do
       it 'deserializes link attributes' do
         aggregate_failures do
           expect(subject.link.id).to eq(link_attrs['id'])
-          expect(subject.link.link_id).to eq(link_attrs['link_id'])
+          expect(subject.link.link_global_position).to eq(link_attrs['link_global_position'])
           expect(subject.link.type).to eq(link_attrs['type'])
           expect(subject.link.stream).to(
             eq(PgEventstore::Stream.new(context: 'MyAwesomeCtx', stream_name: 'Bar', stream_id: 'Baz'))

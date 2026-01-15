@@ -50,7 +50,7 @@ RSpec.describe PgEventstore::Commands::Append do
               expect(subject.data).to eq('foo' => 'bar')
               expect(subject.metadata).to eq({})
               expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
-              expect(subject.link_id).to eq(nil)
+              expect(subject.link_global_position).to eq(nil)
               expect(subject.link_partition_id).to eq(nil)
             end
           end
@@ -214,7 +214,7 @@ RSpec.describe PgEventstore::Commands::Append do
         end
       end
 
-      context 'when middleware which changes #link_id is given' do
+      context 'when middleware which changes #link_global_position is given' do
         let(:middlewares) { [middleware] }
         let(:middleware) do
           Class.new do
@@ -222,14 +222,14 @@ RSpec.describe PgEventstore::Commands::Append do
               include PgEventstore::Middleware
 
               def serialize(event)
-                event.link_id = SecureRandom.uuid
+                event.link_global_position = 0
               end
             end
           end
         end
 
         it_behaves_like 'read only attribute' do
-          let(:attribute) { :link_id }
+          let(:attribute) { :link_global_position }
         end
       end
 
@@ -334,7 +334,7 @@ RSpec.describe PgEventstore::Commands::Append do
             expect(subject.data).to eq('foo' => 'bar')
             expect(subject.metadata).to eq({})
             expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
-            expect(subject.link_id).to eq(nil)
+            expect(subject.link_global_position).to eq(nil)
             expect(subject.link_partition_id).to eq(nil)
           end
         end
@@ -352,7 +352,7 @@ RSpec.describe PgEventstore::Commands::Append do
             expect(subject.data).to eq('foo' => 'baz')
             expect(subject.metadata).to eq({})
             expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
-            expect(subject.link_id).to eq(nil)
+            expect(subject.link_global_position).to eq(nil)
             expect(subject.link_partition_id).to eq(nil)
           end
         end

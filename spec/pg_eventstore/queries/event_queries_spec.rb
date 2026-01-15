@@ -57,28 +57,27 @@ RSpec.describe PgEventstore::EventQueries do
   end
 
   describe '#ids_from_db' do
-    subject { instance.ids_from_db(events) }
+    subject { instance.global_positions_from_db(events) }
 
-    let(:events) { [persisted_event1, persisted_event2, non_persisted_event, event_without_id] }
+    let(:events) { [persisted_event1, persisted_event2, non_persisted_event] }
     let(:persisted_event1) do
-      event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo')
+      event = PgEventstore::Event.new(type: 'Foo')
       PgEventstore.client.append_to_stream(
         PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: '1'),
         event
       )
     end
     let(:persisted_event2) do
-      event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Bar')
+      event = PgEventstore::Event.new(type: 'Bar')
       PgEventstore.client.append_to_stream(
         PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'AnotherStream', stream_id: '1'),
         event
       )
     end
-    let(:non_persisted_event) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Baz') }
-    let(:event_without_id) { PgEventstore::Event.new(type: 'Lorem') }
+    let(:non_persisted_event) { PgEventstore::Event.new(type: 'Baz') }
 
     it 'returns ids of persisted events' do
-      is_expected.to match_array([persisted_event1.id, persisted_event2.id])
+      is_expected.to match_array([persisted_event1.global_position, persisted_event2.global_position])
     end
   end
 
@@ -137,7 +136,7 @@ RSpec.describe PgEventstore::EventQueries do
           expect(subject.data).to eq('foo' => 'bar')
           expect(subject.metadata).to include('baz' => 'bar')
           expect(subject.stream_revision).to eq(123)
-          expect(subject.link_id).to eq(nil)
+          expect(subject.link_global_position).to eq(nil)
           expect(subject.stream).to eq(stream)
           expect(subject.created_at).to be_a(Time)
         end
@@ -154,7 +153,11 @@ RSpec.describe PgEventstore::EventQueries do
         PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new(id: SecureRandom.uuid))
       end
       let(:event) do
-        PgEventstore::Event.new(link_id: existing_event.id, stream_revision: 123, type: PgEventstore::Event::LINK_TYPE)
+        PgEventstore::Event.new(
+          link_global_position: existing_event.global_position,
+          stream_revision: 123,
+          type: PgEventstore::Event::LINK_TYPE
+        )
       end
 
       it 'creates link event' do
@@ -162,7 +165,7 @@ RSpec.describe PgEventstore::EventQueries do
           expect(subject.id).to match(EventHelpers::UUID_REGEXP)
           expect(subject.type).to eq(PgEventstore::Event::LINK_TYPE)
           expect(subject.stream_revision).to eq(123)
-          expect(subject.link_id).to eq(existing_event.id)
+          expect(subject.link_global_position).to eq(existing_event.global_position)
         end
       end
     end

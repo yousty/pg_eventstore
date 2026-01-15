@@ -5,7 +5,7 @@ module PgEventstore
     LINK_TYPE: String
     PRIMARY_TABLE_NAME: String
 
-    def ==: ((Object | PgEventstore::Event) other) -> bool
+    def ==: ((Object | Event) other) -> bool
 
     def link?: () -> bool
 
@@ -29,7 +29,7 @@ module PgEventstore
 
     attr_accessor global_position: Integer?
 
-    attr_accessor stream: PgEventstore::Stream?
+    attr_accessor stream: Stream?
 
     attr_accessor stream_revision: Integer?
 
@@ -37,11 +37,11 @@ module PgEventstore
 
     attr_accessor metadata: ::Hash[untyped, untyped]
 
-    attr_accessor link_id: String?
+    attr_accessor link_global_position: Integer?
 
     attr_accessor link_partition_id: Integer?
 
-    attr_accessor link: PgEventstore::Event?
+    attr_accessor link: Event?
 
     attr_accessor created_at: Time?
   end

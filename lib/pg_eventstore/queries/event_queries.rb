@@ -41,18 +41,18 @@ module PgEventstore
     # Takes an array of potentially persisted events and loads their ids from db. Those ids can be later used to check
     # whether events are actually existing events.
     # @param events [Array<PgEventstore::Event>]
-    # @return [Array<String>]
-    def ids_from_db(events)
-      sql_builder = SQLBuilder.new.from(Event::PRIMARY_TABLE_NAME).select('id')
+    # @return [Array<Integer>]
+    def global_positions_from_db(events)
+      sql_builder = SQLBuilder.new.from(Event::PRIMARY_TABLE_NAME).select('global_position')
       partition_attrs = events.map { |event| [event.stream&.context, event.stream&.stream_name, event.type] }.uniq
       partition_attrs.each do |context, stream_name, event_type|
         sql_builder.where_or('context = ? and stream_name = ? and type = ?', context, stream_name, event_type)
       end
-      sql_builder.where('id = ANY(?::uuid[])', events.map(&:id))
+      sql_builder.where('global_position = ANY(?::bigint[])', events.map(&:global_position))
       raw_events = PgEventstore.connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end.to_a
-      raw_events.map { |attrs| attrs['id'] }
+      raw_events.map { |attrs| attrs['global_position'] }
     end
 
     # @param stream [PgEventstore::Stream]
@@ -84,7 +84,7 @@ module PgEventstore
     # @return [Array<PgEventstore::Event>]
     def insert(stream, events)
       sql_rows_for_insert, values = prepared_statements(stream, events)
-      columns = %w[id data metadata stream_revision link_id link_partition_id type context stream_name stream_id]
+      columns = %w[id data metadata stream_revision link_global_position link_partition_id type context stream_name stream_id]
 
       sql = <<~SQL
         INSERT INTO events (#{columns.join(', ')})
@@ -129,7 +129,7 @@ module PgEventstore
       sql_rows_for_insert = events.map do |event|
         event = serializer.serialize(event)
         attributes = event.options_hash.slice(
-          :id, :data, :metadata, :stream_revision, :link_id, :link_partition_id, :type
+          :id, :data, :metadata, :stream_revision, :link_global_position, :link_partition_id, :type
         )
 
         attributes = attributes.merge(stream.to_hash)

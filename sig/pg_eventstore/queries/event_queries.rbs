@@ -5,43 +5,43 @@ module PgEventstore
     # _@param_ `serializer`
     #
     # _@param_ `deserializer`
-    def initialize: (PgEventstore::Connection connection, PgEventstore::EventSerializer serializer, PgEventstore::EventDeserializer deserializer) -> void
+    def initialize: (Connection connection, EventSerializer serializer, EventDeserializer deserializer) -> void
 
     # _@param_ `event`
-    def event_exists?: (PgEventstore::Event event) -> bool
+    def event_exists?: (Event event) -> bool
 
     def grouped_events: (Stream stream, Array[Hash[untyped, untyped]] options_by_event_type, **untyped options)-> Array[Event]
 
     # _@param_ `events`
-    def ids_from_db: (::Array[PgEventstore::Event] events) -> ::Array[String]
+    def global_positions_from_db: (::Array[Event] events) -> ::Array[Integer]
 
     # _@param_ `stream`
-    def stream_revision: (PgEventstore::Stream stream) -> Integer?
+    def stream_revision: (Stream stream) -> Integer?
 
     # _@param_ `stream`
     #
     # _@param_ `options`
-    def stream_events: (PgEventstore::Stream stream, ::Hash[untyped, untyped] options) -> ::Array[PgEventstore::Event]
+    def stream_events: (Stream stream, ::Hash[untyped, untyped] options) -> ::Array[Event]
 
     # _@param_ `stream`
     #
     # _@param_ `events`
-    def insert: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> ::Array[PgEventstore::Event]
+    def insert: (Stream stream, ::Array[Event] events) -> ::Array[Event]
 
     # _@param_ `stream`
     #
     # _@param_ `events`
-    def prepared_statements: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> ::Array[(::Array[String] | ::Array[Object])]
+    def prepared_statements: (Stream stream, ::Array[Event] events) -> ::Array[(::Array[String] | ::Array[Object])]
 
-    def links_resolver: () -> PgEventstore::LinksResolver
+    def links_resolver: () -> LinksResolver
 
     # Returns the value of attribute connection.
-    attr_accessor connection: PgEventstore::Connection
+    attr_accessor connection: Connection
 
     # Returns the value of attribute serializer.
-    attr_accessor serializer: PgEventstore::EventSerializer
+    attr_accessor serializer: EventSerializer
 
     # Returns the value of attribute deserializer.
-    attr_accessor deserializer: PgEventstore::EventDeserializer
+    attr_accessor deserializer: EventDeserializer
   end
 end

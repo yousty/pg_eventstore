@@ -30,10 +30,10 @@ module PgEventstore
     # @!attribute metadata
     #   @return [Hash] event's metadata
     attribute(:metadata) { {} }
-    # @!attribute link_id
-    #   @return [String, nil] UUIDv4 of an event the current event points to. If it is not nil, then the current
-    #     event is a link
-    attribute(:link_id)
+    # @!attribute link_global_position
+    #   @return [Integer, nil] global_position of an event the current event points to. If it is not nil, then the
+    #     current event is a link
+    attribute(:link_global_position)
     # @!attribute link_partition_id
     #   @return [Integer, nil] a partition id of an event the link event points to. It is used to load original event
     #     when resolve_link_tos: true option is provided when reading events.
@@ -58,7 +58,7 @@ module PgEventstore
     # Detect whether an event is a link event
     # @return [Boolean]
     def link?
-      !link_id.nil?
+      !link_global_position.nil?
     end
 
     # Detect whether an event is a system event

@@ -60,7 +60,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
               expect(subject.data).to eq({})
               expect(subject.metadata).to eq({})
               expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
-              expect(subject.link_id).to eq(event.id)
+              expect(subject.link_global_position).to eq(event.global_position)
               expect(subject.link_partition_id).to(
                 eq(partition_queries.event_type_partition(events_stream, event.type)['id'])
               )
@@ -226,7 +226,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
         end
       end
 
-      context 'when middleware which changes #link_id is given' do
+      context 'when middleware which changes #link_global_position is given' do
         let(:middlewares) { [middleware] }
         let(:middleware) do
           Class.new do
@@ -234,14 +234,14 @@ RSpec.describe PgEventstore::Commands::LinkTo do
               include PgEventstore::Middleware
 
               def serialize(event)
-                event.link_id = SecureRandom.uuid
+                event.link_global_position = 0
               end
             end
           end
         end
 
         it_behaves_like 'read only attribute' do
-          let(:attribute) { :link_id }
+          let(:attribute) { :link_global_position }
         end
       end
 
@@ -375,7 +375,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
             expect(subject.data).to eq({})
             expect(subject.metadata).to eq({})
             expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
-            expect(subject.link_id).to eq(event1.id)
+            expect(subject.link_global_position).to eq(event1.global_position)
             expect(subject.link_partition_id).to(
               eq(partition_queries.event_type_partition(events_stream, event1.type)['id'])
             )
@@ -395,7 +395,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
             expect(subject.data).to eq({})
             expect(subject.metadata).to eq({})
             expect(subject.created_at).to be_between(Time.now - 1, Time.now + 1)
-            expect(subject.link_id).to eq(event2.id)
+            expect(subject.link_global_position).to eq(event2.global_position)
             expect(subject.link_partition_id).to(
               eq(partition_queries.event_type_partition(events_stream, event2.type)['id'])
             )
@@ -414,7 +414,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           expect { subject }.to(
             raise_error(
               PgEventstore::NotPersistedEventError,
-              "Event with #id #{nil.inspect} must be present, but it could not be found."
+              "Event #{event.inspect} is not persisted a persisted event."
             )
           )
         end
@@ -429,7 +429,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           expect { subject }.to(
             raise_error(
               PgEventstore::NotPersistedEventError,
-              "Event with #id #{event.id.inspect} must be present, but it could not be found."
+              "Event #{event.inspect} is not persisted a persisted event."
             )
           )
         end

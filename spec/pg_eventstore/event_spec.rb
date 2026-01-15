@@ -13,7 +13,7 @@ RSpec.describe PgEventstore::Event do
     it { is_expected.to have_attribute(:stream_revision) }
     it { is_expected.to have_attribute(:data).with_default_value({}) }
     it { is_expected.to have_attribute(:metadata).with_default_value({}) }
-    it { is_expected.to have_attribute(:link_id) }
+    it { is_expected.to have_attribute(:link_global_position) }
     it { is_expected.to have_attribute(:link) }
     it { is_expected.to have_attribute(:created_at) }
   end
@@ -47,13 +47,13 @@ RSpec.describe PgEventstore::Event do
   describe '#link?' do
     subject { instance.link? }
 
-    let(:instance) { described_class.new(link_id: SecureRandom.uuid) }
+    let(:instance) { described_class.new(link_global_position: 123) }
 
-    context 'when #link_id is present' do
+    context 'when #link_global_position is present' do
       it { is_expected.to eq(true) }
     end
 
-    context 'when #link_id is nil' do
+    context 'when #link_global_position is nil' do
       let(:instance) { described_class.new(id: SecureRandom.uuid) }
 
       it { is_expected.to eq(false) }

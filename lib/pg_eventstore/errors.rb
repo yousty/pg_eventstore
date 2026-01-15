@@ -203,7 +203,7 @@ module PgEventstore
 
     # @return [String]
     def user_friendly_message
-      "Event with #id #{event.id.inspect} must be present, but it could not be found."
+      "Event #{event.inspect} is not persisted a persisted event."
     end
   end
 
