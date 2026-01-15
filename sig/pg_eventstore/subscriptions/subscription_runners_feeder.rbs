@@ -1,13 +1,20 @@
 module PgEventstore
   class SubscriptionRunnersFeeder
+    @config_name: Symbol
+    @current_database_id: Integer
+
     # _@param_ `config_name`
     def initialize: (Symbol config_name) -> void
 
     # _@param_ `runners`
-    def feed: (::Array[PgEventstore::SubscriptionRunner] runners) -> void
+    def feed: (::Array[SubscriptionRunner] runners) -> void
 
-    def connection: () -> PgEventstore::Connection
+    private
 
-    def subscription_queries: () -> PgEventstore::SubscriptionQueries
+    def connection: () -> Connection
+
+    def subscription_queries: () -> SubscriptionQueries
+
+    def subscription_service_queries: -> SubscriptionServiceQueries
   end
 end

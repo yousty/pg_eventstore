@@ -2,12 +2,15 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.0 (Debian 16.0-1.pgdg120+1)
--- Dumped by pg_dump version 16.0 (Debian 16.0-1.pgdg120+1)
+\restrict tDmO4RiofktrMDrXkbCChg5ZWreg0T8M3di04aQOIWF3Map1czYc0InwUr1cJgk
+
+-- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
+-- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -42,6 +45,21 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 --
 
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
+
+
+--
+-- Name: log_events_horizon(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.log_events_horizon() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO events_horizon(global_position)
+    VALUES (NEW.global_position);
+    RETURN NEW;
+END;
+$$;
 
 
 SET default_tablespace = '';
@@ -108,6 +126,23 @@ ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_p
 
 
 SET default_table_access_method = heap;
+
+--
+-- Name: events_horizon; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE UNLOGGED TABLE public.events_horizon (
+    global_position bigint NOT NULL,
+    xact_id xid8 DEFAULT pg_current_xact_id() NOT NULL
+);
+
+
+--
+-- Name: TABLE events_horizon; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.events_horizon IS 'Internal use only. Data is limited to the PostgreSQL cluster in which it was created. DO NOT INCLUDE ITS DATA INTO YOUR DUMP.';
+
 
 --
 -- Name: migrations; Type: TABLE; Schema: public; Owner: -
@@ -496,6 +531,20 @@ CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING
 
 
 --
+-- Name: idx_xact_id_and_created_at_and_global_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_xact_id_and_created_at_and_global_position ON public.events_horizon USING btree (xact_id, global_position);
+
+
+--
+-- Name: events log_events_horizon; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER log_events_horizon AFTER INSERT ON public.events FOR EACH ROW EXECUTE FUNCTION public.log_events_horizon();
+
+
+--
 -- Name: subscription_commands subscription_commands_subscription_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -530,4 +579,6 @@ ALTER TABLE ONLY public.subscriptions
 --
 -- PostgreSQL database dump complete
 --
+
+\unrestrict tDmO4RiofktrMDrXkbCChg5ZWreg0T8M3di04aQOIWF3Map1czYc0InwUr1cJgk
 

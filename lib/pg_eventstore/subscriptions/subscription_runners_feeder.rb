@@ -12,10 +12,13 @@ module PgEventstore
     # @param runners [Array<PgEventstore::SubscriptionRunner>]
     # @return [void]
     def feed(runners)
-      runners = runners.select(&:running?).select(&:time_to_feed?).select(&:next_chunk_safe?)
+      runners = runners.select(&:running?).select(&:time_to_feed?)
       return if runners.empty?
 
-      runners_query_options = runners.to_h { |runner| [runner.id, runner.next_chunk_query_opts] }
+      safe_pos = subscription_service_queries.safe_global_position
+      runners_query_options = runners.to_h do |runner|
+        [runner.id, runner.next_chunk_query_opts.merge(to_position: safe_pos)]
+      end
       grouped_events = subscription_queries.subscriptions_events(runners_query_options)
 
       runners.each do |runner|
@@ -33,6 +36,11 @@ module PgEventstore
     # @return [PgEventstore::SubscriptionQueries]
     def subscription_queries
       SubscriptionQueries.new(connection)
+    end
+
+    # @return [PgEventstore::SubscriptionServiceQueries]
+    def subscription_service_queries
+      SubscriptionServiceQueries.new(connection)
     end
   end
 end

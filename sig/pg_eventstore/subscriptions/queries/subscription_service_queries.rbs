@@ -1,0 +1,19 @@
+module PgEventstore
+  class SubscriptionServiceQueries
+    DEFAULT_SAFE_POSITION: Integer
+
+    attr_reader connection: Connection
+
+    def initialize: (Connection connection) -> void
+
+    def events_horizon_present?: -> bool
+
+    def init_events_horizon: -> void
+
+    def safe_global_position: -> Integer
+
+    private
+
+    def transaction_queries: -> TransactionQueries
+  end
+end

@@ -171,6 +171,8 @@ RSpec.describe PgEventstore::Subscription do
           last_chunk_greatest_position: 1234,
           last_error: { 'class' => 'StandardError', 'message' => 'Oops', 'backtrace' => ['1.rb'] },
           last_error_occurred_at: Time.now.utc,
+          total_processed_events: 10,
+          current_position: 20,
           state: 'stopped'
         )
       end
@@ -191,6 +193,8 @@ RSpec.describe PgEventstore::Subscription do
               last_error: nil,
               last_error_occurred_at: nil,
               state: 'initial',
+              total_processed_events: 10,
+              current_position: 20,
               locked_by: lock_id
             )
           )

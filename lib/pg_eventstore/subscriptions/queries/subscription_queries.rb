@@ -105,7 +105,7 @@ module PgEventstore
         updated_attrs
       end
 
-      deserialize(updated_attrs)
+      deserialize(updated_attrs).slice(*attrs.keys)
     end
 
     # @param subscriptions_set_id [Integer] SubscriptionsSet#id

@@ -4,27 +4,30 @@ Implements database and API to store and read events in event sourced systems.
 
 ## Requirements
 
-- `pg_eventstore` requires a PostgreSQL database with jsonb data type support (which means you need to have v9.2+). However it is recommended to use a non [EOL](https://www.postgresql.org/support/versioning/) PostgreSQL version, because the development of this gem is targeted at current PostgreSQL versions. 
-- It is recommended you to have the default value set for `default_transaction_isolation` PostgreSQL config setting(`"read committed"`) as the implementation relies on it. All other transaction isolation levels(`"repeatable read"` and `"serializable"`) may cause unexpected serialization errors.
+- `pg_eventstore` requires a PostgreSQL v16+ with [pg_cron](https://github.com/citusdata/pg_cron) extension installed.
+- `pg_evenstore` requires a separate detabase. However, it is recommended that you spin it up on a separate PostgreSQL instance in a production environment.
+- `pg_eventstore` requires `default_transaction_isolation` server config option to be set to `'read committed'` (default behavior). Having this value set to move strict isolation level may result in unexpected behavior.
 - It is recommended to use a connection pooler (for example [PgBouncer](https://www.pgbouncer.org/)) in `transaction` pool mode to lower the load on a database.
 - `pg_eventstore` requires ruby v3+. The development of this gem is targeted at [current](https://endoflife.date/ruby) ruby versions.
 
 ## Installation
 
 Install the gem and add to the application's Gemfile by executing:
-
-    $ bundle add pg_eventstore
+```bash
+bundle add pg_eventstore
+```
 
 If bundler is not being used to manage dependencies, install the gem by executing:
-
-    $ gem install pg_eventstore
+```bash
+gem install pg_eventstore
+```
 
 ## Usage
 
 Before start using the gem - you have to create the database. Please include this line into your `Rakefile`:
 
 ```ruby
-load "pg_eventstore/tasks/setup.rake"
+load 'pg_eventstore/tasks/setup.rake'
 ```
 
 This will include necessary rake tasks. You can now run 
@@ -53,6 +56,16 @@ Documentation chapters:
 ## CLI
 
 The gem is shipped with its own CLI. Use `pg-eventstore --help` to find out its capabilities.
+
+## Maintenance
+
+You may want to backup your eventstore database. It is important to mention that you don't want to dump/restore records of `events_horizon` table. `events_horizon` table is used to supply subscriptions functionality and contains temporary data which is scoped to the PostgreSQL cluster they were created in. **Thus, it is even may be harmful if you restore records from this table into a new PostgreSQL cluster. Simply exclude that table's data when performing backups.** Example:
+
+```bash
+pg_dump --exclude-table-data=events_horizon eventstore -U postgres > eventstore.sql
+```
+
+Also, it is important you create and migrate new database via provided rake commands - they include an important setup of `pg_cron` jobs as well. **Even if you would like to restore your db backup on clean PostgreSQL instance - please initialize pg_eventstore via built-in tools first.**
 
 ## RSpec
 

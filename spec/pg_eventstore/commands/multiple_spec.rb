@@ -8,30 +8,61 @@ RSpec.describe PgEventstore::Commands::Multiple do
   let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
 
   describe '#call' do
-    subject do
-      instance.call do
+    subject { instance.call(read_only: read_only) { commands } }
+
+    let(:read_only) { false }
+    let(:commands) { PgEventstore.client.read(PgEventstore::Stream.all_stream) }
+
+    context 'when performing mutating commands' do
+      let(:commands) do
         PgEventstore.client.append_to_stream(events_stream1, event1)
         PgEventstore.client.append_to_stream(events_stream1, event2)
         PgEventstore.client.append_to_stream(events_stream2, [event3, event4])
       end
+
+      let(:events_stream1) do
+        PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: '123')
+      end
+      let(:events_stream2) do
+        PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '1234')
+      end
+      let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
+      let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
+      let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+      let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+
+      context 'when transaction is read-write' do
+        it 'appends given events' do
+          subject
+          expect(PgEventstore.client.read(PgEventstore::Stream.all_stream).map(&:id)).to(
+            eq([event1.id, event2.id, event3.id, event4.id])
+          )
+        end
+      end
+
+      context 'when transaction is read-only' do
+        let(:read_only) { true }
+
+        it 'raises error' do
+          expect { subject }.to raise_error(PG::ReadOnlySqlTransaction)
+        end
+      end
     end
 
-    let(:events_stream1) do
-      PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'some-stream1', stream_id: '123')
-    end
-    let(:events_stream2) do
-      PgEventstore::Stream.new(context: 'SomeAnotherContext', stream_name: 'some-stream2', stream_id: '1234')
-    end
-    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'foo') }
-    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'bar') }
-    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
-    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'baz') }
+    context 'when performing read-only commands' do
+      context 'when transaction is read-write' do
+        it 'returns its result' do
+          is_expected.to eq([])
+        end
+      end
 
-    it 'appends given events' do
-      subject
-      expect(PgEventstore.client.read(PgEventstore::Stream.all_stream).map(&:id)).to(
-        eq([event1.id, event2.id, event3.id, event4.id])
-      )
+      context 'when transaction is read-only' do
+        let(:read_only) { true }
+
+        it 'returns its result' do
+          is_expected.to eq([])
+        end
+      end
     end
   end
 
@@ -77,7 +108,7 @@ RSpec.describe PgEventstore::Commands::Multiple do
         patterns.values.map do |pattern|
           Thread.new do
             sleep 0.1 + (i / 10.0)
-            instance.call do
+            instance.call(read_only: false) do
               pattern.group_by { |h| h[:stream] }.each do |stream, attrs|
                 PgEventstore.client.append_to_stream(stream, attrs.map { |h| h[:event] })
               end

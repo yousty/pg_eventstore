@@ -565,7 +565,7 @@ RSpec.describe PgEventstore::PartitionQueries do
           PgEventstore.client.append_to_stream(stream2, event)
         end
 
-        it 'returns 2 different partitions with the given event filters, but different context/stream name combination' do
+        it 'returns 2 different partitions, matching event filters, but different context/stream name combination' do
           aggregate_failures do
             expect(subject.size).to eq(2)
             is_expected.to all be_a(PgEventstore::Partition)
