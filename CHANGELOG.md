@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [2.0.0]
+
 - **Breaking change**: `pg_eventstore` now requires [pg_cron](https://github.com/citusdata/pg_cron) extension
 - **Breaking change**: `pg_eventstore` now requires PostgreSQL v16+
 - Greatly decreased the number of connections, used by `pg_eventstore` subscriptions
