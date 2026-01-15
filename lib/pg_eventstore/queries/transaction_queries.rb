@@ -40,7 +40,7 @@ module PgEventstore
     # @param read_only [Boolean]
     # @param pg_connection [PG::Connection]
     # @return [void]
-    def pg_transaction(level, read_only, pg_connection, &_blk)
+    def pg_transaction(level, read_only, pg_connection, &)
       pg_connection.transaction do
         if read_only
           pg_connection.exec("SET TRANSACTION ISOLATION LEVEL #{level} READ ONLY")

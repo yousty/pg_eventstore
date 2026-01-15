@@ -107,7 +107,7 @@ RSpec.describe PgEventstore::Subscription do
     let(:subscription) do
       described_class.using_connection(:default).
         new(
-          set: set, name: name, options: { resolve_link_tos: true }, max_restarts_number: 12, chunk_query_interval: 34,
+          set:, name:, options: { resolve_link_tos: true }, max_restarts_number: 12, chunk_query_interval: 34,
           time_between_restarts: 1
         )
     end
@@ -118,18 +118,18 @@ RSpec.describe PgEventstore::Subscription do
 
     context 'when Subscription does not exist' do
       it 'creates it' do
-        expect { subject }.to change { queries.find_by(set: set, name: name) }.to(instance_of(Hash))
+        expect { subject }.to change { queries.find_by(set:, name:) }.to(instance_of(Hash))
       end
       it 'assigns persisted attributes' do
         subject
         expect(subscription.options_hash).to(
-          eq(described_class.new(**queries.find_by(set: set, name: name)).options_hash)
+          eq(described_class.new(**queries.find_by(set:, name:)).options_hash)
         )
       end
       it { is_expected.to eq(subscription) }
 
       describe 'created Subscription' do
-        subject { super(); described_class.new(**queries.find_by(set: set, name: name)) }
+        subject { super(); described_class.new(**queries.find_by(set:, name:)) }
 
         it 'has correct attributes' do
           aggregate_failures do
@@ -160,8 +160,8 @@ RSpec.describe PgEventstore::Subscription do
     context 'when subscription exists' do
       let!(:existing_subscription) do
         SubscriptionsHelper.create_with_connection(
-          set: set,
-          name: name,
+          set:,
+          name:,
           options: { resolve_link_tos: false },
           max_restarts_number: 21,
           chunk_query_interval: 43,

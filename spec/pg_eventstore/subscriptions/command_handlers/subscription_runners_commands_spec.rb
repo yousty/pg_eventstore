@@ -62,8 +62,8 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
       context 'when command exists only for the second runner' do
         let!(:command) do
           command_queries.create(
-            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
-            data: data
+            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name:,
+            data:
           )
         end
 
@@ -77,7 +77,7 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
         it 'deletes the command' do
           expect { subject }.to change {
             command_queries.find_by(
-              subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+              subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name:
             )
           }.to(nil)
         end
@@ -87,14 +87,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
       context 'when commands exist for both runners' do
         let!(:command1) do
           command_queries.create(
-            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
-            data: data
+            subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name:,
+            data:
           )
         end
         let!(:command2) do
           command_queries.create(
-            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name,
-            data: data
+            subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name:,
+            data:
           )
         end
 
@@ -108,14 +108,14 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
         it 'deletes the command of first runner' do
           expect { subject }.to change {
             command_queries.find_by(
-              subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+              subscription_id: runner1.id, subscriptions_set_id: subscriptions_set.id, command_name:
             )
           }.to(nil)
         end
         it 'deletes the command of second runner' do
           expect { subject }.to change {
             command_queries.find_by(
-              subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name: command_name
+              subscription_id: runner2.id, subscriptions_set_id: subscriptions_set.id, command_name:
             )
           }.to(nil)
         end

@@ -18,7 +18,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadGrouped do
 
   describe '#call' do
     context 'when reading from existing stream' do
-      subject { instance.call(stream1, options: options) }
+      subject { instance.call(stream1, options:) }
 
       let(:options) { {} }
 
@@ -106,7 +106,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadGrouped do
     end
 
     describe 'reading links' do
-      subject { instance.call(projection_stream, options: options) }
+      subject { instance.call(projection_stream, options:) }
 
       let(:options) { {} }
 

@@ -1,5 +1,7 @@
 module PgEventstore
   class Utils
+    def self.benchmark: { -> untyped } -> Float
+
     # _@param_ `object`
     def self.deep_transform_keys: (untyped object) { (untyped key) -> untyped } -> Object
 
@@ -16,13 +18,19 @@ module PgEventstore
     # _@param_ `error`
     def self.error_info: (StandardError error) -> ::Hash[untyped, untyped]
 
+    def self.read_pid: (String file_path) -> String?
+
+    def self.remove_file: (String file_path) -> void
+
     # _@param_ `str`
     def self.underscore_str: (String str) -> String
 
     def self.original_global_position: (Hash[untyped, untyped] raw_event) -> Integer
 
-    def self.unwrap_exception: (PgEventstore::WrappedException | StandardError wrapped_exception)-> StandardError
+    def self.unwrap_exception: (WrappedException | StandardError wrapped_exception)-> StandardError
 
-    def self.wrap_exception: (StandardError exception, **untyped extra)-> PgEventstore::WrappedException
+    def self.wrap_exception: (StandardError exception, **untyped extra)-> WrappedException
+
+    def self.write_to_file: (String file_path, String content) -> void
   end
 end

@@ -25,7 +25,7 @@ module PgEventstore
     def delete_event(event, force: false)
       Commands::DeleteEvent.new(
         Queries.new(transactions: transaction_queries, maintenance: maintenance_queries)
-      ).call(event, force: force)
+      ).call(event, force:)
     end
 
     private

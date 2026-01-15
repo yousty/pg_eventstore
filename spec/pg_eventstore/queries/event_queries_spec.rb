@@ -170,7 +170,7 @@ RSpec.describe PgEventstore::EventQueries do
 
   describe '#grouped_events' do
     context 'when stream is a regular stream' do
-      subject { instance.grouped_events(stream, options_by_event_type, resolve_link_tos: resolve_link_tos) }
+      subject { instance.grouped_events(stream, options_by_event_type, resolve_link_tos:) }
 
       let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
       let(:options_by_event_type) do
@@ -227,7 +227,7 @@ RSpec.describe PgEventstore::EventQueries do
     context 'when stream is "all" stream' do
       subject do
         instance.grouped_events(
-          PgEventstore::Stream.all_stream, options_by_event_type, resolve_link_tos: resolve_link_tos
+          PgEventstore::Stream.all_stream, options_by_event_type, resolve_link_tos:
         )
       end
 

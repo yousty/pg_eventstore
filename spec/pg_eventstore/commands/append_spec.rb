@@ -21,7 +21,7 @@ RSpec.describe PgEventstore::Commands::Append do
     let(:stream) { PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'MyAwesomeStream', stream_id: '123') }
 
     describe 'appending single event' do
-      subject { instance.call(stream, event, options: options) }
+      subject { instance.call(stream, event, options:) }
 
       let(:event) { PgEventstore::Event.new(type: 'MyAwesomeEvent', data: { foo: :bar }) }
       let(:options) { {} }
@@ -131,7 +131,7 @@ RSpec.describe PgEventstore::Commands::Append do
       end
 
       context 'when :expected_revision is a number' do
-        let(:options) { { expected_revision: expected_revision } }
+        let(:options) { { expected_revision: } }
         let(:expected_revision) { 0 }
 
         context "when expected revision matches stream's revision" do
@@ -312,7 +312,7 @@ RSpec.describe PgEventstore::Commands::Append do
     end
 
     describe 'appending multiple events' do
-      subject { instance.call(stream, event1, event2, options: options) }
+      subject { instance.call(stream, event1, event2, options:) }
 
       let(:event1) { PgEventstore::Event.new(type: 'MyAwesomeEvent', data: { foo: :bar }) }
       let(:event2) { PgEventstore::Event.new(type: 'MyAnotherEvent', data: { foo: :baz }) }

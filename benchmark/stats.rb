@@ -35,7 +35,7 @@ class Stats
   end
 
   # @param bm_name [String, Symbol]
-  # @param time [Integer] seconds
+  # @param time [Float] seconds
   # @return [void]
   def update(bm_name, time)
     key = bm_key(bm_name)

@@ -9,7 +9,7 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
   let(:maintenance_queries) { PgEventstore::MaintenanceQueries.new(PgEventstore.connection) }
 
   describe '#call' do
-    subject { instance.call(event, force: force) }
+    subject { instance.call(event, force:) }
 
     let(:event) { PgEventstore::Event.new }
     let(:force) { false }
@@ -130,7 +130,7 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
         PgEventstore.client.append_to_stream(stream, event)
       end
       let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
-      let(:concurrent_deletion) { Thread.new { instance.call(event, force: force) } }
+      let(:concurrent_deletion) { Thread.new { instance.call(event, force:) } }
 
       before do
         event

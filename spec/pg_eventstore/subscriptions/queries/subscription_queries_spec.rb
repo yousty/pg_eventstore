@@ -112,7 +112,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
   end
 
   describe '#update' do
-    subject { instance.update(id, attrs: attrs, locked_by: subscriptions_set.id) }
+    subject { instance.update(id, attrs:, locked_by: subscriptions_set.id) }
 
     let(:id) { subscription.id }
     let(:subscription) { SubscriptionsHelper.create(locked_by: subscriptions_set.id) }
@@ -121,10 +121,10 @@ RSpec.describe PgEventstore::SubscriptionQueries do
 
     context 'when subscription exists' do
       it 'updates the given attribute' do
-        expect { subject }.to change { instance.find_by(id: id)[:max_restarts_number] }.to(123)
+        expect { subject }.to change { instance.find_by(id:)[:max_restarts_number] }.to(123)
       end
       it 'updates updated_at column' do
-        expect { subject }.to change { instance.find_by(id: id)[:updated_at] }
+        expect { subject }.to change { instance.find_by(id:)[:updated_at] }
       end
       it 'returns updated attributes', :timecop do
         is_expected.to eq(attrs.merge(updated_at: Time.now.round(6)))

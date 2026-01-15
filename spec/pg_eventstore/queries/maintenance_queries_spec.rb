@@ -42,7 +42,7 @@ RSpec.describe PgEventstore::MaintenanceQueries do
   describe '#delete_event' do
     subject { instance.delete_event(event) }
 
-    let(:event) { PgEventstore::Event.new(stream: stream) }
+    let(:event) { PgEventstore::Event.new(stream:) }
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
 
     context 'when event exists' do

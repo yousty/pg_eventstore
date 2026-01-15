@@ -43,9 +43,9 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
     let(:command) { described_class.new(data: { 'position' => position }) }
     let(:subscription_runner) do
       PgEventstore::SubscriptionRunner.new(
-        stats: stats,
-        events_processor: events_processor,
-        subscription: subscription
+        stats:,
+        events_processor:,
+        subscription:
       )
     end
 

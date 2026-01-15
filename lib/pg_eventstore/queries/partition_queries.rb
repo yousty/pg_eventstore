@@ -76,7 +76,7 @@ module PgEventstore
     # @return [Hash] partition attributes
     def create_event_type_partition(stream, event_type, stream_name_partition_name)
       attributes = {
-        context: stream.context, stream_name: stream.stream_name, event_type: event_type,
+        context: stream.context, stream_name: stream.stream_name, event_type:,
         table_name: event_type_partition_name(stream, event_type)
       }
 

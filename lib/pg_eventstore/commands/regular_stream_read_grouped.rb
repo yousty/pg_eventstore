@@ -22,7 +22,7 @@ module PgEventstore
         )
         options_by_event_type = queries.partitions.partitions(stream_filters, event_types).map do |partition|
           filter = { event_types: [partition.event_type] }
-          options.merge(filter: filter, max_count: 1)
+          options.merge(filter:, max_count: 1)
         end
         queries.events.grouped_events(stream, options_by_event_type, **options.slice(:resolve_link_tos))
       end

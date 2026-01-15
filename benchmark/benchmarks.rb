@@ -17,8 +17,8 @@ class Benchmarks
       CONTEXTS.each do |context|
         STREAM_NAMES.each do |stream_name|
           stream = PgEventstore::Stream.new(
-            context: context,
-            stream_name: stream_name,
+            context:,
+            stream_name:,
             stream_id: SecureRandom.uuid
           )
           events = 1000.times.map do |j|
@@ -98,7 +98,7 @@ class Benchmarks
   # @param method_name [String, Symbol]
   # @return [void]
   def benchmark(method_name, concurrent_method, &blk)
-    time = Benchmark.realtime(&blk)
+    time = PgEventstore::Utils.benchmark(&blk)
     @stats.update("#{method_name}_#{concurrent_method}", time)
   end
 end

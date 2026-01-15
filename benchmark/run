@@ -87,6 +87,6 @@ puts "Warming up..."
 end
 
 read_tests.each do |explanation, test|
-  time = Benchmark.realtime(&test)
+  time = PgEventstore::Utils.benchmark(&test)
   puts "#{explanation}. Took: #{colorize_read_result(time)} ms."
 end

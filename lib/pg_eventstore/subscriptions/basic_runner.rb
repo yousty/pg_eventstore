@@ -46,7 +46,7 @@ module PgEventstore
   #
   #     def initialize
   #       @basic_runner = PgEventstore::BasicRunner.new(
-  #         run_interval: 1, async_shutdown_time: 2, recovery_strategies: recovery_strategies
+  #         run_interval: 1, async_shutdown_time: 2, recovery_strategies:
   #       )
   #       @jobs_performed = 0
   #       @jobs_limit = 3
@@ -224,7 +224,7 @@ module PgEventstore
 
     # @param state [Symbol]
     # @return [Object, nil] a result of evaluating of passed block
-    def within_state(state, &_blk)
+    def within_state(state, &)
       synchronize do
         return unless @state.public_send("#{RunnerState::STATES.fetch(state)}?")
 
@@ -248,8 +248,8 @@ module PgEventstore
 
     private
 
-    def synchronize(&blk)
-      @mutex.synchronize(&blk)
+    def synchronize(&)
+      @mutex.synchronize(&)
     end
 
     # @return [void]

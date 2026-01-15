@@ -90,7 +90,7 @@ module PgEventstore
             stream_attrs in { context: String | NilClass => context }
             stream_attrs in { stream_name: String | NilClass => stream_name }
             stream_attrs in { stream_id: String | NilClass => stream_id }
-            { context: context, stream_name: stream_name, stream_id: stream_id }
+            { context:, stream_name:, stream_id: }
           end
           streams || []
         end
@@ -111,7 +111,7 @@ module PgEventstore
       # @param stream_id [String, nil]
       # @return [void]
       def add_stream_attrs(context: nil, stream_name: nil, stream_id: nil)
-        stream_attrs = { context: context, stream_name: stream_name, stream_id: stream_id }
+        stream_attrs = { context:, stream_name:, stream_id: }
         return unless correct_stream_filter?(stream_attrs)
 
         stream_attrs.compact!

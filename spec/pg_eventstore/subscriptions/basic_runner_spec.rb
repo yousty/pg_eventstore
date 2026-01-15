@@ -3,9 +3,9 @@
 RSpec.describe PgEventstore::BasicRunner do
   let(:instance) do
     described_class.new(
-      run_interval: run_interval,
-      async_shutdown_time: async_shutdown_time,
-      recovery_strategies: recovery_strategies
+      run_interval:,
+      async_shutdown_time:,
+      recovery_strategies:
     )
   end
   let(:run_interval) { 1 }
@@ -413,13 +413,13 @@ RSpec.describe PgEventstore::BasicRunner do
         it 'changes the state to "stopped" after async_shutdown_time seconds' do
           timeout = async_shutdown_time + test_adjustment_time
           expect { subject }.to change {
-            dv(instance).deferred_wait(timeout: timeout) { _1.state == 'stopped' }.state
+            dv(instance).deferred_wait(timeout:) { _1.state == 'stopped' }.state
           }.from('running').to('stopped')
         end
         it "releases runner's thread pointer after async_shutdown_time seconds" do
           timeout = async_shutdown_time + test_adjustment_time
           expect { subject }.to change {
-            dv(instance).deferred_wait(timeout: timeout) {
+            dv(instance).deferred_wait(timeout:) {
               _1.instance_variable_get(:@runner).nil?
             }.instance_variable_get(:@runner)
           }.from(instance_of(Thread)).to(nil)
@@ -532,13 +532,13 @@ RSpec.describe PgEventstore::BasicRunner do
       it 'changes the state to "stopped" after async_shutdown_time seconds' do
         timeout = async_shutdown_time + test_adjustment_time
         expect { subject }.to change {
-          dv(instance).deferred_wait(timeout: timeout) { _1.state == 'stopped' }.state
+          dv(instance).deferred_wait(timeout:) { _1.state == 'stopped' }.state
         }.from('running').to('stopped')
       end
       it "releases runner's thread pointer after async_shutdown_time seconds" do
         timeout = async_shutdown_time + test_adjustment_time
         expect { subject }.to change {
-          dv(instance).deferred_wait(timeout: timeout) {
+          dv(instance).deferred_wait(timeout:) {
             _1.instance_variable_get(:@runner).nil?
           }.instance_variable_get(:@runner)
         }.from(instance_of(Thread)).to(nil)
@@ -844,7 +844,7 @@ RSpec.describe PgEventstore::BasicRunner do
   end
 
   describe 'self-recovery' do
-    subject { sleep 0.4 }
+    subject { sleep 0.6 }
 
     let(:before_restore_task) { double('Before runner restored') }
     let(:after_error_task) { double('After error happened') }
@@ -906,7 +906,7 @@ RSpec.describe PgEventstore::BasicRunner do
       let(:recovery_strategies) do
         [
           DummyErrorRecovery.new(
-            seconds_before_recovery: seconds_before_recovery,
+            seconds_before_recovery:,
             mocked_action: recovery_task,
             recoverable_message: error.message
           ),
@@ -941,21 +941,21 @@ RSpec.describe PgEventstore::BasicRunner do
 
       let(:strategy1) do
         DummyErrorRecovery.new(
-          seconds_before_recovery: seconds_before_recovery,
+          seconds_before_recovery:,
           mocked_action: recovery_task1,
           recoverable_message: 'Some error'
         )
       end
       let(:strategy2) do
         DummyErrorRecovery.new(
-          seconds_before_recovery: seconds_before_recovery,
+          seconds_before_recovery:,
           mocked_action: recovery_task2,
           recoverable_message: error.message
         )
       end
       let(:strategy3) do
         DummyErrorRecovery.new(
-          seconds_before_recovery: seconds_before_recovery,
+          seconds_before_recovery:,
           mocked_action: recovery_task3,
           recoverable_message: error.message
         )
@@ -999,7 +999,7 @@ RSpec.describe PgEventstore::BasicRunner do
       let(:recovery_strategies) do
         [
           DummyErrorRecovery.new(
-            seconds_before_recovery: seconds_before_recovery,
+            seconds_before_recovery:,
             mocked_action: recovery_task,
             recoverable_message: error.message
           ),

@@ -23,12 +23,12 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
   end
 
   describe '#find_all_by_subscription_state' do
-    subject { instance.find_all_by_subscription_state(name: name, state: state) }
+    subject { instance.find_all_by_subscription_state(name:, state:) }
 
     let(:name) { 'BarCtx' }
     let(:state) { 'running' }
 
-    let!(:subscriptions_set1) { SubscriptionsSetHelper.create(name: name) }
+    let!(:subscriptions_set1) { SubscriptionsSetHelper.create(name:) }
 
     context 'when SubscriptionsSet with the given name does not have subscriptions' do
       it { is_expected.to eq([]) }
@@ -44,18 +44,18 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
     end
 
     context 'when SubscriptionsSet with the given name have subscriptions with the given state' do
-      let!(:subscription1) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: state, name: 'Sub1') }
-      let!(:subscription2) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: state, name: 'Sub2') }
+      let!(:subscription1) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state:, name: 'Sub1') }
+      let!(:subscription2) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state:, name: 'Sub2') }
 
       it { is_expected.to eq([subscriptions_set1.options_hash]) }
     end
 
     context 'when another SubscriptionsSet with the same name with suitable subscriptions exists' do
-      let!(:subscriptions_set2) { SubscriptionsSetHelper.create(name: name) }
+      let!(:subscriptions_set2) { SubscriptionsSetHelper.create(name:) }
 
-      let!(:subscription1) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: state, name: 'Sub1') }
-      let!(:subscription2) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state: state, name: 'Sub2') }
-      let!(:subscription3) { SubscriptionsHelper.create(locked_by: subscriptions_set2.id, state: state, name: 'Sub3') }
+      let!(:subscription1) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state:, name: 'Sub1') }
+      let!(:subscription2) { SubscriptionsHelper.create(locked_by: subscriptions_set1.id, state:, name: 'Sub2') }
+      let!(:subscription3) { SubscriptionsHelper.create(locked_by: subscriptions_set2.id, state:, name: 'Sub3') }
 
       it { is_expected.to match_array([subscriptions_set1.options_hash, subscriptions_set2.options_hash]) }
     end
@@ -160,13 +160,13 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
 
     context 'when SubscriptionsSet exists' do
       it 'updates the given attribute' do
-        expect { subject }.to change { instance.find_by(id: id)[:state] }.to('running')
+        expect { subject }.to change { instance.find_by(id:)[:state] }.to('running')
       end
       it 'updates updated_at column' do
-        expect { subject }.to change { instance.find_by(id: id)[:updated_at] }
+        expect { subject }.to change { instance.find_by(id:)[:updated_at] }
       end
       it 'returns updated attributes' do
-        is_expected.to match(a_hash_including(id: id, state: 'running'))
+        is_expected.to match(a_hash_including(id:, state: 'running'))
       end
 
       context 'when SubscriptionsSet is updated by someone else' do
@@ -175,7 +175,7 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
         end
 
         it 'returns those changes as well' do
-          is_expected.to match(a_hash_including(id: id, state: 'running', name: 'BazCtx'))
+          is_expected.to match(a_hash_including(id:, state: 'running', name: 'BazCtx'))
         end
       end
     end

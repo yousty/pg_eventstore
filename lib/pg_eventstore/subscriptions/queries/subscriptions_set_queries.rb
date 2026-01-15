@@ -62,7 +62,7 @@ module PgEventstore
     # @return [Hash]
     # @raise [PgEventstore::RecordNotFound]
     def find!(id)
-      find_by(id: id) || raise(RecordNotFound.new('subscriptions_set', id))
+      find_by(id:) || raise(RecordNotFound.new('subscriptions_set', id))
     end
 
     # @param attrs [Hash]

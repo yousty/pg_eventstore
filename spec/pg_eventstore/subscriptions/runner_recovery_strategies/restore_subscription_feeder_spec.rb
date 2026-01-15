@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreSubscriptionFeeder do
-  let(:instance) { described_class.new(subscriptions_set_lifecycle: subscriptions_set_lifecycle) }
+  let(:instance) { described_class.new(subscriptions_set_lifecycle:) }
   let(:subscriptions_set_lifecycle) do
     PgEventstore::SubscriptionsSetLifecycle.new(
       :default, { name: 'Set 1', time_between_restarts: 1, max_restarts_number: 10 }
@@ -21,7 +21,7 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreSubscriptionFeeder
 
     context 'when restarts count is less than max restarts number' do
       it 'sleeps for #time_between_restarts seconds' do
-        seconds = Benchmark.realtime { subject }
+        seconds = PgEventstore::Utils.benchmark { subject }
         expect(seconds).to be_between(1.0, 1.1)
       end
       it { is_expected.to eq(true) }
@@ -34,7 +34,7 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreSubscriptionFeeder
 
       it { is_expected.to eq(false) }
       it 'does not sleep' do
-        seconds = Benchmark.realtime { subject }
+        seconds = PgEventstore::Utils.benchmark { subject }
         expect(seconds).to be < 0.1
       end
     end

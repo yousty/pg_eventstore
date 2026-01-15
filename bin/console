@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
+require 'debug'
 require 'pg_eventstore'
 require 'logger'
 require 'niceql'

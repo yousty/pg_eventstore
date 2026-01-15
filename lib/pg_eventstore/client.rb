@@ -33,7 +33,7 @@ module PgEventstore
             events: event_queries(middlewares(middlewares)),
             transactions: transaction_queries
           )
-        ).call(stream, *events_or_event, options: options)
+        ).call(stream, *events_or_event, options:)
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -50,8 +50,8 @@ module PgEventstore
     # @param read_only [Boolean] whether transaction is read-only. Running mutation queries within read-only transaction
     #   will result in exception
     # @return the result of the given block
-    def multiple(read_only: false, &blk)
-      Commands::Multiple.new(Queries.new(transactions: transaction_queries)).call(read_only: read_only, &blk)
+    def multiple(read_only: false, &)
+      Commands::Multiple.new(Queries.new(transactions: transaction_queries)).call(read_only:, &)
     end
 
     # Read events from the specific stream or from "all" stream.
@@ -140,7 +140,7 @@ module PgEventstore
       cmd_class = stream.all_stream? ? Commands::AllStreamReadGrouped : Commands::RegularStreamReadGrouped
       cmd_class.
         new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
-        call(stream, options: options)
+        call(stream, options:)
     end
 
     # Links event from one stream into another stream. You can later access it by providing :resolve_link_tos option
@@ -162,7 +162,7 @@ module PgEventstore
             events: event_queries(middlewares(middlewares)),
             transactions: transaction_queries
           )
-        ).call(stream, *events_or_event, options: options)
+        ).call(stream, *events_or_event, options:)
       events_or_event.is_a?(Array) ? result : result.first
     end
 

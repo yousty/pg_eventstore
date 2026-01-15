@@ -18,7 +18,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
 
   describe '#call' do
     context 'when reading from existing stream' do
-      subject { instance.call(stream1, options: options) }
+      subject { instance.call(stream1, options:) }
 
       let(:options) { { max_count: 2 } }
 
@@ -44,7 +44,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
           end
 
           it 'does not take much time to complete reading all events' do
-            time = Benchmark.realtime { subject.to_a } * 1000
+            time = PgEventstore::Utils.benchmark { subject.to_a } * 1000
             # milliseconds. Keep in mind that this assertion includes performance degradation due to RBS testing
             expect(time).to be < 30
           end
@@ -58,7 +58,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
           end
 
           it 'does not take much time to complete reading all events' do
-            time = Benchmark.realtime { subject.to_a } * 1000
+            time = PgEventstore::Utils.benchmark { subject.to_a } * 1000
             # milliseconds. Keep in mind that this assertion includes performance degradation due to RBS testing
             expect(time).to be < 30
           end

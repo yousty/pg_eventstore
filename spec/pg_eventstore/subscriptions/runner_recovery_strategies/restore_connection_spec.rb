@@ -56,7 +56,7 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::RestoreConnection do
     end
 
     it 'waits until connection gets restored' do
-      seconds = Benchmark.realtime { subject }
+      seconds = PgEventstore::Utils.benchmark { subject }
       aggregate_failures do
         expect(seconds).to be_between(2.0, 2.1)
         expect(subject).to eq(true)

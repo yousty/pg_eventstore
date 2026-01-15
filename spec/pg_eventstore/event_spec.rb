@@ -22,8 +22,8 @@ RSpec.describe PgEventstore::Event do
     subject { instance == another_instance }
 
     let(:id) { SecureRandom.uuid }
-    let(:instance) { described_class.new(id: id, type: 'SomeEvent') }
-    let(:another_instance) { described_class.new(id: id, type: 'SomeEvent') }
+    let(:instance) { described_class.new(id:, type: 'SomeEvent') }
+    let(:another_instance) { described_class.new(id:, type: 'SomeEvent') }
 
     context 'when all attributes match' do
       it { is_expected.to eq(true) }

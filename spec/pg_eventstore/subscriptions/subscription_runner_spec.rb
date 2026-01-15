@@ -3,9 +3,9 @@
 RSpec.describe PgEventstore::SubscriptionRunner do
   let(:instance) do
     described_class.new(
-      stats: stats,
-      events_processor: events_processor,
-      subscription: subscription
+      stats:,
+      events_processor:,
+      subscription:
     )
   end
   let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
@@ -97,7 +97,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
         let(:chunk_query_interval) { 2 }
 
         before do
-          subscription.update(chunk_query_interval: chunk_query_interval)
+          subscription.update(chunk_query_interval:)
         end
 
         context 'when average exec time is normal' do

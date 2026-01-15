@@ -8,36 +8,6 @@ require_relative 'pg_connection'
 
 module PgEventstore
   class Connection
-    # Starting from ruby v3.1 ConnectionPool closes connections after forking by default. For ruby v3 we need this patch
-    # to correctly reload the ConnectionPool. Otherwise the same connection will leak into another process which will
-    # result in disaster.
-    # @!visibility private
-    module Ruby30Patch
-      def initialize(**)
-        @current_pid = Process.pid
-        @mutext = Mutex.new
-        super
-      end
-
-      def with(&blk)
-        reload_after_fork
-        super
-      end
-
-      private
-
-      def reload_after_fork
-        return if @current_pid == Process.pid
-
-        @mutext.synchronize do
-          return if @current_pid == Process.pid
-
-          @pool.reload(&:close)
-          @current_pid = Process.pid
-        end
-      end
-    end
-
     # @!attribute uri
     #   @return [String]
     attr_reader :uri
@@ -63,7 +33,7 @@ module PgEventstore
     # A shorthand from ConnectionPool#with.
     # @yieldparam connection [PG::Connection] PostgreSQL connection instance
     # @return [Object] a value of a given block
-    def with(&_blk)
+    def with(&)
       should_retry = true
       @pool.with do |conn|
         yield conn
@@ -106,8 +76,4 @@ module PgEventstore
       registry
     end
   end
-end
-
-if Gem::Version.new(RUBY_VERSION) < Gem::Version.new('3.1')
-  PgEventstore::Connection.prepend(PgEventstore::Connection::Ruby30Patch)
 end

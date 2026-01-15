@@ -31,7 +31,7 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::Restore do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
         events_processor: PgEventstore::EventsProcessor.new(handler, graceful_shutdown_timeout: 5),
-        subscription: subscription
+        subscription:
       )
     end
     let(:handler) { proc {} }

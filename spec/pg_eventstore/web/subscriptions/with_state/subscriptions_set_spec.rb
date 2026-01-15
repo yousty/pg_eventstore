@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::Web::Subscriptions::WithState::SubscriptionsSet do
-  let(:instance) { described_class.new(PgEventstore.connection, current_set, state: state) }
+  let(:instance) { described_class.new(PgEventstore.connection, current_set, state:) }
   let(:current_set) { 'FooSet' }
   let(:state) { 'stopped' }
 
@@ -14,7 +14,7 @@ RSpec.describe PgEventstore::Web::Subscriptions::WithState::SubscriptionsSet do
     let!(:set4) { SubscriptionsSetHelper.create(name: 'BazSet') }
 
     let!(:subscription1) { SubscriptionsHelper.create(locked_by: set1.id, state: 'running', name: 'Sub1') }
-    let!(:subscription2) { SubscriptionsHelper.create(locked_by: set3.id, state: state, name: 'Sub2') }
+    let!(:subscription2) { SubscriptionsHelper.create(locked_by: set3.id, state:, name: 'Sub2') }
 
     it 'returns all SubscriptionSet-s by the given set name which have subscriptions with the given state' do
       is_expected.to eq([set3])

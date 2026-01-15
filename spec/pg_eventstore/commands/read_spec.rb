@@ -17,7 +17,7 @@ RSpec.describe PgEventstore::Commands::Read do
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
 
   describe '#call' do
-    subject { instance.call(stream, options: options) }
+    subject { instance.call(stream, options:) }
 
     let(:options) { {} }
     let(:events_stream1) do
@@ -157,7 +157,7 @@ RSpec.describe PgEventstore::Commands::Read do
   it_behaves_like 'resolves event class when reading from stream'
 
   describe 'reading using filter by stream parts' do
-    subject { instance.call(stream, options: options) }
+    subject { instance.call(stream, options:) }
 
     let(:options) { {} }
     let(:events_stream1) do
@@ -499,7 +499,7 @@ RSpec.describe PgEventstore::Commands::Read do
   end
 
   describe 'reading using filter by event type' do
-    subject { instance.call(stream, options: options) }
+    subject { instance.call(stream, options:) }
 
     let(:options) { { filter: { event_types: %w[foo baz] } } }
     let(:events_stream1) do
@@ -544,7 +544,7 @@ RSpec.describe PgEventstore::Commands::Read do
   end
 
   describe 'reading using filter by event type and by stream parts' do
-    subject { instance.call(stream, options: options) }
+    subject { instance.call(stream, options:) }
 
     let(:options) do
       { filter: { event_types: %w[foo baz], streams: [{ context: 'SomeContext', stream_name: 'some-stream1' }] } }
@@ -596,7 +596,7 @@ RSpec.describe PgEventstore::Commands::Read do
   end
 
   describe 'direction of reading from a position/revision' do
-    subject { instance.call(stream, options: options) }
+    subject { instance.call(stream, options:) }
 
     let(:options) { {} }
     let(:events_stream1) do

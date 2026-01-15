@@ -113,7 +113,7 @@ module PgEventstore
     # @param attrs [Hash]
     # @return [Hash]
     def update(attrs)
-      assign_attributes(subscription_queries.update(id, attrs: attrs, locked_by: locked_by))
+      assign_attributes(subscription_queries.update(id, attrs:, locked_by:))
     end
 
     # @param attrs [Hash]
@@ -129,8 +129,8 @@ module PgEventstore
     # @param force [Boolean]
     # @return [PgEventstore::Subscription]
     def lock!(lock_id, force: false)
-      self.id = subscription_queries.find_or_create_by(set: set, name: name)[:id]
-      self.locked_by = subscription_queries.lock!(id, lock_id, force: force)
+      self.id = subscription_queries.find_or_create_by(set:, name:)[:id]
+      self.locked_by = subscription_queries.lock!(id, lock_id, force:)
       reset_runtime_attributes
       self
     end
@@ -173,16 +173,16 @@ module PgEventstore
     # @return [void]
     def reset_runtime_attributes
       update(
-        options: options,
+        options:,
         restart_count: 0,
         last_restarted_at: nil,
-        max_restarts_number: max_restarts_number,
+        max_restarts_number:,
         chunk_query_interval: [chunk_query_interval, MIN_EVENTS_PULL_INTERVAL].max,
         last_chunk_fed_at: DEFAULT_TIMESTAMP,
         last_chunk_greatest_position: nil,
         last_error: nil,
         last_error_occurred_at: nil,
-        time_between_restarts: time_between_restarts,
+        time_between_restarts:,
         state: RunnerState::STATES[:initial]
       )
       reload

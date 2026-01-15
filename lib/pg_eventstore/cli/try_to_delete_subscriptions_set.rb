@@ -26,14 +26,14 @@ module PgEventstore
         )
         cmd_name = SubscriptionFeederCommands.command_class('Ping').new.name
         subscriptions_set_commands_queries.find_or_create_by(
-          subscriptions_set_id: subscriptions_set_id, command_name: cmd_name, data: {}
+          subscriptions_set_id:, command_name: cmd_name, data: {}
         )
         # Potentially CommandsHandler can be dead exactly at the same moment we expect it to process "Ping" command.
         # Wait for potential recover plus run interval and plus another second to allow potential processing of
         # "Ping" command. "Ping" command comes in prio, so it is guaranteed it will be processed as a first command.
         sleep RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES + CommandsHandler::PULL_INTERVAL + 1
         existing_cmd = subscriptions_set_commands_queries.find_by(
-          subscriptions_set_id: subscriptions_set_id, command_name: cmd_name
+          subscriptions_set_id:, command_name: cmd_name
         )
         if existing_cmd
           # "Ping" command wasn't consumed. Related process must be dead.

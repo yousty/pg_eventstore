@@ -2,7 +2,7 @@
 
 RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
   let(:instance) do
-    described_class.new(config_name, starting_id: starting_id, per_page: per_page, order: order, options: options)
+    described_class.new(config_name, starting_id:, per_page:, order:, options:)
   end
   let(:config_name) { :default }
   let(:starting_id) { nil }

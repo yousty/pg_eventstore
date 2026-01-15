@@ -1033,7 +1033,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     let!(:subscription1) { SubscriptionsHelper.create(locked_by: set2.id, set: set1.name, name: 'Sub1') }
     let!(:subscription2) do
-      SubscriptionsHelper.create(locked_by: set2.id, set: set2.name, name: 'Sub2', state: state)
+      SubscriptionsHelper.create(locked_by: set2.id, set: set2.name, name: 'Sub2', state:)
     end
 
     it 'displays subscriptions with the given state only' do

@@ -63,7 +63,7 @@ RSpec.describe 'Subscriptions integration' do
 
       manager.subscribe(
         'Subscription 1',
-        handler: handler, options: { filter: { event_types: ['Foo'] } }, pull_interval: pull_interval
+        handler:, options: { filter: { event_types: ['Foo'] } }, pull_interval:
       )
       PgEventstore.client.append_to_stream(stream, [event1, event2])
     end
@@ -101,7 +101,7 @@ RSpec.describe 'Subscriptions integration' do
 
       manager.subscribe(
         'Subscription 1',
-        handler: handler, options: { filter: { event_types: ['Foo'] } }, max_retries: max_retries
+        handler:, options: { filter: { event_types: ['Foo'] } }, max_retries:
       )
       PgEventstore.client.append_to_stream(stream, [event1, event2])
     end
@@ -144,7 +144,7 @@ RSpec.describe 'Subscriptions integration' do
 
       manager.subscribe(
         'Subscription 1',
-        handler: handler, options: { filter: { event_types: ['Foo'] } }, retries_interval: retries_interval
+        handler:, options: { filter: { event_types: ['Foo'] } }, retries_interval:
       )
       PgEventstore.client.append_to_stream(stream, [event1, event2])
     end
@@ -232,7 +232,7 @@ RSpec.describe 'Subscriptions integration' do
   describe "overriding SubscriptionsSet's max_retries" do
     subject { manager.start }
 
-    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name, max_retries: max_retries) }
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name, max_retries:) }
     let(:set_name) { 'Microservice 1 Subscriptions' }
     let(:max_retries) { 2 }
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
@@ -288,7 +288,7 @@ RSpec.describe 'Subscriptions integration' do
       end
       manager.subscribe(
         'Subscription 1',
-        handler: handler, options: { filter: { streams: [{ context: 'FooCtx' }] }, resolve_link_tos: true }
+        handler:, options: { filter: { streams: [{ context: 'FooCtx' }] }, resolve_link_tos: true }
       )
     end
 
@@ -337,7 +337,7 @@ RSpec.describe 'Subscriptions integration' do
       end
       manager.subscribe(
         subscription_name,
-        handler: handler, options: { filter: { streams: [{ context: 'FooCtx' }] } }
+        handler:, options: { filter: { streams: [{ context: 'FooCtx' }] } }
       )
     end
 
@@ -393,7 +393,7 @@ RSpec.describe 'Subscriptions integration' do
     before do
       manager.subscribe(
         subscription_name,
-        handler: handler, options: { filter: { streams: [{ context: 'FooCtx' }] } },
+        handler:, options: { filter: { streams: [{ context: 'FooCtx' }] } },
         **subscription_opts
       )
     end
@@ -448,7 +448,7 @@ RSpec.describe 'Subscriptions integration' do
     end
 
     context 'when restart_terminator is defined' do
-      let(:subscription_opts) { super().merge(restart_terminator: restart_terminator) }
+      let(:subscription_opts) { super().merge(restart_terminator:) }
 
       let(:restart_terminator) { proc { |sub| subscription_receiver.call(sub) } }
       let(:subscription_receiver) { double('Subscription receiver') }
@@ -487,7 +487,7 @@ RSpec.describe 'Subscriptions integration' do
     end
 
     context 'when failed_subscription_notifier is defined' do
-      let(:subscription_opts) { super().merge(failed_subscription_notifier: failed_subscription_notifier) }
+      let(:subscription_opts) { super().merge(failed_subscription_notifier:) }
 
       let(:failed_subscription_notifier) { proc { |sub, error| notifier.call(sub, error) } }
       let(:notifier) { double('Subscription notifier') }
@@ -577,7 +577,7 @@ RSpec.describe 'Subscriptions integration' do
       stub_const('PgEventstore::RunnerRecoveryStrategies::RestoreConnection::TIME_BETWEEN_RETRIES', 1)
       stub_const('PgEventstore::SubscriptionsSetLifecycle::HEARTBEAT_INTERVAL', 1)
       stub_const('PgEventstore::Subscription::MIN_EVENTS_PULL_INTERVAL', 0)
-      manager.subscribe('Sub 1', handler: handler, **subscription_opts)
+      manager.subscribe('Sub 1', handler:, **subscription_opts)
     end
 
     after do
@@ -728,7 +728,7 @@ RSpec.describe 'Subscriptions integration' do
         c.subscription_pull_interval = 0.2
         c.connection_pool_size = 10
       end
-      manager.subscribe('Subscription 1', handler: handler)
+      manager.subscribe('Subscription 1', handler:)
     end
 
     after do

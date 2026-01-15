@@ -86,14 +86,16 @@ module PgEventstore
 
     # @param action [Object] an action to run
     # @return [Object] the result of passed block
-    def run_callbacks(action, *args, **kwargs, &blk)
+    # rubocop:disable Style/ArgumentsForwarding
+    def run_callbacks(action, *, **, &)
       return (yield if block_given?) unless @callbacks[action]
 
-      run_before_callbacks(action, *args, **kwargs)
-      result = run_around_callbacks(action, *args, **kwargs, &blk)
-      run_after_callbacks(action, *args, **kwargs)
+      run_before_callbacks(action, *, **)
+      result = run_around_callbacks(action, *, **, &)
+      run_after_callbacks(action, *, **)
       result
     end
+    # rubocop:enable Style/ArgumentsForwarding
 
     # @param action [Object]
     # @param filter [Symbol]
@@ -121,7 +123,7 @@ module PgEventstore
     end
 
     # @return [Object] the result of the passed block
-    def run_around_callbacks(action, *args, **kwargs, &_blk)
+    def run_around_callbacks(action, *args, **kwargs, &)
       result = nil
       stack = [proc { result = yield if block_given? }]
       @callbacks[action][:around]&.reverse_each&.with_index do |callback, index|

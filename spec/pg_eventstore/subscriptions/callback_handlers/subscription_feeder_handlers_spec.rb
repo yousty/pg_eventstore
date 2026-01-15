@@ -126,8 +126,8 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     let(:subscription_feeder) do
       PgEventstore::SubscriptionFeeder.new(
         config_name: :default,
-        subscriptions_set_lifecycle: subscriptions_set_lifecycle,
-        subscriptions_lifecycle: subscriptions_lifecycle
+        subscriptions_set_lifecycle:,
+        subscriptions_lifecycle:
       )
     end
     let(:subscriptions_set_lifecycle) do
@@ -406,8 +406,8 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     let(:subscription_feeder) do
       PgEventstore::SubscriptionFeeder.new(
         config_name: :default,
-        subscriptions_set_lifecycle: subscriptions_set_lifecycle,
-        subscriptions_lifecycle: subscriptions_lifecycle
+        subscriptions_set_lifecycle:,
+        subscriptions_lifecycle:
       )
     end
     let(:subscriptions_set_lifecycle) do

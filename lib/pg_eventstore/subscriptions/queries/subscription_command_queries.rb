@@ -21,15 +21,15 @@ module PgEventstore
     def find_or_create_by(subscription_id:, subscriptions_set_id:, command_name:, data:)
       transaction_queries.transaction do
         existing = find_by(
-          subscription_id: subscription_id, subscriptions_set_id: subscriptions_set_id, command_name: command_name
+          subscription_id:, subscriptions_set_id:, command_name:
         )
         next existing if existing
 
         create(
-          subscription_id: subscription_id,
-          subscriptions_set_id: subscriptions_set_id,
-          command_name: command_name,
-          data: data
+          subscription_id:,
+          subscriptions_set_id:,
+          command_name:,
+          data:
         )
       end
     end
