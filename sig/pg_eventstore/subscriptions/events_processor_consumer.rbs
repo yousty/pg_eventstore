@@ -1,0 +1,12 @@
+module PgEventstore
+  module EventsProcessorConsumer
+    module ClassMethods
+      def create_consumer: (_SubscriptionHandler handler, EventDeserializer deserializer) -> EventsProcessorConsumer
+    end
+
+    def self.consumer_class: (bool in_batches) -> Class
+
+    def call: (Callbacks callbacks, SynchronizedArray raw_events,
+        MonitorMixin::ConditionVariable raw_events_cond) -> void
+  end
+end

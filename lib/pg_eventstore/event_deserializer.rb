@@ -4,13 +4,13 @@ module PgEventstore
   # @!visibility private
   class EventDeserializer
     # @!attribute middlewares
-    #   @return [Array<#deserialize, #serialize>]
+    #   @return [Array<Middleware>]
     attr_reader :middlewares
     # @!attribute event_class_resolver
     #   @return [#call]
     attr_reader :event_class_resolver
 
-    # @param middlewares [Array<Object<#deserialize, #serialize>>]
+    # @param middlewares [Array<Middleware>]
     # @param event_class_resolver [#call]
     def initialize(middlewares, event_class_resolver)
       @middlewares = middlewares

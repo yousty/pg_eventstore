@@ -7,6 +7,7 @@ require_relative 'runner_recovery_strategy'
 require_relative 'runner_recovery_strategies'
 require_relative 'subscription'
 require_relative 'synchronized_array'
+require_relative 'events_processor_consumer'
 require_relative 'events_processor'
 require_relative 'subscription_handler_performance'
 require_relative 'subscription_runner'
@@ -91,6 +92,7 @@ module PgEventstore
     #   notification about failed subscription.
     # @param graceful_shutdown_timeout [integer, Float] the number of seconds to wait until force-shutdown the
     #   subscription during the stop process
+    # @param in_batches [Boolean] whether a batch of events should be yielded instead a single event
     # @return [void]
     def subscribe(subscription_name, handler:, options: {}, middlewares: nil,
                   pull_interval: config.subscription_pull_interval,
@@ -98,16 +100,18 @@ module PgEventstore
                   retries_interval: config.subscription_retries_interval,
                   restart_terminator: config.subscription_restart_terminator,
                   failed_subscription_notifier: config.failed_subscription_notifier,
-                  graceful_shutdown_timeout: config.subscription_graceful_shutdown_timeout)
+                  graceful_shutdown_timeout: config.subscription_graceful_shutdown_timeout,
+                  in_batches: false)
       subscription = Subscription.using_connection(config.name).new(
         set: @set_name, name: subscription_name, options:, chunk_query_interval: pull_interval,
         max_restarts_number: max_retries, time_between_restarts: retries_interval
       )
+      consumer_class = EventsProcessorConsumer.consumer_class(in_batches)
       runner = SubscriptionRunner.new(
         stats: SubscriptionHandlerPerformance.new,
         events_processor: EventsProcessor.new(
-          create_raw_event_handler(middlewares, handler),
           graceful_shutdown_timeout:,
+          consumer: consumer_class.create_consumer(handler, deserializer(middlewares)),
           recovery_strategies: recovery_strategies(subscription, restart_terminator, failed_subscription_notifier)
         ),
         subscription:
@@ -157,12 +161,8 @@ module PgEventstore
       PgEventstore::CLI.callbacks.run_callbacks(:start_manager, self, &)
     end
 
-    # @param middlewares [Array<Symbol>, nil]
-    # @param handler [#call]
-    # @return [Proc]
-    def create_raw_event_handler(middlewares, handler)
-      deserializer = EventDeserializer.new(select_middlewares(middlewares), config.event_class_resolver)
-      ->(raw_event) { handler.call(deserializer.deserialize(raw_event)) }
+    def deserializer(middlewares)
+      EventDeserializer.new(select_middlewares(middlewares), config.event_class_resolver)
     end
 
     # @param middlewares [Array, nil]

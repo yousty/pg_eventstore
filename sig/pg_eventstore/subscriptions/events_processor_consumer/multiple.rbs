@@ -1,0 +1,13 @@
+module PgEventstore
+  module EventsProcessorConsumer
+    class Multiple
+      include EventsProcessorConsumer
+      extend ClassMethods
+
+      @handler: _RawEventsHandler
+
+      def initialize: (_RawEventsHandler handler) -> void
+    end
+  end
+end
+

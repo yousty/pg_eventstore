@@ -3,21 +3,14 @@ module PgEventstore
     extend Forwardable
 
     @set_name: String
-    @subscription_feeder: PgEventstore::SubscriptionFeeder
-    @subscriptions_lifecycle: PgEventstore::SubscriptionsLifecycle
-    @subscriptions_set_lifecycle: PgEventstore::SubscriptionsSetLifecycle
+    @subscription_feeder: SubscriptionFeeder
+    @subscriptions_lifecycle: SubscriptionsLifecycle
+    @subscriptions_set_lifecycle: SubscriptionsSetLifecycle
 
-    def self.callbacks: () -> PgEventstore::Callbacks
+    def self.callbacks: () -> Callbacks
 
-    # _@param_ `config`
-    #
-    # _@param_ `set_name`
-    #
-    # _@param_ `max_retries` — max number of retries of failed SubscriptionsSet
-    #
-    # _@param_ `retries_interval` — a delay between retries of failed SubscriptionsSet
     def initialize: (
-        config: PgEventstore::Config,
+        config: Config,
         set_name: String,
         ?max_retries: Integer?,
         ?retries_interval: Integer?,
@@ -26,23 +19,6 @@ module PgEventstore
 
     def config_name: () -> Symbol
 
-    # _@param_ `subscription_name` — subscription's name
-    #
-    # _@param_ `handler` — subscription's handler
-    #
-    # _@param_ `options` — request options
-    #
-    # _@param_ `middlewares` — provide a list of middleware names to override a config's middlewares
-    #
-    # _@param_ `pull_interval` — an interval in seconds to determine how often to query new events of the given subscription.
-    #
-    # _@param_ `max_retries` — max number of retries of failed Subscription
-    #
-    # _@param_ `retries_interval` — a delay between retries of failed Subscription
-    #
-    # _@param_ `restart_terminator` — a callable object which is invoked with PgEventstore::Subscription instance to determine whether restarts should be stopped(true - stops restarts, false - continues restarts)
-    #
-    # _@param_ `failed_subscription_notifier` - a callable object which is invoked with PgEventstore::Subscription instance and error instance after the related subscription died due to error and no longer can be automatically restarted due to max retries number reached. You can use this hook to send a notification about failed subscription.
     def subscribe: (
         String subscription_name,
         handler: _SubscriptionHandler,
@@ -54,26 +30,22 @@ module PgEventstore
         ?restart_terminator: _RestartTerminator?,
         ?failed_subscription_notifier: _FailedSubscriptionNotifier?,
         ?graceful_shutdown_timeout: Integer | Float,
+        ?in_batches: bool,
       ) -> void
 
-    def subscriptions: () -> ::Array[PgEventstore::Subscription]
+    def subscriptions: () -> ::Array[Subscription]
 
-    def subscriptions_set: () -> PgEventstore::SubscriptionsSet?
+    def subscriptions_set: () -> SubscriptionsSet?
 
-    # _@param_ `middlewares`
-    #
-    # _@param_ `handler`
-    def create_raw_event_handler: (::Array[Symbol]? middlewares, _SubscriptionHandler handler) -> _RawEventHandler
+    def deserializer: (::Array[Symbol]? middlewares) -> EventDeserializer
 
-    # _@param_ `middlewares`
-    def select_middlewares: (?::Array[Symbol]? middlewares) -> ::Array[PgEventstore::Middleware]
+    def select_middlewares: (?::Array[Symbol]? middlewares) -> ::Array[Middleware]
 
-    def start!: () -> PgEventstore::BasicRunner
+    def start!: () -> BasicRunner
 
-    def start: () -> PgEventstore::BasicRunner?
+    def start: () -> BasicRunner?
 
-    # Returns the value of attribute config.
-    attr_accessor config: PgEventstore::Config
+    attr_accessor config: Config
 
     private
 

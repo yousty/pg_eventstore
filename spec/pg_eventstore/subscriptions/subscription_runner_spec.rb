@@ -10,7 +10,9 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
   let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
   let(:events_processor) do
-    PgEventstore::EventsProcessor.new(handler, graceful_shutdown_timeout: 5)
+    PgEventstore::EventsProcessor.new(
+      consumer: PgEventstore::EventsProcessorConsumer::Single.new(handler), graceful_shutdown_timeout: 5
+    )
   end
   let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo') }
   let(:handler) { proc {} }
@@ -343,7 +345,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
     let(:events_processor) do
       PgEventstore::EventsProcessor.new(
-        handler,
+        consumer: PgEventstore::EventsProcessorConsumer::Single.new(handler),
         graceful_shutdown_timeout: 0,
         recovery_strategies: [
           DummyErrorRecovery.new(recoverable_message: 'You rolled 1. Critical failure!', seconds_before_recovery: 0.1),

@@ -10,12 +10,12 @@ module PgEventstore
     def_delegators :@basic_runner, :state, :start, :stop, :wait_for_finish, :stop_async, :restore, :running?,
                    :within_state
 
-    # @param handler [#call]
     # @param graceful_shutdown_timeout [Integer, Float] seconds. Determines how long to wait before force-shutdown
     #   the runner when stopping it using #stop_async
+    # @param consumer [PgEventstore::EventsProcessorConsumer]
     # @param recovery_strategies [Array<PgEventstore::RunnerRecoveryStrategy>]
-    def initialize(handler, graceful_shutdown_timeout:, recovery_strategies: [])
-      @handler = handler
+    def initialize(graceful_shutdown_timeout:, consumer:, recovery_strategies: [])
+      @consumer = consumer
       @raw_events = SynchronizedArray.new
       @raw_events_cond = @raw_events.new_cond
       @basic_runner = BasicRunner.new(
@@ -56,7 +56,7 @@ module PgEventstore
     def attach_runner_callbacks
       @basic_runner.define_callback(
         :process_async, :before,
-        EventsProcessorHandlers.setup_handler(:process_event, @callbacks, @handler, @raw_events, @raw_events_cond)
+        EventsProcessorHandlers.setup_handler(:consume_events, @consumer, @callbacks, @raw_events, @raw_events_cond)
       )
 
       @basic_runner.define_callback(

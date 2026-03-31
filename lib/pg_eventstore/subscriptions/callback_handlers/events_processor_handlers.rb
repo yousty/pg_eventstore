@@ -6,25 +6,13 @@ module PgEventstore
     include Extensions::CallbackHandlersExtension
 
     class << self
+      # @param consumer [PgEventstore::EventsProcessorConsumer]
       # @param callbacks [PgEventstore::Callbacks]
-      # @param handler [#call]
       # @param raw_events [Array<Hash>]
       # @param raw_events_cond [MonitorMixin::ConditionVariable]
       # @return [void]
-      def process_event(callbacks, handler, raw_events, raw_events_cond)
-        raw_event = nil
-        raw_events.synchronize do
-          raw_events_cond.wait(0.5) if raw_events.empty?
-          raw_event = raw_events.shift
-        end
-        return if raw_event.nil?
-
-        callbacks.run_callbacks(:process, Utils.original_global_position(raw_event)) do
-          handler.call(raw_event)
-        rescue => exception
-          raw_events.unshift(raw_event)
-          raise Utils.wrap_exception(exception, global_position: Utils.original_global_position(raw_event))
-        end
+      def consume_events(consumer, callbacks, raw_events, raw_events_cond)
+        consumer.call(callbacks, raw_events, raw_events_cond)
       end
 
       # @param callbacks [PgEventstore::Callbacks]

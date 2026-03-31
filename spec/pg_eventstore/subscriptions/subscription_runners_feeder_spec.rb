@@ -10,14 +10,18 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
     let(:runner1) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(
+          consumer: PgEventstore::EventsProcessorConsumer::Single.new(proc {}), graceful_shutdown_timeout: 5
+        ),
         subscription: SubscriptionsHelper.create_with_connection(name: 'Foo', options: options1)
       )
     end
     let(:runner2) do
       PgEventstore::SubscriptionRunner.new(
         stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
+        events_processor: PgEventstore::EventsProcessor.new(
+          consumer: PgEventstore::EventsProcessorConsumer::Single.new(proc {}), graceful_shutdown_timeout: 5
+        ),
         subscription: SubscriptionsHelper.create_with_connection(name: 'Bar', options: options2)
       )
     end
