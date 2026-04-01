@@ -134,7 +134,7 @@ subscriptions_manager.subscribe(
 
 ## Processing events in batches
 
-There is an ability to tell the subscription to yield an array of events it pulled last time. The number of events is the implementation-wide(current implementation may yield up to 1k events) and can't be adjusted. Example:
+There is an ability to tell the subscription to yield an array of events it pulled last time. The number of events is the implementation specific(current implementation may yield up to 1k events) and can't be adjusted. Example:
 
 ```ruby
 subscriptions_manager.subscribe(
