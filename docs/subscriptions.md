@@ -126,9 +126,27 @@ subscriptions_manager.subscribe(
   # overrides config.failed_subscription_notifier
   failed_subscription_notifier: proc { |_subscription, err| p err },
   # overrides config.subscription_graceful_shutdown_timeout
-  graceful_shutdown_timeout: 20
+  graceful_shutdown_timeout: 20,
+  # Yield array of events into your handler instead a single event. See example bellow.
+  in_batches: true
 )
 ```
+
+## Processing events in batches
+
+There is an ability to tell the subscription to yield an array of events it pulled last time. The number of events is the implementation-wide(current implementation may yield up to 1k events) and can't be adjusted. Example:
+
+```ruby
+subscriptions_manager.subscribe(
+  'MyAwesomeSubscription',
+  handler: proc { |events| puts events }, # => outputs array of events
+  in_batches: true
+)
+```
+
+In this case the subscription's position will be advanced to the position of the last event of the chunk. Please note that in case of failure: 
+- the whole chunk will be yielded again during subscription retries phase
+- new events may appear in the chunk between retries
 
 ## Middlewares
 

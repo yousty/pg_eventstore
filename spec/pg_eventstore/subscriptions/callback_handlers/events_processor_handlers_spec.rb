@@ -10,13 +10,32 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
     let(:consumer) do
       PgEventstore::EventsProcessorConsumer::Single.new(proc { |raw_event| processed_events.push(raw_event) })
     end
-    let(:raw_events) { PgEventstore::SynchronizedArray.new([raw_event]) }
-    let(:raw_event) { { 'global_position' => 1 } }
+    let(:raw_events) { PgEventstore::SynchronizedArray.new([raw_event1, raw_event2]) }
+    let(:raw_event1) { { 'global_position' => 1 } }
+    let(:raw_event2) { { 'global_position' => 2 } }
     let(:raw_events_cond) { raw_events.new_cond }
     let(:processed_events) { [] }
 
-    it 'processes given events' do
-      expect { subject }.to change { processed_events }.to([raw_event])
+    context 'when consumer is Single' do
+      it 'processes first event in the queue' do
+        expect { subject }.to change { processed_events }.to([raw_event1])
+      end
+      it 'removes processed event from the queue' do
+        expect { subject }.to change { raw_events }.to([raw_event2])
+      end
+    end
+
+    context 'when consumer is Multiple' do
+      let(:consumer) do
+        PgEventstore::EventsProcessorConsumer::Multiple.new(proc { |raw_events| processed_events.push(raw_events) })
+      end
+
+      it 'processes all events in the queue' do
+        expect { subject }.to change { processed_events }.to([[raw_event1, raw_event2]])
+      end
+      it 'removes processed events from the queue' do
+        expect { subject }.to change { raw_events }.to([])
+      end
     end
   end
 
