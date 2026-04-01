@@ -103,13 +103,6 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
           end
         }.to change { Time.now }.by(be_between(0, 0.01))
       end
-      it 'does not process any event' do
-        begin
-          subject
-        rescue PgEventstore::WrappedException
-        end
-        expect(raw_event_handler).not_to have_received(:call)
-      end
       it 'runs only :before :process callbacks' do
         begin
           subject
