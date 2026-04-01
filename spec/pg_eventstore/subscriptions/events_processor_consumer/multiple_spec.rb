@@ -62,7 +62,17 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Multiple do
       end
       it 'runs :process callbacks for the last event' do
         subject
-        expect(position_handler_after).to have_received(:call).with(raw_event2['global_position'])
+        aggregate_failures do
+          expect(position_handler_before).to have_received(:call).with(raw_event2['global_position'])
+          expect(position_handler_after).to have_received(:call).with(raw_event2['global_position'])
+        end
+      end
+      it 'does not run :process callbacks for first event' do
+        subject
+        aggregate_failures do
+          expect(position_handler_before).not_to have_received(:call).with(raw_event1['global_position'])
+          expect(position_handler_after).not_to have_received(:call).with(raw_event1['global_position'])
+        end
       end
       it 'processes events' do
         subject
@@ -101,7 +111,10 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Multiple do
           subject
         rescue PgEventstore::WrappedException
         end
-        expect(position_handler_before).to have_received(:call).with(raw_event2['global_position'])
+        aggregate_failures do
+          expect(position_handler_before).to have_received(:call).with(raw_event2['global_position'])
+          expect(position_handler_after).not_to have_received(:call)
+        end
       end
       it 'does not remove events from the list' do
         expect {
