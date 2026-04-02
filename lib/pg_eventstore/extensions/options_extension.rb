@@ -73,15 +73,19 @@ module PgEventstore
       end
 
       class Options < Set
+        # @param option [PgEventstore::Extensions::OptionsExtension::Option]
+        # @return [self]
         def add(option)
-          @hash[option] = option
+          delete(option)
+          super
           self
         end
 
         # @param option [Symbol]
         # @return [PgEventstore::Extensions::OptionsExtension::Option, nil]
         def [](option)
-          @hash[Option.new(option)]
+          target = Option.new(option)
+          find { |o| o.eql?(target) }
         end
       end
 
