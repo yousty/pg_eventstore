@@ -88,6 +88,36 @@ module PgEventstore
         # @param sql_builder [PgEventstore::SQLBuilder]
         # @return [Integer]
         def estimate_count(sql_builder)
+          return reltuples_estimate if unfiltered_all_stream?
+
+          explain_estimate(sql_builder)
+        end
+
+        # Uses pg_class.reltuples for a fast, lock-free row count estimate.
+        # Suitable for unfiltered queries on partitioned tables where EXPLAIN
+        # would acquire locks on every partition and potentially exceed
+        # max_locks_per_transaction.
+        #
+        # @return [Integer]
+        def reltuples_estimate
+          sql = <<~SQL
+            SELECT COALESCE(SUM(reltuples), 0)::bigint AS estimate
+            FROM pg_class
+            WHERE relname = 'events' OR (relname LIKE 'events_%' AND relkind = 'r')
+          SQL
+          connection.with do |conn|
+            conn.exec_params(sql)
+          end.to_a.first['estimate'].to_i
+        end
+
+        # @return [Boolean]
+        def unfiltered_all_stream?
+          @stream == PgEventstore::Stream.all_stream && options.empty?
+        end
+
+        # @param sql_builder [PgEventstore::SQLBuilder]
+        # @return [Integer]
+        def explain_estimate(sql_builder)
           sql, params = sql_builder.to_exec_params
           connection.with do |conn|
             conn.exec_params("EXPLAIN #{sql}", params)
