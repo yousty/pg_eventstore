@@ -22,6 +22,15 @@ module PgEventstore
         # _@param_ `sql_builder`
         def estimate_count: (PgEventstore::SQLBuilder sql_builder) -> Integer
 
+        def reltuples_estimate: () -> Integer
+
+        def unfiltered_all_stream?: () -> bool
+
+        def no_filtering_options?: () -> bool
+
+        # _@param_ `sql_builder`
+        def explain_estimate: (PgEventstore::SQLBuilder sql_builder) -> Integer
+
         # _@param_ `sql_builder`
         def regular_count: (PgEventstore::SQLBuilder sql_builder) -> Integer
 

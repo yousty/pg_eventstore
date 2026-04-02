@@ -387,6 +387,22 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
           is_expected.to be_between(5, 1000)
         end
       end
+
+      context 'when options contain empty filters and resolve_link_tos' do
+        let(:options) { { filter: { event_types: [], streams: [] }, resolve_link_tos: true } }
+
+        before do
+          events = [PgEventstore::Event.new(type: 'Foo')] * 5
+          PgEventstore.client.append_to_stream(
+            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: '1'),
+            events
+          )
+        end
+
+        it 'returns events count' do
+          is_expected.to eq(5)
+        end
+      end
     end
 
     describe '"$streams" system stream' do

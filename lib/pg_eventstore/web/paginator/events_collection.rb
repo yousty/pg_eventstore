@@ -112,7 +112,19 @@ module PgEventstore
 
         # @return [Boolean]
         def unfiltered_all_stream?
-          @stream == PgEventstore::Stream.all_stream && options.empty?
+          @stream == PgEventstore::Stream.all_stream && no_filtering_options?
+        end
+
+        # Checks whether the options contain any actual filtering criteria.
+        # Options like resolve_link_tos and empty filter arrays do not
+        # constitute real filtering.
+        #
+        # @return [Boolean]
+        def no_filtering_options?
+          filter = options[:filter] || {}
+          event_types = filter[:event_types] || []
+          streams = filter[:streams] || []
+          event_types.empty? && streams.empty?
         end
 
         # @param sql_builder [PgEventstore::SQLBuilder]
@@ -122,6 +134,8 @@ module PgEventstore
           connection.with do |conn|
             conn.exec_params("EXPLAIN #{sql}", params)
           end.to_a.first['QUERY PLAN'].match(/rows=(\d+)/)[1].to_i
+        rescue PG::OutOfMemory
+          reltuples_estimate
         end
 
         # @param sql_builder [PgEventstore::SQLBuilder]
