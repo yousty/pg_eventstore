@@ -35,7 +35,6 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'benchmark', '~> 0.5'
   spec.add_dependency 'connection_pool', '~> 2.4'
   spec.add_dependency 'pg', '~> 1.5'
   spec.add_dependency 'sinatra', '>= 3', '< 5'
