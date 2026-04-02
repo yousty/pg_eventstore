@@ -106,7 +106,7 @@ module PgEventstore
             WHERE relname = 'events' OR (relname LIKE 'events_%' AND relkind = 'r')
           SQL
           connection.with do |conn|
-            conn.exec_params(sql)
+            conn.exec(sql)
           end.to_a.first['estimate'].to_i
         end
 
