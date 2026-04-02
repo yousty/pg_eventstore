@@ -101,9 +101,10 @@ module PgEventstore
         # @return [Integer]
         def reltuples_estimate
           sql = <<~SQL
-            SELECT COALESCE(SUM(reltuples), 0)::bigint AS estimate
-            FROM pg_class
-            WHERE relname = 'events' OR (relname LIKE 'events_%' AND relkind = 'r')
+            SELECT COALESCE(SUM(GREATEST(c.reltuples, 0)), 0)::bigint AS estimate
+            FROM pg_inherits i
+            JOIN pg_class c ON c.oid = i.inhrelid
+            WHERE i.inhparent = 'events'::regclass
           SQL
           connection.with do |conn|
             conn.exec(sql)
@@ -146,6 +147,8 @@ module PgEventstore
           connection.with do |conn|
             conn.exec_params(*sql_builder.to_exec_params)
           end.to_a.first['count_all']
+        rescue PG::OutOfMemory
+          reltuples_estimate
         end
 
         # @param sql_builder [PgEventstore::SQLBuilder]
