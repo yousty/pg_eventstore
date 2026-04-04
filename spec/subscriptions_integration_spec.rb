@@ -768,4 +768,36 @@ RSpec.describe 'Subscriptions integration' do
     end
     # rubocop:enable Style/ZeroLengthPredicate
   end
+
+  describe 'processing events in batches' do
+    subject { manager.start }
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+
+    let(:handler) { proc { |event| processed_events.push(event) } }
+    let(:processed_events) { [] }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
+    let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
+    let(:event2) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar') }
+
+    before do
+      PgEventstore.client.append_to_stream(stream, [event1, event2])
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0.2
+      end
+      manager.subscribe('Subscription 1', handler:, in_batches: true)
+    end
+
+    after do
+      manager.stop
+    end
+
+    it 'processes events in batches' do
+      expect { subject }.to change {
+        dv(processed_events).deferred_wait(timeout: 0.5) { _1.size == 2 }
+      }.to([PgEventstore.client.read(stream)])
+    end
+  end
 end

@@ -1,11 +1,11 @@
 module PgEventstore
   class EventsProcessor
-    include PgEventstore::Extensions::CallbacksExtension
+    include Extensions::CallbacksExtension
     extend Forwardable
 
     %a{rbs:test:skip} def initialize: (
-        _RawEventHandler handler,
         graceful_shutdown_timeout: Float | Integer,
+        consumer: EventsProcessorConsumer,
         ?recovery_strategies: Array[RunnerRecoveryStrategy]
       ) -> void
 

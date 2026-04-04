@@ -1,0 +1,3 @@
+interface _RawEventsHandler
+  def call: (Array[Hash[String, untyped]] events) -> void
+end

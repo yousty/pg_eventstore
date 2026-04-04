@@ -20,10 +20,11 @@ RSpec.describe PgEventstore::CommandsHandler do
     PgEventstore::SubscriptionsLifecycle.new(config_name, subscriptions_set_lifecycle)
   end
   let(:runners) { [runner] }
+  let(:consumer) { PgEventstore::EventsProcessorConsumer::Single.new(proc {}) }
   let(:runner) do
     PgEventstore::SubscriptionRunner.new(
       stats: PgEventstore::SubscriptionHandlerPerformance.new,
-      events_processor: PgEventstore::EventsProcessor.new(proc {}, graceful_shutdown_timeout: 5),
+      events_processor: PgEventstore::EventsProcessor.new(consumer:, graceful_shutdown_timeout: 5),
       subscription: SubscriptionsHelper.create_with_connection
     )
   end
