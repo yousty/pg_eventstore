@@ -1,20 +1,9 @@
 module PgEventstore
-  DEFAULT_CONFIG: Symbol
+  extend Extensions::ActsAsConfigurable
 
-  # _@param_ `name` — a name to assign to a config
-  #
-  # _@return_ — a result of the given block
-  def self.configure: (?name: Symbol) { (PgEventstore::Config) -> untyped } -> Object
+  attr_accessor logger: untyped
 
-  def self.available_configs: () -> ::Array[Symbol]
-
-  # _@param_ `name`
-  def self.config: (?Symbol name) -> PgEventstore::Config
-
-  # _@param_ `name`
-  def self.connection: (?Symbol name) -> PgEventstore::Connection
-
-  def self.maintenance: (?Symbol name) -> PgEventstore::Maintenance
+  def self.maintenance: (?Symbol name) -> Maintenance
 
   def self.subscriptions_manager: (
       ?Symbol config_name,
@@ -22,19 +11,7 @@ module PgEventstore
       ?max_retries: Integer?,
       ?retries_interval: Integer?,
       ?force_lock: bool
-    ) -> PgEventstore::SubscriptionsManager
+    ) -> SubscriptionsManager
 
-  # _@param_ `name`
-  def self.client: (?Symbol name) -> PgEventstore::Client
-
-  def self.logger: () -> Logger?
-
-  # _@param_ `logger`
-  def self.logger=: (Logger? logger) -> Logger?
-
-  def self.init_variables: () -> void
-
-  def self.mutex: () -> Thread::Mutex
-
-  def self.mutex=: (Thread::Mutex value) -> Thread::Mutex
+  def self.client: (?Symbol name) -> Client
 end

@@ -1,0 +1,9 @@
+module PgEventstore
+  class BasicConfig
+    include Extensions::OptionsExtension
+
+    attr_reader name: Symbol
+
+    def initialize: (name: Symbol, **untyped options) -> void
+  end
+end

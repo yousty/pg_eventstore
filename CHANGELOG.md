@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 - New feature: allow subscription to process events in batches. You can now provide `in_batches: true` to `#subscribe` to yield an array of events. See [docs](docs/subscriptions.md#processing-events-in-batches) for more info
+- Introduce `PgEventstore::BasicConfig` and `PgEventstore::Extensions::ActsAsConfigurable` to allow to easily create configurable objects  
 
 ## [2.0.0]
 

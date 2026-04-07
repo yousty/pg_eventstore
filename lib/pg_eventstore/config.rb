@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
-  class Config
-    include Extensions::OptionsExtension
-
-    attr_reader :name
-
+  class Config < BasicConfig
     # @!attribute pg_uri
     #   @return [String] PostgreSQL connection URI docs
     #     https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
@@ -55,17 +51,5 @@ module PgEventstore
     # @!attribute subscription_graceful_shutdown_timeout
     #   @return [Integer] the number of seconds to wait until force-shutdown the subscription during the stop process
     option(:subscription_graceful_shutdown_timeout) { 15 }
-
-    # @param name [Symbol] config's name. Its value matches the appropriate key in PgEventstore.config hash
-    def initialize(name:, **options)
-      super
-      @name = name
-    end
-
-    # Computes a value for usage in PgEventstore::Connection
-    # @return [Hash]
-    def connection_options
-      { uri: pg_uri, pool_size: connection_pool_size, pool_timeout: connection_pool_timeout }
-    end
   end
 end

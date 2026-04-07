@@ -8,6 +8,7 @@ require_relative 'pg_eventstore/extensions/callbacks_extension'
 require_relative 'pg_eventstore/extensions/callback_handlers_extension'
 require_relative 'pg_eventstore/extensions/using_connection_extension'
 require_relative 'pg_eventstore/event_class_resolver'
+require_relative 'pg_eventstore/basic_config'
 require_relative 'pg_eventstore/config'
 require_relative 'pg_eventstore/partition'
 require_relative 'pg_eventstore/event'
@@ -20,66 +21,16 @@ require_relative 'pg_eventstore/connection'
 require_relative 'pg_eventstore/errors'
 require_relative 'pg_eventstore/middleware'
 require_relative 'pg_eventstore/subscriptions/subscriptions_manager'
+require_relative 'pg_eventstore/extensions/acts_as_configurable'
 
 module PgEventstore
-  # @return [Symbol]
-  DEFAULT_CONFIG = :default
+  extend Extensions::ActsAsConfigurable
+
+  acts_as_configurable(config_class: Config)
 
   class << self
-    # @!attribute mutex
-    #   @return [Thread::Mutex]
-    attr_reader :mutex
-    private :mutex
-
     # @return [Logger, nil]
     attr_accessor :logger
-
-    # Creates a Config if not exists and yields it to the given block.
-    # @param name [Symbol] a name to assign to a config
-    # @return [Object] a result of the given block
-    def configure(name: DEFAULT_CONFIG)
-      mutex.synchronize do
-        @config[name] = @config[name] ? Config.new(name:, **@config[name].options_hash) : Config.new(name:)
-        connection_config_was = @config[name].connection_options
-
-        yield(@config[name]).tap do
-          @config[name].freeze
-          next if connection_config_was == @config[name].connection_options
-
-          # Reset the connection if user decided to reconfigure connection's options
-          @connection.delete(name)
-        end
-      end
-    end
-
-    # @return [Array<Symbol>]
-    def available_configs
-      @config.keys
-    end
-
-    # @param name [Symbol]
-    # @return [PgEventstore::Config]
-    def config(name = DEFAULT_CONFIG)
-      return @config[name] if @config[name]
-
-      error_message = <<~TEXT
-        Could not find #{name.inspect} config. You can define it like this:
-        PgEventstore.configure(name: #{name.inspect}) do |config|
-          # your config goes here
-        end
-      TEXT
-      raise error_message
-    end
-
-    # Look ups and returns a Connection, based on the given config. If not exists - it creates one. This operation is a
-    # thread-safe
-    # @param name [Symbol]
-    # @return [PgEventstore::Connection]
-    def connection(name = DEFAULT_CONFIG)
-      mutex.synchronize do
-        @connection[name] ||= Connection.new(**config(name).connection_options)
-      end
-    end
 
     # @param config_name [Symbol]
     # @param subscription_set [String]
@@ -112,12 +63,10 @@ module PgEventstore
 
     private
 
-    # @return [void]
-    def init_variables
-      @config = { DEFAULT_CONFIG => Config.new(name: DEFAULT_CONFIG) }
-      @connection = {}
-      @mutex = Thread::Mutex.new
+    # @param config [Config]
+    # @return [Hash]
+    def connection_options(config)
+      { uri: config.pg_uri, pool_size: config.connection_pool_size, pool_timeout: config.connection_pool_timeout }
     end
   end
-  init_variables
 end

@@ -1,0 +1,30 @@
+module PgEventstore
+  module Extensions
+    module ActsAsConfigurable
+      def acts_as_configurable: (?default_config: Symbol, config_class: Class) -> void
+
+      module Configurable
+        @config: Hash[Symbol, Extensions::OptionsExtension]
+
+        @connection: Hash[Symbol, Connection]
+
+        attr_reader mutex: Thread::Mutex
+
+        def configure: (?name: Symbol) { (BasicConfig) -> untyped } -> untyped
+
+        def config: (?Symbol name) -> BasicConfig
+
+        def available_configs: () -> ::Array[Symbol]
+
+        def connection: (?Symbol name) -> Connection
+
+        private
+
+        def connection_options: (BasicConfig config) ->
+          { uri: String, pool_size: Integer, pool_timeout: Integer }
+
+        def init_variables: -> void
+      end
+    end
+  end
+end
