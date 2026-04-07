@@ -14,4 +14,9 @@ module PgEventstore
     ) -> SubscriptionsManager
 
   def self.client: (?Symbol name) -> Client
+
+  private
+
+  def self.connection_options: (Config config) ->
+    { uri: String, pool_size: Integer, pool_timeout: Integer }
 end

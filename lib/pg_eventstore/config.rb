@@ -51,5 +51,12 @@ module PgEventstore
     # @!attribute subscription_graceful_shutdown_timeout
     #   @return [Integer] the number of seconds to wait until force-shutdown the subscription during the stop process
     option(:subscription_graceful_shutdown_timeout) { 15 }
+
+    # Computes a value for usage in PgEventstore::Connection
+    # @return [Hash]
+    def connection_options
+      puts "DEPRECATED: Config##{__method__} will be removed in next major version with no replacement"
+      { uri: pg_uri, pool_size: connection_pool_size, pool_timeout: connection_pool_timeout }
+    end
   end
 end

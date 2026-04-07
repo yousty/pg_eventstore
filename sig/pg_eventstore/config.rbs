@@ -1,9 +1,5 @@
 module PgEventstore
-  class Config
-    include PgEventstore::Extensions::OptionsExtension
-
-    # _@param_ `name` — config's name. Its value matches the appropriate key in PgEventstore.config hash
-    def initialize: (name: Symbol, **untyped options) -> void
+  class Config < BasicConfig
 
     def connection_options: () -> ::Hash[untyped, untyped]
 
@@ -20,8 +16,6 @@ module PgEventstore
 
     # _@param_ `options`
     def init_default_values: (::Hash[untyped, untyped] options) -> void
-
-    attr_reader name: untyped
 
     attr_accessor pg_uri: String
 

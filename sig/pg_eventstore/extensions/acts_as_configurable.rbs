@@ -20,8 +20,7 @@ module PgEventstore
 
         private
 
-        def connection_options: (BasicConfig config) ->
-          { uri: String, pool_size: Integer, pool_timeout: Integer }
+        def connection_options: (BasicConfig config) -> Hash[untyped, untyped]
 
         def init_variables: -> void
       end
