@@ -1,0 +1,11 @@
+module PgEventstore
+  class EventsGlobalIndexQueries
+    @query_strategy: QueryStrategy
+
+    attr_reader connection: Connection
+
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
+    def create_global_indexes: (Array[[Integer, Integer]] indexes) -> void
+  end
+end

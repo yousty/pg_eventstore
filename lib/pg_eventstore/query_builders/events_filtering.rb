@@ -6,17 +6,6 @@ module PgEventstore
     class EventsFiltering < BasicFiltering
       # @return [Integer]
       DEFAULT_LIMIT = 1_000
-      # @return [Hash<String => String, Symbol => String>]
-      SQL_DIRECTIONS = {
-        'asc' => 'ASC',
-        'desc' => 'DESC',
-        :asc => 'ASC',
-        :desc => 'DESC',
-        'Forwards' => 'ASC',
-        'Backwards' => 'DESC',
-      }.tap do |directions|
-        directions.default = 'ASC'
-      end.freeze
       # @return [Array<Symbol>]
       SUBSCRIPTIONS_OPTIONS = %i[from_position resolve_link_tos filter max_count].freeze
 
@@ -78,7 +67,7 @@ module PgEventstore
         # @return [Array<String>]
         def extract_event_types_filter(options)
           options in { filter: { event_types: Array => event_types } }
-          event_types = event_types&.select { _1.is_a?(String) }
+          event_types = event_types&.grep(String)
           event_types || []
         end
 

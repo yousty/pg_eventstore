@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- **Breaking change**: Database structure and the implementation of `#append_to_stream` was changed in a way it is not compatible with v2. Public API stays the same 
 - New feature: allow subscription to process events in batches. You can now provide `in_batches: true` to `#subscribe` to yield an array of events. See [docs](docs/subscriptions.md#processing-events-in-batches) for more info
 - Introduce `PgEventstore::BasicConfig` and `PgEventstore::Extensions::ActsAsConfigurable` to allow to easily create configurable objects  
 

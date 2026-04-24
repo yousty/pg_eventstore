@@ -31,7 +31,8 @@ module PgEventstore
           Queries.new(
             partitions: partition_queries,
             events: event_queries(middlewares(middlewares)),
-            transactions: transaction_queries
+            transactions: transaction_queries,
+            events_global_index: events_global_index_queries
           )
         ).call(stream, *events_or_event, options:)
       events_or_event.is_a?(Array) ? result : result.first
@@ -199,6 +200,11 @@ module PgEventstore
         EventSerializer.new(middlewares),
         EventDeserializer.new(middlewares, config.event_class_resolver)
       )
+    end
+
+    # @return [PgEventstore::EventsGlobalIndexQueries]
+    def events_global_index_queries
+      EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

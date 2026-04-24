@@ -13,6 +13,9 @@ module PgEventstore
     alias old_clear clear
     alias old_size size
     alias old_empty? empty?
+    alias old_slice slice
+    alias old_slice! slice!
+    alias old_at at
 
     def shift(...)
       synchronize { old_shift(...) }
@@ -36,6 +39,18 @@ module PgEventstore
 
     def empty?(...)
       synchronize { old_empty?(...) }
+    end
+
+    def slice(...)
+      synchronize { old_slice(...) }
+    end
+
+    def slice!(...)
+      synchronize { old_slice!(...) }
+    end
+
+    def at(...)
+      synchronize { old_at(...) }
     end
   end
 end

@@ -1148,7 +1148,12 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     let!(:subscription) { SubscriptionsHelper.create }
 
-    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+    let(:queries) do
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
+    end
 
     it_behaves_like 'admin web ui config'
 
@@ -1177,7 +1182,12 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     let!(:subscription2) { SubscriptionsHelper.create(name: 'Sub2') }
     let!(:subscription3) { SubscriptionsHelper.create(name: 'Sub3') }
 
-    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+    let(:queries) do
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
+    end
 
     it 'deletes first subscription' do
       expect { subject }.to change { queries.find_by(id: subscription1.id) }.to(nil)

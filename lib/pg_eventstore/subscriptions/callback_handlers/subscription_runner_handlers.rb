@@ -52,6 +52,13 @@ module PgEventstore
       def update_subscription_state(subscription, state)
         subscription.update(state:)
       end
+
+      # @param subscription [PgEventstore::Subscription]
+      # @param global_position [Integer]
+      # @return [void]
+      def checkpoint(subscription, global_position)
+        subscription.update(current_position: global_position, last_chunk_greatest_position: global_position)
+      end
     end
   end
 end

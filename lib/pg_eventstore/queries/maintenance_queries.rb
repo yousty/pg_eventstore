@@ -3,6 +3,8 @@
 module PgEventstore
   # @!visibility private
   class MaintenanceQueries
+    INDEXES_TO_REMOVE_PER_QUERY = 10_000
+
     # @!attribute connection
     #   @return [PgEventstore::Connection]
     attr_reader :connection
@@ -16,11 +18,18 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @return [Integer] number of deleted events of the given stream
     def delete_stream(stream)
+      total_removed = 0
       connection.with do |conn|
-        conn.exec_params(<<~SQL, stream.deconstruct)
-          DELETE FROM events WHERE context = $1 AND stream_name = $2 AND stream_id = $3
+        global_positions = conn.exec_params(<<~SQL, stream.deconstruct).to_a.map { _1['global_position'] }
+          DELETE FROM events WHERE context = $1 AND stream_name = $2 AND stream_id = $3 RETURNING global_position
         SQL
-      end.cmd_tuples
+        global_positions.each_slice(INDEXES_TO_REMOVE_PER_QUERY) do |slice|
+          total_removed += conn.exec_params(<<~SQL, [slice]).cmd_tuples
+            DELETE FROM events_global_index WHERE global_position = ANY($1)
+          SQL
+        end
+      end
+      total_removed
     end
 
     # @param event [PgEventstore::Event]
@@ -28,7 +37,8 @@ module PgEventstore
     def delete_event(event)
       connection.with do |conn|
         conn.exec_params(<<~SQL, [event.stream.context, event.stream.stream_name, event.type, event.global_position])
-          DELETE FROM events WHERE context = $1 AND stream_name = $2 AND type = $3 AND global_position = $4
+          DELETE FROM events WHERE context = $1 AND stream_name = $2 AND type = $3 AND global_position = $4;
+          DELETE FROM events_global_index WHERE global_position = $4;
         SQL
       end.cmd_tuples
     end

@@ -12,6 +12,7 @@ require_relative 'events_processor'
 require_relative 'subscription_handler_performance'
 require_relative 'subscription_runner'
 require_relative 'subscriptions_set'
+require_relative 'subscription_feed_strategies'
 require_relative 'subscription_runners_feeder'
 require_relative 'subscriptions_set_lifecycle'
 require_relative 'subscriptions_lifecycle'
@@ -112,7 +113,8 @@ module PgEventstore
         events_processor: EventsProcessor.new(
           graceful_shutdown_timeout:,
           consumer: consumer_class.create_consumer(handler, deserializer(middlewares)),
-          recovery_strategies: recovery_strategies(subscription, restart_terminator, failed_subscription_notifier)
+          recovery_strategies: recovery_strategies(subscription, restart_terminator, failed_subscription_notifier),
+          events_repository: RawEntities::EventsRepository.new
         ),
         subscription:
       )

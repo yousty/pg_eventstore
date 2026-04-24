@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::SubscriptionQueries do
-  let(:instance) { described_class.new(PgEventstore.connection) }
+  let(:instance) do
+    described_class.new(
+      PgEventstore.connection,
+      PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+    )
+  end
 
   describe '#find_by' do
     subject { instance.find_by(attrs) }

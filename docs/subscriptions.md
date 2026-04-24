@@ -144,9 +144,7 @@ subscriptions_manager.subscribe(
 )
 ```
 
-In this case the subscription's position will be advanced to the position of the last event of the chunk. Please note that in case of failure: 
-- the whole chunk will be yielded again during subscription retries phase
-- new events may appear in the chunk between retries
+In this case the subscription's position will be advanced to the position of the last event of the chunk. Please note that in case of failure the whole chunk will be yielded again during subscription retries phase.
 
 ## Middlewares
 

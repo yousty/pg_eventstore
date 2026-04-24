@@ -150,7 +150,7 @@ module PgEventstore
 
     # @return [PgEventstore::LinksResolver]
     def links_resolver
-      LinksResolver.new(connection)
+      LinksResolver.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

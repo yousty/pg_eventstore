@@ -279,14 +279,14 @@ module PgEventstore
       end
 
       post '/delete_subscription/:id' do
-        SubscriptionQueries.new(connection).delete(Integer(params[:id]))
+        SubscriptionQueries.new(connection, QueryStrategy::Foreground.new(connection)).delete(Integer(params[:id]))
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))
       end
 
       post '/delete_all_subscriptions' do
         params[:ids].each do |id|
-          SubscriptionQueries.new(connection).delete(Integer(id))
+          SubscriptionQueries.new(connection, QueryStrategy::Foreground.new(connection)).delete(Integer(id))
         end
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))

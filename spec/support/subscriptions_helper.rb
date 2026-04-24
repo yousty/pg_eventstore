@@ -4,9 +4,11 @@ class SubscriptionsHelper
   class << self
     def create(**attrs)
       defaults = { set: 'FooSet', name: 'FooSubscription' }
-      PgEventstore::Subscription.new(
-        **PgEventstore::SubscriptionQueries.new(PgEventstore.connection).create(defaults.merge(attrs))
+      queries = PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
       )
+      PgEventstore::Subscription.new(**queries.create(defaults.merge(attrs)))
     end
 
     def create_with_connection(config_name = :default, **attrs)

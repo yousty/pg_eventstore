@@ -56,10 +56,7 @@ module PgEventstore
       transaction_queries.transaction do
         return if events_horizon_present?
 
-        max_pos = connection.with do |conn|
-          conn.exec('SELECT MAX(global_position) FROM events')
-        end
-        max_pos = max_pos.to_a.first&.dig('global_position') || DEFAULT_SAFE_POSITION
+        max_pos = events_global_index_queries.max_global_position || DEFAULT_SAFE_POSITION
         connection.with do |conn|
           conn.exec_params(<<~SQL, [max_pos])
             INSERT INTO events_horizon (global_position, xact_id) VALUES ($1, DEFAULT)
@@ -73,6 +70,10 @@ module PgEventstore
     # @return [PgEventstore::TransactionQueries]
     def transaction_queries
       TransactionQueries.new(connection)
+    end
+
+    def events_global_index_queries
+      EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

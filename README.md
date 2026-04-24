@@ -10,6 +10,10 @@ Implements database and API to store and read events in event sourced systems.
 - It is recommended to use a connection pooler (for example [PgBouncer](https://www.pgbouncer.org/)) in `transaction` pool mode to lower the load on a database.
 - `pg_eventstore` requires ruby v3+. The development of this gem is targeted at [current](https://endoflife.date/ruby) ruby versions.
 
+### Migrating to v3
+
+If you are running v1 - please migrate to v2 and only then - to v3.
+
 ## Installation
 
 Install the gem and add to the application's Gemfile by executing:
@@ -65,7 +69,7 @@ You may want to backup your eventstore database. It is important to mention that
 pg_dump --exclude-table-data=events_horizon eventstore -U postgres > eventstore.sql
 ```
 
-Also, it is important you create and migrate new database via provided rake commands - they include an important setup of `pg_cron` jobs as well. **Even if you would like to restore your db backup on clean PostgreSQL instance - please initialize pg_eventstore via built-in tools first.**
+Also, it is important you create new database via built-in command - it includes an important setup of `pg_cron` jobs. **Even if you would like to restore your db backup on clean PostgreSQL instance - please initialize pg_eventstore database via built-in tools first.**
 
 ## RSpec
 

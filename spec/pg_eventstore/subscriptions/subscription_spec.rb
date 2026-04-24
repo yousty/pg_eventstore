@@ -114,7 +114,12 @@ RSpec.describe PgEventstore::Subscription do
     let(:set) { 'FooSet' }
     let(:name) { 'MySubscription1' }
     let(:lock_id) { SubscriptionsSetHelper.create.id }
-    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+    let(:queries) do
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
+    end
 
     context 'when Subscription does not exist' do
       it 'creates it' do
@@ -254,7 +259,12 @@ RSpec.describe PgEventstore::Subscription do
     subject { subscription.reload }
 
     let(:subscription) { SubscriptionsHelper.create_with_connection }
-    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+    let(:queries) do
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
+    end
 
     before do
       queries.update(subscription.id, attrs: { options: { resolve_link_tos: true } }, locked_by: nil)

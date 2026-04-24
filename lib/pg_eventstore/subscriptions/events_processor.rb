@@ -14,10 +14,11 @@ module PgEventstore
     #   the runner when stopping it using #stop_async
     # @param consumer [PgEventstore::EventsProcessorConsumer]
     # @param recovery_strategies [Array<PgEventstore::RunnerRecoveryStrategy>]
-    def initialize(graceful_shutdown_timeout:, consumer:, recovery_strategies: [])
+    # @param events_repository [PgEventstore::RawEntities::EventsRepository]
+    def initialize(graceful_shutdown_timeout:, consumer:, events_repository:, recovery_strategies: [])
       @consumer = consumer
-      @raw_events = SynchronizedArray.new
-      @raw_events_cond = @raw_events.new_cond
+      @events_repository = events_repository
+      @repository_cond = @events_repository.new_cond
       @basic_runner = BasicRunner.new(
         run_interval: 0,
         async_shutdown_time: graceful_shutdown_timeout,
@@ -26,29 +27,35 @@ module PgEventstore
       attach_runner_callbacks
     end
 
-    # @param raw_events [Array<Hash>]
+    # @param chunk [PgEventstore::RawEntities::Chunk]
     # @return [void]
-    def feed(raw_events)
-      raise EmptyChunkFedError.new('Empty chunk was fed!') if raw_events.empty?
+    def feed(chunk)
+      raise EmptyChunkFedError.new('Empty chunk was fed!') if chunk.empty?
 
       within_state(:running) do
-        callbacks.run_callbacks(:feed, Utils.original_global_position(raw_events.last))
-        @raw_events.synchronize do
-          @raw_events.push(*raw_events)
-          @raw_events_cond.broadcast
-        end
+        callbacks.run_callbacks(:feed, chunk.last_global_position)
+        @events_repository.add_chunk(chunk, condition: @repository_cond)
+      end
+    end
+
+    def checkpoint(global_position)
+      within_state(:running) do
+        return unless @events_repository.empty?
+
+        callbacks.run_callbacks(:checkpoint, global_position)
       end
     end
 
     # Number of unprocessed events which are currently in a queue
     # @return [Integer]
     def events_left_in_chunk
-      @raw_events.size
+      @events_repository.size
     end
 
     # @return [void]
-    def clear_chunk
-      @raw_events.clear
+    def clear_events_repository
+      @events_repository.clear
+      @consumer.clear_unprocessed_events
     end
 
     private
@@ -56,7 +63,9 @@ module PgEventstore
     def attach_runner_callbacks
       @basic_runner.define_callback(
         :process_async, :before,
-        EventsProcessorHandlers.setup_handler(:consume_events, @consumer, @callbacks, @raw_events, @raw_events_cond)
+        EventsProcessorHandlers.setup_handler(
+          :consume_events, @consumer, @callbacks, @events_repository, @repository_cond
+        )
       )
 
       @basic_runner.define_callback(

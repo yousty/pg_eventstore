@@ -328,7 +328,10 @@ RSpec.describe 'Subscriptions integration' do
     end
 
     let(:queries) do
-      PgEventstore::SubscriptionQueries.new(PgEventstore.connection)
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
     end
 
     before do

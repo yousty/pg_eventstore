@@ -29,6 +29,11 @@ module PgEventstore
     def call(callbacks, raw_events, raw_events_cond)
       raise NotImplementedError
     end
+
+    # @return [void]
+    def clear_unprocessed_events
+      raise NotImplementedError
+    end
   end
 end
 

@@ -16,26 +16,31 @@ module PgEventstore
       # @param handler [#call]
       def initialize(handler)
         @handler = handler
+        @last_unprocessed_events = nil
+      end
+
+      def clear_unprocessed_events
+        @last_unprocessed_events = nil
       end
 
       # @param callbacks [PgEventstore::Callbacks]
-      # @param raw_events [Array<Hash>]
-      # @param raw_events_cond [MonitorMixin::ConditionVariable]
-      def call(callbacks, raw_events, raw_events_cond)
-        events_to_process = []
-        raw_events.synchronize do
-          raw_events_cond.wait(0.5) if raw_events.empty?
-          events_to_process = raw_events.slice!(0..)
-        end
+      # @param events_repository [PgEventstore::RawEntities::EventsRepository]
+      # @param repository_cond [MonitorMixin::ConditionVariable]
+      def call(callbacks, events_repository, repository_cond)
+        events_to_process =
+          @last_unprocessed_events ||
+          events_repository.wait_and_consume(events_num: nil, timeout: 0.5, condition: repository_cond)
         return if events_to_process.empty?
 
         callbacks.run_callbacks(:process, Utils.original_global_position(events_to_process.last)) do
           @handler.call(events_to_process)
         rescue => exception
-          raw_events.unshift(*events_to_process)
+          @last_unprocessed_events = events_to_process
           raise Utils.wrap_exception(
             exception, global_positions: events_to_process.map(&Utils.method(:original_global_position))
           )
+        else
+          clear_unprocessed_events
         end
       end
     end

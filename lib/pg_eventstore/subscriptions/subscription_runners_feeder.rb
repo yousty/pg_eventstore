@@ -5,8 +5,10 @@ module PgEventstore
   # @!visibility private
   class SubscriptionRunnersFeeder
     # @param config_name [Symbol]
-    def initialize(config_name)
+    # @param affected_partitions_size_map [PgEventstore::SubscriptionFeedStrategies::AffectedPartitionsSizeMap]
+    def initialize(config_name, affected_partitions_size_map)
       @config_name = config_name
+      @affected_partitions_size_map = affected_partitions_size_map
     end
 
     # @param runners [Array<PgEventstore::SubscriptionRunner>]
@@ -15,15 +17,20 @@ module PgEventstore
       runners = runners.select(&:running?).select(&:time_to_feed?)
       return if runners.empty?
 
-      safe_pos = subscription_service_queries.safe_global_position
-      runners_query_options = runners.to_h do |runner|
-        [runner.id, runner.next_chunk_query_opts.merge(to_position: safe_pos)]
+      feed_strategies_collection = SubscriptionFeedStrategies::Collection.create(
+        runners,
+        @affected_partitions_size_map,
+        connection,
+        QueryStrategy::Async.new(connection)
+      )
+      safe_position = subscription_service_queries.safe_global_position
+      query_runner = AsyncQueryRunner.new
+      feed_strategies_collection.each do |strategy|
+        query_runner.async do
+          strategy.feed(safe_position)
+        end
       end
-      grouped_events = subscription_queries.subscriptions_events(runners_query_options)
-
-      runners.each do |runner|
-        runner.feed(grouped_events[runner.id]) if grouped_events[runner.id]
-      end
+      query_runner.run
     end
 
     private
@@ -31,11 +38,6 @@ module PgEventstore
     # @return [PgEventstore::Connection]
     def connection
       PgEventstore.connection(@config_name)
-    end
-
-    # @return [PgEventstore::SubscriptionQueries]
-    def subscription_queries
-      SubscriptionQueries.new(connection)
     end
 
     # @return [PgEventstore::SubscriptionServiceQueries]

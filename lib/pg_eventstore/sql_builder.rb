@@ -7,12 +7,24 @@ module PgEventstore
     class << self
       # @param builders [Array<PgEventstore::SQLBuilder>]
       # @return [PgEventstore::SQLBuilder]
-      def union_builders(builders)
-        builders[1..].each_with_object(builders[0]) do |builder, first_builder|
+      def union_builders(builders, mode: :all)
+        union_builder = builders[1..].each_with_object(builders[0]) do |builder, first_builder|
           first_builder.union(builder)
+        end
+        union_builder.union_mode = mode
+        union_builder
+      end
+
+      def wrap_union_builder(builder)
+        new.tap do |b|
+          b.select('*')
+          b.from(builder)
         end
       end
     end
+
+    UNION_MODES = %i[all distinct].freeze
+    private_constant :UNION_MODES
 
     # @return [Array<Object>] sql positional values
     attr_reader :positional_values
@@ -33,6 +45,8 @@ module PgEventstore
       @positional_values = []
       @positional_values_size = 0
       @union_values = []
+      @union_mode = :all
+      @table_alias = nil
     end
 
     # @param sql [String]
@@ -68,6 +82,7 @@ module PgEventstore
     # @return [self]
     def from(table_name)
       @from_value = table_name
+      @table_alias = table_name.is_a?(SQLBuilder) ? table_name.table_alias : table_name
       self
     end
 
@@ -139,6 +154,38 @@ module PgEventstore
       _to_exec_params
     end
 
+    def dup
+      self.class.new.tap do |inst|
+        inst.instance_variable_set(:@select_values, @select_values.map(&:dup))
+        inst.instance_variable_set(:@from_value, @from_value&.dup)
+        inst.instance_variable_set(:@where_values, @where_values.dup.transform_values(&:dup))
+        inst.instance_variable_set(:@join_values, @join_values.map(&:dup))
+        inst.instance_variable_set(:@group_values, @group_values.map(&:dup))
+        inst.instance_variable_set(:@order_values, @order_values.map(&:dup))
+        inst.instance_variable_set(:@limit_value, @limit_value&.dup)
+        inst.instance_variable_set(:@offset_value, @offset_value&.dup)
+        inst.instance_variable_set(:@positional_values, @positional_values.map(&:dup))
+        inst.instance_variable_set(:@positional_values_size, @positional_values_size)
+        inst.instance_variable_set(:@union_values, @union_values.map(&:dup))
+        inst.instance_variable_set(:@union_mode, @union_mode.dup)
+        inst.instance_variable_set(:@table_alias, @table_alias.dup)
+      end
+    end
+
+    def union_builder?
+      @union_values.any?
+    end
+
+    def union_mode=(val)
+      raise "Unknown UNION mode #{val.inspect}. Available modes are: #{UNION_MODES}" unless UNION_MODES.include?(val)
+
+      @union_mode = val
+    end
+
+    def table_alias
+      @table_alias
+    end
+
     protected
 
     # @return [[String, Array<_>]]
@@ -153,7 +200,7 @@ module PgEventstore
       return @from_value if @from_value.is_a?(String)
 
       sql = merge(@from_value)
-      "(#{sql}) #{@from_value.from_sql}"
+      "(#{sql}) #{@from_value.table_alias}"
     end
 
     private
@@ -178,7 +225,8 @@ module PgEventstore
       union_parts += @union_values.map do |builder|
         "(#{merge(builder)})"
       end
-      union_parts.join(' UNION ALL ')
+      union_mode_sql = @union_mode == :all ? 'UNION ALL' : 'UNION'
+      union_parts.join(" #{union_mode_sql} ")
     end
 
     # @return [String]
@@ -207,6 +255,7 @@ module PgEventstore
     # @param builder [PgEventstore::SQLBuilder]
     # @return [String]
     def merge(builder)
+      builder = builder.dup
       builder.positional_values_size = @positional_values_size
       sql_query, positional_values = builder._to_exec_params
       @positional_values.push(*positional_values)

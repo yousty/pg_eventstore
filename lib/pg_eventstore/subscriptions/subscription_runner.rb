@@ -19,10 +19,10 @@ module PgEventstore
 
     # @!attribute subscription
     #   @return [PgEventstore::Subscription]
-    attr_reader :subscription
+    attr_reader :subscription, :index_partitions_filter
 
     def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore, :state, :running?,
-                   :clear_chunk, :within_state
+                   :clear_events_repository, :within_state, :checkpoint
     def_delegators :@subscription, :lock!, :id
 
     # @param stats [PgEventstore::SubscriptionHandlerPerformance]
@@ -32,6 +32,7 @@ module PgEventstore
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
+      @index_partitions_filter = QueryBuilders::IndexPartitionsFilter.create(subscription.options, scope: :event_type)
 
       attach_callbacks
     end
@@ -40,7 +41,8 @@ module PgEventstore
     def next_chunk_query_opts
       @subscription.options.merge(
         from_position: next_chunk_global_position,
-        max_count: estimate_events_number
+        max_count: estimate_events_number,
+        index_partitions_filter: @index_partitions_filter
       )
     end
 
@@ -89,6 +91,11 @@ module PgEventstore
       @events_processor.define_callback(
         :feed, :after,
         SubscriptionRunnerHandlers.setup_handler(:update_subscription_chunk_stats, @subscription)
+      )
+
+      @events_processor.define_callback(
+        :checkpoint, :after,
+        SubscriptionRunnerHandlers.setup_handler(:checkpoint, @subscription)
       )
 
       @events_processor.define_callback(

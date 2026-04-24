@@ -1,0 +1,9 @@
+module PG
+  class Result
+    def map_types!: (untyped type_map) -> self
+
+    def field_names_as: (Symbol type_map) -> self
+
+    def inspect: -> String
+  end
+end

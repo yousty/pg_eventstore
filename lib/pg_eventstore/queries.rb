@@ -1,14 +1,19 @@
 # frozen_string_literal: true
 
 require_relative 'sql_builder'
+require_relative 'query_builders/index_partitions_filter'
 require_relative 'query_builders/basic_filtering'
 require_relative 'query_builders/events_filtering'
 require_relative 'query_builders/partitions_filtering'
+require_relative 'query_builders/events_global_index_filtering'
+require_relative 'query_builders/streams_global_index_filtering'
 require_relative 'queries/transaction_queries'
 require_relative 'queries/event_queries'
 require_relative 'queries/partition_queries'
 require_relative 'queries/links_resolver'
 require_relative 'queries/maintenance_queries'
+require_relative 'queries/events_global_index_queries'
+require_relative 'queries/streams_global_index_queries'
 
 module PgEventstore
   # @!visibility private
@@ -28,5 +33,9 @@ module PgEventstore
     # @!attribute maintenance
     #   @return [PgEventstore::MaintenanceQueries, nil]
     attribute(:maintenance)
+
+    # @!attribute maintenance
+    #   @return [PgEventstore::EventsGlobalIndexQueries, nil]
+    attribute(:events_global_index)
   end
 end

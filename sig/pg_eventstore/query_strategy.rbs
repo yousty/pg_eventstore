@@ -1,0 +1,7 @@
+module PgEventstore
+  module QueryStrategy
+    def exec: (*untyped) -> PG::Result
+
+    def exec_params: (*untyped) -> PG::Result
+  end
+end

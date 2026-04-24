@@ -303,7 +303,12 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     subject { instance.start }
 
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
-    let(:subscription_queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+    let(:subscription_queries) do
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
+    end
 
     let(:subscription1) { SubscriptionsHelper.init_with_connection(name: 'Foo', set: set_name) }
     let(:subscription2) { SubscriptionsHelper.init_with_connection(name: 'Bar', set: set_name) }

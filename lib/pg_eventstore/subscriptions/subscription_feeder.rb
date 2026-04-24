@@ -29,6 +29,9 @@ module PgEventstore
       )
       @subscriptions_set_lifecycle = subscriptions_set_lifecycle
       @subscriptions_lifecycle = subscriptions_lifecycle
+      @affected_partitions_size_map = SubscriptionFeedStrategies::AffectedPartitionsSizeMap.new(
+        PgEventstore.connection(config_name)
+      )
       @commands_handler = CommandsHandler.new(@config_name, self, @subscriptions_lifecycle.runners)
       attach_runner_callbacks
     end
@@ -89,7 +92,9 @@ module PgEventstore
       )
       @basic_runner.define_callback(
         :process_async, :before,
-        SubscriptionFeederHandlers.setup_handler(:feed_runners, @subscriptions_lifecycle, @config_name)
+        SubscriptionFeederHandlers.setup_handler(
+          :feed_runners, @subscriptions_lifecycle, @config_name, @affected_partitions_size_map
+        )
       )
       @basic_runner.define_callback(
         :process_async, :after,

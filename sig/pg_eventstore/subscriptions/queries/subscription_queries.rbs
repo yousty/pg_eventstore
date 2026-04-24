@@ -1,7 +1,9 @@
 module PgEventstore
   class SubscriptionQueries
+    @query_strategy: QueryStrategy
+
     # _@param_ `connection`
-    def initialize: (PgEventstore::Connection connection) -> void
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
 
     # _@param_ `attrs`
     def find_or_create_by: (::Hash[untyped, untyped] attrs) -> ::Hash[Symbol, untyped]
