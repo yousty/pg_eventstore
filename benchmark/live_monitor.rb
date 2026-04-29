@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 class LiveMonitor
-  def initialize
+  def initialize(connection)
+    @connection = connection
     @total = 0
     @per_second = 0
     @per_minute = 0
@@ -14,7 +15,9 @@ class LiveMonitor
   end
 
   def stop
-    initialize
+    @total = 0
+    @per_second = 0
+    @per_minute = 0
     @track_per_second_t&.exit
     @track_per_minute_t&.exit
     @output_t&.exit
@@ -33,11 +36,11 @@ class LiveMonitor
 
   def track_per_second
     @track_per_second_t = Thread.new do
-      count_was = PgEventstore.connection.with { |c| c.exec('select count(*) from events').first['count'] }
+      count_was = @connection.with { |c| c.exec('select count(*) from events_global_index').first['count'] }
 
       loop do
         sleep 1
-        count_now = PgEventstore.connection.with { |c| c.exec('select count(*) from events').first['count'] }
+        count_now = @connection.with { |c| c.exec('select count(*) from events_global_index').first['count'] }
 
         @per_second = count_now - count_was
         count_was = count_now
@@ -47,11 +50,11 @@ class LiveMonitor
 
   def track_per_minute
     @track_per_minute_t = Thread.new do
-      count_was = PgEventstore.connection.with { |c| c.exec('select count(*) from events').first['count'] }
+      count_was = @connection.with { |c| c.exec('select count(*) from events_global_index').first['count'] }
 
       loop do
         sleep 60
-        count_now = PgEventstore.connection.with { |c| c.exec('select count(*) from events').first['count'] }
+        count_now = @connection.with { |c| c.exec('select count(*) from events_global_index').first['count'] }
 
         @per_minute = count_now - count_was
         count_was = count_now

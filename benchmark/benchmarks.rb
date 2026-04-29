@@ -1,39 +1,68 @@
 # frozen_string_literal: true
 
 require 'pg_eventstore'
-require 'benchmark'
 require 'securerandom'
 require_relative 'stats'
 
 class Benchmarks
-  EVENT_TYPES = %w[Foo Bar Baz Lorem Ipsum Dolor Sit Amet].freeze
-  CONTEXTS = %w[SomeContext AnotherContext FooCtx Ctx BarCtx BazCtx BazBarCtx FooBarCtx FooBazCtx].freeze
-  STREAM_NAMES = %w[User Post Article Comment Reaction Chapter UserProfile Book].freeze
+  # This config results in 11520 event partitions and 11673 partitions in total. This allows to see how well current
+  # implementation scales with the number of partitions
+  EVENT_TYPES = %w[Foo Bar Baz Lorem Ipsum Dolor Sit Amet].flat_map do |e|
+    10.times.map { |t| "#{e}-#{t}" }
+  end.freeze
+  CONTEXTS = %w[SomeContext AnotherContext FooCtx Ctx BarCtx BazCtx BazBarCtx FooBarCtx FooBazCtx]
+  STREAM_NAMES = %w[User Post Article Comment Reaction Chapter UserProfile Book].flat_map do |s|
+    2.times.map { |t| "#{s}-#{t}" }
+  end.freeze
 
   class << self
     # Populate db with some data, so that tests are performed over non-empty db
     def warm_up
       puts "Warming up..."
-      CONTEXTS.each do |context|
-        STREAM_NAMES.each do |stream_name|
+      puts "Concurrency is: #{CONCURRENCY}"
+      workers = CONCURRENCY.times.map do
+        Thread.new do
+          # [{ stream: stream1, events: [event1, event2, ...] }, ...]
+          Thread.current[:jobs] = []
+          loop do
+            job = Thread.current[:jobs].shift
+            unless job
+              sleep 0.5
+              next
+            end
+            PgEventstore.client.append_to_stream(job[:stream], job[:events])
+          end
+        end
+      end
+      loop do
+        break if workers.all? { |worker| worker[:jobs]&.empty? && worker.status == 'sleep' }
+      end
+      CONTEXTS.each_with_index do |context, i|
+        STREAM_NAMES.each_with_index do |stream_name, j|
           stream = PgEventstore::Stream.new(
             context:,
             stream_name:,
             stream_id: SecureRandom.uuid
           )
-          events = 1000.times.map do |j|
-            PgEventstore::Event.new(data: { foo: "foo-#{j}" }, type: EVENT_TYPES.sample)
+          events = 1000.times.map do |event_num|
+            PgEventstore::Event.new(data: { foo: "foo-#{event_num}" }, type: EVENT_TYPES[event_num % EVENT_TYPES.size])
           end
-          PgEventstore.client.append_to_stream(stream, events)
+          worker = workers[(i + j) % workers.size]
+          worker[:jobs].push({ stream:, events: })
         end
       end
+      loop do
+        break if workers.all? { |worker| worker.status == 'sleep' && worker[:jobs].empty? }
+        sleep 1
+      end
+      workers.each(&:exit)
+      puts "Done warming up. Benchmarking now..."
     end
   end
 
   attr_reader :stats
 
   # @param parallel_num [Integer] number of parallel threads/processes
-  # @param stats [Stats]
   def initialize(parallel_num)
     @parallel_num = parallel_num
     @stats = Stats.new
@@ -43,12 +72,14 @@ class Benchmarks
   # @return [void]
   def in_processes(method_name)
     puts "Running #{@parallel_num} processes to benchmark #{method_name.inspect} performance"
+    PgEventstore.connection.shutdown
     pids = @parallel_num.times.map do
       fork do
         public_send(method_name, :processes)
         @stats.persist_stats
       end
     end
+    PgEventstore.connection.establish_connection
     pids.each { |pid| Process.waitpid(pid) }
   end
 
