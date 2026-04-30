@@ -3,7 +3,7 @@ CREATE TABLE public.streams_global_index
     id              bigserial                         NOT NULL,
     partition_id    bigint                            NOT NULL,
     stream_id       character varying COLLATE "POSIX" NOT NULL,
-    stream_revision integer DEFAULT 0                 NOT NULL
+    stream_revision integer                           NOT NULL
 );
 
 COMMENT ON COLUMN public.streams_global_index.partition_id IS

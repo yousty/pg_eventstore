@@ -66,5 +66,9 @@ module PgEventstore
     def system?
       type.start_with?('$')
     end
+
+    def dup
+      self.class.new(**Utils.deep_dup(options_hash))
+    end
   end
 end

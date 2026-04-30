@@ -3,16 +3,34 @@
 RSpec.describe PgEventstore::Commands::Append do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(events: event_queries, partitions: partition_queries, transactions: transaction_queries)
+    PgEventstore::Queries.new(
+      events: event_queries,
+      partitions: partition_queries,
+      transactions: transaction_queries,
+      events_global_index: events_global_index_queries,
+      streams_global_index: streams_global_index_queries
+    )
   end
   let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
   let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
+  let(:events_global_index_queries) do
+    PgEventstore::EventsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+    )
+  end
+  let(:streams_global_index_queries) do
+    PgEventstore::StreamsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+    )
+  end
   let(:event_queries) do
     PgEventstore::EventQueries.new(
       PgEventstore.connection,
-      PgEventstore::EventSerializer.new(middlewares),
       PgEventstore::EventDeserializer.new(middlewares, event_class_resolver)
     )
+  end
+  let(:event_modifier) do
+    PgEventstore::Commands::EventModifiers::PrepareRegularEvent.new(PgEventstore::EventSerializer.new(middlewares))
   end
   let(:middlewares) { [] }
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
@@ -21,7 +39,7 @@ RSpec.describe PgEventstore::Commands::Append do
     let(:stream) { PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'MyAwesomeStream', stream_id: '123') }
 
     describe 'appending single event' do
-      subject { instance.call(stream, event, options:) }
+      subject { instance.call(stream, event, event_modifier:, options:) }
 
       let(:event) { PgEventstore::Event.new(type: 'MyAwesomeEvent', data: { foo: :bar }) }
       let(:options) { {} }
@@ -252,25 +270,6 @@ RSpec.describe PgEventstore::Commands::Append do
         end
       end
 
-      context 'when middleware which changes #stream_revision is given' do
-        let(:middlewares) { [middleware] }
-        let(:middleware) do
-          Class.new do
-            class << self
-              include PgEventstore::Middleware
-
-              def serialize(event)
-                event.stream_revision = -1
-              end
-            end
-          end
-        end
-
-        it_behaves_like 'read only attribute' do
-          let(:attribute) { :stream_revision }
-        end
-      end
-
       context "when event's class is defined" do
         let(:event_class) { Class.new(PgEventstore::Event) }
         let(:event) { event_class.new }
@@ -312,7 +311,7 @@ RSpec.describe PgEventstore::Commands::Append do
     end
 
     describe 'appending multiple events' do
-      subject { instance.call(stream, event1, event2, options:) }
+      subject { instance.call(stream, event1, event2, event_modifier:, options:) }
 
       let(:event1) { PgEventstore::Event.new(type: 'MyAwesomeEvent', data: { foo: :bar }) }
       let(:event2) { PgEventstore::Event.new(type: 'MyAnotherEvent', data: { foo: :baz }) }
@@ -373,15 +372,15 @@ RSpec.describe PgEventstore::Commands::Append do
       iterations_number.times.flat_map do |i|
         t1 = Thread.new do
           sleep 0.1 + (i / 10.0)
-          instance.call(stream, *([event1] * events_count_mapping['some-event']))
+          instance.call(stream, *([event1] * events_count_mapping['some-event']), event_modifier:)
         end
         t2 = Thread.new do
           sleep 0.1 + (i / 10.0)
-          instance.call(stream, *([event2] * events_count_mapping['some-event2']))
+          instance.call(stream, *([event2] * events_count_mapping['some-event2']), event_modifier:)
         end
         t3 = Thread.new do
           sleep 0.1 + (i / 10.0)
-          instance.call(stream, *([event3] * events_count_mapping['some-event3']))
+          instance.call(stream, *([event3] * events_count_mapping['some-event3']), event_modifier:)
         end
         [t1, t2, t3]
       end.each(&:join)

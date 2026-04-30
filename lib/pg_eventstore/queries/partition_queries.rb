@@ -120,6 +120,8 @@ module PgEventstore
         stream_name_partition(stream) || create_stream_name_partition(stream, context_partition['table_name'])
 
       create_event_type_partition(stream, event_type, stream_name_partition['table_name'])
+    rescue PG::UniqueViolation => e
+      raise DuplicatedRecordError.new(e)
     end
 
     # @param stream [PgEventstore::Stream]
@@ -196,12 +198,12 @@ module PgEventstore
       index_partitions_filter = index_partitions_filter.dup
       main_builder = SQLBuilder.new.select('count(*) as count_all')
       builders = []
-      index_partitions_filter.with_stream_ids&.each do |builder|
+      index_partitions_filter.for_streams_idx&.each do |builder|
         builder.unselect.select('id')
         builders.push(builder)
       end
-      if index_partitions_filter.without_stream_id
-        builder = index_partitions_filter.without_stream_id
+      if index_partitions_filter.for_events_idx
+        builder = index_partitions_filter.for_events_idx
         builder.unselect.select('id')
         builders.push(builder)
       end

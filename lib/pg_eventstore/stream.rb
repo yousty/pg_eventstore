@@ -9,7 +9,7 @@ module PgEventstore
     # @return [Integer]
     NON_EXISTING_STREAM_REVISION = -1
     # @return [Array<String>]
-    KNOWN_SYSTEM_STREAMS = %w[$streams].freeze
+    KNOWN_SYSTEM_STREAMS = %w[].freeze
 
     class << self
       # Produces "all" stream instance. "all" stream does not represent any specific stream. Instead, it indicates that

@@ -12,12 +12,10 @@ module PgEventstore
       # @return [Array<PgEventstore::Event>] persisted events
       # @raise [PgEventstore::WrongExpectedRevisionError]
       # @raise [PgEventstore::NotPersistedEventError]
-      def call(stream, *events, options: {})
+      def call(stream, *events, event_modifier:, options: {})
         check_events_presence(events)
         append_cmd = Append.new(queries)
-        append_cmd.call(
-          stream, *events, options:, event_modifier: EventModifiers::PrepareLinkEvent.new(queries.partitions)
-        )
+        append_cmd.call(stream, *events, event_modifier:, options:)
       end
 
       private
@@ -27,7 +25,7 @@ module PgEventstore
       # @param events [Array<PgEventstore::Event>]
       # @return [void]
       def check_events_presence(events)
-        global_positions_from_db = queries.events.global_positions_from_db(events)
+        global_positions_from_db = queries.events_global_index.global_positions_from_db(events)
         missing_ids = events.map(&:global_position) - global_positions_from_db
         return if missing_ids.empty?
 

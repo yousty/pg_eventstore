@@ -53,6 +53,13 @@ module PgEventstore
       @pool.shutdown(&:close)
     end
 
+    # Restore connection after shutdown by re-initializing connection pool
+    # @return [void]
+    def establish_connection
+      @pool = nil
+      init_pool
+    end
+
     private
 
     # @return [ConnectionPool]

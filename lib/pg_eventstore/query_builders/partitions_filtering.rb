@@ -89,21 +89,33 @@ module PgEventstore
           case scope
           when :event_type
             partitions_filter.with_event_types
+            partitions_filter.ordered
           when :stream_name
             filter = QueryBuilders::PartitionsFiltering.new
             filter.without_event_types
             filter.with_stream_names
+            filter.ordered
             builder = filter.to_sql_builder
             builder.where(
               '(context, stream_name) in ?',
-              partitions_filter.to_sql_builder.unselect.select('context, stream_name').group('context, stream_name')
+              partitions_filter.
+                to_sql_builder.
+                unselect.
+                select('distinct on (context, stream_name) context, stream_name')
             )
           when :context
             filter = QueryBuilders::PartitionsFiltering.new
             filter.without_event_types
             filter.without_stream_names
+            filter.ordered
             builder = filter.to_sql_builder
-            builder.where('context in ?', partitions_filter.to_sql_builder.unselect.select('context').group('context'))
+            builder.where(
+              'context in ?',
+              partitions_filter.
+                to_sql_builder.
+                unselect.
+                select('distinct on (context) context')
+            )
           when :auto
             if event_filters.any?
               set_partitions_scope(partitions_filter, stream_filters, event_filters, :event_type)
@@ -161,6 +173,10 @@ module PgEventstore
 
       def without_stream_names
         @sql_builder.where('stream_name IS NULL')
+      end
+
+      def ordered
+        @sql_builder.order('id asc')
       end
     end
   end

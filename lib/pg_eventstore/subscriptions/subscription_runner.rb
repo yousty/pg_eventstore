@@ -32,7 +32,7 @@ module PgEventstore
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
-      @index_partitions_filter = QueryBuilders::IndexPartitionsFilter.create(subscription.options, scope: :event_type)
+      @index_partitions_filter = QueryBuilders::IndexPartitionsFilter.create(subscription.options)
 
       attach_callbacks
     end

@@ -14,7 +14,7 @@ module PgEventstore
         # @return [PgEventstore::QueryBuilders::EventsGlobalIndexFiltering]
         def build_filter_from_query_options(options)
           index_filter = new
-          index_filter.add_partition_filters(IndexPartitionsFilter.create(options, scope: :event_type))
+          index_filter.add_partition_filters(IndexPartitionsFilter.create(options))
           index_filter.from_position(options[:from_position], options[:direction])
           index_filter.to_position(options[:to_position], options[:direction])
           index_filter.add_direction(options[:direction])
@@ -45,11 +45,13 @@ module PgEventstore
       def add_partition_filters(index_partitions_filter)
         return if index_partitions_filter.empty?
 
-        index_partitions_filter.with_stream_ids&.each do |builder|
-          @sql_builder.where_or('(partition_id, stream_id) in ?', builder)
+        if index_partitions_filter.for_streams_idx
+          streams_filter = StreamsGlobalIndexFiltering.new
+          streams_filter.add_partition_filters(index_partitions_filter)
+          @sql_builder.where_or('streams_global_index_id in ?', streams_filter.to_sql_builder)
         end
-        if index_partitions_filter.without_stream_id
-          @sql_builder.where_or('partition_id in ?', index_partitions_filter.without_stream_id)
+        if index_partitions_filter.for_events_idx
+          @sql_builder.where_or('partition_id in ?', index_partitions_filter.for_events_idx)
         end
       end
 

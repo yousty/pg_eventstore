@@ -9,23 +9,25 @@ module PgEventstore
         attr_reader :partition_queries, :partitions
 
         # @param partition_queries [PgEventstore::PartitionQueries]
-        def initialize(partition_queries)
+        # @param serializer [PgEventstore::EventSerializer]
+        def initialize(partition_queries, serializer)
           @partitions = {}
           @partition_queries = partition_queries
+          @serializer = serializer
         end
 
         # @param event [PgEventstore::Event]
-        # @param revision [Integer]
         # @return [PgEventstore::Event]
-        def call(event, revision)
-          Event.new(
+        def call(event)
+          event = Event.new(
             link_global_position: event.global_position,
             link_partition_id: partition_id(event),
-            type: Event::LINK_TYPE,
-            stream_revision: revision
+            type: Event::LINK_TYPE
           ).tap do |e|
-            %i[link_global_position link_partition_id type stream_revision].each { |attr| e.readonly!(attr) }
+            %i[link_global_position link_partition_id type].each { |attr| e.readonly!(attr) }
           end
+          @serializer.serialize(event)
+          event
         end
 
         private

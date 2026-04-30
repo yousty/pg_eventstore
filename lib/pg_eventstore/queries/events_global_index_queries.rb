@@ -14,15 +14,15 @@ module PgEventstore
       @query_strategy = query_strategy
     end
 
-    # @param indexes [Array<[Integer, Integer, String]>]
+    # @param indexes [Array<[Integer, Integer, Integer]>]
     # @return [void]
     def create_global_indexes(indexes)
-      values = indexes.map do |global_position, partition_id, stream_id|
-        "(#{global_position}, #{partition_id}, '#{PG::Connection.escape(stream_id)}')"
+      values = indexes.map do |global_position, partition_id, stream_idx_id|
+        "(#{global_position}, #{partition_id}, #{stream_idx_id})"
       end.join(',')
 
       @query_strategy.exec(<<~SQL)
-        INSERT INTO events_global_index ("global_position", "partition_id", "stream_id") VALUES #{values}
+        INSERT INTO events_global_index ("global_position", "partition_id", "streams_global_index_id") VALUES #{values}
       SQL
     end
 
@@ -59,6 +59,17 @@ module PgEventstore
       builder.unselect
       builder.select('max(global_position) as max_global_position')
       @query_strategy.exec_params(*builder.to_exec_params).to_a.first['max_global_position']
+    end
+
+    # Takes an array of potentially persisted events and loads their ids from db. Those ids can be later used to check
+    # whether events are actually existing events.
+    # @param events [Array<PgEventstore::Event>]
+    # @return [Array<Integer>]
+    def global_positions_from_db(events)
+      builder = QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
+      builder.unselect.select('global_position')
+      builder.where('global_position = ANY(?::bigint[])', events.map(&:global_position))
+      @query_strategy.exec_params(*builder.to_exec_params).to_a.map { |attrs| attrs['global_position'] }
     end
 
     private

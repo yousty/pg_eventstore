@@ -85,7 +85,7 @@ namespace :pg_eventstore do
           next if latest_migration >= number
 
           if File.extname(f_name) == '.rb'
-            load f_name
+            load(f_name, true)
           else
             conn.exec(File.read(f_name))
           end

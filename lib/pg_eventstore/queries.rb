@@ -37,5 +37,9 @@ module PgEventstore
     # @!attribute maintenance
     #   @return [PgEventstore::EventsGlobalIndexQueries, nil]
     attribute(:events_global_index)
+
+    # @!attribute maintenance
+    #   @return [PgEventstore::StreamsGlobalIndexQueries, nil]
+    attribute(:streams_global_index)
   end
 end

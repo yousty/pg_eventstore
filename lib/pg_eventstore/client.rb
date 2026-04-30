@@ -26,15 +26,18 @@ module PgEventstore
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def append_to_stream(stream, events_or_event, options: {}, middlewares: nil)
+      middlewares = self.middlewares(middlewares)
+      event_modifier = Commands::EventModifiers::PrepareRegularEvent.new(EventSerializer.new(middlewares))
       result =
         Commands::Append.new(
           Queries.new(
             partitions: partition_queries,
-            events: event_queries(middlewares(middlewares)),
+            events: event_queries(middlewares),
             transactions: transaction_queries,
-            events_global_index: events_global_index_queries
+            events_global_index: events_global_index_queries,
+            streams_global_index: streams_global_index_queries
           )
-        ).call(stream, *events_or_event, options:)
+        ).call(stream, *events_or_event, event_modifier:, options:)
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -110,9 +113,12 @@ module PgEventstore
     # @return [Array<PgEventstore::Event>]
     # @raise [PgEventstore::StreamNotFoundError]
     def read(stream, options: {}, middlewares: nil)
-      Commands::Read.
-        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
-        call(stream, options: { max_count: config.max_count }.merge(options))
+      queries = Queries.new(
+        partitions: partition_queries,
+        events: event_queries(middlewares(middlewares)),
+        streams_global_index: streams_global_index_queries
+      )
+      Commands::Read.new(queries).call(stream, options: { max_count: config.max_count }.merge(options))
     end
 
     # @see {#read} for the detailed docs
@@ -156,14 +162,20 @@ module PgEventstore
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def link_to(stream, events_or_event, options: {}, middlewares: [])
+      middlewares = self.middlewares(middlewares)
+      event_modifier = Commands::EventModifiers::PrepareLinkEvent.new(
+        partition_queries, EventSerializer.new(middlewares)
+      )
       result =
         Commands::LinkTo.new(
           Queries.new(
             partitions: partition_queries,
-            events: event_queries(middlewares(middlewares)),
-            transactions: transaction_queries
+            events: event_queries(middlewares),
+            transactions: transaction_queries,
+            events_global_index: events_global_index_queries,
+            streams_global_index: streams_global_index_queries
           )
-        ).call(stream, *events_or_event, options:)
+        ).call(stream, *events_or_event, event_modifier:, options:)
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -197,7 +209,6 @@ module PgEventstore
     def event_queries(middlewares)
       EventQueries.new(
         connection,
-        EventSerializer.new(middlewares),
         EventDeserializer.new(middlewares, config.event_class_resolver)
       )
     end
@@ -205,6 +216,11 @@ module PgEventstore
     # @return [PgEventstore::EventsGlobalIndexQueries]
     def events_global_index_queries
       EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
+    end
+
+    # @return [PgEventstore::EventsGlobalIndexQueries]
+    def streams_global_index_queries
+      StreamsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

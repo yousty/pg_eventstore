@@ -3,7 +3,7 @@
 module PgEventstore
   # @!visibility private
   class MaintenanceQueries
-    INDEXES_TO_REMOVE_PER_QUERY = 10_000
+    EVENT_INDEXES_TO_REMOVE_PER_QUERY = 10_000
 
     # @!attribute connection
     #   @return [PgEventstore::Connection]
@@ -19,11 +19,12 @@ module PgEventstore
     # @return [Integer] number of deleted events of the given stream
     def delete_stream(stream)
       total_removed = 0
+      streams_global_index_queries.delete(stream)
       connection.with do |conn|
         global_positions = conn.exec_params(<<~SQL, stream.deconstruct).to_a.map { _1['global_position'] }
           DELETE FROM events WHERE context = $1 AND stream_name = $2 AND stream_id = $3 RETURNING global_position
         SQL
-        global_positions.each_slice(INDEXES_TO_REMOVE_PER_QUERY) do |slice|
+        global_positions.each_slice(EVENT_INDEXES_TO_REMOVE_PER_QUERY) do |slice|
           total_removed += conn.exec_params(<<~SQL, [slice]).cmd_tuples
             DELETE FROM events_global_index WHERE global_position = ANY($1)
           SQL
@@ -54,18 +55,21 @@ module PgEventstore
               AND stream_id = $3 AND stream_revision > $4
         SQL
       end
+      stream_index = streams_global_index_queries.find_by(stream)
+      new_revision = stream_index['stream_revision'] - 1
+      if new_revision == Stream::NON_EXISTING_STREAM_REVISION
+        streams_global_index_queries.delete(stream)
+      else
+        streams_global_index_queries.update_revision(stream_index['id'], stream_revision: new_revision)
+      end
     end
 
     # @param stream [PgEventstore::Stream]
     # @param after_revision [Integer]
     # @return [Integer]
     def events_to_lock_count(stream, after_revision)
-      connection.with do |conn|
-        conn.exec_params(<<~SQL, [*stream.deconstruct, after_revision])
-          EXPLAIN SELECT * FROM events
-                    WHERE context = $1 AND stream_name = $2 AND stream_id = $3 AND stream_revision > $4
-        SQL
-      end.to_a.first['QUERY PLAN'].match(/rows=(\d+)/)[1].to_i
+      stream_index = streams_global_index_queries.find_by(stream)
+      stream_index['stream_revision'] - after_revision
     end
 
     # @param event [PgEventstore::Event]
@@ -86,6 +90,10 @@ module PgEventstore
     # @return [PgEventstore::EventDeserializer]
     def basic_deserializer
       EventDeserializer.new([], ->(_event_type) { Event })
+    end
+
+    def streams_global_index_queries
+      StreamsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

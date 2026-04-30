@@ -18,8 +18,7 @@ class Benchmarks
   class << self
     # Populate db with some data, so that tests are performed over non-empty db
     def warm_up
-      puts "Warming up..."
-      puts "Concurrency is: #{CONCURRENCY}"
+      puts "Concurrency is: #{CONCURRENCY}. Warming up..."
       workers = CONCURRENCY.times.map do
         Thread.new do
           # [{ stream: stream1, events: [event1, event2, ...] }, ...]

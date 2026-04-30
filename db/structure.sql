@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict HTATkuOeQTrqxvWFri23ZYY08JRFdcsYctHKgEIA2KcF5oyv87EMb2hvjvQn7hd
+\restrict S5y5JW5dgS0tl156fCf3gMISptutumONFBViXsJ0Q5lhnl8yt63o7ZLXPN6awfX
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -85,25 +85,17 @@ CREATE TABLE public.events (
 PARTITION BY LIST (context);
 
 
+SET default_table_access_method = heap;
+
 --
--- Name: $streams; Type: VIEW; Schema: public; Owner: -
+-- Name: events_global_index; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE VIEW public."$streams" AS
- SELECT id,
-    context,
-    stream_name,
-    stream_id,
-    global_position,
-    stream_revision,
-    data,
-    metadata,
-    link_partition_id,
-    created_at,
-    type,
-    link_global_position
-   FROM public.events
-  WHERE (stream_revision = 0);
+CREATE TABLE public.events_global_index (
+    global_position bigint NOT NULL,
+    partition_id bigint NOT NULL,
+    stream_id character varying NOT NULL COLLATE pg_catalog."POSIX"
+);
 
 
 --
@@ -124,8 +116,6 @@ CREATE SEQUENCE public.events_global_position_seq
 
 ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_position;
 
-
-SET default_table_access_method = heap;
 
 --
 -- Name: events_horizon; Type: TABLE; Schema: public; Owner: -
@@ -183,6 +173,44 @@ CREATE SEQUENCE public.partitions_id_seq
 --
 
 ALTER SEQUENCE public.partitions_id_seq OWNED BY public.partitions.id;
+
+
+--
+-- Name: streams_global_index; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.streams_global_index (
+    id bigint NOT NULL,
+    partition_id bigint NOT NULL,
+    stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
+    stream_revision integer NOT NULL
+);
+
+
+--
+-- Name: COLUMN streams_global_index.partition_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.streams_global_index.partition_id IS 'Unlike partition_id of events_global_index - this one refers to (context, stream_name) partition where event_type is null';
+
+
+--
+-- Name: streams_global_index_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.streams_global_index_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: streams_global_index_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.streams_global_index_id_seq OWNED BY public.streams_global_index.id;
 
 
 --
@@ -350,6 +378,13 @@ ALTER TABLE ONLY public.partitions ALTER COLUMN id SET DEFAULT nextval('public.p
 
 
 --
+-- Name: streams_global_index id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.streams_global_index ALTER COLUMN id SET DEFAULT nextval('public.streams_global_index_id_seq'::regclass);
+
+
+--
 -- Name: subscription_commands id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -378,6 +413,14 @@ ALTER TABLE ONLY public.subscriptions_set_commands ALTER COLUMN id SET DEFAULT n
 
 
 --
+-- Name: events_global_index events_global_index_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events_global_index
+    ADD CONSTRAINT events_global_index_pkey PRIMARY KEY (global_position, partition_id, stream_id);
+
+
+--
 -- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -391,6 +434,14 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.partitions
     ADD CONSTRAINT partitions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: streams_global_index streams_global_index_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.streams_global_index
+    ADD CONSTRAINT streams_global_index_pkey PRIMARY KEY (id);
 
 
 --
@@ -423,13 +474,6 @@ ALTER TABLE ONLY public.subscriptions_set_commands
 
 ALTER TABLE ONLY public.subscriptions_set
     ADD CONSTRAINT subscriptions_set_pkey PRIMARY KEY (id);
-
-
---
--- Name: idx_events_0_stream_revision_global_position; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_0_stream_revision_global_position ON ONLY public.events USING btree (global_position) WHERE (stream_revision = 0);
 
 
 --
@@ -489,6 +533,13 @@ CREATE UNIQUE INDEX idx_partitions_by_partition_table_name ON public.partitions 
 
 
 --
+-- Name: idx_streams_global_index_on_stream_id_and_partition_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_streams_global_index_on_stream_id_and_partition_id ON public.streams_global_index USING btree (stream_id, partition_id);
+
+
+--
 -- Name: idx_subscr_set_commands_subscriptions_set_id_and_name; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -521,6 +572,13 @@ CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING
 --
 
 CREATE INDEX idx_xact_id_and_created_at_and_global_position ON public.events_horizon USING btree (xact_id, global_position);
+
+
+--
+-- Name: partition_parts_dep; Type: STATISTICS; Schema: public; Owner: -
+--
+
+CREATE STATISTICS public.partition_parts_dep (dependencies) ON context, stream_name, event_type FROM public.partitions;
 
 
 --
@@ -566,5 +624,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict HTATkuOeQTrqxvWFri23ZYY08JRFdcsYctHKgEIA2KcF5oyv87EMb2hvjvQn7hd
+\unrestrict S5y5JW5dgS0tl156fCf3gMISptutumONFBViXsJ0Q5lhnl8yt63o7ZLXPN6awfX
 

@@ -255,4 +255,13 @@ module PgEventstore
       super()
     end
   end
+
+  class DuplicatedRecordError < StandardError
+    attr_reader :original_exception
+
+    def initialize(original_exception)
+      @original_exception = original_exception
+      super()
+    end
+  end
 end
