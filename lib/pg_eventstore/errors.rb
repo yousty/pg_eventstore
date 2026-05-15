@@ -112,21 +112,21 @@ module PgEventstore
     # @!attribute table_name
     #   @return [String]
     attr_reader :table_name
-    # @!attribute id
+    # @!attribute lookup_obj
     #   @return [Integer, String]
-    attr_reader :id
+    attr_reader :lookup_obj
 
     # @param table_name [String]
-    # @param id [Integer, String]
-    def initialize(table_name, id)
+    # @param lookup_obj [Object]
+    def initialize(table_name, lookup_obj)
       @table_name = table_name
-      @id = id
+      @lookup_obj = lookup_obj
       super(user_friendly_message)
     end
 
     # @return [String]
     def user_friendly_message
-      "Could not find/update #{table_name.inspect} record with #{id.inspect} id."
+      "Could not find/update/delete #{table_name.inspect} record by #{@lookup_obj.inspect}."
     end
   end
 
@@ -256,12 +256,6 @@ module PgEventstore
     end
   end
 
-  class DuplicatedRecordError < StandardError
-    attr_reader :original_exception
-
-    def initialize(original_exception)
-      @original_exception = original_exception
-      super()
-    end
+  class NotSupportedError < Error
   end
 end

@@ -2,9 +2,9 @@
 
 module PgEventstore
   module SubscriptionFeedStrategies
-    # @param runner [PgEventstore::SubscriptionRunner]
+    # @param runners [PgEventstore::SubscriptionRunner, Array<PgEventstore::SubscriptionRunner>]
     # @return [Array<PgEventstore::SubscriptionRunner>]
-    def add(runner)
+    def add(*runners)
       raise NotImplementedError
     end
 
@@ -26,7 +26,5 @@ module PgEventstore
   end
 end
 
-require_relative 'subscription_feed_strategies/affected_partitions_size_map'
 require_relative 'subscription_feed_strategies/collection'
-require_relative 'subscription_feed_strategies/direct_read'
-require_relative 'subscription_feed_strategies/index_read'
+require_relative 'subscription_feed_strategies/index_read_strategy'

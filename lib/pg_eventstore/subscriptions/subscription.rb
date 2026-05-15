@@ -185,6 +185,7 @@ module PgEventstore
         time_between_restarts:,
         state: RunnerState::STATES[:initial]
       )
+      subscription_queries.create_or_replace_view(id, options, locked_by)
       reload
     end
 

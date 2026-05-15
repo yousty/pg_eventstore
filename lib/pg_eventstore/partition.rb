@@ -19,5 +19,7 @@ module PgEventstore
     # @!attribute table_name
     #   @return [String]
     option(:table_name)
+    option(:parent_context_partition_id)
+    option(:parent_stream_name_partition_id)
   end
 end

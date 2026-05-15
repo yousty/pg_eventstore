@@ -124,3 +124,6 @@ Gemspec/RequiredRubyVersion:
 
 Gemspec/RequireMFA:
   Enabled: false
+
+Style/StructInheritance:
+  Enabled: false

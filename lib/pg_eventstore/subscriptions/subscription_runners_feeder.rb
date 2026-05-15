@@ -5,10 +5,8 @@ module PgEventstore
   # @!visibility private
   class SubscriptionRunnersFeeder
     # @param config_name [Symbol]
-    # @param affected_partitions_size_map [PgEventstore::SubscriptionFeedStrategies::AffectedPartitionsSizeMap]
-    def initialize(config_name, affected_partitions_size_map)
+    def initialize(config_name)
       @config_name = config_name
-      @affected_partitions_size_map = affected_partitions_size_map
     end
 
     # @param runners [Array<PgEventstore::SubscriptionRunner>]
@@ -19,7 +17,6 @@ module PgEventstore
 
       feed_strategies_collection = SubscriptionFeedStrategies::Collection.create(
         runners,
-        @affected_partitions_size_map,
         connection,
         QueryStrategy::Async.new(connection)
       )

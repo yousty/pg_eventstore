@@ -23,12 +23,8 @@ RSpec.describe PgEventstore::Commands::Append do
       PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
     )
   end
-  let(:event_queries) do
-    PgEventstore::EventQueries.new(
-      PgEventstore.connection,
-      PgEventstore::EventDeserializer.new(middlewares, event_class_resolver)
-    )
-  end
+  let(:event_queries) { PgEventstore::EventQueries.new(PgEventstore.connection) }
+  let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, event_class_resolver) }
   let(:event_modifier) do
     PgEventstore::Commands::EventModifiers::PrepareRegularEvent.new(PgEventstore::EventSerializer.new(middlewares))
   end
@@ -39,7 +35,7 @@ RSpec.describe PgEventstore::Commands::Append do
     let(:stream) { PgEventstore::Stream.new(context: 'SomeContext', stream_name: 'MyAwesomeStream', stream_id: '123') }
 
     describe 'appending single event' do
-      subject { instance.call(stream, event, event_modifier:, options:) }
+      subject { instance.call(stream, event, event_modifier:, deserializer:, options:) }
 
       let(:event) { PgEventstore::Event.new(type: 'MyAwesomeEvent', data: { foo: :bar }) }
       let(:options) { {} }
@@ -205,7 +201,7 @@ RSpec.describe PgEventstore::Commands::Append do
       context 'when middleware is present' do
         let(:middlewares) { [DummyMiddleware.new] }
 
-        it 'modifies the event using it' do
+        it 'does not modify the event after it was persisted' do
           expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::ENCR_SECRET)
         end
       end
@@ -311,7 +307,7 @@ RSpec.describe PgEventstore::Commands::Append do
     end
 
     describe 'appending multiple events' do
-      subject { instance.call(stream, event1, event2, event_modifier:, options:) }
+      subject { instance.call(stream, event1, event2, event_modifier:, deserializer:, options:) }
 
       let(:event1) { PgEventstore::Event.new(type: 'MyAwesomeEvent', data: { foo: :bar }) }
       let(:event2) { PgEventstore::Event.new(type: 'MyAnotherEvent', data: { foo: :baz }) }
@@ -372,15 +368,15 @@ RSpec.describe PgEventstore::Commands::Append do
       iterations_number.times.flat_map do |i|
         t1 = Thread.new do
           sleep 0.1 + (i / 10.0)
-          instance.call(stream, *([event1] * events_count_mapping['some-event']), event_modifier:)
+          instance.call(stream, *([event1] * events_count_mapping['some-event']), event_modifier:, deserializer:)
         end
         t2 = Thread.new do
           sleep 0.1 + (i / 10.0)
-          instance.call(stream, *([event2] * events_count_mapping['some-event2']), event_modifier:)
+          instance.call(stream, *([event2] * events_count_mapping['some-event2']), event_modifier:, deserializer:)
         end
         t3 = Thread.new do
           sleep 0.1 + (i / 10.0)
-          instance.call(stream, *([event3] * events_count_mapping['some-event3']), event_modifier:)
+          instance.call(stream, *([event3] * events_count_mapping['some-event3']), event_modifier:, deserializer:)
         end
         [t1, t2, t3]
       end.each(&:join)

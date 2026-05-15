@@ -7,7 +7,7 @@ module PgEventstore
 
       def initialize(events)
         @events = events
-        @last_global_position = Utils.original_global_position(events.last)
+        @last_global_position = Utils.original_global_position(events.last) if events.any?
       end
 
       def take(size)

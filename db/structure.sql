@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict S5y5JW5dgS0tl156fCf3gMISptutumONFBViXsJ0Q5lhnl8yt63o7ZLXPN6awfX
+\restrict 0tDEATBQoOzpUFSDLVE6ziJdsviktEWBBghMkxBFtLP7MUkah3yYk1Rqjp3YfCG
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -93,8 +93,11 @@ SET default_table_access_method = heap;
 
 CREATE TABLE public.events_global_index (
     global_position bigint NOT NULL,
-    partition_id bigint NOT NULL,
-    stream_id character varying NOT NULL COLLATE pg_catalog."POSIX"
+    stream_revision integer NOT NULL,
+    context_partition_id bigint NOT NULL,
+    stream_name_partition_id bigint NOT NULL,
+    event_type_partition_id bigint NOT NULL,
+    streams_global_index_id bigint NOT NULL
 );
 
 
@@ -152,7 +155,9 @@ CREATE TABLE public.partitions (
     context character varying NOT NULL COLLATE pg_catalog."POSIX",
     stream_name character varying COLLATE pg_catalog."POSIX",
     event_type character varying COLLATE pg_catalog."POSIX",
-    table_name character varying NOT NULL COLLATE pg_catalog."POSIX"
+    table_name character varying NOT NULL COLLATE pg_catalog."POSIX",
+    parent_stream_name_partition_id bigint,
+    parent_context_partition_id bigint
 );
 
 
@@ -183,15 +188,9 @@ CREATE TABLE public.streams_global_index (
     id bigint NOT NULL,
     partition_id bigint NOT NULL,
     stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
-    stream_revision integer NOT NULL
+    stream_revision integer NOT NULL,
+    starting_position bigint NOT NULL
 );
-
-
---
--- Name: COLUMN streams_global_index.partition_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.streams_global_index.partition_id IS 'Unlike partition_id of events_global_index - this one refers to (context, stream_name) partition where event_type is null';
 
 
 --
@@ -413,22 +412,6 @@ ALTER TABLE ONLY public.subscriptions_set_commands ALTER COLUMN id SET DEFAULT n
 
 
 --
--- Name: events_global_index events_global_index_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events_global_index
-    ADD CONSTRAINT events_global_index_pkey PRIMARY KEY (global_position, partition_id, stream_id);
-
-
---
--- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_pkey PRIMARY KEY (context, stream_name, type, global_position);
-
-
---
 -- Name: partitions partitions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -484,17 +467,59 @@ CREATE INDEX idx_events_global_position ON ONLY public.events USING btree (globa
 
 
 --
--- Name: idx_events_stream_id_and_global_position; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_events_idx_on_ctx_part_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_stream_id_and_global_position ON ONLY public.events USING btree (stream_id, global_position);
+CREATE INDEX idx_events_idx_on_ctx_part_id_n_position ON public.events_global_index USING btree (context_partition_id, global_position);
 
 
 --
--- Name: idx_events_stream_id_and_stream_revision; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_events_idx_on_e_type_part_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_stream_id_and_stream_revision ON ONLY public.events USING btree (stream_id, stream_revision);
+CREATE INDEX idx_events_idx_on_e_type_part_id_n_position ON public.events_global_index USING btree (event_type_partition_id, global_position);
+
+
+--
+-- Name: idx_events_idx_on_global_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_global_position ON public.events_global_index USING btree (global_position);
+
+
+--
+-- Name: idx_events_idx_on_stream_name_part_id_n_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_stream_name_part_id_n_position ON public.events_global_index USING btree (stream_name_partition_id, global_position);
+
+
+--
+-- Name: idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_position ON public.events_global_index USING btree (streams_global_index_id, event_type_partition_id, global_position);
+
+
+--
+-- Name: idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_revision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_revision ON public.events_global_index USING btree (streams_global_index_id, event_type_partition_id, stream_revision);
+
+
+--
+-- Name: idx_events_idx_on_streams_idx_id_n_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_position ON public.events_global_index USING btree (streams_global_index_id, global_position);
+
+
+--
+-- Name: idx_events_idx_on_streams_idx_id_n_revision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_revision ON public.events_global_index USING btree (streams_global_index_id, stream_revision);
 
 
 --
@@ -519,10 +544,17 @@ CREATE UNIQUE INDEX idx_partitions_by_context_and_stream_name_and_event_type ON 
 
 
 --
--- Name: idx_partitions_by_event_type; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_partitions_by_context_and_stream_name_and_event_type_and_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_partitions_by_event_type ON public.partitions USING btree (event_type);
+CREATE INDEX idx_partitions_by_context_and_stream_name_and_event_type_and_id ON public.partitions USING btree (context, stream_name, event_type, id);
+
+
+--
+-- Name: idx_partitions_by_event_type_and_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_by_event_type_and_id ON public.partitions USING btree (event_type, id);
 
 
 --
@@ -530,6 +562,13 @@ CREATE INDEX idx_partitions_by_event_type ON public.partitions USING btree (even
 --
 
 CREATE UNIQUE INDEX idx_partitions_by_partition_table_name ON public.partitions USING btree (table_name);
+
+
+--
+-- Name: idx_streams_global_index_on_starting_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_streams_global_index_on_starting_position ON public.streams_global_index USING btree (starting_position);
 
 
 --
@@ -624,5 +663,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict S5y5JW5dgS0tl156fCf3gMISptutumONFBViXsJ0Q5lhnl8yt63o7ZLXPN6awfX
+\unrestrict 0tDEATBQoOzpUFSDLVE6ziJdsviktEWBBghMkxBFtLP7MUkah3yYk1Rqjp3YfCG
 

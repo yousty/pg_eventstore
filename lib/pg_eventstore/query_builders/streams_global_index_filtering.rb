@@ -3,12 +3,18 @@
 module PgEventstore
   module QueryBuilders
     # @!visibility private
-    class StreamsGlobalIndexFiltering < BasicFiltering
+    class StreamsGlobalIndexFiltering
+      include BasicFiltering
+
       # @return [String]
       PRIMARY_TABLE_NAME = 'streams_global_index'
 
-      class << self
+      def initialize
+        @sql_builder = SQLBuilder.new.select("#{to_table_name}.*").from(to_table_name)
+      end
 
+      def to_sql_builder
+        @sql_builder
       end
 
       # @return [String]
@@ -16,14 +22,10 @@ module PgEventstore
         PRIMARY_TABLE_NAME
       end
 
-      # @param index_partitions_filter [PgEventstore::QueryBuilders::IndexPartitionsFilter]
-      # @return [void]
-      def add_partition_filters(index_partitions_filter)
-        return if index_partitions_filter.empty?
-
-        index_partitions_filter.for_streams_idx&.each do |builder|
-          @sql_builder.where_or('(partition_id, stream_id) in ?', builder)
-        end
+      def add_filter_row(filter_row)
+        affected_partitions = PartitionsFiltering.from_filter_row(filter_row, scope: :stream_name)
+        builder = affected_partitions.unselect.select('id')
+        @sql_builder.where_or('partition_id = ? and stream_id = ?', builder, filter_row.stream_filter.stream_id)
       end
     end
   end

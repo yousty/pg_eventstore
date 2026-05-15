@@ -5,12 +5,12 @@ module PgEventstore
     # @!visibility private
     class RegularStreamReadPaginated < AbstractCommand
       # @see PgEventstore::Commands::Read for docs
-      def call(stream, options: {})
+      def call(stream, deserializer:, options: {})
         Enumerator.new do |yielder|
           next_revision = nil
           loop do
             options = options.merge(from_revision: next_revision) if next_revision
-            events = read_cmd.call(stream, options:)
+            events = read_cmd.call(stream, deserializer:, options:)
             yielder << events if events.any?
             if end_reached?(events, options[:max_count] || QueryBuilders::EventsFiltering::DEFAULT_LIMIT)
               raise StopIteration

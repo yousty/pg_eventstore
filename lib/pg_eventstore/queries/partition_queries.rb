@@ -34,7 +34,8 @@ module PgEventstore
       connection.with do |conn|
         conn.exec(<<~SQL)
           CREATE TABLE #{attributes[:table_name]} PARTITION OF events
-            FOR VALUES IN('#{conn.escape_string(stream.context)}') PARTITION BY LIST (stream_name)
+            FOR VALUES IN('#{conn.escape_string(stream.context)}') PARTITION BY LIST (stream_name);
+            COMMENT ON TABLE #{attributes[:table_name]} IS '#{conn.escape_string("'#{stream.context}'")} context partition';
         SQL
       end
       partition
@@ -42,10 +43,12 @@ module PgEventstore
 
     # @param stream [PgEventstore::Stream]
     # @param context_partition_name [String]
+    # @param context_partition_id [Integer]
     # @return [Hash] partition attributes
-    def create_stream_name_partition(stream, context_partition_name)
+    def create_stream_name_partition(stream, context_partition_name, context_partition_id)
       attributes = {
-        context: stream.context, stream_name: stream.stream_name, table_name: stream_name_partition_name(stream)
+        context: stream.context, stream_name: stream.stream_name, table_name: stream_name_partition_name(stream),
+        parent_context_partition_id: context_partition_id
       }
 
       loop do
@@ -64,7 +67,9 @@ module PgEventstore
       connection.with do |conn|
         conn.exec(<<~SQL)
           CREATE TABLE #{attributes[:table_name]} PARTITION OF #{context_partition_name}
-            FOR VALUES IN('#{conn.escape_string(stream.stream_name)}') PARTITION BY LIST (type)
+            FOR VALUES IN('#{conn.escape_string(stream.stream_name)}') PARTITION BY LIST (type);
+            COMMENT ON TABLE #{attributes[:table_name]} IS '#{conn.escape_string("'#{stream.context}'")} context and \
+            #{conn.escape_string("'#{stream.stream_name}'")} stream name partition';
         SQL
       end
       partition
@@ -73,11 +78,15 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @param event_type [String]
     # @param stream_name_partition_name [String]
+    # @param context_partition_id [Integer]
+    # @param stream_name_partition_id [Integer]
     # @return [Hash] partition attributes
-    def create_event_type_partition(stream, event_type, stream_name_partition_name)
+    def create_event_type_partition(stream, event_type, stream_name_partition_name, context_partition_id,
+                                    stream_name_partition_id)
       attributes = {
         context: stream.context, stream_name: stream.stream_name, event_type:,
-        table_name: event_type_partition_name(stream, event_type)
+        table_name: event_type_partition_name(stream, event_type), parent_context_partition_id: context_partition_id,
+        parent_stream_name_partition_id: stream_name_partition_id
       }
 
       loop do
@@ -96,7 +105,10 @@ module PgEventstore
       connection.with do |conn|
         conn.exec(<<~SQL)
           CREATE TABLE #{attributes[:table_name]} PARTITION OF #{stream_name_partition_name}
-            FOR VALUES IN('#{conn.escape_string(event_type)}')
+            FOR VALUES IN('#{conn.escape_string(event_type)}');
+          COMMENT ON TABLE #{attributes[:table_name]} IS '#{conn.escape_string("'#{stream.context}'")} context and \
+          #{conn.escape_string("'#{stream.stream_name}'")} stream name and #{conn.escape_string("'#{event_type}'")} \
+          event type partition';
         SQL
       end
       partition
@@ -117,11 +129,16 @@ module PgEventstore
 
       context_partition = context_partition(stream) || create_context_partition(stream)
       stream_name_partition =
-        stream_name_partition(stream) || create_stream_name_partition(stream, context_partition['table_name'])
+        stream_name_partition(stream) ||
+        create_stream_name_partition(stream, context_partition['table_name'], context_partition['id'])
 
-      create_event_type_partition(stream, event_type, stream_name_partition['table_name'])
-    rescue PG::UniqueViolation => e
-      raise DuplicatedRecordError.new(e)
+      create_event_type_partition(
+        stream,
+        event_type,
+        stream_name_partition['table_name'],
+        context_partition['id'],
+        stream_name_partition['id']
+      )
     end
 
     # @param stream [PgEventstore::Stream]
@@ -178,13 +195,12 @@ module PgEventstore
       end.to_a
     end
 
-    # @param stream_filters [Array<Hash[Symbol, String]>]
-    # @param event_filters [Array<String>]
+    # @param filter_collection [PgEventstore::QueryBuilders::Filters::Collection]
     # @param scope [Symbol] what kind of partition we want to receive. Available options are :event_type, :context,
     #   :stream_name and :auto. In :auto mode the scope will be calculated based on stream_filters and event_filters.
     # @return [Array<PgEventstore::Partition>]
-    def partitions(stream_filters, event_filters, scope: :event_type)
-      sql_builder = QueryBuilders::PartitionsFiltering.assemble_sql_builder(stream_filters, event_filters, scope:)
+    def partitions(filter_collection, scope: :event_type)
+      sql_builder = QueryBuilders::PartitionsFiltering.assemble_sql_builder(filter_collection, scope:)
       connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end.map(&method(:deserialize))

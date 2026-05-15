@@ -1,7 +1,12 @@
 ## [Unreleased]
 
-- **Breaking change**: `Middleware#serialize` is now called outside SQL transaction that inserts an event tuple. Previously it was happening right before an `INSERT` statement. If you want old behavior - wrap your `#append_to_stream` using `#multiple`
-- **Breaking change**: Database structure and the implementation of `#append_to_stream` was changed in a way it is not compatible with v2. Public API stays the same 
+- Fix issue when incomplete transaction block may be interrupted half way and commited successfully. The issue is related to incorrect transaction termination flow during non-graceful process shutdown(e.g. via kill -9)
+- New feature: `Client#stream_revision` allows to quickly get stream's revision. Example: `PgEventstore.client.stream_revision(stream) #=> number, greater than or equal to 0 or -1 if stream does not exist`
+- **Breaking change**: `Client#read_grouped` now requires to provide `event_types` filter option explicitly. Example: `PgEventstore.client.read_grouped(stream, options: { filter: { event_types: ['Foo', 'Bar'] } })`
+- New feature: Subscription event types filter now support prefixes. So, if you have subscriptions like `manager.subscribe('MyAwesomeSubscription', handler: my_handler, options: { filter: { event_types: ['Foo1', 'Foo2', 'Foo3'] } })`, you can replace its filter as follows: `{ event_types: [{ prefix: 'Foo' }] }`. **Read API does not support this feature yet**  
+- New feature: Read API now supports `:to_position`(and `:to_revision` when reading from specific stream) option. Use it if you want to limit your result alongside `:max_count` option. Example: `PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { from_position: 100, to_position: 200 })`
+- **Breaking change**: `Middleware#serialize` is now called outside SQL transaction that inserts an event tuple. Previously it was happening right before an `INSERT` statement
+- **Breaking change**: Database structure and the implementation of `#append_to_stream` was changed in a way it is not compatible with v2. Public API stays the same
 - New feature: allow subscription to process events in batches. You can now provide `in_batches: true` to `#subscribe` to yield an array of events. See [docs](docs/subscriptions.md#processing-events-in-batches) for more info
 - Introduce `PgEventstore::BasicConfig` and `PgEventstore::Extensions::ActsAsConfigurable` to allow to easily create configurable objects  
 

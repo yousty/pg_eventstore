@@ -3,7 +3,8 @@
 module PgEventstore
   module QueryBuilders
     # @!visibility private
-    class EventsFiltering < BasicFiltering
+    class EventsFiltering
+      include BasicFiltering
       # @return [Integer]
       DEFAULT_LIMIT = 1_000
       # @return [Array<Symbol>]
@@ -86,8 +87,11 @@ module PgEventstore
       end
 
       def initialize
-        super
-        @sql_builder.limit(DEFAULT_LIMIT)
+        @sql_builder = SQLBuilder.new.select("#{to_table_name}.*").from(to_table_name)
+      end
+
+      def to_sql_builder
+        @sql_builder
       end
 
       # @return [String]
@@ -118,7 +122,7 @@ module PgEventstore
         sql = event_types.size.times.map do
           '?'
         end.join(', ')
-        @sql_builder.where("#{to_table_name}.type IN (#{sql})", *event_types)
+        @sql_builder.where("#{to_table_name}.type #{comparison_operator(event_types)} (#{sql})", *event_types)
       end
 
       # @param revision [Integer, nil]
@@ -154,9 +158,7 @@ module PgEventstore
       # @param limit [Integer, nil]
       # @return [void]
       def add_limit(limit)
-        return unless limit
-
-        @sql_builder.limit(limit)
+        @sql_builder.limit(limit || DEFAULT_LIMIT)
       end
 
       # @param table_name [String] system stream view name
@@ -188,6 +190,10 @@ module PgEventstore
       # @return [String]
       def direction_operator(direction)
         SQL_DIRECTIONS[direction] == 'ASC' ? '>=' : '<='
+      end
+
+      def comparison_operator(entities)
+        entities.size > 1 ? 'in' : '='
       end
     end
   end

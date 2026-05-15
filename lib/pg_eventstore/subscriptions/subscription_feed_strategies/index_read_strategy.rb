@@ -2,7 +2,7 @@
 
 module PgEventstore
   module SubscriptionFeedStrategies
-    class IndexRead
+    class IndexReadStrategy
       include SubscriptionFeedStrategies
 
       # Allow large subscriptions(querying among more than SubscriptionRunnersFeeder::MAX_PARTITIONS_PER_QUERY
@@ -19,8 +19,8 @@ module PgEventstore
         @runners = []
       end
 
-      def add(runner)
-        @runners.push(runner)
+      def add(*runners)
+        @runners.push(*runners)
       end
 
       def size
@@ -38,10 +38,17 @@ module PgEventstore
             [next_chunk_query_opts[:from_position] + INDEX_LOOK_UP_DISTANCE, safe_position].min
           [runner.id, next_chunk_query_opts]
         end
-        grouped_indexes = events_global_index_queries.grouped_indexes(runners_query_options)
+        grouped_indexes = events_global_index_queries.fetch_indexes_for_subscriptions(runners_query_options)
         @runners.each do |runner|
           if grouped_indexes[runner.id]
-            runner.feed(RawEntities::EventIndexesChunk.new(grouped_indexes[runner.id], @connection))
+            runner.feed(
+              RawEntities::EventIndexesChunk.new(
+                grouped_indexes[runner.id],
+                @connection,
+                QueryStrategy::Foreground.new(@connection),
+                runners_query_options[runner.id][:resolve_link_tos]
+              )
+            )
           else
             runner.checkpoint(runners_query_options[runner.id][:to_position])
           end

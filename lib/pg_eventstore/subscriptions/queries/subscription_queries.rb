@@ -71,6 +71,27 @@ module PgEventstore
       deserialize(pg_result.to_a.first)
     end
 
+    def create_or_replace_view(id, options, locked_by)
+      filter_collection = QueryBuilders::Filters::Collection.from_options(options)
+      index_filtering = QueryBuilders::EventsGlobalIndexFiltering.new
+      index_filtering.add_global_position_direction(:asc)
+      filter_collection.collection.each(&index_filtering.method(:add_filter_row))
+      view_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
+
+      transaction_queries.transaction(:read_committed) do
+        connection.with do |conn|
+          attrs = conn.exec_params('select * from subscriptions where id = $1 for update', [id]).to_a.first
+          unless attrs['locked_by'] == locked_by
+            # Subscription is force-locked by someone else. We have to roll back such transaction
+            raise(WrongLockIdError.new(attrs['set'], attrs['name'], attrs['locked_by']))
+          end
+
+          compiled = conn.compile(*index_filtering.to_exec_params)
+          conn.exec("create or replace view #{view_name} as #{compiled}")
+        end
+      end
+    end
+
     # @param id [Integer]
     # @param attrs [Hash]
     # @param locked_by [Integer, nil]
@@ -114,20 +135,6 @@ module PgEventstore
       end
     end
 
-    # @param query_options [Hash{Integer => Hash}] runner_id/query options association
-    # @return [Hash{Integer => Array<Hash>}] runner_id/events association
-    def subscriptions_events(query_options)
-      return {} if query_options.empty?
-
-      final_builder = SQLBuilder.union_builders(query_options.map { |id, opts| query_builder(id, opts) })
-      raw_events = @query_strategy.exec_params(*final_builder.to_exec_params).to_a
-      raw_events.group_by { _1['runner_id'] }.to_h do |runner_id, runner_raw_events|
-        next [runner_id, runner_raw_events] unless query_options[runner_id][:resolve_link_tos]
-
-        [runner_id, links_resolver.resolve(runner_raw_events)]
-      end
-    end
-
     # @param id [Integer] subscription's id
     # @param lock_id [Integer] id of the subscriptions set which reserves the subscription
     # @param force [Boolean] whether to lock the subscription despite on #locked_by value
@@ -151,19 +158,16 @@ module PgEventstore
     # @param id [Integer]
     # @return [void]
     def delete(id)
-      @query_strategy.exec_params('DELETE FROM subscriptions WHERE id = $1', [id])
+      view_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
+      transaction_queries.transaction(:read_committed) do
+        connection.with do |conn|
+          conn.exec_params('delete from subscriptions where id = $1', [id])
+          conn.exec("drop view if exists #{view_name}")
+        end
+      end
     end
 
     private
-
-    # @param id [Integer] runner id
-    # @param options [Hash] query options
-    # @return [PgEventstore::SQLBuilder]
-    def query_builder(id, options)
-      builder = PgEventstore::QueryBuilders::EventsFiltering.subscriptions_events_filtering(options).to_sql_builder
-      builder.where('global_position <= ?', options[:to_position]) if options[:to_position]
-      builder.select("#{id} as runner_id")
-    end
 
     # @return [PgEventstore::TransactionQueries]
     def transaction_queries

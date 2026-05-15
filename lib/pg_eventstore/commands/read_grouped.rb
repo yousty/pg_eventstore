@@ -3,7 +3,7 @@
 module PgEventstore
   module Commands
     # @!visibility private
-    class Read < AbstractCommand
+    class ReadGrouped < AbstractCommand
       # @param stream [PgEventstore::Stream]
       # @param deserializer [PgEventstore::EventDeserializer]
       # @param options [Hash] request options
@@ -19,7 +19,7 @@ module PgEventstore
         queries.streams_global_index.stream_exists?(stream) || raise(StreamNotFoundError, stream) unless stream.system?
 
         deserializer.deserialize_many(
-          queries.events_global_index.fetch_indexes_for_read_api(stream, options).consume_all
+          queries.events_global_index.fetch_grouped_indexes_for_read_api(stream, options).consume_all
         )
       end
     end

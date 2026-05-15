@@ -6,16 +6,18 @@ module PgEventstore
     class LinkTo < AbstractCommand
       # @param stream [PgEventstore::Stream]
       # @param events [Array<PgEventstore::Event>]
+      # @param event_modifier [#call]
+      # @param deserializer [PgEventstore::EventDeserializer]
       # @param options [Hash]
       # @option options [Integer] :expected_revision provide your own revision number
       # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
       # @return [Array<PgEventstore::Event>] persisted events
       # @raise [PgEventstore::WrongExpectedRevisionError]
       # @raise [PgEventstore::NotPersistedEventError]
-      def call(stream, *events, event_modifier:, options: {})
+      def call(stream, *events, event_modifier:, deserializer:, options: {})
         check_events_presence(events)
         append_cmd = Append.new(queries)
-        append_cmd.call(stream, *events, event_modifier:, options:)
+        append_cmd.call(stream, *events, event_modifier:, deserializer:, options:)
       end
 
       private

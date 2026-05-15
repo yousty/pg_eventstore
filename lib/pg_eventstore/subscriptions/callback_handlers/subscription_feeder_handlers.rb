@@ -48,10 +48,9 @@ module PgEventstore
 
       # @param subscriptions_lifecycle [PgEventstore::SubscriptionsLifecycle]
       # @param config_name [Symbol]
-      # @param affected_partitions_size_map [PgEventstore::SubscriptionFeedStrategies::AffectedPartitionsSizeMap]
       # @return [void]
-      def feed_runners(subscriptions_lifecycle, config_name, affected_partitions_size_map)
-        SubscriptionRunnersFeeder.new(config_name, affected_partitions_size_map).feed(subscriptions_lifecycle.runners)
+      def feed_runners(subscriptions_lifecycle, config_name)
+        SubscriptionRunnersFeeder.new(config_name).feed(subscriptions_lifecycle.runners)
       end
 
       # @param subscriptions_lifecycle [PgEventstore::SubscriptionsLifecycle]

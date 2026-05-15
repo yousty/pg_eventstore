@@ -14,44 +14,80 @@ module PgEventstore
       @query_strategy = query_strategy
     end
 
-    # @param indexes [Array<[Integer, Integer, Integer]>]
+    # @param raw_events [Array<Hash>]
+    # @param affected_partitions [Array<PgEventstore::Partition>]
+    # @param stream_index_id [Integer]
     # @return [void]
-    def create_global_indexes(indexes)
-      values = indexes.map do |global_position, partition_id, stream_idx_id|
-        "(#{global_position}, #{partition_id}, #{stream_idx_id})"
-      end.join(',')
+    def index_events(raw_events, affected_partitions, stream_index_id)
+      partitions = affected_partitions.to_h { [_1.event_type, _1] }
+      values = raw_events.map do |event_attrs|
+        index = EventGlobalIndex.new(
+          global_position: event_attrs['global_position'],
+          stream_revision: event_attrs['stream_revision'],
+          context_partition_id: partitions[event_attrs['type']].parent_context_partition_id,
+          stream_name_partition_id: partitions[event_attrs['type']].parent_stream_name_partition_id,
+          event_type_partition_id: partitions[event_attrs['type']].id,
+          streams_global_index_id: stream_index_id
+        )
+        "(#{index.to_a.join(', ')})"
+      end
+      values = values.join(',')
+      columns = EventGlobalIndex.members.map { %("#{_1}") }.join(', ')
 
-      @query_strategy.exec(<<~SQL)
-        INSERT INTO events_global_index ("global_position", "partition_id", "streams_global_index_id") VALUES #{values}
-      SQL
+      @query_strategy.exec(%(INSERT INTO events_global_index (#{columns}) VALUES #{values}))
     end
 
-    def grouped_indexes(grouped_opts)
-      builders = grouped_opts.map do |group_id, opts|
-        filter = QueryBuilders::EventsGlobalIndexFiltering.build_filter_from_subscription_options(opts)
-        filter.to_sql_builder.select("#{group_id} as group_id")
+    def fetch_indexes_for_read_api(stream, options)
+      index_filtering = QueryBuilders::EventsGlobalIndexFiltering.build_for_read_api(stream, options)
+      raw_indexes = deserialize(@query_strategy.exec_params(*index_filtering.to_exec_params))
+      repo = RawEntities::EventsRepository.new
+      repo.add_chunk(
+        RawEntities::EventIndexesChunk.new(
+          raw_indexes, connection, @query_strategy, options[:resolve_link_tos] || false
+        )
+      )
+      repo
+    end
+
+    def fetch_grouped_indexes_for_read_api(stream, options)
+      index_filtering = QueryBuilders::EventsGlobalIndexFiltering.build_grouped_for_read_api(stream, options)
+      raw_indexes = deserialize(@query_strategy.exec_params(*index_filtering.to_exec_params))
+      repo = RawEntities::EventsRepository.new
+      repo.add_chunk(
+        RawEntities::EventIndexesChunk.new(
+          raw_indexes, connection, @query_strategy, options[:resolve_link_tos] || false
+        )
+      )
+      repo
+    end
+
+    def fetch_indexes_for_subscriptions(grouped_opts)
+      builders = grouped_opts.map do |subscription_id, opts|
+        filter = QueryBuilders::SubscriptionEventsFiltering.build(subscription_id, opts)
+        filter.to_sql_builder.select("#{subscription_id} as subscription_id")
       end
       final_builder = SQLBuilder.union_builders(builders)
-      @query_strategy.exec_params(*final_builder.to_exec_params).group_by { _1['group_id'] }
+      res = @query_strategy.exec_params(*final_builder.to_exec_params)
+      res = res.group_by { _1['subscription_id'] }
+      res.to_h { |sid, indexes| [sid, indexes.map { EventGlobalIndex.new(_1.except('subscription_id')) }] }
     end
 
-    def resolve_indexes(indexes)
-      indexes = indexes.group_by { _1['partition_id'] }
+    def resolve_indexes(indexes, direction:, resolve_link_tos:)
+      indexes = indexes.group_by(&:event_type_partition_id)
       partitions = partition_queries.find_by_ids(indexes.keys).to_h { [_1['id'], _1] }
       builders = indexes.map do |partition_id, idxs|
         partition = partitions[partition_id]
-        builder = SQLBuilder.new.select('*').from(Event::PRIMARY_TABLE_NAME)
-        builder.where(
-          'context = ? and stream_name = ? and type = ? and global_position = ANY(?)',
-          partition['context'],
-          partition['stream_name'],
-          partition['event_type'],
-          idxs.map { _1['global_position'] }
-        )
+        events_filtering = QueryBuilders::EventsFiltering.new
+        events_filtering.add_stream_attrs(context: partition['context'], stream_name: partition['stream_name'])
+        events_filtering.add_event_types([partition['event_type']])
+        builder = events_filtering.to_sql_builder
+        builder.where('global_position = ANY(?)', idxs.map(&:global_position))
       end
       main_builder = SQLBuilder.union_builders(builders)
-      with_sorted_events = SQLBuilder.new.select('*').from(main_builder).order('global_position asc')
-      links_resolver.resolve(@query_strategy.exec_params(*with_sorted_events.to_exec_params).to_a)
+      with_sorted_events = SQLBuilder.new.select('*').from(main_builder)
+      with_sorted_events.order("global_position #{QueryBuilders::EventsFiltering::SQL_DIRECTIONS[direction]}")
+      raw_events = @query_strategy.exec_params(*with_sorted_events.to_exec_params).to_a
+      resolve_link_tos ? links_resolver.resolve(raw_events) : raw_events
     end
 
     def max_global_position
@@ -80,6 +116,10 @@ module PgEventstore
 
     def links_resolver
       LinksResolver.new(connection, @query_strategy)
+    end
+
+    def deserialize(pg_result)
+      pg_result.map { EventGlobalIndex.new(_1) }
     end
   end
 end

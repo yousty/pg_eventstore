@@ -13,19 +13,22 @@ module PgEventstore
       super
     end
 
+    def compile(sql, params)
+      return sql if params.empty?
+
+      sql.gsub(/\$\d+/).each do |matched|
+        value = params[matched[1..].to_i - 1]
+        value = encode_value(value)
+        normalize_value(value)
+      end
+    end
+
     private
 
     def log(sql, params)
       return unless PgEventstore.logger&.debug?
 
-      unless params&.empty?
-        sql = sql.gsub(/\$\d+/).each do |matched|
-          value = params[matched[1..].to_i - 1]
-          value = encode_value(value)
-          normalize_value(value)
-        end
-      end
-      PgEventstore.logger.debug(sql)
+      PgEventstore.logger.debug(compile(sql, params))
     end
 
     def encode_value(value)
@@ -42,7 +45,7 @@ module PgEventstore
       when NilClass
         'NULL'
       else
-        value
+        "'#{self.class.escape(value.to_s)}'"
       end
     end
   end

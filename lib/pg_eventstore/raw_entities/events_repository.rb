@@ -10,10 +10,10 @@ module PgEventstore
         @chunks = SynchronizedArray.new
       end
 
-      def add_chunk(chunk, condition:)
+      def add_chunk(chunk, condition: nil)
         mon_try_enter
         @chunks.push(chunk)
-        condition.broadcast if mon_owned?
+        condition&.broadcast if mon_owned?
       ensure
         mon_exit if mon_owned?
       end
@@ -30,7 +30,7 @@ module PgEventstore
         @chunks.empty?
       end
 
-      # Consumes all chunks and returns enumerator.
+      # Consumes all chunks and returns enumerator holding them.
       # @return [Enumerator]
       def consume_all
         synchronize do

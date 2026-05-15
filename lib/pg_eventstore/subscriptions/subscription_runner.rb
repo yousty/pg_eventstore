@@ -19,7 +19,7 @@ module PgEventstore
 
     # @!attribute subscription
     #   @return [PgEventstore::Subscription]
-    attr_reader :subscription, :index_partitions_filter
+    attr_reader :subscription
 
     def_delegators :@events_processor, :start, :stop, :stop_async, :feed, :wait_for_finish, :restore, :state, :running?,
                    :clear_events_repository, :within_state, :checkpoint
@@ -32,18 +32,17 @@ module PgEventstore
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
-      @index_partitions_filter = QueryBuilders::IndexPartitionsFilter.create(subscription.options)
 
       attach_callbacks
     end
 
     # @return [Hash]
     def next_chunk_query_opts
-      @subscription.options.merge(
+      {
         from_position: next_chunk_global_position,
         max_count: estimate_events_number,
-        index_partitions_filter: @index_partitions_filter
-      )
+        resolve_link_tos: @subscription.options[:resolve_link_tos] || false,
+      }
     end
 
     # @return [Boolean]

@@ -28,16 +28,16 @@ module PgEventstore
     def append_to_stream(stream, events_or_event, options: {}, middlewares: nil)
       middlewares = self.middlewares(middlewares)
       event_modifier = Commands::EventModifiers::PrepareRegularEvent.new(EventSerializer.new(middlewares))
-      result =
-        Commands::Append.new(
-          Queries.new(
-            partitions: partition_queries,
-            events: event_queries(middlewares),
-            transactions: transaction_queries,
-            events_global_index: events_global_index_queries,
-            streams_global_index: streams_global_index_queries
-          )
-        ).call(stream, *events_or_event, event_modifier:, options:)
+      queries = Queries.new(
+        partitions: partition_queries,
+        events: event_queries,
+        transactions: transaction_queries,
+        events_global_index: events_global_index_queries,
+        streams_global_index: streams_global_index_queries
+      )
+      result = Commands::Append.new(queries).call(
+        stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
+      )
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -114,11 +114,14 @@ module PgEventstore
     # @raise [PgEventstore::StreamNotFoundError]
     def read(stream, options: {}, middlewares: nil)
       queries = Queries.new(
-        partitions: partition_queries,
-        events: event_queries(middlewares(middlewares)),
+        events_global_index: events_global_index_queries,
         streams_global_index: streams_global_index_queries
       )
-      Commands::Read.new(queries).call(stream, options: { max_count: config.max_count }.merge(options))
+      Commands::Read.new(queries).call(
+        stream,
+        deserializer: event_deserializer(middlewares(middlewares)),
+        options: { max_count: config.max_count }.merge(options)
+      )
     end
 
     # @see {#read} for the detailed docs
@@ -128,9 +131,15 @@ module PgEventstore
     # @return [Enumerator] enumerator will yield PgEventstore::Event
     def read_paginated(stream, options: {}, middlewares: nil)
       cmd_class = stream.system? ? Commands::SystemStreamReadPaginated : Commands::RegularStreamReadPaginated
-      cmd_class.
-        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
-        call(stream, options: { max_count: config.max_count }.merge(options))
+      queries = Queries.new(
+        events_global_index: events_global_index_queries,
+        streams_global_index: streams_global_index_queries
+      )
+      cmd_class.new(queries).call(
+        stream,
+        deserializer: event_deserializer(middlewares(middlewares)),
+        options: { max_count: config.max_count }.merge(options)
+      )
     end
 
     # Takes a stream, determines a list of even types in it and returns most recent(or very first - depending on
@@ -144,10 +153,13 @@ module PgEventstore
     # @param middlewares [Array, nil]
     # @return [Array<PgEventstore::Event>]
     def read_grouped(stream, options: {}, middlewares: nil)
-      cmd_class = stream.all_stream? ? Commands::AllStreamReadGrouped : Commands::RegularStreamReadGrouped
-      cmd_class.
-        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
-        call(stream, options:)
+      queries = Queries.new(
+        events_global_index: events_global_index_queries,
+        streams_global_index: streams_global_index_queries
+      )
+      Commands::ReadGrouped.new(queries).call(
+        stream, deserializer: event_deserializer(middlewares(middlewares)), options:
+      )
     end
 
     # Links event from one stream into another stream. You can later access it by providing :resolve_link_tos option
@@ -166,17 +178,26 @@ module PgEventstore
       event_modifier = Commands::EventModifiers::PrepareLinkEvent.new(
         partition_queries, EventSerializer.new(middlewares)
       )
-      result =
-        Commands::LinkTo.new(
-          Queries.new(
-            partitions: partition_queries,
-            events: event_queries(middlewares),
-            transactions: transaction_queries,
-            events_global_index: events_global_index_queries,
-            streams_global_index: streams_global_index_queries
-          )
-        ).call(stream, *events_or_event, event_modifier:, options:)
+      queries = Queries.new(
+        partitions: partition_queries,
+        events: event_queries,
+        transactions: transaction_queries,
+        events_global_index: events_global_index_queries,
+        streams_global_index: streams_global_index_queries
+      )
+      result = Commands::LinkTo.new(queries).call(
+        stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
+      )
       events_or_event.is_a?(Array) ? result : result.first
+    end
+
+    def stream_revision(stream)
+      queries = Queries.new(streams_global_index: streams_global_index_queries)
+      Commands::StreamRevision.new(queries).call(stream)
+    end
+
+    def streams(options: {})
+
     end
 
     private
@@ -204,13 +225,15 @@ module PgEventstore
       TransactionQueries.new(connection)
     end
 
-    # @param middlewares [Array<Object<#serialize, #deserialize>>]
     # @return [PgEventstore::EventQueries]
-    def event_queries(middlewares)
-      EventQueries.new(
-        connection,
-        EventDeserializer.new(middlewares, config.event_class_resolver)
-      )
+    def event_queries
+      EventQueries.new(connection)
+    end
+
+    # @param middlewares [Array<Middleware>]
+    # @return [PgEventstore::EventDeserializer]
+    def event_deserializer(middlewares)
+      EventDeserializer.new(middlewares, config.event_class_resolver)
     end
 
     # @return [PgEventstore::EventsGlobalIndexQueries]

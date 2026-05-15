@@ -19,6 +19,8 @@ class Benchmarks
     # Populate db with some data, so that tests are performed over non-empty db
     def warm_up
       puts "Concurrency is: #{CONCURRENCY}. Warming up..."
+      lock = Thread::Mutex.new
+      to_append = 0
       workers = CONCURRENCY.times.map do
         Thread.new do
           # [{ stream: stream1, events: [event1, event2, ...] }, ...]
@@ -30,6 +32,7 @@ class Benchmarks
               next
             end
             PgEventstore.client.append_to_stream(job[:stream], job[:events])
+            lock.synchronize { to_append -= job[:events].size }
           end
         end
       end
@@ -46,12 +49,13 @@ class Benchmarks
           events = 1000.times.map do |event_num|
             PgEventstore::Event.new(data: { foo: "foo-#{event_num}" }, type: EVENT_TYPES[event_num % EVENT_TYPES.size])
           end
+          lock.synchronize { to_append += events.size }
           worker = workers[(i + j) % workers.size]
           worker[:jobs].push({ stream:, events: })
         end
       end
       loop do
-        break if workers.all? { |worker| worker.status == 'sleep' && worker[:jobs].empty? }
+        break if lock.synchronize { to_append == 0 }
         sleep 1
       end
       workers.each(&:exit)

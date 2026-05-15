@@ -10,7 +10,8 @@ services:
       - 5532:5432
     environment:
       - POSTGRES_PASSWORD=postgres
-    command: ["postgres", "-c", "log_statement=all", "-c", "shared_preload_libraries=pg_cron", "-c", "max_locks_per_transaction=2048", "-c", "max_pred_locks_per_transaction=2048", "-c", "shared_buffers=4096MB"]
+    command: ["postgres", "-c", "log_statement=all", "-c", "shared_preload_libraries=pg_cron", "-c", "max_locks_per_transaction=2048"]
+#    command: ["postgres", "-c", "log_min_error_statement=fatal", "-c", "shared_preload_libraries=pg_cron", "-c", "max_locks_per_transaction=2048"]
     volumes:
       - "./db/postgresql/data:/var/lib/postgresql/18/data"
   pgbouncer:

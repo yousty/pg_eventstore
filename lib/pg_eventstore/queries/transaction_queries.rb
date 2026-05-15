@@ -41,7 +41,7 @@ module PgEventstore
     # @param pg_connection [PG::Connection]
     # @return [void]
     def pg_transaction(level, read_only, pg_connection, &)
-      pg_connection.transaction do
+      _transaction(pg_connection) do
         if read_only
           pg_connection.exec("SET TRANSACTION ISOLATION LEVEL #{level} READ ONLY")
         else
@@ -49,7 +49,7 @@ module PgEventstore
         end
         yield
       end
-    rescue PG::TRSerializationFailure, PG::TRDeadlockDetected, DuplicatedRecordError
+    rescue PG::TRSerializationFailure, PG::TRDeadlockDetected, PG::UniqueViolation
       retry
     rescue MissingPartitions => error
       error.event_types.each do |event_type|
@@ -58,6 +58,36 @@ module PgEventstore
         end
       end
       retry
+    end
+
+    # @param conn [PG::Connection]
+    # rubocop:disable Lint/RescueException
+    def _transaction(conn)
+      rollback = false
+      conn.exec('BEGIN')
+      yield
+    rescue PG::RollbackTransaction
+      rollback = true
+      perform_rollback(conn)
+    rescue Exception
+      rollback = true
+      perform_rollback(conn)
+      raise
+    ensure
+      unless rollback
+        if Thread.current.status == 'aborting'
+          perform_rollback(conn)
+        else
+          conn.exec('COMMIT')
+        end
+      end
+    end
+    # rubocop:enable Lint/RescueException
+
+    def perform_rollback(conn)
+      conn.cancel if conn.transaction_status == PG::PQTRANS_ACTIVE
+      conn.block
+      conn.exec('ROLLBACK')
     end
 
     # @return [PgEventstore::PartitionQueries]

@@ -7,12 +7,15 @@ module PgEventstore
 
       MAX_PARTITIONS_TO_RESOLVE_PER_CALL = 50
 
-      def initialize(indexes, connection)
+      def initialize(indexes, connection, query_strategy, resolve_link_tos)
         @indexes = indexes
-        @events = []
-        @last_global_position = Utils.original_global_position(indexes.last)
         @connection = connection
-        @resolved = false
+        @query_strategy = query_strategy
+        @resolve_link_tos = resolve_link_tos
+        @idx_direction = detect_direction(indexes[0], indexes[1])
+        @events = []
+        @last_global_position = indexes.last.global_position if indexes.any?
+        @resolved = indexes.empty?
       end
 
       def take(size)
@@ -34,6 +37,12 @@ module PgEventstore
 
       private
 
+      def detect_direction(idx1, idx2)
+        return :asc if idx1.nil? || idx2.nil?
+
+        idx1.global_position > idx2.global_position ? :desc : :asc
+      end
+
       # @return [Boolean]
       def resolved?
         @resolved
@@ -42,7 +51,11 @@ module PgEventstore
       # @return [void]
       def resolve_indexes
         indexes_to_resolve = @indexes.slice!(range_to_slice)
-        raw_events = events_global_index_queries.resolve_indexes(indexes_to_resolve)
+        raw_events = events_global_index_queries.resolve_indexes(
+          indexes_to_resolve,
+          direction: @idx_direction,
+          resolve_link_tos: @resolve_link_tos
+        )
         @events.push(*raw_events)
         @resolved = @indexes.empty?
       rescue => exception
@@ -60,7 +73,7 @@ module PgEventstore
         partitions_map = Set.new
         latest_index = 0
         @indexes.each_with_index do |events_index, index|
-          partitions_map.add(events_index['partition_id'])
+          partitions_map.add(events_index.event_type_partition_id)
           latest_index = index
           break if partitions_map.size == MAX_PARTITIONS_TO_RESOLVE_PER_CALL
         end
@@ -68,7 +81,7 @@ module PgEventstore
       end
 
       def events_global_index_queries
-        EventsGlobalIndexQueries.new(@connection, QueryStrategy::Foreground.new(@connection))
+        EventsGlobalIndexQueries.new(@connection, @query_strategy)
       end
     end
   end
