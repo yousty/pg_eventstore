@@ -2,7 +2,7 @@
 
 ## Database architecture
 
-The database is designed specifically for Eventsourcing using Domain-Driven Design. `events` table is partitioned in next way:
+The database is designed specifically for Eventsourcing alongside Domain-Driven Design. Internally, it is architected using Snowflake schema with `events_global_index` as fact table and `events`, `streams_global_index` and `partitions` tables as dimensions tables. `events` table is additionally partitioned in next way:
 
 - For each `Stream#context` there is a subpartition of `events` table. Those tables have `contexts_` prefix.
 - For each `Stream#stream_name` there is a subpartition of `contexts_` table. Those tables have `stream_names_` prefix.
