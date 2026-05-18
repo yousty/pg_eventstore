@@ -1,7 +1,7 @@
 ## [Unreleased]
 
 - Remove any practical limit of `Event#stream_revision` by changing its type to `bigint`. Stream size can be practically unreachable now
-- Fix issue when incomplete transaction block may be interrupted half way and commited successfully. The issue is related to incorrect transaction termination flow during non-graceful process shutdown(e.g. via kill -9)
+- Fix issue when incomplete transaction block may be interrupted half way and commited successfully. The issue is related to incorrect transaction termination flow during non-graceful thread shutdown(e.g. via `Thread.exit`)
 - New feature: `Client#stream_revision` allows to quickly get stream's revision. Example: `PgEventstore.client.stream_revision(stream) #=> number, greater than or equal to 0 or -1 if stream does not exist`
 - **Breaking change**: `Client#read_grouped` now requires to provide `event_types` filter option explicitly. Example: `PgEventstore.client.read_grouped(stream, options: { filter: { event_types: ['Foo', 'Bar'] } })`
 - New feature: Subscription event types filter now support prefixes. So, if you have subscriptions like `manager.subscribe('MyAwesomeSubscription', handler: my_handler, options: { filter: { event_types: ['Foo1', 'Foo2', 'Foo3'] } })`, you can replace its filter as follows: `{ event_types: [{ prefix: 'Foo' }] }`. **Read API does not support this feature yet**  
