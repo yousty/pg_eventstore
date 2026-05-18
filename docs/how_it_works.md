@@ -8,7 +8,7 @@ The database is designed specifically for Eventsourcing using Domain-Driven Desi
 - For each `Stream#stream_name` there is a subpartition of `contexts_` table. Those tables have `stream_names_` prefix.
 - For each `Event#type` there is a subpartition of `stream_names_` table. Those tables have `event_types_` prefix.
 
-To implement partitions - Declarative Partitioning is used. Partitioning means that you should not have any random values in the combination of `Stream#context`, `Stream#stream_name` and `Event#type`. A combination of those values must have low cardinality(low distinct values number) and must be pre-defined in your application. Otherwise it will lead to the performance degradation. More about PostgreSQL partitions is [here](https://www.postgresql.org/docs/current/ddl-partitioning.html).
+To implement partitions - Declarative Partitioning is used. While the implementation scales well with the number of partitions - it is recommended your application pre-defines all combinations of contexts, stream names and event types. More about PostgreSQL partitions is [here](https://www.postgresql.org/docs/current/ddl-partitioning.html).
 
 So, let's say you want to publish next event:
 
@@ -24,7 +24,7 @@ To actually create `events` record next partitions will be created:
 - `stream_names_ecb803` table which is a subpartition of `contexts_81820a` table. It is needed to handle all events which comes to `"SomeStream"` stream name of `"SomeCtx"` context
 - `event_types_aeadd5` table which is a subpartition of `stream_names_ecb803` table. It is needed to handle all events which have `"SomethingChanged"` event type of `"SomeStream"` stream name of `"SomeCtx"` context
 
-You can check all partitions and associated with them contexts, stream names and event types by querying `partitions` table. Example(based on the publish sample above):
+You can check all partitions and associated with them contexts, stream names and event types by querying special service table called `partitions`. Example(based on the sample above):
 
 ```ruby
 PgEventstore.connection.with do |conn|
@@ -38,16 +38,25 @@ end.to_a
 
 ### PostgreSQL settings
 
-The more partitions you have, the more locks are required for operations that affect multiple partitions. Especially it concerns the case when you are [reading events from "all" stream](reading_events.md#reading-from-the-all-stream) without providing any filters. It may lead to the next error:
+The more partitions you have, the more locks are required for operations that affect multiple partitions. Especially it concerns the case when you involve many different event types when using `Client#multiple`. It may lead to the next error:
 
 ```
 ERROR:  out of shared memory (PG::OutOfMemory)
-HINT:  You might need to increase max_locks_per_transaction.
+HINT:  You might need to increase max_pred_locks_per_transaction.
 ```
 
-PostgreSQL suggests to increase the `max_locks_per_transaction`(the description of it is [here](https://www.postgresql.org/docs/current/runtime-config-locks.html)). The default value is `64`. The good value of this setting really depends on your queries, the number of concurrent transactions, the values of `shared_buffers` and `work_mem` settings. In case you have several thousands of partitions - you may want to set it to `128` or event to `256` from the start. On the other hand - you may want to increase it even earlier(e.g. when having several hundreds of partitions) in case you involve high number of partitions into a single transaction(for example, when using [#multiple](multiple_commands.md)).
+PostgreSQL suggests to increase the `max_pred_locks_per_transaction`(the description of it is [here](https://www.postgresql.org/docs/current/runtime-config-locks.html)). The default value is `64`. In case you have several thousands of partitions - you may want to set it to `128` or even to `256`.
 
-Conclusion: monitor db logs, monitor exceptions and adjust your db settings accordingly.
+You may also face similar error which refers to `max_locks_per_transaction` setting:
+
+```
+PG::OutOfMemory: ERROR:  out of shared memory (PG::OutOfMemory)
+HINT:  You might need to increase "max_locks_per_transaction".
+```
+
+The reason of it to appear is the same - too many objects(partition tables, indexes, etc) are involved in a single transaction. You may face it when running migrations of your pg_eventstore database using `rake pg_eventstore:migrate` as some migrations may involve high number of db objects.
+
+Conclusion: adjust values of `max_locks_per_transaction` and `max_pred_locks_per_transaction` settings as long as the number of partitions(number of distinct values of (context, stream_name, event type) tuple) grow.
 
 ## Appending events and multiple commands
 

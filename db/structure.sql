@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0tDEATBQoOzpUFSDLVE6ziJdsviktEWBBghMkxBFtLP7MUkah3yYk1Rqjp3YfCG
+\restrict rz4wOyDTt9VVXaJfTLbHn0Pgweo1TtH3wrphMefdURhNKxAI3O4w9u7TfVYHfeY
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -74,7 +74,7 @@ CREATE TABLE public.events (
     stream_name character varying NOT NULL COLLATE pg_catalog."POSIX",
     stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
     global_position bigint NOT NULL,
-    stream_revision integer NOT NULL,
+    stream_revision bigint NOT NULL,
     data jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     link_partition_id bigint,
@@ -93,7 +93,7 @@ SET default_table_access_method = heap;
 
 CREATE TABLE public.events_global_index (
     global_position bigint NOT NULL,
-    stream_revision integer NOT NULL,
+    stream_revision bigint NOT NULL,
     context_partition_id bigint NOT NULL,
     stream_name_partition_id bigint NOT NULL,
     event_type_partition_id bigint NOT NULL,
@@ -188,7 +188,7 @@ CREATE TABLE public.streams_global_index (
     id bigint NOT NULL,
     partition_id bigint NOT NULL,
     stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
-    stream_revision integer NOT NULL,
+    stream_revision bigint NOT NULL,
     starting_position bigint NOT NULL
 );
 
@@ -663,5 +663,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0tDEATBQoOzpUFSDLVE6ziJdsviktEWBBghMkxBFtLP7MUkah3yYk1Rqjp3YfCG
+\unrestrict rz4wOyDTt9VVXaJfTLbHn0Pgweo1TtH3wrphMefdURhNKxAI3O4w9u7TfVYHfeY
 

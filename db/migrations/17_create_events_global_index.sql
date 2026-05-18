@@ -1,11 +1,11 @@
 CREATE TABLE public.events_global_index
 (
-    global_position          bigint  NOT NULL,
-    stream_revision          integer NOT NULL,
-    context_partition_id     bigint  NOT NULL,
-    stream_name_partition_id bigint  NOT NULL,
-    event_type_partition_id  bigint  NOT NULL,
-    streams_global_index_id  bigint  NOT NULL
+    global_position          bigint NOT NULL,
+    stream_revision          bigint NOT NULL,
+    context_partition_id     bigint NOT NULL,
+    stream_name_partition_id bigint NOT NULL,
+    event_type_partition_id  bigint NOT NULL,
+    streams_global_index_id  bigint NOT NULL
 );
 
 CREATE INDEX idx_events_idx_on_global_position ON public.events_global_index USING btree (global_position);

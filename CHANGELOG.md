@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Remove any practical limit of `Event#stream_revision` by changing its type to `bigint`. Stream size can be practically unreachable now
 - Fix issue when incomplete transaction block may be interrupted half way and commited successfully. The issue is related to incorrect transaction termination flow during non-graceful process shutdown(e.g. via kill -9)
 - New feature: `Client#stream_revision` allows to quickly get stream's revision. Example: `PgEventstore.client.stream_revision(stream) #=> number, greater than or equal to 0 or -1 if stream does not exist`
 - **Breaking change**: `Client#read_grouped` now requires to provide `event_types` filter option explicitly. Example: `PgEventstore.client.read_grouped(stream, options: { filter: { event_types: ['Foo', 'Bar'] } })`
