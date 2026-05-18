@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict rz4wOyDTt9VVXaJfTLbHn0Pgweo1TtH3wrphMefdURhNKxAI3O4w9u7TfVYHfeY
+\restrict vRu5jGnBUCGyrmaObt5obvSzVaLCXIbEsgrmbAX89hG9NLat2AHV5cDWYVSa9NP
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -470,7 +470,7 @@ CREATE INDEX idx_events_global_position ON ONLY public.events USING btree (globa
 -- Name: idx_events_idx_on_ctx_part_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_idx_on_ctx_part_id_n_position ON public.events_global_index USING btree (context_partition_id, global_position);
+CREATE INDEX idx_events_idx_on_ctx_part_id_n_position ON public.events_global_index USING btree (context_partition_id, global_position) INCLUDE (event_type_partition_id);
 
 
 --
@@ -484,14 +484,14 @@ CREATE INDEX idx_events_idx_on_e_type_part_id_n_position ON public.events_global
 -- Name: idx_events_idx_on_global_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_idx_on_global_position ON public.events_global_index USING btree (global_position);
+CREATE INDEX idx_events_idx_on_global_position ON public.events_global_index USING btree (global_position) INCLUDE (event_type_partition_id);
 
 
 --
 -- Name: idx_events_idx_on_stream_name_part_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_idx_on_stream_name_part_id_n_position ON public.events_global_index USING btree (stream_name_partition_id, global_position);
+CREATE INDEX idx_events_idx_on_stream_name_part_id_n_position ON public.events_global_index USING btree (stream_name_partition_id, global_position) INCLUDE (event_type_partition_id);
 
 
 --
@@ -505,21 +505,21 @@ CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_position ON pub
 -- Name: idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_revision; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_revision ON public.events_global_index USING btree (streams_global_index_id, event_type_partition_id, stream_revision);
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_revision ON public.events_global_index USING btree (streams_global_index_id, event_type_partition_id, stream_revision) INCLUDE (global_position);
 
 
 --
 -- Name: idx_events_idx_on_streams_idx_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_idx_on_streams_idx_id_n_position ON public.events_global_index USING btree (streams_global_index_id, global_position);
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_position ON public.events_global_index USING btree (streams_global_index_id, global_position) INCLUDE (event_type_partition_id);
 
 
 --
 -- Name: idx_events_idx_on_streams_idx_id_n_revision; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_idx_on_streams_idx_id_n_revision ON public.events_global_index USING btree (streams_global_index_id, stream_revision);
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_revision ON public.events_global_index USING btree (streams_global_index_id, stream_revision) INCLUDE (event_type_partition_id, global_position);
 
 
 --
@@ -663,5 +663,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict rz4wOyDTt9VVXaJfTLbHn0Pgweo1TtH3wrphMefdURhNKxAI3O4w9u7TfVYHfeY
+\unrestrict vRu5jGnBUCGyrmaObt5obvSzVaLCXIbEsgrmbAX89hG9NLat2AHV5cDWYVSa9NP
 

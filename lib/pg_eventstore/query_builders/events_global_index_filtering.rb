@@ -94,7 +94,9 @@ module PgEventstore
       end
 
       def initialize
-        @sql_builder = SQLBuilder.new.select("#{to_table_name}.*").from(to_table_name)
+        @sql_builder = SQLBuilder.new
+        @sql_builder.select("#{to_table_name}.global_position, #{to_table_name}.event_type_partition_id")
+        @sql_builder.from(to_table_name)
       end
 
       def to_sql_builder
