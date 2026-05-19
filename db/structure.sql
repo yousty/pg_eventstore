@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict vRu5jGnBUCGyrmaObt5obvSzVaLCXIbEsgrmbAX89hG9NLat2AHV5cDWYVSa9NP
+\restrict kgcguhdG4PJWz0L1PZpVM4MosNTKY536GPEA7PY6sBiyb8Btj9MEkK4wbGZPftj
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -486,6 +486,8 @@ CREATE INDEX idx_events_idx_on_e_type_part_id_n_position ON public.events_global
 
 CREATE INDEX idx_events_idx_on_global_position ON public.events_global_index USING btree (global_position) INCLUDE (event_type_partition_id);
 
+ALTER TABLE public.events_global_index CLUSTER ON idx_events_idx_on_global_position;
+
 
 --
 -- Name: idx_events_idx_on_stream_name_part_id_n_position; Type: INDEX; Schema: public; Owner: -
@@ -569,6 +571,8 @@ CREATE UNIQUE INDEX idx_partitions_by_partition_table_name ON public.partitions 
 --
 
 CREATE INDEX idx_streams_global_index_on_starting_position ON public.streams_global_index USING btree (starting_position);
+
+ALTER TABLE public.streams_global_index CLUSTER ON idx_streams_global_index_on_starting_position;
 
 
 --
@@ -663,5 +667,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict vRu5jGnBUCGyrmaObt5obvSzVaLCXIbEsgrmbAX89hG9NLat2AHV5cDWYVSa9NP
+\unrestrict kgcguhdG4PJWz0L1PZpVM4MosNTKY536GPEA7PY6sBiyb8Btj9MEkK4wbGZPftj
 

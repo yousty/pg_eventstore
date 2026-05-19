@@ -118,5 +118,6 @@ end
 threads.each(&:join)
 
 PgEventstore.connection(:_eventstore_db_connection).with do |conn|
+  conn.exec('CLUSTER streams_global_index USING idx_streams_global_index_on_starting_position')
   conn.exec('VACUUM (ANALYZE) streams_global_index;')
 end
