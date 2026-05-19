@@ -61,7 +61,7 @@ Not supported
 #### For Read API
 
 ```sql
-select * from events_global_index where streams_global_index_id = $1 and stream_revision >= $2 
+select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and stream_revision >= $2 
                                   order by stream_revision 
                                   limit $3
 ```
@@ -75,9 +75,9 @@ Not supported
 #### For Read API
 
 ```sql
-(select * from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $2 and stream_revision >= $3 order by stream_revision limit $4)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $2 and stream_revision >= $3 order by stream_revision limit $4)
 union all
-(select * from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $5 and stream_revision >= $3 order by stream_revision limit $4)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $5 and stream_revision >= $3 order by stream_revision limit $4)
 order by stream_revision
 limit $4
 ```
@@ -87,13 +87,13 @@ limit $4
 #### For subscription
 
 ```sql
-select * from events_global_index where global_position >= $1 and global_position <= $2 order by global_position limit $3
+select global_position, event_type_partition_id from events_global_index where global_position >= $1 and global_position <= $2 order by global_position limit $3
 ```
 
 #### For Read API
 
 ```sql
-select * from events_global_index where global_position >= $1 order by global_position limit $2;
+select global_position, event_type_partition_id from events_global_index where global_position >= $1 order by global_position limit $2;
 ```
 
 ### Reading from $all stream with specific event types filter
@@ -114,7 +114,7 @@ Example:
 #### For subscription
 
 ```sql
-select * from events_global_index where event_type_partition_id in ($1) and global_position >= $2 and 
+select global_position, event_type_partition_id from events_global_index where event_type_partition_id in ($1) and global_position >= $2 and 
                                         global_position <= $3 
                                   order by global_position 
                                   limit $4
@@ -123,9 +123,9 @@ select * from events_global_index where event_type_partition_id in ($1) and glob
 #### For Read API
 
 ```sql
-(select * from events_global_index where event_type_partition_id = $1 and global_position >= $2 order by global_position limit $4)
+(select global_position, event_type_partition_id from events_global_index where event_type_partition_id = $1 and global_position >= $2 order by global_position limit $4)
 union all
-(select * from events_global_index where event_type_partition_id = $3 and global_position >= $2 order by global_position limit $4)
+(select global_position, event_type_partition_id from events_global_index where event_type_partition_id = $3 and global_position >= $2 order by global_position limit $4)
 order by global_position
 limit $4
 ```
@@ -151,7 +151,7 @@ Example:
 #### For subscription
 
 ```sql
-select * from events_global_index where context_partition_id in ($1) and global_position >= $2 and 
+select global_position, event_type_partition_id from events_global_index where context_partition_id in ($1) and global_position >= $2 and 
                                         global_position <= $3 
                                   order by global_position 
                                   limit $4
@@ -160,9 +160,9 @@ select * from events_global_index where context_partition_id in ($1) and global_
 #### For Read API
 
 ```sql
-(select * from events_global_index where context_partition_id = $1 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where context_partition_id = $1 order by global_position limit $3)
 union all
-(select * from events_global_index where context_partition_id = $2 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where context_partition_id = $2 order by global_position limit $3)
 order by global_position
 limit $3
 ```
@@ -190,7 +190,7 @@ Example:
 Note: context constraint is already a part of stream name constraint
 
 ```sql
-select * from events_global_index where stream_name_partition_id in ($1) and global_position >= $2 and 
+select global_position, event_type_partition_id from events_global_index where stream_name_partition_id in ($1) and global_position >= $2 and 
                                         global_position <= $3 
                                   order by global_position 
                                   limit $4
@@ -199,9 +199,9 @@ select * from events_global_index where stream_name_partition_id in ($1) and glo
 #### For Read API
 
 ```sql
-(select * from events_global_index where stream_name_partition_id = $1 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where stream_name_partition_id = $1 order by global_position limit $3)
 union all
-(select * from events_global_index where stream_name_partition_id = $2 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where stream_name_partition_id = $2 order by global_position limit $3)
 order by global_position
 limit $3
 ```
@@ -228,7 +228,7 @@ Example:
 #### For subscription
 
 ```sql
-select * from events_global_index where (context_partition_id in ($1) or streams_global_index_id in ($2)) and 
+select global_position, event_type_partition_id from events_global_index where (context_partition_id in ($1) or streams_global_index_id in ($2)) and 
                                         global_position >= $3 and global_position <= $4 
                                   order by global_position 
                                   limit $5
@@ -238,11 +238,11 @@ select * from events_global_index where (context_partition_id in ($1) or streams
 
 
 ```sql
-(select * from events_global_index where context_partition_id = $1 order by global_position limit $4)
+(select global_position, event_type_partition_id from events_global_index where context_partition_id = $1 order by global_position limit $4)
 union all -- or UNION in case filters are not unique
-(select * from events_global_index where context_partition_id = $2 order by global_position limit $4)
+(select global_position, event_type_partition_id from events_global_index where context_partition_id = $2 order by global_position limit $4)
 union all -- or UNION in case filters are not unique
-(select * from events_global_index where streams_global_index_id = $3 order by global_position limit $4)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $3 order by global_position limit $4)
 order by global_position
 limit $4
 ```
@@ -271,7 +271,7 @@ Example:
 Note: context constraint is already a part of stream name constraint
 
 ```sql
-select * from events_global_index where (stream_name_partition_id in ($1) or streams_global_index_id in ($2)) and 
+select global_position, event_type_partition_id from events_global_index where (stream_name_partition_id in ($1) or streams_global_index_id in ($2)) and 
                                         global_position >= $3 and global_position <= $4 
                                   order by global_position 
                                   limit $5
@@ -280,11 +280,11 @@ select * from events_global_index where (stream_name_partition_id in ($1) or str
 #### For Read API
 
 ```sql
-(select * from events_global_index where stream_name_partition_id = $1 order by global_position limit $4)
+(select global_position, event_type_partition_id from events_global_index where stream_name_partition_id = $1 order by global_position limit $4)
 union all  -- or UNION in case filters are not unique
-(select * from events_global_index where stream_name_partition_id = $2 order by global_position limit $4)
+(select global_position, event_type_partition_id from events_global_index where stream_name_partition_id = $2 order by global_position limit $4)
 union all  -- or UNION in case filters are not unique
-(select * from events_global_index where streams_global_index_id = $3 order by global_position limit $4)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $3 order by global_position limit $4)
 order by global_position
 limit $4
 ```
@@ -311,7 +311,7 @@ Example:
 #### For subscription
 
 ```sql
-select * from events_global_index where event_type_partition_id in ($1) and streams_global_index_id in ($2) and 
+select global_position, event_type_partition_id from events_global_index where event_type_partition_id in ($1) and streams_global_index_id in ($2) and 
                                         global_position >= $3 and global_position <= $4 
                                   order by global_position 
                                   limit $5
@@ -322,13 +322,13 @@ select * from events_global_index where event_type_partition_id in ($1) and stre
 We have to expand each combination of stream and event type into a separate query and union them:
 
 ```sql
-(select * from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $2 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $2 order by global_position limit $3)
 union all
-(select * from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $4 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $4 order by global_position limit $3)
 union all
-(select * from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $2 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $2 order by global_position limit $3)
 union all
-(select * from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $4 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $4 order by global_position limit $3)
 order by global_position
 limit $3
 ```
@@ -358,7 +358,7 @@ Example:
 Note, that in case with `{ context: 'FooCtx' }` and `event_types: %w[Foo Bar]` we simply replace it with events partitions list `$3`
 
 ```sql
-select * from events_global_index where (
+select global_position, event_type_partition_id from events_global_index where (
         (event_type_partition_id in ($1) and streams_global_index_id in ($2)) or event_type_partition_id in ($3)
     ) and global_position >= $4 and global_position <= $5 order by global_position limit $6
 ```
@@ -366,13 +366,13 @@ select * from events_global_index where (
 #### For Read API
 
 ```sql
-(select * from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $2 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $2 order by global_position limit $3)
 union all  -- or UNION in case filters are not unique
-(select * from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $4 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $4 order by global_position limit $3)
 union all  -- or UNION in case filters are not unique
-(select * from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $2 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $2 order by global_position limit $3)
 union all  -- or UNION in case filters are not unique
-(select * from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $4 order by global_position limit $3)
+(select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $4 order by global_position limit $3)
 order by global_position
 limit $3
 ```

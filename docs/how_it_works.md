@@ -54,7 +54,7 @@ PG::OutOfMemory: ERROR:  out of shared memory (PG::OutOfMemory)
 HINT:  You might need to increase "max_locks_per_transaction".
 ```
 
-The reason of it to appear is the same - too many objects(partition tables, indexes, etc) are involved in a single transaction. You may face it when running migrations of your pg_eventstore database using `rake pg_eventstore:migrate` as some migrations may involve high number of db objects.
+The reason of it to appear is the same - too many objects(partition tables, indexes, etc) are involved in a single transaction. You may face it when running migrations on large pg_eventstore database using `rake pg_eventstore:migrate` as some migrations may involve high number of db objects.
 
 Conclusion: adjust values of `max_locks_per_transaction` and `max_pred_locks_per_transaction` settings as long as the number of partitions(number of distinct values of (context, stream_name, event type) tuple) grow.
 
