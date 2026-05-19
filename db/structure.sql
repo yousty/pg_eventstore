@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict kgcguhdG4PJWz0L1PZpVM4MosNTKY536GPEA7PY6sBiyb8Btj9MEkK4wbGZPftj
+\restrict whQdUAdsDDSDfrRlafFSsmDOyMzSpEk72c8M3noj21OnVPkmOF2VOrH0XXYwOPv
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -579,7 +579,7 @@ ALTER TABLE public.streams_global_index CLUSTER ON idx_streams_global_index_on_s
 -- Name: idx_streams_global_index_on_stream_id_and_partition_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_streams_global_index_on_stream_id_and_partition_id ON public.streams_global_index USING btree (stream_id, partition_id);
+CREATE UNIQUE INDEX idx_streams_global_index_on_stream_id_and_partition_id ON public.streams_global_index USING btree (stream_id, partition_id) INCLUDE (id);
 
 
 --
@@ -667,5 +667,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict kgcguhdG4PJWz0L1PZpVM4MosNTKY536GPEA7PY6sBiyb8Btj9MEkK4wbGZPftj
+\unrestrict whQdUAdsDDSDfrRlafFSsmDOyMzSpEk72c8M3noj21OnVPkmOF2VOrH0XXYwOPv
 
