@@ -69,9 +69,11 @@ module PgEventstore
       stream = event.stream
       transaction_queries.transaction(:read_commited) do
         stream_global_idx = streams_global_index_queries.find_by!(stream)
-        connection.with do |conn|
-          conn.exec_params('select * from streams_global_index where id = $1 for update', [stream_global_idx.id])
-        end
+        current_stream_revision = connection.with do |conn|
+          conn.exec_params(
+            'select stream_revision from streams_global_index where id = $1 for update', [stream_global_idx.id]
+          )
+        end.to_a.first['stream_revision']
         deleted_event = connection.with do |conn|
           conn.exec_params(<<~SQL, [stream_global_idx.id, event.global_position]).to_a.first
             delete from events_global_index where streams_global_index_id = $1 and global_position = $2
@@ -80,6 +82,9 @@ module PgEventstore
         end
         raise RecordNotFound.new('events_global_index', event.global_position) unless deleted_event
 
+        return delete_stream(stream) if current_stream_revision == 0 && deleted_event['stream_revision'] == 0
+
+        first_updated_event = nil
         stream_revision = deleted_event['stream_revision']
         loop do
           updated_events = connection.with do |conn|
@@ -94,6 +99,7 @@ module PgEventstore
                      returning event_type_partition_id, global_position, stream_revision
             SQL
           end
+          first_updated_event ||= updated_events.first
           break if updated_events.empty?
 
           stream_revision += updated_events.size
@@ -114,6 +120,16 @@ module PgEventstore
           end
           connection.with do |conn|
             conn.exec(queries.join("\n"))
+          end
+        end
+        # Adjust starting_position in case zero revision event was deleted
+        if deleted_event['stream_revision'] == 0
+          connection.with do |conn|
+            conn.exec_params(
+              'update streams_global_index set starting_position = $1 where id = $2',
+              [first_updated_event['stream_revision'],
+               stream_global_idx.id]
+            )
           end
         end
       end

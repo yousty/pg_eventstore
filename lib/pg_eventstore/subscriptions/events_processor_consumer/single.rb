@@ -24,12 +24,12 @@ module PgEventstore
       end
 
       # @param callbacks [PgEventstore::Callbacks]
-      # @param events_repository [PgEventstore::RawEntities::EventsRepository]
+      # @param events_repository [PgEventstore::RawEntities::Repository]
       # @param repository_cond [MonitorMixin::ConditionVariable]
       def call(callbacks, events_repository, repository_cond)
         raw_event =
           @last_unprocessed_event ||
-          events_repository.wait_and_consume(events_num: 1, timeout: 0.5, condition: repository_cond).first
+          events_repository.wait_and_consume(entities_num: 1, timeout: 0.5, condition: repository_cond).first
         return if raw_event.nil?
 
         callbacks.run_callbacks(:process, Utils.original_global_position(raw_event)) do

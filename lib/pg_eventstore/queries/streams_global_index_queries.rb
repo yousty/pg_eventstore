@@ -91,6 +91,30 @@ module PgEventstore
       @query_strategy.exec_params(*builder.to_exec_params).first&.dig('stream_revision')
     end
 
+    def streams_global_index(options)
+      streams_idx_filtering = QueryBuilders::StreamsGlobalIndexFiltering.new
+      streams_idx_filtering.from_position(options[:from_position], options[:direction])
+      streams_idx_filtering.limit(options[:max_count])
+      streams_idx_filtering.add_starting_position_direction(options[:direction])
+      deserialize_many(@query_strategy.exec_params(*streams_idx_filtering.to_exec_params))
+    end
+
+    def resolve_indexes(indexes)
+      return [] if indexes.empty?
+
+      partition_ids = indexes.map(&:partition_id).uniq
+      partitions = partition_queries.find_by_ids(partition_ids).to_h { [_1['id'], _1] }
+      indexes.map do |stream_global_index|
+        partition = partitions[stream_global_index.partition_id]
+        Stream.new(
+          context: partition['context'],
+          stream_name: partition['stream_name'],
+          stream_id: stream_global_index.stream_id,
+          stream_revision: stream_global_index.stream_revision
+        )
+      end
+    end
+
     private
 
     # @return [PgEventstore::TransactionQueries]
@@ -103,6 +127,14 @@ module PgEventstore
       return unless first_result
 
       StreamGlobalIndex.new(first_result)
+    end
+
+    def deserialize_many(pg_result)
+      pg_result.map(&StreamGlobalIndex.method(:new))
+    end
+
+    def partition_queries
+      PartitionQueries.new(connection)
     end
   end
 end

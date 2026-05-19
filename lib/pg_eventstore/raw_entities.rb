@@ -6,6 +6,6 @@ module PgEventstore
 end
 
 require_relative 'raw_entities/chunk'
-require_relative 'raw_entities/event_indexes_chunk'
+require_relative 'raw_entities/events_index_chunk'
 require_relative 'raw_entities/events_chunk'
-require_relative 'raw_entities/events_repository'
+require_relative 'raw_entities/repository'

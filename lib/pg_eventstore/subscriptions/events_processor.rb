@@ -14,7 +14,7 @@ module PgEventstore
     #   the runner when stopping it using #stop_async
     # @param consumer [PgEventstore::EventsProcessorConsumer]
     # @param recovery_strategies [Array<PgEventstore::RunnerRecoveryStrategy>]
-    # @param events_repository [PgEventstore::RawEntities::EventsRepository]
+    # @param events_repository [PgEventstore::RawEntities::Repository]
     def initialize(graceful_shutdown_timeout:, consumer:, events_repository:, recovery_strategies: [])
       @consumer = consumer
       @events_repository = events_repository

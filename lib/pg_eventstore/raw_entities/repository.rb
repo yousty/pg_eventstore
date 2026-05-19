@@ -2,7 +2,7 @@
 
 module PgEventstore
   module RawEntities
-    class EventsRepository
+    class Repository
       include MonitorMixin
 
       def initialize(...)
@@ -46,17 +46,17 @@ module PgEventstore
         end
       end
 
-      # @param events_num [Integer, nil]
+      # @param entities_num [Integer, nil]
       # @param timeout [Float, Integer]
       # @param condition [MonitorMixin::ConditionVariable]
       # @return [Array<Hash>]
-      def wait_and_consume(events_num:, timeout:, condition:)
+      def wait_and_consume(entities_num:, timeout:, condition:)
         synchronize do
           condition.wait(timeout) if @chunks.empty?
           return [] if @chunks.empty?
 
           chunk = @chunks.at(0)
-          chunk.take(events_num).tap do
+          chunk.take(entities_num).tap do
             @chunks.delete(chunk) if chunk.empty?
           end
         end

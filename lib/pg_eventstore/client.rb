@@ -128,7 +128,7 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @param options [Hash] request options
     # @param middlewares [Array, nil]
-    # @return [Enumerator] enumerator will yield PgEventstore::Event
+    # @return [Enumerator] enumerator will yield Array<PgEventstore::Event>
     def read_paginated(stream, options: {}, middlewares: nil)
       cmd_class = stream.system? ? Commands::SystemStreamReadPaginated : Commands::RegularStreamReadPaginated
       queries = Queries.new(
@@ -160,6 +160,28 @@ module PgEventstore
       Commands::ReadGrouped.new(queries).call(
         stream, deserializer: event_deserializer(middlewares(middlewares)), options:
       )
+    end
+
+    # @param options [Hash] request options
+    # @option options [String] :direction read direction. Allowed values are "Forwards", "Backwards", "asc", "desc",
+    #   :asc, :desc
+    # @option options [Integer] :from_position a starting global position number
+    # @option options [Integer] :max_count max number of streams to return in one response. Defaults to config.max_count
+    # @return [Array<PgEventstore::Stream>]
+    def read_streams(options: {})
+      queries = Queries.new(streams_global_index: streams_global_index_queries)
+      Commands::ReadStreams.new(queries).call(options: { max_count: config.max_count }.merge(options))
+    end
+
+    # @param options [Hash] request options
+    # @option options [String] :direction read direction. Allowed values are "Forwards", "Backwards", "asc", "desc",
+    #   :asc, :desc
+    # @option options [Integer] :from_position a starting global position number
+    # @option options [Integer] :max_count max number of streams to return in one response. Defaults to config.max_count
+    # @return [Enumerator] yields Array<PgEventstore::Stream>
+    def read_streams_paginated(options: {})
+      queries = Queries.new(streams_global_index: streams_global_index_queries)
+      Commands::ReadStreamsPaginated.new(queries).call(options: { max_count: config.max_count }.merge(options))
     end
 
     # Links event from one stream into another stream. You can later access it by providing :resolve_link_tos option

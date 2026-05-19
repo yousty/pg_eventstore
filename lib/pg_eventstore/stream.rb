@@ -37,14 +37,19 @@ module PgEventstore
     # @!attribute stream_id
     #   @return [String]
     attr_reader :stream_id
+    # @!attribute stream_revision
+    #   @return [Integer, nil]
+    attr_reader :stream_revision
 
     # @param context [String]
     # @param stream_name [String]
     # @param stream_id [String]
-    def initialize(context:, stream_name:, stream_id:)
+    # @param stream_revision [Integer, nil]
+    def initialize(context:, stream_name:, stream_id:, stream_revision: nil)
       @context = context
       @stream_name = stream_name
       @stream_id = stream_id
+      @stream_revision = stream_revision
     end
 
     # @return [Boolean]

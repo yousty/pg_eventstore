@@ -2,7 +2,7 @@
 
 module PgEventstore
   module RawEntities
-    class EventIndexesChunk
+    class EventsIndexChunk
       include Chunk
 
       MAX_PARTITIONS_TO_RESOLVE_PER_CALL = 50
@@ -62,7 +62,7 @@ module PgEventstore
         @indexes.unshift(*indexes_to_resolve)
         @resolved = false
         raise Utils.wrap_exception(
-          exception, global_positions: indexes_to_resolve.map(&Utils.method(:original_global_position))
+          exception, global_positions: indexes_to_resolve.map(&:global_position)
         )
       end
 
