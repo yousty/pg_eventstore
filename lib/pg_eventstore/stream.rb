@@ -20,12 +20,6 @@ module PgEventstore
           stream.instance_variable_set(:@all_stream, true)
         end
       end
-
-      # @param name [String]
-      # @return [PgEventstore::Stream]
-      def system_stream(name)
-        new(context: name, stream_name: '', stream_id: '')
-      end
     end
 
     # @!attribute context
@@ -40,28 +34,27 @@ module PgEventstore
     # @!attribute stream_revision
     #   @return [Integer, nil]
     attr_reader :stream_revision
+    # @!attribute starting_position
+    #   @return [Integer, nil]
+    attr_reader :starting_position
 
     # @param context [String]
     # @param stream_name [String]
     # @param stream_id [String]
     # @param stream_revision [Integer, nil]
-    def initialize(context:, stream_name:, stream_id:, stream_revision: nil)
+    def initialize(context:, stream_name:, stream_id:, stream_revision: nil, starting_position: nil)
       @context = context
       @stream_name = stream_name
       @stream_id = stream_id
       @stream_revision = stream_revision
+      @starting_position = starting_position
     end
 
     # @return [Boolean]
     def all_stream?
       !!@all_stream
     end
-
-    # Determine whether a stream is reserved by `pg_eventstore`. You can't append events to such streams.
-    # @return [Boolean]
-    def system?
-      all_stream? || context.start_with?(SYSTEM_STREAM_PREFIX)
-    end
+    alias system? all_stream?
 
     # @return [Array]
     def deconstruct

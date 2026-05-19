@@ -5,7 +5,7 @@
     <td><%= empty_characters_fallback(h event.stream.context) %></td>
     <td><%= empty_characters_fallback(h event.stream.stream_name) %></td>
     <td>
-      <a href="<%= stream_path(event) %>"><%= empty_characters_fallback(h event.stream.stream_id) %></a>
+      <a href="<%= stream_path(event.stream) %>"><%= empty_characters_fallback(h event.stream.stream_id) %></a>
       <a role="button" href="#" data-title="Copy stream definition." class="copy-to-clipboard"
          data-clipboard-content="<%= h "PgEventstore::Stream.new(context: #{event.stream.context.inspect}, stream_name: #{event.stream.stream_name.inspect}, stream_id: #{event.stream.stream_id.inspect})" %>">
         <i class="fa fa-clipboard"></i>

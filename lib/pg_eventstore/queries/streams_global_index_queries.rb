@@ -92,11 +92,8 @@ module PgEventstore
     end
 
     def streams_global_index(options)
-      streams_idx_filtering = QueryBuilders::StreamsGlobalIndexFiltering.new
-      streams_idx_filtering.from_position(options[:from_position], options[:direction])
-      streams_idx_filtering.limit(options[:max_count])
-      streams_idx_filtering.add_starting_position_direction(options[:direction])
-      deserialize_many(@query_strategy.exec_params(*streams_idx_filtering.to_exec_params))
+      sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination(options)
+      deserialize_many(@query_strategy.exec_params(*sql_builder.to_exec_params))
     end
 
     def resolve_indexes(indexes)
@@ -110,7 +107,8 @@ module PgEventstore
           context: partition['context'],
           stream_name: partition['stream_name'],
           stream_id: stream_global_index.stream_id,
-          stream_revision: stream_global_index.stream_revision
+          stream_revision: stream_global_index.stream_revision,
+          starting_position: stream_global_index.starting_position
         )
       end
     end

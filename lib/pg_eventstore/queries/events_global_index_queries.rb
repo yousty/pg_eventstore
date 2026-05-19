@@ -38,8 +38,8 @@ module PgEventstore
     end
 
     def fetch_indexes_for_read_api(stream, options)
-      index_filtering = QueryBuilders::EventsGlobalIndexFiltering.build_for_read_api(stream, options)
-      raw_indexes = deserialize(@query_strategy.exec_params(*index_filtering.to_exec_params))
+      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(stream, options)
+      raw_indexes = deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
       repo = RawEntities::Repository.new
       repo.add_chunk(
         RawEntities::EventsIndexChunk.new(
@@ -50,8 +50,8 @@ module PgEventstore
     end
 
     def fetch_grouped_indexes_for_read_api(stream, options)
-      index_filtering = QueryBuilders::EventsGlobalIndexFiltering.build_grouped_for_read_api(stream, options)
-      raw_indexes = deserialize(@query_strategy.exec_params(*index_filtering.to_exec_params))
+      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_grouped(stream, options)
+      raw_indexes = deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
       repo = RawEntities::Repository.new
       repo.add_chunk(
         RawEntities::EventsIndexChunk.new(

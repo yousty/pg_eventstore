@@ -3,7 +3,7 @@
 module PgEventstore
   module Web
     module Paginator
-      class EventsCollection < BaseCollection
+      class StreamsCollection < BaseCollection
         # @return [Hash<String => Symbol>] SQL directions, string-to-symbol mapping
         SQL_DIRECTIONS = {
           'asc' => :asc,
@@ -19,11 +19,10 @@ module PgEventstore
         #   count instead because of the potential performance degradation.
         MAX_NUMBER_TO_COUNT = 10_000
 
-        # @return [Array<PgEventstore::Event>]
+        # @return [Array<PgEventstore::Stream>]
         def collection
-          @collection ||= PgEventstore.client(config_name).read(
-            PgEventstore::Stream.all_stream,
-            options: options.merge(from_position: starting_id, max_count: per_page, direction: order)
+          @collection ||= PgEventstore.client(config_name).read_streams(
+            options: { from_position: starting_id, max_count: per_page, direction: order }
           )
         end
 
@@ -31,24 +30,22 @@ module PgEventstore
         def next_page_starting_id
           return unless collection.size == per_page
 
-          from_position = event_global_position(collection.first)
-          sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-            PgEventstore::Stream.all_stream,
-            options.merge(from_position:, max_count: 1, direction: order)
-          ).unselect.select('global_position').offset(per_page)
-          global_position(sql_builder)
+          from_position = collection.first&.starting_position
+          sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination(
+            from_position:, max_count: 1, direction: order
+          ).unselect.select('starting_position').offset(per_page)
+          starting_position(sql_builder)
         end
 
         # @return [Integer, nil]
         def prev_page_starting_id
-          from_position = event_global_position(collection.first) || starting_id
-          sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-            PgEventstore::Stream.all_stream,
-            options.merge(from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc)
-          ).unselect.select('global_position').offset(1)
-          sql_builder =
-            SQLBuilder.new.select('global_position').from(sql_builder).order("global_position #{order}").limit(1)
-          global_position(sql_builder)
+          from_position = collection.first&.starting_position || starting_id
+          sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination(
+            from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc
+          ).unselect.select('starting_position').offset(1)
+          sql_builder = SQLBuilder.new.select('starting_position').from(sql_builder)
+          sql_builder.order("starting_position #{order}").limit(1)
+          starting_position(sql_builder)
         end
 
         # @return [Integer]
@@ -96,10 +93,10 @@ module PgEventstore
 
         # @param sql_builder [PgEventstore::SQLBuilder]
         # @return [Integer, nil]
-        def global_position(sql_builder)
+        def starting_position(sql_builder)
           connection.with do |conn|
             conn.exec_params(*sql_builder.to_exec_params)
-          end.to_a.dig(0, 'global_position')
+          end.to_a.dig(0, 'starting_position')
         end
       end
     end

@@ -80,21 +80,22 @@ module PgEventstore
           parts.join(delimiter)
         end
 
-        # @param event [PgEventstore::Event]
+        # @param stream [PgEventstore::Stream]
         # @return [String]
-        def stream_path(event)
+        def stream_path(stream)
           build_path(
             {
               filter: {
                 streams: [
                   {
-                    context: escape_empty_string(event.stream.context),
-                    stream_name: escape_empty_string(event.stream.stream_name),
-                    stream_id: escape_empty_string(event.stream.stream_id),
+                    context: escape_empty_string(stream.context),
+                    stream_name: escape_empty_string(stream.stream_name),
+                    stream_id: escape_empty_string(stream.stream_id),
                   },
                 ],
               },
-            }
+            },
+            base_url: '/'
           )
         end
 
@@ -118,11 +119,11 @@ module PgEventstore
 
         # @param params [Hash, Array]
         # @return [String]
-        def build_path(params)
+        def build_path(params, base_url: request.path)
           encoded_params = Rack::Utils.build_nested_query(params)
-          return request.path if encoded_params.empty?
+          return base_url if encoded_params.empty?
 
-          "#{request.path}?#{encoded_params}"
+          "#{base_url}?#{encoded_params}"
         end
       end
     end

@@ -10,6 +10,16 @@ module PgEventstore
       PRIMARY_TABLE_NAME = 'streams_global_index'
       DEFAULT_LIMIT = 1000
 
+      class << self
+        def sql_builder_for_basic_pagination(options)
+          streams_idx_filtering = QueryBuilders::StreamsGlobalIndexFiltering.new
+          streams_idx_filtering.from_position(options[:from_position], options[:direction])
+          streams_idx_filtering.limit(options[:max_count])
+          streams_idx_filtering.add_starting_position_direction(options[:direction])
+          streams_idx_filtering.to_sql_builder
+        end
+      end
+
       def initialize
         @sql_builder = SQLBuilder.new.select("#{to_table_name}.*").from(to_table_name)
       end

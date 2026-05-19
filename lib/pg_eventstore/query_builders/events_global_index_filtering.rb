@@ -12,20 +12,7 @@ module PgEventstore
       PRIMARY_TABLE_NAME = 'events_global_index'
 
       class << self
-        # @param options [Hash]
-        # @return [PgEventstore::QueryBuilders::EventsGlobalIndexFiltering]
-        def build(options)
-          filter_collection = Filters::Collection.from_options(options)
-          index_filtering = new
-          filter_collection.collection.each(&index_filtering.method(:add_filter_row))
-          index_filtering.from_position(options[:from_position], options[:direction])
-          index_filtering.to_position(options[:to_position], options[:direction])
-          index_filtering.add_global_position_direction(options[:direction])
-          index_filtering.add_limit(options[:max_count])
-          index_filtering
-        end
-
-        def build_grouped_for_read_api(stream, options)
+        def sql_builder_for_read_grouped(stream, options)
           filter_collection = Filters::Collection.from_stream_and_options(stream, options)
           if filter_collection.has_prefix_filter?
             raise NotSupportedError, 'Read API does not support look up by prefix.'
@@ -39,7 +26,7 @@ module PgEventstore
           SQLBuilder.union_builders(builders, mode: filter_collection.filters_unique? ? :all : :distinct)
         end
 
-        def build_for_read_api(stream, options)
+        def sql_builder_for_read_common(stream, options)
           filter_collection = Filters::Collection.from_stream_and_options(stream, options)
           if filter_collection.has_prefix_filter?
             raise NotSupportedError, 'Read API does not support look up by prefix.'
@@ -48,7 +35,7 @@ module PgEventstore
           builders = filter_collection.collection.flat_map do |filter_row|
             filter_row.flatten.map { filtering_from_filter_row(_1, stream, options).to_sql_builder }
           end
-          return default_filtering(stream, options) if builders.empty?
+          return default_filtering(stream, options).to_sql_builder if builders.empty?
 
           union_builders(builders, stream, options, mode: filter_collection.filters_unique? ? :all : :distinct)
         end

@@ -41,12 +41,6 @@ module PgEventstore
         end
         # rubocop:enable Style/HashConversion
 
-        # @return [String, nil]
-        def system_stream
-          params in { filter: { system_stream: String => system_stream } }
-          system_stream if Stream::KNOWN_SYSTEM_STREAMS.include?(system_stream)
-        end
-
         # @return [Array<String>, nil]
         def events_filter
           event_filters = { filter: { event_types: params.dig(:filter, :events) } }
@@ -152,8 +146,7 @@ module PgEventstore
           options: {
             filter: { event_types: events_filter, streams: streams_filter },
             resolve_link_tos: resolve_link_tos?,
-          },
-          system_stream:
+          }
         )
 
         if request.xhr?
@@ -166,6 +159,16 @@ module PgEventstore
         else
           erb :'home/dashboard'
         end
+      end
+
+      get '/streams' do
+        @collection = Paginator::StreamsCollection.new(
+          current_config,
+          starting_id: params[:starting_id]&.to_i,
+          per_page: Paginator::StreamsCollection::PER_PAGE[params[:per_page]],
+          order: Paginator::StreamsCollection::SQL_DIRECTIONS[params[:order]]
+        )
+        erb :'streams/index'
       end
 
       get '/subscriptions' do
