@@ -13,11 +13,14 @@ module PgEventstore
 
       class << self
         def sql_builder_for_read_grouped(filters_collection, pagination_options)
+          pagination_options = pagination_options.dup
           pagination_options.max_count = 1
           builders = filters_collection.collection.flat_map do |filter_row|
             filter_row.flatten.map { filtering_from_filter_row(_1, pagination_options).to_sql_builder }
           end
-          SQLBuilder.union_builders(builders, mode: filters_collection.filters_unique? ? :all : :distinct)
+          # Do not limit final result
+          pagination_options.max_count = nil
+          union_builders(builders, pagination_options, mode: filters_collection.filters_unique? ? :all : :distinct)
         end
 
         def sql_builder_for_read_common(filters_collection, pagination_options)
@@ -36,6 +39,12 @@ module PgEventstore
 
           union_builder = SQLBuilder.union_builders(builders, mode:)
           top_filtering = new
+          # Union builder always has fixed columns in SELECT (global_position and event_type_partition_id). Thus,
+          # define SystemStreamOptions that is resolved to the sorting by global_position instead of possible
+          # sorting by stream_revision which may not be present among the columns list
+          pagination_options = Pagination::SystemStreamOptions.new(
+            direction: pagination_options.direction, max_count: pagination_options.max_count
+          )
           add_direction_and_limit(top_filtering, pagination_options)
           top_filtering.to_sql_builder.from(union_builder)
         end
