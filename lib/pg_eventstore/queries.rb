@@ -2,6 +2,7 @@
 
 require_relative 'sql_builder'
 require_relative 'query_builders/filters/collection'
+require_relative 'query_builders/pagination/stream_options'
 require_relative 'query_builders/basic_filtering'
 require_relative 'query_builders/subscription_events_filtering'
 require_relative 'query_builders/events_filtering'

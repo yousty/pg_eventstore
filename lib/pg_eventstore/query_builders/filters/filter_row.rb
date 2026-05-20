@@ -15,6 +15,10 @@ module PgEventstore
         def collapsable_into_event_types_only?
           (stream_filter.nil? || stream_filter.context? || stream_filter.stream_name?) && event_type_filters.any?
         end
+
+        def ambiguous_event_type?
+          (stream_filter.nil? || stream_filter.context?) && event_type_filters.any?
+        end
       end
     end
   end

@@ -12,71 +12,60 @@ module PgEventstore
       PRIMARY_TABLE_NAME = 'events_global_index'
 
       class << self
-        def sql_builder_for_read_grouped(stream, options)
-          filter_collection = Filters::Collection.from_stream_and_options(stream, options)
-          if filter_collection.has_prefix_filter?
-            raise NotSupportedError, 'Read API does not support look up by prefix.'
+        def sql_builder_for_read_grouped(filters_collection, pagination_options)
+          pagination_options.max_count = 1
+          builders = filters_collection.collection.flat_map do |filter_row|
+            filter_row.flatten.map { filtering_from_filter_row(_1, pagination_options).to_sql_builder }
           end
-          raise 'This operation requires event type filter' unless filter_collection.has_event_types?
-
-          options = options.merge(max_count: 1)
-          builders = filter_collection.collection.flat_map do |filter_row|
-            filter_row.flatten.map { filtering_from_filter_row(_1, stream, options).to_sql_builder }
-          end
-          SQLBuilder.union_builders(builders, mode: filter_collection.filters_unique? ? :all : :distinct)
+          SQLBuilder.union_builders(builders, mode: filters_collection.filters_unique? ? :all : :distinct)
         end
 
-        def sql_builder_for_read_common(stream, options)
-          filter_collection = Filters::Collection.from_stream_and_options(stream, options)
-          if filter_collection.has_prefix_filter?
-            raise NotSupportedError, 'Read API does not support look up by prefix.'
+        def sql_builder_for_read_common(filters_collection, pagination_options)
+          builders = filters_collection.collection.flat_map do |filter_row|
+            filter_row.flatten.map { filtering_from_filter_row(_1, pagination_options).to_sql_builder }
           end
+          return default_filtering(pagination_options).to_sql_builder if builders.empty?
 
-          builders = filter_collection.collection.flat_map do |filter_row|
-            filter_row.flatten.map { filtering_from_filter_row(_1, stream, options).to_sql_builder }
-          end
-          return default_filtering(stream, options).to_sql_builder if builders.empty?
-
-          union_builders(builders, stream, options, mode: filter_collection.filters_unique? ? :all : :distinct)
+          union_builders(builders, pagination_options, mode: filters_collection.filters_unique? ? :all : :distinct)
         end
 
         private
 
-        def union_builders(builders, stream, options, mode:)
+        def union_builders(builders, pagination_options, mode:)
           return builders.first if builders.size == 1
 
           union_builder = SQLBuilder.union_builders(builders, mode:)
           top_filtering = new
-          add_direction_and_limit(top_filtering, stream, options)
+          add_direction_and_limit(top_filtering, pagination_options)
           top_filtering.to_sql_builder.from(union_builder)
         end
 
-        def filtering_from_filter_row(filter_row, stream, options)
-          index_filtering = default_filtering(stream, options)
+        def filtering_from_filter_row(filter_row, pagination_options)
+          index_filtering = default_filtering(pagination_options)
           index_filtering.add_filter_row(filter_row)
           index_filtering
         end
 
-        def default_filtering(stream, options)
+        def default_filtering(pagination_options)
           index_filtering = new
-          add_direction_and_limit(index_filtering, stream, options)
-          if stream.system?
-            index_filtering.from_position(options[:from_position], options[:direction])
-            index_filtering.to_position(options[:to_position], options[:direction])
+          add_direction_and_limit(index_filtering, pagination_options)
+          if pagination_options.is_a?(Pagination::SystemStreamOptions)
+            index_filtering.from_position(pagination_options.from_position, pagination_options.direction)
+            index_filtering.to_position(pagination_options.to_position, pagination_options.direction)
           else
-            index_filtering.from_revision(options[:from_revision], options[:direction])
-            index_filtering.to_revision(options[:to_revision], options[:direction])
+            index_filtering.from_revision(pagination_options.from_revision, pagination_options.direction)
+            index_filtering.to_revision(pagination_options.to_revision, pagination_options.direction)
           end
           index_filtering
         end
 
-        def add_direction_and_limit(index_filtering, stream, options)
-          if stream.system?
-            index_filtering.add_global_position_direction(options[:direction])
+        def add_direction_and_limit(index_filtering, pagination_options)
+          if pagination_options.is_a?(Pagination::SystemStreamOptions)
+            index_filtering.add_global_position_direction(pagination_options.direction)
           else
-            index_filtering.add_stream_revision_direction(options[:direction])
+            index_filtering.add_stream_revision_direction(pagination_options.direction)
           end
-          index_filtering.add_limit(options[:max_count])
+          index_filtering.add_limit(pagination_options.max_count)
         end
       end
 
@@ -98,12 +87,15 @@ module PgEventstore
       def add_filter_row(filter_row)
         stream_filter = filter_row.stream_filter
         event_type_filters = filter_row.event_type_filters
+        event_type_comparison_operator = event_type_comparison_operator(filter_row)
         # Collapse context/stream name & event type filters into event type filters
         if filter_row.collapsable_into_event_types_only?
           affected_partitions = PartitionsFiltering.from_filter_row(filter_row)
           partitions_builder = affected_partitions.unselect.select('id')
-          comparison_operator = comparison_operator(event_type_filters)
-          return @sql_builder.where_or("event_type_partition_id #{comparison_operator} ?", partitions_builder)
+          return @sql_builder.where_or(
+            "event_type_partition_id #{event_type_comparison_operator} ?",
+            partitions_builder
+          )
         end
 
         query_parts = []
@@ -123,7 +115,7 @@ module PgEventstore
         if event_type_filters.any?
           affected_partitions = PartitionsFiltering.from_filter_row(filter_row)
           query_parts << [
-            "event_type_partition_id #{comparison_operator(event_type_filters)} ?",
+            "event_type_partition_id #{event_type_comparison_operator} ?",
             affected_partitions.unselect.select('id'),
           ]
         end
@@ -210,8 +202,13 @@ module PgEventstore
         SQL_DIRECTIONS[direction] == 'ASC' ? '<=' : '>='
       end
 
-      def comparison_operator(entities)
-        entities.size > 1 || entities.any?(&:prefix?) ? 'in' : '='
+      def event_type_comparison_operator(filter_row)
+        if filter_row.event_type_filters.size > 1 || filter_row.ambiguous_event_type? ||
+           filter_row.event_type_filters.any?(&:prefix?)
+          return 'in'
+        end
+
+        '='
       end
     end
   end

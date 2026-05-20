@@ -163,7 +163,7 @@ module PgEventstore
         event_types_query, event_types_values = event_types_filters.transpose
         sql = ''
         sql += stream_parts_filters_query.join(' and ') if stream_parts_filters_query&.any?
-        sql += ' and ' if sql != '' and event_types_query&.any?
+        sql += ' and ' if sql != '' && event_types_query&.any?
         sql += "(#{event_types_query.join(' or ')})" if event_types_query&.any?
         @sql_builder.where_or(sql, *stream_parts_filters_values, *event_types_values)
       end

@@ -65,8 +65,12 @@ module PgEventstore
     #   :asc, :desc
     # @option options [Integer] :from_revision a starting revision number. **Use this option when stream name is a
     #   normal stream name**
+    # @option options [Integer] :to_revision ending revision number. **Use this option when stream name is a
+    #   normal stream name**
     # @option options [Integer] :from_position a starting global position number. **Use this option when reading
     #   from "all" stream**
+    # @option options [Integer] :to_position ending global position number. **Use this option when reading from
+    #   "all" stream**
     # @option options [Integer] :max_count max number of events to return in one response. Defaults to config.max_count
     # @option options [Boolean] :resolve_link_tos When using projections to create new events you
     #   can set whether the generated events are pointers to existing events. Setting this option to true tells
@@ -142,11 +146,11 @@ module PgEventstore
       )
     end
 
-    # Takes a stream, determines a list of even types in it and returns most recent(or very first - depending on
-    # :direction option) events, one of each type. If :event_types filter is provided - uses it instead of automatic
-    # event types lookup logic. The result size is almost always less than or equal to event types list size, so passing
-    # :max_count option does not make any effect. In case if event of same type appears in different context/stream
-    # name - it will be counted as a different event, thus, may appear several times in the result.
+    # Takes a stream, event types filter and returns most recent(or very first - depending on :direction option) events,
+    # one of each given type. The result size is almost always less than or equal to event types list size, so passing
+    # :max_count option does not take any effect. In case if event of same type appears in different context/stream
+    # name - it will be counted as a different event, thus, may appear several times in the result, scoped to each
+    # context and stream name in the result. Useful when implementing Dynamic Consistency Boundaries.
     # @see {#read} for the detailed docs
     # @param stream [PgEventstore::Stream]
     # @param options [Hash] request options

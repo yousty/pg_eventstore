@@ -56,7 +56,7 @@ module PgEventstore
                 { context: String, stream_name: String } |
                 { context: String })
               if matches
-                instance.add_stream(stream_attrs.slice(:context, :stream_name, :stream_id))
+                instance.add_stream(StreamFilter.new(**stream_attrs.slice(:context, :stream_name, :stream_id)))
                 next
               end
 
@@ -121,19 +121,18 @@ module PgEventstore
           @filters_unique
         end
 
-        def add_stream(stream_attrs)
+        def add_stream(stream_filter)
           reset if @compiled
-          filter = StreamFilter.new(**stream_attrs)
-          return if @streams.include?(filter)
+          return if @streams.include?(stream_filter)
 
-          @index.index(filter)
-          @streams.add(filter)
+          @index.index(stream_filter)
+          @streams.add(stream_filter)
         end
 
-        def add_event_type(event_type)
+        def add_event_type(event_type_filter)
           reset if @compiled
-          @prefix_filter ||= event_type.prefix?
-          @event_types.add(event_type)
+          @prefix_filter ||= event_type_filter.prefix?
+          @event_types.add(event_type_filter)
         end
 
         def to_partition_collection

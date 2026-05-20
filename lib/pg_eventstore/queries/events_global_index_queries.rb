@@ -37,25 +37,35 @@ module PgEventstore
       @query_strategy.exec(%(INSERT INTO events_global_index (#{columns}) VALUES #{values}))
     end
 
-    def fetch_indexes_for_read_api(stream, options)
-      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(stream, options)
+    def fetch_indexes_for_read_api(filters_collection, pagination_options, resolve_link_tos)
+      if filters_collection.collection.any?(&:ambiguous_event_type?)
+        filters_collection = expand_event_types(filters_collection)
+      end
+      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
+        filters_collection, pagination_options
+      )
       raw_indexes = deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
       repo = RawEntities::Repository.new
       repo.add_chunk(
         RawEntities::EventsIndexChunk.new(
-          raw_indexes, connection, @query_strategy, options[:resolve_link_tos] || false
+          raw_indexes, connection, @query_strategy, resolve_link_tos || false
         )
       )
       repo
     end
 
-    def fetch_grouped_indexes_for_read_api(stream, options)
-      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_grouped(stream, options)
+    def fetch_grouped_indexes_for_read_api(filters_collection, pagination_options, resolve_link_tos)
+      if filters_collection.collection.any?(&:ambiguous_event_type?)
+        filters_collection = expand_event_types(filters_collection)
+      end
+      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_grouped(
+        filters_collection, pagination_options
+      )
       raw_indexes = deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
       repo = RawEntities::Repository.new
       repo.add_chunk(
         RawEntities::EventsIndexChunk.new(
-          raw_indexes, connection, @query_strategy, options[:resolve_link_tos] || false
+          raw_indexes, connection, @query_strategy, resolve_link_tos || false
         )
       )
       repo
@@ -109,6 +119,34 @@ module PgEventstore
     end
 
     private
+
+    def expand_event_types(filters_collection)
+      filter_rows = filters_collection.collection
+      to_expand = filter_rows.select(&:ambiguous_event_type?)
+      rest_filter_rows = filter_rows - to_expand
+      partition_builders = to_expand.map do |filter_row|
+        partitions_filtering = QueryBuilders::PartitionsFiltering.new
+        partitions_filtering.with_event_types
+        partitions_filtering.add_filter_row(filter_row)
+        partitions_filtering.to_sql_builder.unselect.select('context, stream_name, event_type')
+      end
+      final_partition_builder = SQLBuilder.union_builders(partition_builders)
+      adjuster_filters_collection = QueryBuilders::Filters::Collection.new
+      @query_strategy.exec_params(*final_partition_builder.to_exec_params).each do |attrs|
+        stream_filter = QueryBuilders::Filters::StreamFilter.new(
+          context: attrs['context'],
+          stream_name: attrs['stream_name']
+        )
+        event_type_filter = QueryBuilders::Filters::EventTypeFilter.new(value: attrs['event_type'], prefix: false)
+        adjuster_filters_collection.add_stream(stream_filter)
+        adjuster_filters_collection.add_event_type(event_type_filter)
+      end
+      rest_filter_rows.each do |filter_row|
+        adjuster_filters_collection.add_stream(filter_row.stream_filter) if filter_row.stream_filter
+        filter_row.event_type_filters.each(&adjuster_filters_collection.method(:add_event_type))
+      end
+      adjuster_filters_collection
+    end
 
     def partition_queries
       PartitionQueries.new(connection)
