@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
-  module RawEntities
+  module Chunks
     module Chunk
       # @param size [Integer, nil]
       def take(size)

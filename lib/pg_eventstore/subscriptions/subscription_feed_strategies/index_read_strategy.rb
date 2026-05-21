@@ -42,7 +42,7 @@ module PgEventstore
         @runners.each do |runner|
           if grouped_indexes[runner.id]
             runner.feed(
-              RawEntities::EventsIndexChunk.new(
+              Chunks::EventsIndexChunk.new(
                 grouped_indexes[runner.id],
                 @connection,
                 QueryStrategy::Foreground.new(@connection),

@@ -114,7 +114,7 @@ module PgEventstore
           graceful_shutdown_timeout:,
           consumer: consumer_class.create_consumer(handler, deserializer(middlewares)),
           recovery_strategies: recovery_strategies(subscription, restart_terminator, failed_subscription_notifier),
-          events_repository: RawEntities::Repository.new
+          events_repository: Chunks::Repository.new
         ),
         subscription:
       )

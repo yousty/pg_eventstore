@@ -12,29 +12,43 @@ module PgEventstore
       PRIMARY_TABLE_NAME = 'events_global_index'
 
       class << self
-        def sql_builder_for_read_grouped(filters_collection, pagination_options)
-          pagination_options = pagination_options.dup
-          pagination_options.max_count = 1
+        def sql_builder_for_revision_validation_per_type(filters_collection, cursor)
+          raise ArgumentError, "Can't build this query using system stream cursor." if cursor.system_stream_cursor?
+
+          cursor = cursor.dup
+          cursor.max_count = 1
           builders = filters_collection.collection.flat_map do |filter_row|
-            filter_row.flatten.map { filtering_from_filter_row(_1, pagination_options).to_sql_builder }
+            filter_row.flatten.map do |flattened_row|
+              builder = filtering_from_filter_row(flattened_row, cursor).to_sql_builder
+              builder.select('stream_revision')
+            end
           end
-          # Do not limit final result
-          pagination_options.max_count = nil
-          union_builders(builders, pagination_options, mode: filters_collection.filters_unique? ? :all : :distinct)
+          SQLBuilder.union_builders(builders, mode: filters_collection.filters_unique? ? :all : :distinct)
         end
 
-        def sql_builder_for_read_common(filters_collection, pagination_options)
+        def sql_builder_for_read_grouped(filters_collection, cursor)
+          cursor = cursor.dup
+          cursor.max_count = 1
           builders = filters_collection.collection.flat_map do |filter_row|
-            filter_row.flatten.map { filtering_from_filter_row(_1, pagination_options).to_sql_builder }
+            filter_row.flatten.map { filtering_from_filter_row(_1, cursor).to_sql_builder }
           end
-          return default_filtering(pagination_options).to_sql_builder if builders.empty?
+          # Do not limit final result
+          cursor.max_count = nil
+          union_builders(builders, cursor, mode: filters_collection.filters_unique? ? :all : :distinct)
+        end
 
-          union_builders(builders, pagination_options, mode: filters_collection.filters_unique? ? :all : :distinct)
+        def sql_builder_for_read_common(filters_collection, cursor)
+          builders = filters_collection.collection.flat_map do |filter_row|
+            filter_row.flatten.map { filtering_from_filter_row(_1, cursor).to_sql_builder }
+          end
+          return default_filtering(cursor).to_sql_builder if builders.empty?
+
+          union_builders(builders, cursor, mode: filters_collection.filters_unique? ? :all : :distinct)
         end
 
         private
 
-        def union_builders(builders, pagination_options, mode:)
+        def union_builders(builders, cursor, mode:)
           return builders.first if builders.size == 1
 
           union_builder = SQLBuilder.union_builders(builders, mode:)
@@ -42,39 +56,37 @@ module PgEventstore
           # Union builder always has fixed columns in SELECT (global_position and event_type_partition_id). Thus,
           # define SystemStreamOptions that is resolved to the sorting by global_position instead of possible
           # sorting by stream_revision which may not be present among the columns list
-          pagination_options = Pagination::SystemStreamOptions.new(
-            direction: pagination_options.direction, max_count: pagination_options.max_count
-          )
-          add_direction_and_limit(top_filtering, pagination_options)
+          cursor = ReadCursor::StreamCursor.from_options(direction: cursor.direction, max_count: cursor.max_count)
+          add_direction_and_limit(top_filtering, cursor)
           top_filtering.to_sql_builder.from(union_builder)
         end
 
-        def filtering_from_filter_row(filter_row, pagination_options)
-          index_filtering = default_filtering(pagination_options)
+        def filtering_from_filter_row(filter_row, cursor)
+          index_filtering = default_filtering(cursor)
           index_filtering.add_filter_row(filter_row)
           index_filtering
         end
 
-        def default_filtering(pagination_options)
+        def default_filtering(cursor)
           index_filtering = new
-          add_direction_and_limit(index_filtering, pagination_options)
-          if pagination_options.is_a?(Pagination::SystemStreamOptions)
-            index_filtering.from_position(pagination_options.from_position, pagination_options.direction)
-            index_filtering.to_position(pagination_options.to_position, pagination_options.direction)
+          add_direction_and_limit(index_filtering, cursor)
+          if cursor.system_stream_cursor?
+            index_filtering.from_position(cursor.from, cursor.direction)
+            index_filtering.to_position(cursor.to, cursor.direction)
           else
-            index_filtering.from_revision(pagination_options.from_revision, pagination_options.direction)
-            index_filtering.to_revision(pagination_options.to_revision, pagination_options.direction)
+            index_filtering.from_revision(cursor.from, cursor.direction)
+            index_filtering.to_revision(cursor.to, cursor.direction)
           end
           index_filtering
         end
 
-        def add_direction_and_limit(index_filtering, pagination_options)
-          if pagination_options.is_a?(Pagination::SystemStreamOptions)
-            index_filtering.add_global_position_direction(pagination_options.direction)
+        def add_direction_and_limit(index_filtering, cursor)
+          if cursor.system_stream_cursor?
+            index_filtering.add_global_position_direction(cursor.direction)
           else
-            index_filtering.add_stream_revision_direction(pagination_options.direction)
+            index_filtering.add_stream_revision_direction(cursor.direction)
           end
-          index_filtering.add_limit(pagination_options.max_count)
+          index_filtering.add_limit(cursor.max_count)
         end
       end
 

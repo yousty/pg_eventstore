@@ -24,7 +24,7 @@ module PgEventstore
       end
 
       # @param callbacks [PgEventstore::Callbacks]
-      # @param events_repository [PgEventstore::RawEntities::Repository]
+      # @param events_repository [PgEventstore::Chunks::Repository]
       # @param repository_cond [MonitorMixin::ConditionVariable]
       def call(callbacks, events_repository, repository_cond)
         events_to_process =

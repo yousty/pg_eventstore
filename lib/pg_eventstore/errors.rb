@@ -55,14 +55,18 @@ module PgEventstore
     # @!attribute expected_revision
     #   @return [Integer, Symbol]
     attr_reader :expected_revision
+    # @!attribute verdict
+    #   @return [Symbol]
+    attr_reader :verdict
 
     # @param revision [Integer]
     # @param expected_revision [Integer, Symbol]
     # @param stream [PgEventstore::Stream]
-    def initialize(revision:, expected_revision:, stream:)
+    def initialize(revision:, expected_revision:, stream:, verdict:)
       @revision = revision
       @expected_revision = expected_revision
       @stream = stream
+      @verdict = verdict
       super(user_friendly_message)
     end
 
@@ -70,13 +74,18 @@ module PgEventstore
 
     # @return [String]
     def user_friendly_message
-      if revision == Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :stream_exists
-        return expected_stream_exists
+      case verdict
+      when :expected_to_have_stream_with_given_revision
+        current_no_stream
+      when :unmatched_stream_revision
+        unmatched_stream_revision
+      when :expected_to_have_stream
+        expected_stream_exists
+      when :expected_not_to_have_stream
+        expected_no_stream
+      else
+        raise NotImplementedError
       end
-      return expected_no_stream if revision > Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :no_stream
-      return current_no_stream if revision == Stream::NON_EXISTING_STREAM_REVISION && expected_revision.is_a?(Integer)
-
-      unmatched_stream_revision
     end
 
     # @return [String]
@@ -99,6 +108,90 @@ module PgEventstore
       <<~TEXT.strip
         #{stream_descr} stream revision #{expected_revision.inspect} is expected, but actual stream revision is \
         #{revision.inspect}.
+      TEXT
+    end
+
+    # @return [String]
+    def stream_descr
+      stream.to_hash.inspect
+    end
+  end
+
+  class WrongExpectedTypesRevisionError < Error
+    # @!attribute stream
+    #   @return [PgEventstore::Stream]
+    attr_reader :stream
+    # @!attribute revisions
+    #   @return [Hash]
+    attr_reader :revisions
+    # @!attribute expected_revisions
+    #   @return [Hash]
+    attr_reader :expected_revisions
+    # @!attribute verdict
+    #   @return [Array<Array<Symbol, String>>]
+    attr_reader :verdicts
+
+    # @param revisions [Hash]
+    # @param expected_revisions [Hash]
+    # @param stream [PgEventstore::Stream]
+    # @param verdicts [Array<Array<Symbol, String>>]
+    def initialize(revisions:, expected_revisions:, stream:, verdicts:)
+      @revisions = revisions
+      @expected_revisions = expected_revisions
+      @stream = stream
+      @verdicts = verdicts
+      super(user_friendly_message)
+    end
+
+    private
+
+    # @return [String]
+    def user_friendly_message
+      messages =
+        verdicts.map do |verdict, event_type|
+          case verdict
+          when :expected_to_have_event_with_given_revision
+            current_no_event(event_type)
+          when :unmatched_event_revision
+            unmatched_event_revision(event_type)
+          when :expected_to_have_event
+            expected_event_exists(event_type)
+          when :expected_not_to_have_event
+            expected_no_event(event_type)
+          else
+            raise NotImplementedError
+          end
+        end
+      messages.join('; ')
+    end
+
+    # @param event_type [String]
+    # @return [String]
+    def expected_event_exists(event_type)
+      "Expected #{stream_descr} stream to contain #{event_type.inspect}, but it doesn't."
+    end
+
+    # @param event_type [String]
+    # @return [String]
+    def expected_no_event(event_type)
+      "Expected #{stream_descr} stream does not contain #{event_type.inspect}, but it actually exists."
+    end
+
+    # @param event_type [String]
+    # @return [String]
+    def current_no_event(event_type)
+      <<~TEXT.strip
+        Expected #{stream_descr} to have #{event_type.inspect} event with #{expected_revisions[event_type]} revision, \
+        but this event does not exist.
+      TEXT
+    end
+
+    # @param event_type [String]
+    # @return [String]
+    def unmatched_event_revision(event_type)
+      <<~TEXT.strip
+        Expected #{stream_descr} stream to contain #{event_type.inspect} event with #{expected_revisions[event_type]} \
+        revision, but it actually has #{revisions[event_type]} revision.
       TEXT
     end
 

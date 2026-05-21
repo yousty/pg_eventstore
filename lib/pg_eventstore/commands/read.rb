@@ -19,14 +19,12 @@ module PgEventstore
         queries.streams_global_index.stream_exists?(stream) || raise(StreamNotFoundError, stream) unless stream.system?
 
         filter_collection = QueryBuilders::Filters::Collection.from_stream_and_options(stream, options)
-        pagination_options = QueryBuilders::Pagination::StreamOptions.from_stream_and_options(stream, options)
+        cursor = QueryBuilders::ReadCursor::StreamCursor.from_stream_and_options(stream, options)
         raise NotSupportedError, '#read does not support look up by prefix.' if filter_collection.has_prefix_filter?
 
-        deserializer.deserialize_many(
-          queries.events_global_index.fetch_indexes_for_read_api(
-            filter_collection, pagination_options, options[:resolve_link_tos]
-          ).consume_all
-        )
+        indexes = queries.events_global_index.fetch_indexes_for_read_api(filter_collection, cursor)
+        repo = queries.events_global_index.compute_chunks_repo(indexes, options[:resolve_link_tos] || false)
+        deserializer.deserialize_many(repo.consume_all)
       end
     end
   end

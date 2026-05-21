@@ -14,7 +14,7 @@ module PgEventstore
     #   the runner when stopping it using #stop_async
     # @param consumer [PgEventstore::EventsProcessorConsumer]
     # @param recovery_strategies [Array<PgEventstore::RunnerRecoveryStrategy>]
-    # @param events_repository [PgEventstore::RawEntities::Repository]
+    # @param events_repository [PgEventstore::Chunks::Repository]
     def initialize(graceful_shutdown_timeout:, consumer:, events_repository:, recovery_strategies: [])
       @consumer = consumer
       @events_repository = events_repository
@@ -27,7 +27,7 @@ module PgEventstore
       attach_runner_callbacks
     end
 
-    # @param chunk [PgEventstore::RawEntities::Chunk]
+    # @param chunk [PgEventstore::Chunks::Chunk]
     # @return [void]
     def feed(chunk)
       raise EmptyChunkFedError.new('Empty chunk was fed!') if chunk.empty?

@@ -8,6 +8,8 @@ module PgEventstore
     LINK_TYPE = '$>'
     # @return [String]
     PRIMARY_TABLE_NAME = 'events'
+    # @return [Integer]
+    NON_EXISTING_EVENT_REVISION = -1
 
     # @!attribute id
     #   @return [String] UUIDv4 string

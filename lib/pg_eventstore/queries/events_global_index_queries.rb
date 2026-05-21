@@ -37,37 +37,32 @@ module PgEventstore
       @query_strategy.exec(%(INSERT INTO events_global_index (#{columns}) VALUES #{values}))
     end
 
-    def fetch_indexes_for_read_api(filters_collection, pagination_options, resolve_link_tos)
-      if filters_collection.collection.any?(&:ambiguous_event_type?)
-        filters_collection = expand_event_types(filters_collection)
-      end
-      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-        filters_collection, pagination_options
+    def fetch_indexes_for_revision_validation(filters_collection, cursor)
+      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_revision_validation_per_type(
+        filters_collection, cursor
       )
-      raw_indexes = deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
-      repo = RawEntities::Repository.new
-      repo.add_chunk(
-        RawEntities::EventsIndexChunk.new(
-          raw_indexes, connection, @query_strategy, resolve_link_tos || false
-        )
-      )
-      repo
+      deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
     end
 
-    def fetch_grouped_indexes_for_read_api(filters_collection, pagination_options, resolve_link_tos)
+    def fetch_indexes_for_read_api(filters_collection, cursor)
       if filters_collection.collection.any?(&:ambiguous_event_type?)
         filters_collection = expand_event_types(filters_collection)
       end
-      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_grouped(
-        filters_collection, pagination_options
-      )
-      raw_indexes = deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
-      repo = RawEntities::Repository.new
-      repo.add_chunk(
-        RawEntities::EventsIndexChunk.new(
-          raw_indexes, connection, @query_strategy, resolve_link_tos || false
-        )
-      )
+      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(filters_collection, cursor)
+      deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
+    end
+
+    def fetch_grouped_indexes_for_read_api(filters_collection, cursor)
+      if filters_collection.collection.any?(&:ambiguous_event_type?)
+        filters_collection = expand_event_types(filters_collection)
+      end
+      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_grouped(filters_collection, cursor)
+      deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
+    end
+
+    def compute_chunks_repo(indexes, resolve_link_tos)
+      repo = Chunks::Repository.new
+      repo.add_chunk(Chunks::EventsIndexChunk.new(indexes, connection, @query_strategy, resolve_link_tos))
       repo
     end
 

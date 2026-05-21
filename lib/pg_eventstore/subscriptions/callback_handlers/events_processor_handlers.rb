@@ -8,7 +8,7 @@ module PgEventstore
     class << self
       # @param consumer [PgEventstore::EventsProcessorConsumer]
       # @param callbacks [PgEventstore::Callbacks]
-      # @param events_repository [PgEventstore::RawEntities::Repository]
+      # @param events_repository [PgEventstore::Chunks::Repository]
       # @param repository_cond [MonitorMixin::ConditionVariable]
       # @return [void]
       def consume_events(consumer, callbacks, events_repository, repository_cond)

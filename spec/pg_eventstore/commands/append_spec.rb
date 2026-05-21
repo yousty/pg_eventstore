@@ -198,6 +198,213 @@ RSpec.describe PgEventstore::Commands::Append do
         end
       end
 
+      context 'when :expected_revision is a event_type-to-revision map' do
+        context 'when expected revision is :any' do
+          let(:options) { { expected_revision: { event.type => :any } } }
+
+          context 'when another event with same type exists' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+
+            before do
+              PgEventstore.client.append_to_stream(stream, another_event)
+            end
+
+            it_behaves_like 'appending the event' do
+              let(:stream_revision) { 1 }
+            end
+          end
+
+          context 'when event with same type exists in another stream' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+            let(:another_stream) { PgEventstore::Stream.new(context: 'AnotherCtx', stream_name: 'Foo', stream_id: '1') }
+
+            before do
+              PgEventstore.client.append_to_stream(another_stream, another_event)
+            end
+
+            it_behaves_like 'appending the event' do
+              let(:stream_revision) { 0 }
+            end
+          end
+        end
+
+        context 'when expected revision is a number' do
+          let(:options) { { expected_revision: { event.type => 0 } } }
+
+          context 'when event with same type exists with the expected revision' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+
+            before do
+              PgEventstore.client.append_to_stream(stream, another_event)
+            end
+
+            it_behaves_like 'appending the event' do
+              let(:stream_revision) { 1 }
+            end
+          end
+
+          context 'when event with same type exists with another revision' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+
+            before do
+              PgEventstore.client.append_to_stream(stream, another_event)
+              PgEventstore.client.append_to_stream(stream, another_event)
+            end
+
+            it 'raises error' do
+              expect { subject }.to(
+                raise_error(
+                  PgEventstore::WrongExpectedTypesRevisionError,
+                  <<~TEXT.strip
+                    Expected #{stream.to_hash.inspect} stream to contain "#{event.type}" event with 0 \
+                    revision, but it actually has 1 revision.
+                  TEXT
+                )
+              )
+            end
+          end
+
+          context 'when event with another type exists with expected revision' do
+            let(:another_event) { PgEventstore::Event.new(type: 'Bar', data: { foo: :baz }) }
+
+            before do
+              PgEventstore.client.append_to_stream(stream, another_event)
+            end
+
+            it 'raises error' do
+              expect { subject }.to(
+                raise_error(
+                  PgEventstore::WrongExpectedTypesRevisionError,
+                  <<~TEXT.strip
+                    Expected #{stream.to_hash.inspect} to have "#{event.type}" event with 0 revision, \
+                    but this event does not exist.
+                  TEXT
+                )
+              )
+            end
+          end
+
+          context 'when event with same type exists in another stream' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+            let(:another_stream) { PgEventstore::Stream.new(context: 'AnotherCtx', stream_name: 'Foo', stream_id: '1') }
+
+            before do
+              PgEventstore.client.append_to_stream(another_stream, another_event)
+            end
+
+            it 'raises error' do
+              expect { subject }.to(
+                raise_error(
+                  PgEventstore::WrongExpectedTypesRevisionError,
+                  <<~TEXT.strip
+                    Expected #{stream.to_hash.inspect} to have "#{event.type}" event with 0 revision, but this event \
+                    does not exist.
+                  TEXT
+                )
+              )
+            end
+          end
+        end
+
+        context 'when expected revision is :event_exists' do
+          let(:options) { { expected_revision: { event.type => :event_exists } } }
+
+          context 'when event with same type exists' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+
+            before do
+              PgEventstore.client.append_to_stream(stream, another_event)
+            end
+
+            it_behaves_like 'appending the event' do
+              let(:stream_revision) { 1 }
+            end
+          end
+
+          context 'when event with same type exists with any revision' do
+            let(:another_event1) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+            let(:another_event2) { PgEventstore::Event.new(type: 'Bar', data: { foo: :baz }) }
+
+            before do
+              PgEventstore.client.append_to_stream(stream, another_event2)
+              PgEventstore.client.append_to_stream(stream, another_event1)
+            end
+
+            it_behaves_like 'appending the event' do
+              let(:stream_revision) { 2 }
+            end
+          end
+
+          context 'when event with same type exists in another stream' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+            let(:another_stream) { PgEventstore::Stream.new(context: 'AnotherCtx', stream_name: 'Foo', stream_id: '1') }
+
+            before do
+              PgEventstore.client.append_to_stream(another_stream, another_event)
+            end
+
+            it 'raises error' do
+              expect { subject }.to(
+                raise_error(
+                  PgEventstore::WrongExpectedTypesRevisionError,
+                  <<~TEXT.strip
+                    Expected #{stream.to_hash.inspect} stream to contain "#{event.type}", but it doesn't.
+                  TEXT
+                )
+              )
+            end
+          end
+        end
+
+        context 'when expected revision is :no_event' do
+          let(:options) { { expected_revision: { event.type => :no_event } } }
+
+          context 'when event with same type exists' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+
+            before do
+              PgEventstore.client.append_to_stream(stream, another_event)
+            end
+
+            it 'raises error' do
+              expect { subject }.to(
+                raise_error(
+                  PgEventstore::WrongExpectedTypesRevisionError,
+                  <<~TEXT.strip
+                    Expected #{stream.to_hash.inspect} stream does not contain "#{event.type}", but it actually exists.
+                  TEXT
+                )
+              )
+            end
+          end
+
+          context 'when event with another type exists' do
+            let(:another_event) { PgEventstore::Event.new(type: 'Bar', data: { foo: :baz }) }
+
+            before do
+              PgEventstore.client.append_to_stream(stream, another_event)
+            end
+
+            it_behaves_like 'appending the event' do
+              let(:stream_revision) { 1 }
+            end
+          end
+
+          context 'when event with same type exists in another stream' do
+            let(:another_event) { PgEventstore::Event.new(type: event.type, data: { foo: :baz }) }
+            let(:another_stream) { PgEventstore::Stream.new(context: 'AnotherCtx', stream_name: 'Foo', stream_id: '1') }
+
+            before do
+              PgEventstore.client.append_to_stream(another_stream, another_event)
+            end
+
+            it_behaves_like 'appending the event' do
+              let(:stream_revision) { 0 }
+            end
+          end
+        end
+      end
+
       context 'when middleware is present' do
         let(:middlewares) { [DummyMiddleware.new] }
 
@@ -281,19 +488,6 @@ RSpec.describe PgEventstore::Commands::Append do
 
       context 'when "all" stream is given as a stream to append events' do
         let(:stream) { PgEventstore::Stream.all_stream }
-
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::SystemStreamError,
-              "Can't perform this action with #{stream.inspect} system stream."
-            )
-          )
-        end
-      end
-
-      context 'when system stream is given as a stream to append events' do
-        let(:stream) { PgEventstore::Stream.new(context: '$et', stream_name: 'SomeEvent', stream_id: '') }
 
         it 'raises error' do
           expect { subject }.to(
