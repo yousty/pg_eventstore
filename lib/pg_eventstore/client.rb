@@ -22,8 +22,8 @@ module PgEventstore
     # @param options [Hash]
     # @option options [Integer] :expected_revision expected stream revision
     # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
-    # @option options [Hash] :expected_revision <even type>-to-<expected revision> map. Allows to define expected
-    #   revision per event type. Useful when implementing Dynamic Consistency Boundaries
+    # @option options [Hash] :expected_revision <even type>-to-<expected stream revision> map. Allows to define expected
+    #   stream revision at the given event type. Useful when implementing Dynamic Consistency Boundaries
     # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
