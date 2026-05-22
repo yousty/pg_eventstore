@@ -2,6 +2,7 @@
 
 module PgEventstore
   module Chunks
+    # @!visibility private
     class Repository
       include MonitorMixin
 
@@ -10,6 +11,9 @@ module PgEventstore
         @chunks = SynchronizedArray.new
       end
 
+      # @param chunk [PgEventstore::Chunks::Chunk]
+      # @param condition [MonitorMixin::ConditionVariable, nil]
+      # @return [void]
       def add_chunk(chunk, condition: nil)
         mon_try_enter
         @chunks.push(chunk)
@@ -18,14 +22,17 @@ module PgEventstore
         mon_exit if mon_owned?
       end
 
+      # @return [void]
       def clear
         @chunks.clear
       end
 
+      # @return [Integer]
       def size
         @chunks.sum(&:size)
       end
 
+      # @return [Boolean]
       def empty?
         @chunks.empty?
       end
@@ -39,7 +46,7 @@ module PgEventstore
             chunks.each do |chunk|
               loop do
                 chunk.take(nil).each(&y.method(:<<))
-                break if chunk.empty?
+                break if chunk.drained?
               end
             end
           end
@@ -49,7 +56,7 @@ module PgEventstore
       # @param entities_num [Integer, nil]
       # @param timeout [Float, Integer]
       # @param condition [MonitorMixin::ConditionVariable]
-      # @return [Array<Hash>]
+      # @return [Array<Object>]
       def wait_and_consume(entities_num:, timeout:, condition:)
         synchronize do
           condition.wait(timeout) if @chunks.empty?
@@ -57,7 +64,7 @@ module PgEventstore
 
           chunk = @chunks.at(0)
           chunk.take(entities_num).tap do
-            @chunks.delete(chunk) if chunk.empty?
+            @chunks.delete(chunk) if chunk.drained?
           end
         end
       end

@@ -2,41 +2,49 @@
 
 module PgEventstore
   module Chunks
+    # @!visibility private
     class EventsIndexChunk
       include Chunk
 
+      # @return [Integer]
       MAX_PARTITIONS_TO_RESOLVE_PER_CALL = 50
 
+      attr_reader :last_global_position
+
+      # @param indexes [Array<PgEventstore::EventGlobalIndex>]
+      # @param connection [PgEventstore::Connection]
+      # @param query_strategy [PgEventstore::QueryStrategy]
+      # @param resolve_link_tos [Boolean]
       def initialize(indexes, connection, query_strategy, resolve_link_tos)
         @indexes = indexes
         @connection = connection
         @query_strategy = query_strategy
         @resolve_link_tos = resolve_link_tos
         @idx_direction = detect_direction(indexes[0], indexes[1])
-        @events = []
+        @raw_events = []
         @last_global_position = indexes.last.global_position if indexes.any?
         @resolved = indexes.empty?
       end
 
+      # @return [Array<Hash>] raw events array
       def take(size)
         resolve_indexes unless resolved?
-        @events.slice!(0...size)
+        @raw_events.slice!(0...size)
       end
 
-      def empty?
-        @indexes.empty? && @events.empty?
-      end
-
-      def last_global_position
-        @last_global_position
+      def drained?
+        @indexes.empty? && @raw_events.empty?
       end
 
       def size
-        @indexes.size + @events.size
+        @indexes.size + @raw_events.size
       end
 
       private
 
+      # @param idx1 [PgEventstore::EventGlobalIndex, nil]
+      # @param idx2 [PgEventstore::EventGlobalIndex, nil]
+      # @return [Symbol]
       def detect_direction(idx1, idx2)
         return :asc if idx1.nil? || idx2.nil?
 
@@ -56,7 +64,7 @@ module PgEventstore
           direction: @idx_direction,
           resolve_link_tos: @resolve_link_tos
         )
-        @events.push(*raw_events)
+        @raw_events.push(*raw_events)
         @resolved = @indexes.empty?
       rescue => exception
         @indexes.unshift(*indexes_to_resolve)
@@ -73,13 +81,18 @@ module PgEventstore
         partitions_map = Set.new
         latest_index = 0
         @indexes.each_with_index do |events_index, index|
+          if partitions_map.size == MAX_PARTITIONS_TO_RESOLVE_PER_CALL &&
+             !partitions_map.include?(events_index.event_type_partition_id)
+            break
+          end
+
           partitions_map.add(events_index.event_type_partition_id)
           latest_index = index
-          break if partitions_map.size == MAX_PARTITIONS_TO_RESOLVE_PER_CALL
         end
         0..latest_index
       end
 
+      # @return [PgEventstore::EventsGlobalIndexQueries]
       def events_global_index_queries
         EventsGlobalIndexQueries.new(@connection, @query_strategy)
       end

@@ -1,0 +1,4 @@
+module PgEventstore
+  class SynchronizedArray[unchecked out Elem] < Array[Elem]
+  end
+end

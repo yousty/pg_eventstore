@@ -6,7 +6,7 @@ module PgEventstore
 
     def self.consumer_class: (bool in_batches) -> Class
 
-    def call: (Callbacks callbacks, SynchronizedArray raw_events,
+    def call: (Callbacks callbacks, SynchronizedArray[Hash[String, untyped]] raw_events,
         MonitorMixin::ConditionVariable raw_events_cond) -> void
   end
 end

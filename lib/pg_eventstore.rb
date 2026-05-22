@@ -22,11 +22,11 @@ require_relative 'pg_eventstore/maintenance'
 require_relative 'pg_eventstore/connection'
 require_relative 'pg_eventstore/errors'
 require_relative 'pg_eventstore/middleware'
+require_relative 'pg_eventstore/synchronized_array'
 require_relative 'pg_eventstore/chunks'
 require_relative 'pg_eventstore/subscriptions/subscriptions_manager'
 require_relative 'pg_eventstore/extensions/acts_as_configurable'
 require_relative 'pg_eventstore/async_query_runner'
-require_relative 'pg_eventstore/async_query_runner_with_status'
 require_relative 'pg_eventstore/query_strategy'
 
 module PgEventstore

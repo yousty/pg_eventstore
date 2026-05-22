@@ -1,0 +1,10 @@
+module PgEventstore
+  class EventGlobalIndex
+    attr_accessor global_position: Integer
+    attr_accessor stream_revision: Integer?
+    attr_accessor context_partition_id: Integer?
+    attr_accessor stream_name_partition_id: Integer?
+    attr_accessor event_type_partition_id: Integer
+    attr_accessor streams_global_index_id: Integer?
+  end
+end

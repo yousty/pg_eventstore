@@ -7,4 +7,15 @@ module EventHelpers
   def safe_read(stream)
     PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [stream.to_hash] } })
   end
+
+  # @param events [PgEventstore::Event]
+  # @return [Array<PgEventstore::EventGlobalIndex>]
+  def events_index(*events)
+    builder = PgEventstore::QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
+    builder.where('global_position = any(?)', events.map(&:global_position))
+    result = PgEventstore.connection.with do |conn|
+      conn.exec_params(*builder.to_exec_params)
+    end
+    result.map(&PgEventstore::EventGlobalIndex.method(:new))
+  end
 end

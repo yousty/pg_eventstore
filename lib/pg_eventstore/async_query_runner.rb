@@ -6,10 +6,12 @@ module PgEventstore
       @jobs = {}
     end
 
+    # @return [Integer]
     def jobs_size
       @jobs.size
     end
 
+    # @return [void]
     def run
       loop do
         break if @jobs.empty?
@@ -18,6 +20,7 @@ module PgEventstore
       end
     end
 
+    # rubocop:disable Style/HashEachMethods
     def run_once
       return if @jobs.empty?
 
@@ -26,7 +29,9 @@ module PgEventstore
         @jobs.delete(job) unless job.alive?
       end
     end
+    # rubocop:enable Style/HashEachMethods
 
+    # @return [void]
     def async(&)
       @jobs[Fiber.new(&)] = true
     end

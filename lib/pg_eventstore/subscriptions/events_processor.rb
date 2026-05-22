@@ -31,6 +31,7 @@ module PgEventstore
     # @return [void]
     def feed(chunk)
       raise EmptyChunkFedError.new('Empty chunk was fed!') if chunk.empty?
+      raise ArgumentError unless chunk.is_a?(Chunks::EventsIndexChunk)
 
       within_state(:running) do
         callbacks.run_callbacks(:feed, chunk.last_global_position)

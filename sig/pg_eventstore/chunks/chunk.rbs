@@ -1,0 +1,11 @@
+module PgEventstore
+  module Chunks
+    module Chunk
+      def drained?: -> bool
+
+      def size: -> Integer
+
+      def take: (Integer? size) -> Array[untyped]
+    end
+  end
+end

@@ -1,0 +1,22 @@
+module PgEventstore
+  module Chunks
+    class Repository
+      include MonitorMixin
+
+      @chunks: SynchronizedArray[Chunk]
+
+      def add_chunk: (Chunk chunk, ?condition: MonitorMixin::ConditionVariable?) -> void
+
+      def clear: -> void
+
+      def consume_all: -> untyped
+
+      def empty?: -> bool
+
+      def size: -> Integer
+
+      def wait_and_consume: (entities_num: Integer?, timeout: Float | Integer,
+          condition: MonitorMixin::ConditionVariable) -> Array[untyped]
+    end
+  end
+end
