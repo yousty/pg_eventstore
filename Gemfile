@@ -40,3 +40,5 @@ gem 'rubocop-rspec', '~> 3.6', require: false
 gem 'debug', '>= 1.0.0', require: false
 
 gem 'cgi', require: false
+
+gem 'benchmark-ips', '~> 2.15', '>= 2.15.1', require: false

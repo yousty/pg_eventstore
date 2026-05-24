@@ -78,16 +78,14 @@ module PgEventstore
       def range_to_slice
         return (0..) if @indexes.size <= MAX_PARTITIONS_TO_RESOLVE_PER_CALL
 
-        partitions_map = Set.new
-        latest_index = 0
+        partitions_map = {}
+        latest_index = nil
         @indexes.each_with_index do |events_index, index|
-          if partitions_map.size == MAX_PARTITIONS_TO_RESOLVE_PER_CALL &&
-             !partitions_map.include?(events_index.event_type_partition_id)
+          partitions_map[events_index.event_type_partition_id] = true
+          if partitions_map.size > MAX_PARTITIONS_TO_RESOLVE_PER_CALL
+            latest_index = index - 1
             break
           end
-
-          partitions_map.add(events_index.event_type_partition_id)
-          latest_index = index
         end
         0..latest_index
       end
