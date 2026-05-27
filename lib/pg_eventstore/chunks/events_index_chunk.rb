@@ -7,7 +7,7 @@ module PgEventstore
       include Chunk
 
       # @return [Integer]
-      MAX_PARTITIONS_TO_RESOLVE_PER_CALL = 50
+      MAX_PARTITIONS_TO_RESOLVE_PER_CALL = 100
 
       attr_reader :last_global_position
 
