@@ -195,45 +195,15 @@ module PgEventstore
       end.to_a
     end
 
-    # @param filter_collection [PgEventstore::QueryBuilders::Filters::Collection]
+    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
     # @param scope [Symbol] what kind of partition we want to receive. Available options are :event_type, :context,
     #   :stream_name and :auto. In :auto mode the scope will be calculated based on stream_filters and event_filters.
     # @return [Array<PgEventstore::Partition>]
-    def partitions(filter_collection, scope: :event_type)
-      sql_builder = QueryBuilders::PartitionsFiltering.assemble_sql_builder(filter_collection, scope:)
+    def partitions(filters_collection, scope: :event_type)
+      sql_builder = QueryBuilders::PartitionsFiltering.assemble_sql_builder(filters_collection, scope:)
       connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end.map(&method(:deserialize))
-    end
-
-    # @param index_partitions_filter [PgEventstore::QueryBuilders::IndexPartitionsFilter]
-    # @return [Integer]
-    def count_from_index_partitions_filter(index_partitions_filter)
-      return 0 if index_partitions_filter.empty?
-
-      index_partitions_filter = index_partitions_filter.dup
-      main_builder = SQLBuilder.new.select('count(*) as count_all')
-      builders = []
-      index_partitions_filter.for_streams_idx&.each do |builder|
-        builder.unselect.select('id')
-        builders.push(builder)
-      end
-      if index_partitions_filter.for_events_idx
-        builder = index_partitions_filter.for_events_idx
-        builder.unselect.select('id')
-        builders.push(builder)
-      end
-      main_builder.from(SQLBuilder.union_builders(builders, mode: :distinct))
-      connection.with do |conn|
-        conn.exec_params(*main_builder.to_exec_params)
-      end.to_a.first['count_all']
-    end
-
-    # @return [Integer]
-    def latest_partition_id
-      connection.with do |conn|
-        conn.exec('select max(id) as id from partitions')
-      end.first['id']
     end
 
     # @param stream [PgEventstore::Stream]

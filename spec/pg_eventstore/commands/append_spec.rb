@@ -54,6 +54,12 @@ RSpec.describe PgEventstore::Commands::Append do
         describe 'appended event' do
           subject { super(); PgEventstore.client.read(stream).last }
 
+          before do
+            event.link_global_position = -1
+            event.link_partition_id = -1
+            event.stream_revision = -1
+          end
+
           it 'has correct attributes' do
             aggregate_failures do
               expect(subject.id).to be_a(String).and match(EventHelpers::UUID_REGEXP)
@@ -545,6 +551,14 @@ RSpec.describe PgEventstore::Commands::Append do
             expect(subject.link_partition_id).to eq(nil)
           end
         end
+      end
+    end
+
+    context 'when no events are provided' do
+      subject { instance.call(stream, *[], event_modifier:, deserializer:, options: {}) }
+
+      it 'raises error' do
+        expect { subject }.to raise_error(ArgumentError, 'No events to append.')
       end
     end
   end

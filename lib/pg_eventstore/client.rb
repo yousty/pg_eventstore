@@ -183,7 +183,7 @@ module PgEventstore
     # @option options [String] :direction read direction. Allowed values are "Forwards", "Backwards", "asc", "desc",
     #   :asc, :desc
     # @option options [Integer] :from_position a starting global position number
-    # @option options [Integer] :max_count max number of streams to return in one response. Defaults to config.max_count
+    # @option options [Integer] :max_count max number of streams to yield. Defaults to config.max_count
     # @return [Enumerator] yields Array<PgEventstore::Stream>
     def read_streams_paginated(options: {})
       queries = Queries.new(streams_global_index: streams_global_index_queries)
@@ -219,13 +219,11 @@ module PgEventstore
       events_or_event.is_a?(Array) ? result : result.first
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @return [Integer]
     def stream_revision(stream)
       queries = Queries.new(streams_global_index: streams_global_index_queries)
       Commands::StreamRevision.new(queries).call(stream)
-    end
-
-    def streams(options: {})
-
     end
 
     private
@@ -269,7 +267,7 @@ module PgEventstore
       EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
 
-    # @return [PgEventstore::EventsGlobalIndexQueries]
+    # @return [PgEventstore::StreamsGlobalIndexQueries]
     def streams_global_index_queries
       StreamsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end

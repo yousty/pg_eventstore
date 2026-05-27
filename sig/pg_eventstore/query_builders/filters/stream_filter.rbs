@@ -1,0 +1,21 @@
+module PgEventstore
+  module QueryBuilders
+    module Filters
+      class StreamFilter
+        attr_accessor context: String
+        attr_accessor stream_name: String?
+        attr_accessor stream_id: String?
+
+        def context?: -> bool
+
+        def stream?: -> bool
+
+        def stream_name?: -> bool
+
+        def to_h: -> Hash[Symbol, String]
+
+        def to_partition_h: -> Hash[Symbol, String?]
+      end
+    end
+  end
+end

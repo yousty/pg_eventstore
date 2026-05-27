@@ -7,8 +7,12 @@ require_relative 'filter_row'
 module PgEventstore
   module QueryBuilders
     module Filters
+      # @!visibility private
       class Collection
         class << self
+          # @param stream [PgEventstore::Stream]
+          # @param options [Hash]
+          # @return [self]
           def from_stream_and_options(stream, options)
             return from_options(options) if stream.system?
 
@@ -17,6 +21,8 @@ module PgEventstore
             from_options(options.merge(filter: { **current_filter, streams: [stream.to_hash] }))
           end
 
+          # @param options [Hash]
+          # @return [self]
           def from_options(options)
             instance = new
             case options
@@ -35,6 +41,8 @@ module PgEventstore
 
           private
 
+          # @param instance [PgEventstore::QueryBuilders::Filters::Collection]
+          # @param event_types [Array<String>, nil]
           # @return [void]
           def extract_event_types_filter(instance, event_types)
             event_types&.each do |event_type|
@@ -49,6 +57,8 @@ module PgEventstore
             end
           end
 
+          # @param instance [PgEventstore::QueryBuilders::Filters::Collection]
+          # @param streams [Array<Hash>, nil]
           # @return [void]
           def extract_streams_filter(instance, streams)
             streams&.each do |stream_attrs|
@@ -64,6 +74,8 @@ module PgEventstore
             end
           end
 
+          # @param stream_attrs
+          # @return [void]
           def unsupported_filter_warning(stream_attrs)
             PgEventstore.logger&.debug(<<~TEXT)
               Ignoring unsupported stream filter format for searching #{stream_attrs.inspect}. \
@@ -80,6 +92,8 @@ module PgEventstore
             @count = 0
           end
 
+          # @param stream_filter [PgEventstore::QueryBuilders::Filters::StreamFilter]
+          # @return [void]
           def index(stream_filter)
             root = self
             stream_filter.to_h.each_value do |val|
@@ -89,10 +103,13 @@ module PgEventstore
             end
           end
 
+          # @return [void]
           def incr!
             @count += 1
           end
 
+          # @param stream_filter [PgEventstore::QueryBuilders::Filters::StreamFilter]
+          # @return [Boolean]
           def uniq?(stream_filter)
             root = self
             stream_filter.to_h.each_value.each do |val|
@@ -111,16 +128,20 @@ module PgEventstore
           reset
         end
 
+        # @return [Array<PgEventstore::QueryBuilders::Filters::FilterRow>]
         def collection
           compile unless @compiled
           @compiled
         end
 
+        # @return [Boolean]
         def filters_unique?
           compile unless @compiled
           @filters_unique
         end
 
+        # @param stream_filter [PgEventstore::QueryBuilders::Filters::StreamFilter]
+        # @return [void]
         def add_stream(stream_filter)
           reset if @compiled
           return if @streams.include?(stream_filter)
@@ -129,42 +150,35 @@ module PgEventstore
           @streams.add(stream_filter)
         end
 
+        # @param event_type_filter [PgEventstore::QueryBuilders::Filters::EventTypeFilter]
+        # @return [void]
         def add_event_type(event_type_filter)
           reset if @compiled
           @prefix_filter ||= event_type_filter.prefix?
           @event_types.add(event_type_filter)
         end
 
-        def to_partition_collection
-          inst = self.class.new
-          inst.event_types = @event_types.dup
-          @streams.each do |stream_filter|
-            inst.add_stream(stream_filter.to_partition_h)
-          end
-          inst
-        end
-
+        # rubocop:disable Naming/PredicatePrefix
+        # @return [Boolean]
         def has_event_types?
           @event_types.any?
         end
 
+        # @return [Boolean]
         def has_prefix_filter?
           @prefix_filter
         end
-
-        protected
-
-        def event_types=(val)
-          @event_types = val
-        end
+        # rubocop:enable Naming/PredicatePrefix
 
         private
 
+        # @return [void]
         def reset
           @compiled = nil
           @filters_unique = nil
         end
 
+        # @return [void]
         def compile
           all_filters_unique = true
           event_types = @event_types.to_a

@@ -1,0 +1,39 @@
+module PgEventstore
+  class StreamsGlobalIndexQueries
+    @query_strategy: QueryStrategy
+
+    attr_reader connection: Connection
+
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
+    def create: (Stream stream) -> StreamGlobalIndex
+
+    def delete: (Integer id) -> bool
+
+    def find_by: (Stream stream) -> StreamGlobalIndex?
+
+    def find_by!: (Stream stream) -> StreamGlobalIndex
+
+    def find_or_create_by: (Stream stream) -> StreamGlobalIndex
+
+    def resolve_indexes: (Array[StreamGlobalIndex] indexes) -> Array[Stream]
+
+    def stream_exists?: (Stream stream) -> bool
+
+    def stream_revision: (Stream stream) -> Integer?
+
+    def streams_global_index: (Hash[Symbol, untyped]) -> Array[StreamGlobalIndex]
+
+    def update: (Integer id, **untyped attrs) -> void
+
+    private
+
+    def deserialize_many: (PG::Result pg_result) -> Array[StreamGlobalIndex]
+
+    def deserialize_one: (PG::Result pg_result) -> StreamGlobalIndex?
+
+    def partition_queries: -> PartitionQueries
+
+    def transaction_queries: -> TransactionQueries
+  end
+end

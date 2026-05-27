@@ -15,6 +15,8 @@ module PgEventstore
         # @return [PgEventstore::Event]
         def call(event)
           event = event.dup
+          event.link_global_position = nil
+          event.link_partition_id = nil
           %i[link_global_position link_partition_id].each { |attr| event.readonly!(attr) }
           @serializer.serialize(event)
           event

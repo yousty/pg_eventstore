@@ -42,6 +42,7 @@ module PgEventstore
     # @param stream_name [String]
     # @param stream_id [String]
     # @param stream_revision [Integer, nil]
+    # @param starting_position [Integer, nil]
     def initialize(context:, stream_name:, stream_id:, stream_revision: nil, starting_position: nil)
       @context = context
       @stream_name = stream_name

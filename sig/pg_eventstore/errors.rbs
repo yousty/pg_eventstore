@@ -5,28 +5,31 @@ module PgEventstore
     def to_h: () -> ::Hash[untyped, untyped]
   end
 
-  class StreamNotFoundError < PgEventstore::Error
+  class StreamNotFoundError < Error
     # _@param_ `stream`
-    def initialize: (PgEventstore::Stream stream) -> void
+    def initialize: (Stream stream) -> void
 
     # Returns the value of attribute stream.
-    attr_accessor stream: PgEventstore::Stream
+    attr_accessor stream: Stream
   end
 
-  class SystemStreamError < PgEventstore::Error
+  class SystemStreamError < Error
     # _@param_ `stream`
-    def initialize: (PgEventstore::Stream stream) -> void
+    def initialize: (Stream stream) -> void
 
-    attr_accessor stream: PgEventstore::Stream
+    attr_accessor stream: Stream
   end
 
-  class WrongExpectedRevisionError < PgEventstore::Error
-    # _@param_ `revision`
-    #
-    # _@param_ `expected_revision`
-    #
-    # _@param_ `stream`
-    def initialize: (revision: Integer, expected_revision: (Integer | Symbol), stream: PgEventstore::Stream) -> void
+  class WrongExpectedRevisionError < Error
+
+    attr_accessor stream: Stream
+    attr_accessor revision: Integer
+    attr_accessor expected_revision: (Integer | Symbol)
+    attr_accessor verdict: Symbol
+
+    def initialize: (revision: Integer, expected_revision: (Integer | Symbol), stream: Stream, verdict: Symbol) -> void
+
+    private
 
     def user_friendly_message: () -> String
 
@@ -39,28 +42,42 @@ module PgEventstore
     def unmatched_stream_revision: () -> String
 
     def stream_descr: () -> String
-
-    attr_accessor stream: PgEventstore::Stream
-
-    attr_accessor revision: Integer
-
-    attr_accessor expected_revision: (Integer | Symbol)
   end
 
-  class RecordNotFound < PgEventstore::Error
-    # _@param_ `table_name`
-    #
-    # _@param_ `id`
-    def initialize: (String table_name, (Integer | String) id) -> void
+  class WrongExpectedTypesRevisionError < Error
+    attr_accessor stream: Stream
+    attr_accessor revisions: Hash[String, Integer]
+    attr_accessor expected_revisions: Hash[String, Integer | Symbol]
+    attr_accessor verdicts: Array[[Symbol, String]]
+
+    def initialize: (revisions: Hash[String, Integer], expected_revisions: Hash[String, Integer | Symbol],
+        stream: Stream, verdicts: Array[[Symbol, String]]) -> void
+
+    private
 
     def user_friendly_message: () -> String
 
+    def expected_event_exists: (String event_type) -> String
+
+    def expected_no_event: (String event_type) -> String
+
+    def current_no_event: (String event_type) -> String
+
+    def unmatched_event_revision: (String event_type) -> String
+
+    def stream_descr: -> String
+  end
+
+  class RecordNotFound < Error
     attr_accessor table_name: String
+    attr_accessor id: untyped
 
-    attr_accessor id: (Integer | String)
+    def initialize: (String table_name, untyped id) -> void
+
+    def user_friendly_message: () -> String
   end
 
-  class SubscriptionAlreadyLockedError < PgEventstore::Error
+  class SubscriptionAlreadyLockedError < Error
     # _@param_ `set` — subscriptions set name
     #
     # _@param_ `name` — subscription's name
@@ -77,7 +94,7 @@ module PgEventstore
     attr_accessor lock_id: Integer
   end
 
-  class WrongLockIdError < PgEventstore::Error
+  class WrongLockIdError < Error
     # _@param_ `set` — subscriptions set name
     #
     # _@param_ `name` — subscription's name
@@ -94,7 +111,7 @@ module PgEventstore
     attr_accessor lock_id: Integer
   end
 
-  class NotPersistedEventError < PgEventstore::Error
+  class NotPersistedEventError < Error
     # _@param_ `event`
     def initialize: (PgEventstore::Event event) -> void
 
@@ -103,32 +120,35 @@ module PgEventstore
     attr_accessor event: PgEventstore::Event
   end
 
-  class MissingPartitions < PgEventstore::Error
+  class MissingPartitions < Error
     # _@param_ `stream`
     #
     # _@param_ `event_types`
-    def initialize: (PgEventstore::Stream stream, ::Array[String] event_types) -> void
+    def initialize: (Stream stream, ::Array[String] event_types) -> void
 
-    attr_accessor stream: PgEventstore::Stream
+    attr_accessor stream: Stream
 
     attr_accessor event_types: ::Array[String]
   end
 
-  class TooManyRecordsToLockError < PgEventstore::Error
-    def initialize: (PgEventstore::Stream stream, Integer number_of_records) -> void
+  class TooManyRecordsToLockError < Error
+    def initialize: (Stream stream, Integer number_of_records) -> void
 
-    attr_accessor stream: PgEventstore::Stream
+    attr_accessor stream: Stream
 
     attr_accessor number_of_records: Integer
 
     def user_friendly_message: -> String
   end
 
-  class WrappedException < PgEventstore::Error
+  class WrappedException < Error
     def initialize: (StandardError original_exception, Hash[Symbol, untyped] extra) -> void
 
     attr_accessor original_exception: StandardError
 
     attr_accessor extra: Hash[Symbol, untyped]
+  end
+
+  class NotSupportedError < Error
   end
 end

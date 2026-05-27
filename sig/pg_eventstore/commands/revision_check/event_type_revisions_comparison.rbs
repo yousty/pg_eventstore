@@ -1,0 +1,10 @@
+module PgEventstore
+  module Commands
+    module RevisionCheck
+      class EventTypeRevisionsComparison
+        def self.verdict: (Integer current_revision, Symbol | Integer expected_revision,
+            String event_type) -> [Symbol, String]
+      end
+    end
+  end
+end

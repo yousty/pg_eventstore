@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 - New feature: explicit support of Dynamic Consistency Boundaries when publishing events. You can now provide "event type"-to-"expected stream revision" hash map into `:expected_revision` option. It allows to validate against stream revision at the specific event type instead validating the whole stream. Example: `PgEventstore.client.append_to_stream(stream, events, options: { expected_revision: { 'Foo' => 10, 'Bar' => 20 } })` 
+- **Breaking change**: `WrongExpectedRevisionError#new` now requires `:verdict` keyword argument. `Client#append_to_stream` now also may raise `WrongExpectedTypesRevisionError` error in case `:expected_revision` option is "event type"-to-"expected stream revision" hash map
 - Remove any practical limit of `Event#stream_revision` by changing its type to `bigint`. Stream size can be practically unreachable now
 - Fix issue when incomplete transaction block may be interrupted half way and commited successfully. The issue is related to incorrect transaction termination flow during non-graceful thread shutdown(e.g. via `Thread.exit`)
 - New feature: `Client#stream_revision` allows to quickly get stream's revision. Example: `PgEventstore.client.stream_revision(stream) #=> number, greater than or equal to 0 or -1 if stream does not exist`

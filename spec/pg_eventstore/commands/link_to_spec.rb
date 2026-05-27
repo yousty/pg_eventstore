@@ -3,15 +3,31 @@
 RSpec.describe PgEventstore::Commands::LinkTo do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(events: event_queries, partitions: partition_queries, transactions: transaction_queries)
+    PgEventstore::Queries.new(
+      events: event_queries,
+      partitions: partition_queries,
+      transactions: transaction_queries,
+      events_global_index: events_global_index_queries,
+      streams_global_index: streams_global_index_queries
+    )
   end
   let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
   let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
-  let(:event_queries) do
-    PgEventstore::EventQueries.new(
-      PgEventstore.connection,
-      PgEventstore::EventSerializer.new(middlewares),
-      PgEventstore::EventDeserializer.new(middlewares, event_class_resolver)
+  let(:events_global_index_queries) do
+    PgEventstore::EventsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+    )
+  end
+  let(:streams_global_index_queries) do
+    PgEventstore::StreamsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+    )
+  end
+  let(:event_queries) { PgEventstore::EventQueries.new(PgEventstore.connection) }
+  let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, event_class_resolver) }
+  let(:event_modifier) do
+    PgEventstore::Commands::EventModifiers::PrepareLinkEvent.new(
+      partition_queries, PgEventstore::EventSerializer.new(middlewares)
     )
   end
   let(:middlewares) { [] }
@@ -26,7 +42,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
     end
 
     describe 'linking persisted event' do
-      subject { instance.call(projection_stream, event, options:) }
+      subject { instance.call(projection_stream, event, event_modifier:, deserializer:, options:) }
 
       let(:event) do
         PgEventstore.client.append_to_stream(
@@ -264,25 +280,6 @@ RSpec.describe PgEventstore::Commands::LinkTo do
         end
       end
 
-      context 'when middleware which changes #stream_revision is given' do
-        let(:middlewares) { [middleware] }
-        let(:middleware) do
-          Class.new do
-            class << self
-              include PgEventstore::Middleware
-
-              def serialize(event)
-                event.stream_revision = -1
-              end
-            end
-          end
-        end
-
-        it_behaves_like 'read only attribute' do
-          let(:attribute) { :stream_revision }
-        end
-      end
-
       context 'when middleware which changes #type is given' do
         let(:middlewares) { [middleware] }
         let(:middleware) do
@@ -327,23 +324,10 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           )
         end
       end
-
-      context 'when system stream is given as a stream to link events' do
-        let(:projection_stream) { PgEventstore::Stream.new(context: '$et', stream_name: 'SomeEvent', stream_id: '') }
-
-        it 'raises error' do
-          expect { subject }.to(
-            raise_error(
-              PgEventstore::SystemStreamError,
-              "Can't perform this action with #{projection_stream.inspect} system stream."
-            )
-          )
-        end
-      end
     end
 
     describe 'linking multiple events' do
-      subject { instance.call(projection_stream, event1, event2, options:) }
+      subject { instance.call(projection_stream, event1, event2, event_modifier:, deserializer:, options:) }
 
       let(:event1) do
         PgEventstore.client.append_to_stream(
@@ -406,7 +390,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
 
     describe 'linking non-existing event' do
       context 'when event#id is nil' do
-        subject { instance.call(projection_stream, event) }
+        subject { instance.call(projection_stream, event, event_modifier:, deserializer:) }
 
         let(:event) { PgEventstore::Event.new }
 
@@ -421,7 +405,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
       end
 
       context 'when event#id is present' do
-        subject { instance.call(projection_stream, event) }
+        subject { instance.call(projection_stream, event, event_modifier:, deserializer:) }
 
         let(:event) { PgEventstore::Event.new(id: SecureRandom.uuid) }
 

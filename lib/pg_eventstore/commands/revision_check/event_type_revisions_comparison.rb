@@ -3,8 +3,13 @@
 module PgEventstore
   module Commands
     module RevisionCheck
+      # @!visibility private
       class EventTypeRevisionsComparison
         class << self
+          # @param current_revision [Integer]
+          # @param expected_revision [Symbol, Integer]
+          # @param event_type [String]
+          # @return [[Symbol, String]]
           def verdict(current_revision, expected_revision, event_type)
             return if expected_revision == :any
 

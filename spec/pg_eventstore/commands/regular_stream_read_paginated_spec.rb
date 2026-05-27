@@ -3,22 +3,28 @@
 RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(events: event_queries, partitions: partition_queries)
+    PgEventstore::Queries.new(
+      events_global_index: events_global_index_queries,
+      streams_global_index: streams_global_index_queries
+    )
   end
-  let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
-  let(:event_queries) do
-    PgEventstore::EventQueries.new(
-      PgEventstore.connection,
-      PgEventstore::EventSerializer.new(middlewares),
-      PgEventstore::EventDeserializer.new(middlewares, event_class_resolver)
+  let(:events_global_index_queries) do
+    PgEventstore::EventsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+    )
+  end
+  let(:streams_global_index_queries) do
+    PgEventstore::StreamsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
     )
   end
   let(:middlewares) { [] }
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
+  let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, event_class_resolver) }
 
   describe '#call' do
     context 'when reading from existing stream' do
-      subject { instance.call(stream1, options:) }
+      subject { instance.call(stream1, deserializer:, options:) }
 
       let(:options) { { max_count: 2 } }
 
@@ -115,7 +121,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
     end
 
     context 'when reading from non-existing stream' do
-      subject { instance.call(stream) }
+      subject { instance.call(stream, deserializer:) }
 
       let(:stream) { PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'Foo', stream_id: '1') }
 

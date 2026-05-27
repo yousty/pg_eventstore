@@ -56,11 +56,17 @@ module PgEventstore
 
       attributes_hash.except(:link) == other.attributes_hash.except(:link)
     end
+    alias eql? ==
 
     # Detect whether an event is a link event
     # @return [Boolean]
     def link?
       !link_global_position.nil?
+    end
+
+    # @return [Integer]
+    def hash
+      attributes_hash.except(:link).hash
     end
 
     # Detect whether an event is a system event
@@ -69,6 +75,7 @@ module PgEventstore
       type.start_with?('$')
     end
 
+    # @return [self]
     def dup
       self.class.new(**Utils.deep_dup(options_hash))
     end

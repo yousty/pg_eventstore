@@ -1,0 +1,11 @@
+module PgEventstore
+  module Commands
+    module RevisionCheck
+      class StreamRevisionCheck
+
+        def self.assert_eq!: ((CurrentRevision::StreamRevision | CurrentRevision::EventTypeRevisions)?,
+            (ExpectedRevision::StreamRevision | ExpectedRevision::EventTypeRevisions)?, Stream stream) -> void
+      end
+    end
+  end
+end

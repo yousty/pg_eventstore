@@ -3,11 +3,25 @@
 module PgEventstore
   module Commands
     module RevisionCheck
+      # @!visibility private
       class CurrentRevision
-        StreamRevision = Struct.new(:revision)
-        EventTypeRevisions = Struct.new(:revisions)
+        class StreamRevision < Struct.new(:revision)
+          # @!attribute revision
+          #   @return [Integer]
+        end
+
+        class EventTypeRevisions < Struct.new(:revisions)
+          # @!attribute revisions
+          #   @return [Hash<String, Integer>]
+        end
 
         class << self
+          # @param stream [PgEventstore::Stream]
+          # @param stream_revision [Integer]
+          # @param expected_revision [ExpectedRevision::StreamRevision, ExpectedRevision::EventTypeRevisions, nil]
+          # @param partitions [Array<PgEventstore::Partition>]
+          # @param events_global_index_queries [PgEventstore::EventsGlobalIndexQueries]
+          # @return [CurrentRevision::StreamRevision, CurrentRevision::EventTypeRevisions, nil]
           def build(stream, stream_revision, expected_revision, partitions, events_global_index_queries)
             case expected_revision
             in ExpectedRevision::StreamRevision
@@ -20,12 +34,17 @@ module PgEventstore
             in NilClass
               # do nothing
             else
-              raise ArgumentError
+              raise ArgumentError, "Unsupported expected revision #{expected_revision.inspect}."
             end
           end
 
           private
 
+          # @param stream [PgEventstore::Stream]
+          # @param event_types [Array<String>]
+          # @param affected_partitions [Array<PgEventstore::Partition>]
+          # @param events_global_idx_queries [PgEventstore::EventsGlobalIndexQueries]
+          # @return [Hash<String, Integer>]
           def current_revision_by_event_types(stream, event_types, affected_partitions, events_global_idx_queries)
             affected_partitions = affected_partitions.to_h { [_1.id, _1.event_type] }
             filters_collection = QueryBuilders::Filters::Collection.from_stream_and_options(

@@ -8,8 +8,10 @@ module PgEventstore
       # @param deserializer [PgEventstore::EventDeserializer]
       # @param options [Hash] request options
       # @option options [String] :direction read direction - 'Forwards' or 'Backwards'
-      # @option options [Integer, Symbol] :from_revision. **Use this option when stream name is a normal stream name**
-      # @option options [Integer, Symbol] :from_position. **Use this option when reading from "all" stream**
+      # @option options [Integer] :from_revision. **Use this option when stream is a regular stream**
+      # @option options [Integer] :from_position. **Use this option when reading from "all" stream**
+      # @option options [Integer] :to_revision. **Use this option when stream is a regular stream**
+      # @option options [Integer] :to_position. **Use this option when reading from "all" stream**
       # @option options [Integer] :max_count
       # @option options [Boolean] :resolve_link_tos
       # @option options [Hash] :filter provide it to filter events

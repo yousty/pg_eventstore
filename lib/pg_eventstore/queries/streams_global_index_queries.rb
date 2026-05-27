@@ -15,12 +15,16 @@ module PgEventstore
       @query_strategy = query_strategy
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @return [PgEventstore::StreamGlobalIndex]
     def find_or_create_by(stream)
       transaction_queries.transaction do
         find_by(stream) || create(stream)
       end
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @return [PgEventstore::StreamGlobalIndex, nil]
     def find_by(stream)
       idx_partitions_filter = QueryBuilders::Filters::Collection.from_options({ filter: { streams: [stream.to_hash] } })
       filtering = QueryBuilders::StreamsGlobalIndexFiltering.new
@@ -28,17 +32,16 @@ module PgEventstore
       deserialize_one(@query_strategy.exec_params(*filtering.to_exec_params))
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @return [PgEventstore::StreamGlobalIndex]
     def find_by!(stream)
       find_by(stream) ||
         raise(RecordNotFound.new(QueryBuilders::StreamsGlobalIndexFiltering::PRIMARY_TABLE_NAME, stream))
     end
 
-    def update_revision(id, stream_revision:)
-      @query_strategy.exec_params(<<~SQL, [id, stream_revision])
-        UPDATE streams_global_index SET stream_revision = $2 WHERE id = $1
-      SQL
-    end
-
+    # @param id [Integer]
+    # @param attrs [Hash]
+    # @return [void]
     def update(id, **attrs)
       attrs_sql = attrs.keys.map.with_index(2) do |attr, index|
         "#{attr} = $#{index}"
@@ -48,6 +51,8 @@ module PgEventstore
       SQL
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @return [PgEventstore::StreamGlobalIndex]
     def create(stream)
       filter_collection = QueryBuilders::Filters::Collection.from_options(
         { filter: { streams: [{ context: stream.context, stream_name: stream.stream_name }] } }
@@ -70,11 +75,15 @@ module PgEventstore
       deserialize_one(res)
     end
 
+    # @param id [Integer]
+    # @return [Boolean]
     def delete(id)
       res = @query_strategy.exec_params('delete from streams_global_index where id = $1', [id])
       res.cmd_tuples == 1
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @return [Boolean]
     def stream_exists?(stream)
       idx_partitions_filter = QueryBuilders::Filters::Collection.from_options({ filter: { streams: [stream.to_hash] } })
       filtering = QueryBuilders::StreamsGlobalIndexFiltering.new
@@ -83,6 +92,8 @@ module PgEventstore
       @query_strategy.exec_params(*builder.to_exec_params).ntuples == 1
     end
 
+    # @param stream [PgEventstore::Stream]
+    # @return [Integer, nil]
     def stream_revision(stream)
       idx_partitions_filter = QueryBuilders::Filters::Collection.from_options({ filter: { streams: [stream.to_hash] } })
       filtering = QueryBuilders::StreamsGlobalIndexFiltering.new
@@ -91,11 +102,18 @@ module PgEventstore
       @query_strategy.exec_params(*builder.to_exec_params).first&.dig('stream_revision')
     end
 
+    # @param options [Hash]
+    # @option options [Integer, nil] :from_position
+    # @option options [Integer, nil] :max_count
+    # @option options [String, Symbol, nil] :direction
+    # @return [Array<PgEventstore::StreamGlobalIndex>]
     def streams_global_index(options)
       sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination(options)
       deserialize_many(@query_strategy.exec_params(*sql_builder.to_exec_params))
     end
 
+    # @param indexes [Array<PgEventstore::StreamGlobalIndex>]
+    # @return [Array<PgEventstore::Stream>]
     def resolve_indexes(indexes)
       return [] if indexes.empty?
 
@@ -120,6 +138,8 @@ module PgEventstore
       TransactionQueries.new(connection)
     end
 
+    # @param pg_result [PG::Result]
+    # @return [PgEventstore::StreamGlobalIndex, nil]
     def deserialize_one(pg_result)
       first_result = pg_result.first
       return unless first_result
@@ -127,10 +147,13 @@ module PgEventstore
       StreamGlobalIndex.new(first_result)
     end
 
+    # @param pg_result [PG::Result]
+    # @return [Array<PgEventstore::StreamGlobalIndex>]
     def deserialize_many(pg_result)
       pg_result.map(&StreamGlobalIndex.method(:new))
     end
 
+    # @return [PgEventstore::PartitionQueries]
     def partition_queries
       PartitionQueries.new(connection)
     end

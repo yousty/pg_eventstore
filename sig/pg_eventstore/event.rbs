@@ -1,9 +1,10 @@
 module PgEventstore
   class Event
-    include Extensions::OptionsExtension
-
+    NON_EXISTING_EVENT_REVISION: Integer
     LINK_TYPE: String
     PRIMARY_TABLE_NAME: String
+
+    include Extensions::OptionsExtension
 
     def ==: ((Object | Event) other) -> bool
 

@@ -1,0 +1,41 @@
+module PgEventstore
+  module QueryBuilders
+    module ReadCursor
+      class StreamCursor
+        class RegularStreamCursor < Struct[untyped]
+          attr_accessor from_revision: Integer?
+          attr_accessor to_revision: Integer?
+          attr_accessor direction: String? | Symbol?
+          attr_accessor max_count: Integer?
+        end
+
+        class SystemStreamCursor < Struct[untyped]
+          attr_accessor from_position: Integer?
+          attr_accessor to_position: Integer?
+          attr_accessor direction: String? | Symbol?
+          attr_accessor max_count: Integer?
+        end
+
+        @cursor: RegularStreamCursor | SystemStreamCursor
+
+        def self.from_options: (Hash[untyped, untyped] options) -> StreamCursor
+
+        def self.from_stream_and_options: (Stream stream, Hash[untyped, untyped] options) -> StreamCursor
+
+        def initialize: (RegularStreamCursor | SystemStreamCursor cursor) -> void
+
+        def direction: -> (String | Symbol)?
+
+        def from: -> Integer?
+
+        def max_count: -> Integer?
+
+        def max_count=: (Integer? val) -> void
+
+        def system_stream_cursor?: -> bool
+
+        def to: -> Integer?
+      end
+    end
+  end
+end

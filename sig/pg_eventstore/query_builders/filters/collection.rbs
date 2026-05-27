@@ -1,0 +1,54 @@
+module PgEventstore
+  module QueryBuilders
+    module Filters
+      class Collection
+        @compiled: Array[FilterRow]?
+        @event_types: Set[EventTypeFilter]
+        @filters_unique: bool?
+        @index: Index
+        @prefix_filter: bool?
+        @streams: Set[StreamFilter]
+
+        def self.from_options: (Hash[untyped, untyped] options) -> Collection
+
+        def self.from_stream_and_options: (Stream stream, Hash[untyped, untyped] options) -> Collection
+
+        def add_event_type: (EventTypeFilter event_type_filter) -> untyped
+
+        def add_stream: (StreamFilter stream_filter) -> void
+
+        def collection: -> Array[FilterRow]
+        
+        def filters_unique?: -> bool
+
+        def has_event_types?: -> bool
+
+        def has_prefix_filter?: -> bool
+
+        private
+
+        def self.extract_event_types_filter: (Collection instance, Array[String]? event_types) -> void
+
+        def self.extract_streams_filter: (Collection instance, Array[Hash[Symbol, untyped]]? streams) -> void
+
+        def self.unsupported_filter_warning: (untyped stream_attrs) -> void
+
+        class Index
+
+          attr_reader children: Hash[Symbol, Index]
+          attr_reader count: Integer
+
+          def incr!: -> void
+
+          def index: (StreamFilter stream_filter) -> void
+
+          def uniq?: (StreamFilter stream_filter) -> bool
+        end
+
+        def compile: -> void
+
+        def reset: -> void
+      end
+    end
+  end
+end

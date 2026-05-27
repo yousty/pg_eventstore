@@ -1,10 +1,7 @@
 module PgEventstore
   module Commands
-    class Read < PgEventstore::AbstractCommand
-      # _@param_ `stream`
-      #
-      # _@param_ `options` — request options
-      def call: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped]) -> ::Array[PgEventstore::Event]
+    class Read < AbstractCommand
+      def call: (Stream stream, deserializer: EventDeserializer, ?options: ::Hash[untyped, untyped]) -> ::Array[Event]
     end
   end
 end

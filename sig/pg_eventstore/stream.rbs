@@ -4,16 +4,18 @@ module PgEventstore
     SYSTEM_STREAM_PREFIX: String
     NON_EXISTING_STREAM_REVISION: Integer
 
-    def self.all_stream: () -> PgEventstore::Stream
+    def self.all_stream: () -> Stream
 
-    def self.system_stream: (String) -> PgEventstore::Stream
+    def self.system_stream: (String) -> Stream
 
-    # _@param_ `context`
-    #
-    # _@param_ `stream_name`
-    #
-    # _@param_ `stream_id`
-    def initialize: (context: String, stream_name: String, stream_id: String) -> void
+    attr_reader context: String
+    attr_reader stream_name: String
+    attr_reader stream_id: String
+    attr_reader stream_revision: Integer?
+    attr_reader starting_position: Integer?
+
+    def initialize: (context: String, stream_name: String, stream_id: String, ?stream_revision: Integer?,
+        ?starting_position: Integer?) -> void
 
     def all_stream?: () -> bool
 
@@ -21,23 +23,14 @@ module PgEventstore
 
     def deconstruct: () -> ::Array[untyped]
 
-    # _@param_ `keys`
     def deconstruct_keys: (::Array[Symbol]? keys) -> ::Hash[Symbol, String]
 
     def to_hash: () -> ::Hash[untyped, untyped]
 
     def hash: () -> Integer
 
-    # _@param_ `another`
     def eql?: (untyped another) -> bool
 
-    # _@param_ `other_stream`
     def ==: (untyped other_stream) -> bool
-
-    attr_accessor context: String
-
-    attr_accessor stream_name: String
-
-    attr_accessor stream_id: String
   end
 end

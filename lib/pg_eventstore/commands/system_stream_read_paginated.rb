@@ -12,7 +12,7 @@ module PgEventstore
             options = options.merge(from_position: next_position) if next_position
             events = read_cmd.call(stream, deserializer:, options:)
             yielder << events if events.any?
-            if end_reached?(events, options[:max_count] || QueryBuilders::EventsFiltering::DEFAULT_LIMIT)
+            if end_reached?(events, options[:max_count] || QueryBuilders::EventsGlobalIndexFiltering::DEFAULT_LIMIT)
               raise StopIteration
             end
 
@@ -43,7 +43,7 @@ module PgEventstore
       # @param direction [String, Symbol, nil]
       # @return [Boolean]
       def forwards?(direction)
-        QueryBuilders::EventsFiltering::SQL_DIRECTIONS[direction] == QueryBuilders::EventsFiltering::SQL_DIRECTIONS[:asc]
+        QueryBuilders::BasicFiltering::SQL_DIRECTIONS[direction] == QueryBuilders::BasicFiltering::SQL_DIRECTIONS[:asc]
       end
 
       # @return [PgEventstore::Commands::Read]

@@ -1,0 +1,18 @@
+module PgEventstore
+  module Commands
+    module RevisionCheck
+      class ExpectedRevision
+        class StreamRevision < Struct[untyped]
+          attr_accessor revision: Symbol | Integer
+        end
+
+        class EventTypeRevisions < Struct[untyped]
+          attr_accessor revisions: Hash[String, Symbol] | Hash[String, Integer]
+        end
+
+        def self.build: (Symbol | Integer | Hash[String, Symbol] |
+            Hash[String, Integer] expected_revision) -> (StreamRevision | EventTypeRevisions)?
+      end
+    end
+  end
+end

@@ -32,7 +32,7 @@ module PgEventstore
         # @return [Array<Hash>, nil]
         # rubocop:disable Style/HashConversion
         def streams_filter
-          streams = QueryBuilders::EventsFiltering.extract_streams_filter(params)
+          streams = extract_streams_filter(params)
           streams = streams.select { _1 in { context: String, stream_name: String, stream_id: String } }
           streams = streams.map do |stream_attrs|
             Hash[stream_attrs.reject { |_, value| value == '' }].transform_keys(&:to_sym)
@@ -44,7 +44,7 @@ module PgEventstore
         # @return [Array<String>, nil]
         def events_filter
           event_filters = { filter: { event_types: params.dig(:filter, :events) } }
-          events = QueryBuilders::EventsFiltering.extract_event_types_filter(event_filters)
+          events = extract_event_types_filter(event_filters)
           events.reject { _1 == '' }
         end
 
@@ -130,6 +130,27 @@ module PgEventstore
         # @return [String, nil]
         def unescape_empty_string(string)
           string == EMPTY_STRING_SIGN ? '' : string
+        end
+
+        # @param options [Hash]
+        # @return [Array<String>]
+        def extract_event_types_filter(options)
+          options in { filter: { event_types: Array => event_types } }
+          event_types = event_types&.grep(String)
+          event_types || []
+        end
+
+        # @param options [Hash]
+        # @return [Array<Hash[Symbol, String]>]
+        def extract_streams_filter(options)
+          options in { filter: { streams: Array => streams } }
+          streams = streams&.map do |stream_attrs|
+            stream_attrs in { context: String | NilClass => context }
+            stream_attrs in { stream_name: String | NilClass => stream_name }
+            stream_attrs in { stream_id: String | NilClass => stream_id }
+            { context:, stream_name:, stream_id: }
+          end
+          streams || []
         end
       end
 

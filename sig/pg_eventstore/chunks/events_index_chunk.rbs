@@ -16,6 +16,9 @@ module PgEventstore
 
       attr_reader last_global_position: Integer?
 
+      def initialize: (Array[EventGlobalIndex] indexes, Connection connection, QueryStrategy query_strategy,
+          bool resolve_link_tos) -> void
+
       private
 
       def detect_direction: (EventGlobalIndex? idx1, EventGlobalIndex? idx2) -> Symbol

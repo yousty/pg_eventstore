@@ -17,7 +17,7 @@ module PgEventstore
       # @raise [PgEventstore::WrongExpectedRevisionError]
       def call(stream, *events, event_modifier:, deserializer:, options: {})
         raise SystemStreamError, stream if stream.system?
-        raise ArgumentError, 'No events to append' if events.empty?
+        raise ArgumentError, 'No events to append.' if events.empty?
 
         events = events.map(&event_modifier.method(:call))
         raw_events = queries.transactions.transaction(:repeatable_read) do
@@ -42,8 +42,8 @@ module PgEventstore
             queries.events_global_index.index_events(created_events, partitions, stream_index.id)
           end
         end
-        # It is important to return events in the form they were persisted into the database instead deserializing them
-        # using configured middlewares
+        # It is important to return events in the form they were persisted into the database instead passing them
+        # through the configured middlewares
         deserializer.without_middlewares.deserialize_many(raw_events)
       end
 

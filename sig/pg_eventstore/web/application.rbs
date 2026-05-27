@@ -38,6 +38,11 @@ module PgEventstore
       def system_stream: -> String?
 
       def unescape_empty_string: (String? string) -> String?
+
+      def extract_event_types_filter: (Hash[untyped, untyped] options) -> Array[String]
+
+      def extract_streams_filter: (Hash[untyped, untyped] options) -> Array[Hash[untyped, untyped]]
+
     end
   end
 end

@@ -11,6 +11,7 @@ require 'pg_eventstore/cli'
 require 'rack/test'
 require 'timecop'
 require 'nokogiri'
+require 'niceql'
 
 Dir[File.join(File.expand_path('.', __dir__), 'support/**/*.rb')].each { |f| require f }
 

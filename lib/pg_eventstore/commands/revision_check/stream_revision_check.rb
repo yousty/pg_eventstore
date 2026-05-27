@@ -8,8 +8,13 @@ require_relative 'stream_revision_comparison'
 module PgEventstore
   module Commands
     module RevisionCheck
+      # @!visibility private
       class StreamRevisionCheck
         class << self
+          # @param current_revision [CurrentRevision::StreamRevision, CurrentRevision::EventTypeRevisions, nil]
+          # @param expected_revision [ExpectedRevision::StreamRevision, ExpectedRevision::EventTypeRevisions, nil]
+          # @param stream [PgEventstore::Stream]
+          # @return [void]
           def assert_eq!(current_revision, expected_revision, stream)
             case [current_revision, expected_revision]
             in [_, NilClass]
@@ -40,7 +45,7 @@ module PgEventstore
                 )
               end
             else
-              raise ArgumentError
+              raise ArgumentError, "Incorrect combination: #{current_revision.inspect} and #{expected_revision.inspect}"
             end
           end
         end

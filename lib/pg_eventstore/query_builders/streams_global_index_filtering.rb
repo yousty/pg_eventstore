@@ -46,8 +46,7 @@ module PgEventstore
       end
 
       def limit(limit)
-        limit ||= DEFAULT_LIMIT
-        @sql_builder.limit(limit)
+        @sql_builder.limit(limit || DEFAULT_LIMIT)
       end
 
       def add_starting_position_direction(direction)

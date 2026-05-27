@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
+  # @!visibility private
   class EventsGlobalIndexQueries
     # @!attribute connection
     #   @return [PgEventstore::Connection]
@@ -37,6 +38,9 @@ module PgEventstore
       @query_strategy.exec(%(INSERT INTO events_global_index (#{columns}) VALUES #{values}))
     end
 
+    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+    # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+    # @return [Array<PgEventstore::EventGlobalIndex>]
     def fetch_indexes_for_revision_validation(filters_collection, cursor)
       sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_revision_validation_per_type(
         filters_collection, cursor
@@ -44,6 +48,9 @@ module PgEventstore
       deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
     end
 
+    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+    # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+    # @return [Array<PgEventstore::EventGlobalIndex>]
     def fetch_indexes_for_read_api(filters_collection, cursor)
       if filters_collection.collection.any?(&:ambiguous_event_type?)
         filters_collection = expand_event_types(filters_collection)
@@ -52,6 +59,9 @@ module PgEventstore
       deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
     end
 
+    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+    # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+    # @return [Array<PgEventstore::EventGlobalIndex>]
     def fetch_grouped_indexes_for_read_api(filters_collection, cursor)
       if filters_collection.collection.any?(&:ambiguous_event_type?)
         filters_collection = expand_event_types(filters_collection)
@@ -60,12 +70,17 @@ module PgEventstore
       deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params))
     end
 
+    # @param indexes [Array<PgEventstore::EventGlobalIndex>]
+    # @param resolve_link_tos [Boolean]
+    # @return [PgEventstore::Chunks::Repository]
     def compute_chunks_repo(indexes, resolve_link_tos)
       repo = Chunks::Repository.new
       repo.add_chunk(Chunks::EventsIndexChunk.new(indexes, connection, @query_strategy, resolve_link_tos))
       repo
     end
 
+    # @param grouped_opts [Hash]
+    # @return [Hash<Integer, Array<PgEventstore::EventGlobalIndex>>]
     def fetch_indexes_for_subscriptions(grouped_opts)
       builders = grouped_opts.map do |subscription_id, opts|
         filter = QueryBuilders::SubscriptionEventsFiltering.build(subscription_id, opts)
@@ -77,6 +92,10 @@ module PgEventstore
       res.to_h { |sid, indexes| [sid, indexes.map { EventGlobalIndex.new(_1.except('subscription_id')) }] }
     end
 
+    # @param indexes [Array<PgEventstore::EventGlobalIndex>]
+    # @param direction [String, Symbol]
+    # @param resolve_link_tos [Boolean]
+    # @return [Array<Hash>]
     def resolve_indexes(indexes, direction:, resolve_link_tos:)
       indexes = indexes.group_by(&:event_type_partition_id)
       partitions = partition_queries.find_by_ids(indexes.keys).to_h { [_1['id'], _1] }
@@ -90,16 +109,17 @@ module PgEventstore
       end
       main_builder = SQLBuilder.union_builders(builders)
       with_sorted_events = SQLBuilder.new.select('*').from(main_builder)
-      with_sorted_events.order("global_position #{QueryBuilders::EventsFiltering::SQL_DIRECTIONS[direction]}")
+      with_sorted_events.order("global_position #{QueryBuilders::BasicFiltering::SQL_DIRECTIONS[direction]}")
       raw_events = @query_strategy.exec_params(*with_sorted_events.to_exec_params).to_a
       resolve_link_tos ? links_resolver.resolve(raw_events) : raw_events
     end
 
+    # @return [Integer, nil]
     def max_global_position
       builder = QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
       builder.unselect
       builder.select('max(global_position) as max_global_position')
-      @query_strategy.exec_params(*builder.to_exec_params).to_a.first['max_global_position']
+      @query_strategy.exec_params(*builder.to_exec_params).first['max_global_position']
     end
 
     # Takes an array of potentially persisted events and loads their ids from db. Those ids can be later used to check
@@ -110,11 +130,13 @@ module PgEventstore
       builder = QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
       builder.unselect.select('global_position')
       builder.where('global_position = ANY(?::bigint[])', events.map(&:global_position))
-      @query_strategy.exec_params(*builder.to_exec_params).to_a.map { |attrs| attrs['global_position'] }
+      @query_strategy.exec_params(*builder.to_exec_params).map { _1['global_position'] }
     end
 
     private
 
+    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+    # @return [PgEventstore::QueryBuilders::Filters::Collection]
     def expand_event_types(filters_collection)
       filter_rows = filters_collection.collection
       to_expand = filter_rows.select(&:ambiguous_event_type?)
@@ -127,14 +149,21 @@ module PgEventstore
       end
       final_partition_builder = SQLBuilder.union_builders(partition_builders)
       adjuster_filters_collection = QueryBuilders::Filters::Collection.new
-      @query_strategy.exec_params(*final_partition_builder.to_exec_params).each do |attrs|
-        stream_filter = QueryBuilders::Filters::StreamFilter.new(
-          context: attrs['context'],
-          stream_name: attrs['stream_name']
-        )
-        event_type_filter = QueryBuilders::Filters::EventTypeFilter.new(value: attrs['event_type'], prefix: false)
-        adjuster_filters_collection.add_stream(stream_filter)
+      expanded_partitions_list = @query_strategy.exec_params(*final_partition_builder.to_exec_params).to_a
+      if expanded_partitions_list.empty?
+        # Failed to fetch partitions from the database, because no related partitions exist yet by the given criteria
+        event_type_filter = QueryBuilders::Filters::EventTypeFilter.null_filter
         adjuster_filters_collection.add_event_type(event_type_filter)
+      else
+        expanded_partitions_list.each do |attrs|
+          stream_filter = QueryBuilders::Filters::StreamFilter.new(
+            context: attrs['context'],
+            stream_name: attrs['stream_name']
+          )
+          event_type_filter = QueryBuilders::Filters::EventTypeFilter.new(value: attrs['event_type'], prefix: false)
+          adjuster_filters_collection.add_stream(stream_filter)
+          adjuster_filters_collection.add_event_type(event_type_filter)
+        end
       end
       rest_filter_rows.each do |filter_row|
         adjuster_filters_collection.add_stream(filter_row.stream_filter) if filter_row.stream_filter
@@ -143,14 +172,17 @@ module PgEventstore
       adjuster_filters_collection
     end
 
+    # @return [PgEventstore::PartitionQueries]
     def partition_queries
       PartitionQueries.new(connection)
     end
 
+    # @return [PgEventstore::LinksResolver]
     def links_resolver
       LinksResolver.new(connection, @query_strategy)
     end
 
+    # @return [Array<PgEventstore::EventGlobalIndex>]
     def deserialize(pg_result)
       pg_result.map { EventGlobalIndex.new(_1) }
     end

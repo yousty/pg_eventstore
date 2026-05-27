@@ -4,6 +4,11 @@ module PgEventstore
   module Commands
     # @!visibility private
     class ReadStreamsPaginated < AbstractCommand
+      # @param options [Hash] request options
+      # @option options [String] :direction
+      # @option options [Integer] :from_position
+      # @option options [Integer] :max_count
+      # @return [Enumerator]
       def call(options: {})
         Enumerator.new do |yielder|
           next_position = nil

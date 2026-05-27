@@ -3,7 +3,9 @@
 module PgEventstore
   # @!visibility private
   class MaintenanceQueries
+    # @return [Integer]
     EVENT_INDEXES_TO_REMOVE_PER_QUERY = 10_000
+    # @return [Integer]
     EVENT_INDEXES_TO_UPDATE_PER_QUERY = 10_000
 
     # @!attribute connection
@@ -16,6 +18,7 @@ module PgEventstore
       @connection = connection
     end
 
+    # TODO: refactor me. Reason: fatty
     # @param stream [PgEventstore::Stream]
     # @return [Integer] number of deleted events of the given stream
     def delete_stream(stream)
@@ -63,6 +66,7 @@ module PgEventstore
       total_removed
     end
 
+    # TODO: refactor me. Reason: fatty
     # @param event [PgEventstore::Event]
     # @return [void]
     def delete_event(event)
@@ -122,16 +126,12 @@ module PgEventstore
             conn.exec(queries.join("\n"))
           end
         end
+        stream_idx_attrs_to_update = { stream_revision: current_stream_revision - 1 }
         # Adjust starting_position in case zero revision event was deleted
         if deleted_event['stream_revision'] == 0
-          connection.with do |conn|
-            conn.exec_params(
-              'update streams_global_index set starting_position = $1 where id = $2',
-              [first_updated_event['stream_revision'],
-               stream_global_idx.id]
-            )
-          end
+          stream_idx_attrs_to_update[:starting_position] = first_updated_event['global_position']
         end
+        streams_global_index_queries.update(stream_global_idx.id, **stream_idx_attrs_to_update)
       end
     end
 
@@ -139,20 +139,23 @@ module PgEventstore
     # @param after_revision [Integer]
     # @return [Integer]
     def events_to_lock_count(stream, after_revision)
-      stream_index = streams_global_index_queries.find_by(stream)
+      stream_index = streams_global_index_queries.find_by!(stream)
       stream_index.stream_revision - after_revision
     end
 
     private
 
+    # @return [PgEventstore::StreamsGlobalIndexQueries]
     def streams_global_index_queries
       StreamsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
 
+    # @return [PgEventstore::TransactionQueries]
     def transaction_queries
       TransactionQueries.new(connection)
     end
 
+    # @return [PgEventstore::PartitionQueries]
     def partition_queries
       PartitionQueries.new(connection)
     end

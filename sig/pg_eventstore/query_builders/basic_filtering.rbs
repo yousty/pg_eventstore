@@ -1,9 +1,7 @@
 module PgEventstore
   module QueryBuilders
-    class BasicFiltering
-      @sql_builder: SQLBuilder
-
-      def initialize: -> void
+    module BasicFiltering
+      SQL_DIRECTIONS: Hash[String | Symbol, String]
 
       def to_exec_params: -> [String, Array[untyped]]
 

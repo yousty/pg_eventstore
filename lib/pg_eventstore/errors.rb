@@ -62,6 +62,7 @@ module PgEventstore
     # @param revision [Integer]
     # @param expected_revision [Integer, Symbol]
     # @param stream [PgEventstore::Stream]
+    # @param verdict [Symbol]
     def initialize(revision:, expected_revision:, stream:, verdict:)
       @revision = revision
       @expected_revision = expected_revision
@@ -205,21 +206,21 @@ module PgEventstore
     # @!attribute table_name
     #   @return [String]
     attr_reader :table_name
-    # @!attribute lookup_obj
-    #   @return [Integer, String]
-    attr_reader :lookup_obj
+    # @!attribute id
+    #   @return [Object]
+    attr_reader :id
 
     # @param table_name [String]
-    # @param lookup_obj [Object]
-    def initialize(table_name, lookup_obj)
+    # @param id [Object]
+    def initialize(table_name, id)
       @table_name = table_name
-      @lookup_obj = lookup_obj
+      @id = id
       super(user_friendly_message)
     end
 
     # @return [String]
     def user_friendly_message
-      "Could not find/update/delete #{table_name.inspect} record by #{@lookup_obj.inspect}."
+      "Could not find/update/delete #{table_name.inspect} record by #{@id.inspect}."
     end
   end
 

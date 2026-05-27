@@ -3,11 +3,21 @@
 module PgEventstore
   module Commands
     module RevisionCheck
+      # @!visibility private
       class ExpectedRevision
-        StreamRevision = Struct.new(:revision)
-        EventTypeRevisions = Struct.new(:revisions)
+        class StreamRevision < Struct.new(:revision)
+          # @!attribute revision
+          #   @return [Symbol, Integer]
+        end
+
+        class EventTypeRevisions < Struct.new(:revisions)
+          # @!attribute revisions
+          #   @return [Hash<String, Symbol>, Hash<String, Integer>]
+        end
 
         class << self
+          # @param expected_revision [Symbol, Integer, Hash<String, Symbol>, Hash<String, Integer>, nil]
+          # @return [ExpectedRevision::StreamRevision, ExpectedRevision::EventTypeRevisions, nil]
           def build(expected_revision)
             case expected_revision
             in Integer | Symbol
@@ -18,7 +28,7 @@ module PgEventstore
             in NilClass
               # do nothing
             else
-              raise ArgumentError
+              raise ArgumentError, "Unsupported expected revision #{expected_revision.inspect}."
             end
           end
         end

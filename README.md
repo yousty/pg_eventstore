@@ -124,11 +124,14 @@ After checking out the repo, run:
 - `bin/setup_db` to create/re-create development and test databases, tables and related objects
 - `bundle exec rbs collection install` to install external rbs definitions
 
-Then, run `bin/rspec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Then, run `bin/rspec` to run the tests(or just `rspec` if you want to temporary skip rbs checks). Optional env variables for testing:
+- `DEBUG=1 bin/rspec`. Enable nicely formatted and highlighted SQL output into stdout.
+
+You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`.
 
-To run admin UI web server - run `puma` in your terminal. By default it will start web server on `http://0.0.0.0:9292`.
+To run admin UI web server - run `puma` in your terminal. By default, it will start web server on `http://0.0.0.0:9292`.
 
 ### Benchmarks
 

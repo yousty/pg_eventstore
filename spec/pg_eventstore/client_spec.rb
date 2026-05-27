@@ -38,7 +38,6 @@ RSpec.describe PgEventstore::Client do
             streams: [{ context: 'FooCtx', stream_name: 'Foo', stream_id: 'Bar' }.freeze].freeze,
           }.freeze,
           max_count: 1,
-          # from_position: 0,
           resolve_link_tos: true,
           direction: 'Forwards',
         }.freeze
@@ -242,53 +241,65 @@ RSpec.describe PgEventstore::Client do
 
   describe '#read_grouped' do
     describe 'common behavior' do
-      subject { instance.read_grouped(stream) }
+      subject { instance.read_grouped(stream, options:) }
 
-      let(:stream1) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
-      let(:stream2) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '2') }
-      let(:stream) { stream1 }
+      let(:options) { {} }
+      let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
 
-      before do
-        PgEventstore.client.append_to_stream(stream1, Array.new(2) { PgEventstore::Event.new(type: 'foo') })
-        PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new(type: 'bar'))
-      end
-
-      context 'when reading from the specific stream' do
-        it 'returns a projection of events of the given stream' do
-          aggregate_failures do
-            is_expected.to be_an(Array)
-            is_expected.to all be_a(PgEventstore::Event)
-            expect(subject.size).to eq(1)
-            expect(subject.first.type).to eq('foo')
-            expect(subject.first.stream).to eq(stream)
-          end
-        end
-
-        it 'applies all middlewares' do
-          expect(subject.first.metadata).to eq('foo' => 'foo', 'bar' => 'bar', 'baz' => 'baz')
-        end
-
-        context 'when :middlewares argument is given' do
-          subject { instance.read(stream, middlewares: %i[bar]) }
-
-          it 'applies only provided middlewares' do
-            expect(subject.first.metadata).to eq('foo' => 'secret-foo', 'bar' => 'bar', 'baz' => 'secret-baz')
-          end
+      context 'when :event_types filter is not provided' do
+        it 'raises error' do
+          expect { subject }.to raise_error(ArgumentError, '#read_grouped requires :event_types filter.')
         end
       end
 
-      context 'when reading from "all" stream' do
-        let(:stream) { PgEventstore::Stream.all_stream }
+      context 'when :event_types filter is provided' do
+        let(:stream1) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '1') }
+        let(:stream2) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: '2') }
+        let(:stream) { stream1 }
+        let(:options) { { filter: { event_types: %w[foo bar] } } }
 
-        it 'returns a projection of all events' do
-          aggregate_failures do
-            is_expected.to be_an(Array)
-            is_expected.to all be_a(PgEventstore::Event)
-            expect(subject.size).to eq(2)
-            expect(subject.first.type).to eq('foo')
-            expect(subject.last.type).to eq('bar')
-            expect(subject.first.stream).to eq(stream1)
-            expect(subject.last.stream).to eq(stream2)
+        before do
+          PgEventstore.client.append_to_stream(stream1, Array.new(2) { PgEventstore::Event.new(type: 'foo') })
+          PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new(type: 'bar'))
+        end
+
+        context 'when reading from the specific stream' do
+          it 'returns a projection of events of the given stream' do
+            aggregate_failures do
+              is_expected.to be_an(Array)
+              is_expected.to all be_a(PgEventstore::Event)
+              expect(subject.size).to eq(1)
+              expect(subject.first.type).to eq('foo')
+              expect(subject.first.stream).to eq(stream)
+            end
+          end
+
+          it 'applies all middlewares' do
+            expect(subject.first.metadata).to eq('foo' => 'foo', 'bar' => 'bar', 'baz' => 'baz')
+          end
+
+          context 'when :middlewares argument is given' do
+            subject { instance.read(stream, middlewares: %i[bar]) }
+
+            it 'applies only provided middlewares' do
+              expect(subject.first.metadata).to eq('foo' => 'secret-foo', 'bar' => 'bar', 'baz' => 'secret-baz')
+            end
+          end
+        end
+
+        context 'when reading from "all" stream' do
+          let(:stream) { PgEventstore::Stream.all_stream }
+
+          it 'returns a projection of all events' do
+            aggregate_failures do
+              is_expected.to be_an(Array)
+              is_expected.to all be_a(PgEventstore::Event)
+              expect(subject.size).to eq(2)
+              expect(subject.first.type).to eq('foo')
+              expect(subject.last.type).to eq('bar')
+              expect(subject.first.stream).to eq(stream1)
+              expect(subject.last.stream).to eq(stream2)
+            end
           end
         end
       end
@@ -296,6 +307,46 @@ RSpec.describe PgEventstore::Client do
 
     it_behaves_like 'read action with frozen arguments' do
       let(:read_method) { :read_grouped }
+    end
+  end
+
+  describe '#read_streams' do
+    subject { instance.read_streams(options:) }
+
+    let(:options) { {} }
+
+    context 'when no streams exist' do
+      it { is_expected.to eq([]) }
+    end
+
+    context 'when some streams exist' do
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '2') }
+
+      before do
+        PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
+        PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
+      end
+
+      it { is_expected.to eq([stream1, stream2]) }
+    end
+  end
+
+  describe '#read_streams_paginated' do
+    subject { instance.read_streams_paginated(options:) }
+
+    let(:options) { {} }
+    let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '2') }
+
+    before do
+      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
+      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
+    end
+
+    it { is_expected.to be_a(Enumerator) }
+    it 'yields existing streams' do
+      expect(subject.to_a).to eq([[stream1, stream2]])
     end
   end
 
@@ -414,5 +465,17 @@ RSpec.describe PgEventstore::Client do
         end
       end
     end
+  end
+
+  describe '#stream_revision' do
+    subject { instance.stream_revision(stream) }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+
+    before do
+      PgEventstore.client.append_to_stream(stream, [PgEventstore::Event.new] * 2)
+    end
+
+    it { is_expected.to eq(1) }
   end
 end

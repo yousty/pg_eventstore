@@ -31,15 +31,12 @@ module PgEventstore
     # @!attribute transactions
     #   @return [PgEventstore::TransactionQueries, nil]
     attribute(:transactions)
-
     # @!attribute maintenance
     #   @return [PgEventstore::MaintenanceQueries, nil]
     attribute(:maintenance)
-
     # @!attribute maintenance
     #   @return [PgEventstore::EventsGlobalIndexQueries, nil]
     attribute(:events_global_index)
-
     # @!attribute maintenance
     #   @return [PgEventstore::StreamsGlobalIndexQueries, nil]
     attribute(:streams_global_index)

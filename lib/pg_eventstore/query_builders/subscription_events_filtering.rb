@@ -48,10 +48,8 @@ module PgEventstore
 
       # @param limit [Integer, nil]
       # @return [void]
-      def add_limit(limit = DEFAULT_LIMIT)
-        return unless limit
-
-        @sql_builder.limit(limit)
+      def add_limit(limit)
+        @sql_builder.limit(limit || DEFAULT_LIMIT)
       end
 
       # @return [String]

@@ -1,0 +1,26 @@
+module PgEventstore
+  module Commands
+    module RevisionCheck
+      class CurrentRevision
+        class StreamRevision < Struct[untyped]
+          attr_accessor revision: Integer
+        end
+
+        class EventTypeRevisions < Struct[untyped]
+          attr_accessor revisions: Hash[String, Integer]
+        end
+
+        def self.build: (Stream stream, Integer stream_revision,
+            ExpectedRevision::StreamRevision? | ExpectedRevision::EventTypeRevisions? expected_revision,
+            Array[Partition] partitions,
+            EventsGlobalIndexQueries events_global_index_queries) -> (StreamRevision | EventTypeRevisions)?
+
+        private
+
+        def self.current_revision_by_event_types: (Stream stream, Array[String] event_types,
+            Array[Partition] affected_partitions,
+            EventsGlobalIndexQueries events_global_idx_queries) -> Hash[String, Integer]
+      end
+    end
+  end
+end

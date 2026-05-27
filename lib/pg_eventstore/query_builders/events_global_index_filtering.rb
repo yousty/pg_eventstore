@@ -120,15 +120,14 @@ module PgEventstore
         end
 
         query_parts = []
-        case
-        when stream_filter&.stream?
+        if stream_filter&.stream?
           streams_filter = StreamsGlobalIndexFiltering.new
           streams_filter.add_filter_row(filter_row)
           query_parts << ['streams_global_index_id = ?', streams_filter.to_sql_builder.unselect.select('id')]
-        when stream_filter&.context?
+        elsif stream_filter&.context?
           affected_partitions = PartitionsFiltering.from_filter_row(filter_row, scope: :context)
           query_parts << ['context_partition_id = ?', affected_partitions.unselect.select('id')]
-        when stream_filter&.stream_name?
+        elsif stream_filter&.stream_name?
           affected_partitions = PartitionsFiltering.from_filter_row(filter_row, scope: :stream_name)
           query_parts << ['stream_name_partition_id = ?', affected_partitions.unselect.select('id')]
         end
@@ -183,10 +182,8 @@ module PgEventstore
 
       # @param limit [Integer, nil]
       # @return [void]
-      def add_limit(limit = DEFAULT_LIMIT)
-        return unless limit
-
-        @sql_builder.limit(limit)
+      def add_limit(limit)
+        @sql_builder.limit(limit || DEFAULT_LIMIT)
       end
 
       # @param direction [String, Symbol, nil]

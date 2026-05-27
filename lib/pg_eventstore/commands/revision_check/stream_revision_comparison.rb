@@ -3,8 +3,12 @@
 module PgEventstore
   module Commands
     module RevisionCheck
+      # @!visibility private
       class StreamRevisionComparison
         class << self
+          # @param current_revision [Integer]
+          # @param expected_revision [Integer, Symbol]
+          # @return [Symbol]
           def verdict(current_revision, expected_revision)
             return if expected_revision == :any
 

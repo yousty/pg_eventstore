@@ -1,0 +1,7 @@
+module PgEventstore
+  module Commands
+    class ReadStreams < AbstractCommand
+      def call: (?options: ::Hash[untyped, untyped]) -> Array[Stream]
+    end
+  end
+end

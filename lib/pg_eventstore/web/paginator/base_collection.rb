@@ -31,7 +31,7 @@ module PgEventstore
           @per_page = per_page
           @order = order
           @options =
-            options.is_a?(Sinatra::IndifferentHash) ? Utils.deep_transform_keys(Hash[**options], &:to_sym) : options
+            options.is_a?(Sinatra::IndifferentHash) ? Utils.deep_transform_keys(Hash[options], &:to_sym) : options
         end
 
         # @return [Array]

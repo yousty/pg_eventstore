@@ -3,21 +3,27 @@
 RSpec.describe PgEventstore::Commands::Read do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(events: event_queries, partitions: partition_queries)
+    PgEventstore::Queries.new(
+      events_global_index: events_global_index_queries,
+      streams_global_index: streams_global_index_queries
+    )
   end
-  let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
-  let(:event_queries) do
-    PgEventstore::EventQueries.new(
-      PgEventstore.connection,
-      PgEventstore::EventSerializer.new(middlewares),
-      PgEventstore::EventDeserializer.new(middlewares, event_class_resolver)
+  let(:events_global_index_queries) do
+    PgEventstore::EventsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+    )
+  end
+  let(:streams_global_index_queries) do
+    PgEventstore::StreamsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
     )
   end
   let(:middlewares) { [] }
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
+  let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, event_class_resolver) }
 
   describe '#call' do
-    subject { instance.call(stream, options:) }
+    subject { instance.call(stream, deserializer:, options:) }
 
     let(:options) { {} }
     let(:events_stream1) do
@@ -98,23 +104,8 @@ RSpec.describe PgEventstore::Commands::Read do
       end
     end
 
-    describe 'reading from "$streams" system stream' do
-      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-      it 'returns 0-stream revision events' do
-        expect(subject.map(&:id)).to eq([event1.id, event4.id])
-      end
-    end
-
     describe 'reading from "all" stream when no events match the filter' do
       let(:stream) { PgEventstore::Stream.all_stream }
-      let(:options) { { filter: { event_types: ['NonExisting'] } } }
-
-      it { is_expected.to eq([]) }
-    end
-
-    describe 'reading from system stream when no events match the filter' do
-      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
       let(:options) { { filter: { event_types: ['NonExisting'] } } }
 
       it { is_expected.to eq([]) }
@@ -124,6 +115,23 @@ RSpec.describe PgEventstore::Commands::Read do
       let(:options) { { filter: { event_types: ['NonExisting'] } } }
 
       it { is_expected.to eq([]) }
+    end
+
+    describe 'reading from "all" stream with mix of existing and non-existing events' do
+      let(:stream) { PgEventstore::Stream.all_stream }
+      let(:options) { { filter: { event_types: %w[NonExisting baz] } } }
+
+      it 'returns matching events' do
+        expect(subject.map(&:id)).to eq([event3.id, event4.id])
+      end
+    end
+
+    describe 'reading from specific stream with mix of existing and non-existing events' do
+      let(:options) { { filter: { event_types: %w[NonExisting foo] } } }
+
+      it 'returns matching events' do
+        expect(subject.map(&:id)).to eq([event1.id])
+      end
     end
 
     describe 'reading from the non-existing, specified stream' do
@@ -154,10 +162,34 @@ RSpec.describe PgEventstore::Commands::Read do
     end
   end
 
-  it_behaves_like 'resolves event class when reading from stream'
+  describe 'resolve event class when reading from stream' do
+    subject { instance.call(stream, deserializer:, options:) }
+
+    let(:event_class) { Class.new(PgEventstore::Event) }
+    let(:event) { event_class.new }
+    let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
+    let(:options) { {} }
+
+    before do
+      stub_const('DummyClass', event_class)
+      PgEventstore.client.append_to_stream(stream, event)
+    end
+
+    it "recognizes event's class" do
+      expect(subject.first).to be_a(DummyClass)
+    end
+
+    context 'when :resolve_link_tos option is given' do
+      let(:options) { { resolve_link_tos: true } }
+
+      it "recognizes event's class" do
+        expect(subject.first).to be_a(DummyClass)
+      end
+    end
+  end
 
   describe 'reading using filter by stream parts' do
-    subject { instance.call(stream, options:) }
+    subject { instance.call(stream, deserializer:, options:) }
 
     let(:options) { {} }
     let(:events_stream1) do
@@ -214,14 +246,6 @@ RSpec.describe PgEventstore::Commands::Read do
           expect(subject.map(&:id)).to eq([event1.id, event6.id, event3.id, event8.id])
         end
       end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'returns 0-stream revision events within the given context' do
-          expect(subject.map(&:id)).to eq([event1.id, event3.id])
-        end
-      end
     end
 
     describe 'filtering by the stream name only' do
@@ -250,14 +274,6 @@ RSpec.describe PgEventstore::Commands::Read do
           )
         end
       end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'ignores it, returning 0-stream revision events' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
-        end
-      end
     end
 
     describe 'filtering by two different contexts' do
@@ -276,14 +292,6 @@ RSpec.describe PgEventstore::Commands::Read do
           expect(subject.map(&:id)).to eq([event2.id, event7.id, event4.id, event9.id, event5.id, event10.id])
         end
       end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'returns 0-stream revision events within the given contexts' do
-          expect(subject.map(&:id)).to eq([event2.id, event4.id, event5.id])
-        end
-      end
     end
 
     describe 'filtering by stream name and context as a part of the same filter' do
@@ -300,14 +308,6 @@ RSpec.describe PgEventstore::Commands::Read do
 
         it 'returns all events within the given stream name and context' do
           expect(subject.map(&:id)).to eq([event2.id, event7.id, event5.id, event10.id])
-        end
-      end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'returns 0-stream revision events within the given context and stream name' do
-          expect(subject.map(&:id)).to eq([event2.id, event5.id])
         end
       end
     end
@@ -337,14 +337,6 @@ RSpec.describe PgEventstore::Commands::Read do
           expect(subject.map(&:id)).to eq([event1.id, event6.id, event2.id, event7.id, event5.id, event10.id])
         end
       end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'returns 0-stream revision events within the given contexts and stream names' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event5.id])
-        end
-      end
     end
 
     describe 'filtering by stream name and context as a part of different streams' do
@@ -363,14 +355,6 @@ RSpec.describe PgEventstore::Commands::Read do
           expect(subject.map(&:id)).to eq([event2.id, event7.id, event5.id, event10.id])
         end
       end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'returns 0-stream revision events that match context only, ignoring stream_name' do
-          expect(subject.map(&:id)).to eq([event2.id, event5.id])
-        end
-      end
     end
 
     describe 'filtering by several specific streams' do
@@ -387,14 +371,6 @@ RSpec.describe PgEventstore::Commands::Read do
 
         it 'returns all events of those streams' do
           expect(subject.map(&:id)).to eq([event1.id, event6.id, event4.id, event9.id])
-        end
-      end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'returns 0-stream revision events of those streams' do
-          expect(subject.map(&:id)).to eq([event1.id, event4.id])
         end
       end
     end
@@ -425,14 +401,6 @@ RSpec.describe PgEventstore::Commands::Read do
           )
         end
       end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'ignores it, returning 0-stream revision events' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
-        end
-      end
     end
 
     describe 'filtering by context and stream id as a part of different filters' do
@@ -449,14 +417,6 @@ RSpec.describe PgEventstore::Commands::Read do
 
         it 'returns all events that match the given context only, ignoring stream id' do
           expect(subject.map(&:id)).to eq([event4.id, event9.id])
-        end
-      end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'returns 0-stream revision events that match the given context only, ignoring stream id' do
-          expect(subject.map(&:id)).to eq([event4.id])
         end
       end
     end
@@ -487,19 +447,11 @@ RSpec.describe PgEventstore::Commands::Read do
           )
         end
       end
-
-      context 'when reading from "$streams" system stream' do
-        let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-        it 'ignores it, returning 0-stream revision events' do
-          expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id, event4.id, event5.id])
-        end
-      end
     end
   end
 
   describe 'reading using filter by event type' do
-    subject { instance.call(stream, options:) }
+    subject { instance.call(stream, deserializer:, options:) }
 
     let(:options) { { filter: { event_types: %w[foo baz] } } }
     let(:events_stream1) do
@@ -533,18 +485,10 @@ RSpec.describe PgEventstore::Commands::Read do
         expect(subject.map(&:id)).to eq([event1.id, event3.id, event5.id])
       end
     end
-
-    context 'when reading from "$streams" system stream' do
-      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-      it 'returns 0-stream revision events according to the given types' do
-        expect(subject.map(&:id)).to eq([event1.id, event3.id])
-      end
-    end
   end
 
   describe 'reading using filter by event type and by stream parts' do
-    subject { instance.call(stream, options:) }
+    subject { instance.call(stream, deserializer:, options:) }
 
     let(:options) do
       { filter: { event_types: %w[foo baz], streams: [{ context: 'SomeContext', stream_name: 'some-stream1' }] } }
@@ -585,18 +529,10 @@ RSpec.describe PgEventstore::Commands::Read do
         expect(subject.map(&:id)).to eq([event1.id, event5.id, event6.id])
       end
     end
-
-    context 'when reading from "$streams" system stream' do
-      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
-
-      it 'returns 0-stream revision events according to the given types and stream parts' do
-        expect(subject.map(&:id)).to eq([event1.id, event5.id])
-      end
-    end
   end
 
-  describe 'direction of reading from a position/revision' do
-    subject { instance.call(stream, options:) }
+  describe 'direction of reading from/to position/revision' do
+    subject { instance.call(stream, deserializer:, options:) }
 
     let(:options) { {} }
     let(:events_stream1) do
@@ -637,6 +573,14 @@ RSpec.describe PgEventstore::Commands::Read do
             expect(subject.map(&:id)).to eq([event4.id, event5.id])
           end
         end
+
+        context 'when :to_revision option is provided' do
+          let(:options) { super().merge(to_revision: 1) }
+
+          it 'reads events in historical order to the specific revision' do
+            expect(subject.map(&:id)).to eq([event3.id, event4.id])
+          end
+        end
       end
 
       shared_examples 'reversed events order' do
@@ -649,6 +593,14 @@ RSpec.describe PgEventstore::Commands::Read do
 
           it 'reads events from old to new ordering from the specific revision' do
             expect(subject.map(&:id)).to eq([event4.id, event3.id])
+          end
+        end
+
+        context 'when :to_revision option is provided' do
+          let(:options) { super().merge(to_revision: 1) }
+
+          it 'reads events from old to new ordering to the specific revision' do
+            expect(subject.map(&:id)).to eq([event5.id, event4.id])
           end
         end
       end
@@ -709,6 +661,14 @@ RSpec.describe PgEventstore::Commands::Read do
             expect(subject.map(&:id)).to eq([event3.id, event4.id, event5.id, event6.id])
           end
         end
+
+        context 'when :to_position option is provided' do
+          let(:options) { super().merge(to_position: PgEventstore.client.read(stream)[2].global_position) }
+
+          it 'reads events in historical order to the specific position' do
+            expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id])
+          end
+        end
       end
 
       shared_examples 'reversed events order' do
@@ -721,6 +681,14 @@ RSpec.describe PgEventstore::Commands::Read do
 
           it 'reads events from old to new ordering from the specific position' do
             expect(subject.map(&:id)).to eq([event3.id, event2.id, event1.id])
+          end
+        end
+
+        context 'when :to_position option is provided' do
+          let(:options) { super().merge(to_position: PgEventstore.client.read(stream)[2].global_position) }
+
+          it 'reads events from old to new ordering to the specific position' do
+            expect(subject.map(&:id)).to eq([event6.id, event5.id, event4.id, event3.id])
           end
         end
       end
@@ -765,76 +733,132 @@ RSpec.describe PgEventstore::Commands::Read do
         it_behaves_like 'reversed events order'
       end
     end
+  end
 
-    context 'when reading from "$streams" system stream' do
-      let(:stream) { PgEventstore::Stream.system_stream('$streams') }
+  describe 'general read cases' do
+    let(:stream1) do
+      PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+    end
+    let(:stream2) do
+      PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '2')
+    end
+    let(:stream3) do
+      PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Bar', stream_id: '1')
+    end
 
-      shared_examples 'historical events order' do
-        it 'reads 0-stream revision events in historical order' do
-          expect(subject.map(&:id)).to eq([event1.id, event3.id, event6.id])
+    let(:event1) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo') }
+    let(:event2) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Bar') }
+    let(:event3) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Baz') }
+    let(:event4) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Bar') }
+    let(:event5) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo') }
+    let(:event6) { PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo') }
+
+    before do
+      PgEventstore.client.append_to_stream(stream1, [event1, event2])
+      PgEventstore.client.append_to_stream(stream2, [event3, event4, event5])
+      PgEventstore.client.append_to_stream(stream3, event6)
+    end
+
+    context 'when reading a mix of existing and non-existing stream filters' do
+      subject { instance.call(PgEventstore::Stream.all_stream, deserializer:, options:) }
+
+      let(:options) { { filter: { streams: [{ context: 'FooCtx', stream_name: 'NonExisting' }, stream3.to_hash] } } }
+
+      it 'returns events for the existing part' do
+        expect(subject.map(&:id)).to eq([event6.id])
+      end
+    end
+
+    context 'when reading a mix of existing and non-existing event type filters' do
+      subject { instance.call(PgEventstore::Stream.all_stream, deserializer:, options:) }
+
+      let(:options) { { filter: { event_types: %w[NonExisting Baz] } } }
+
+      it 'returns events for the existing part' do
+        expect(subject.map(&:id)).to eq([event3.id])
+      end
+    end
+
+    context 'when reading a mix of existing and non-existing event type and stream filters' do
+      subject { instance.call(PgEventstore::Stream.all_stream, deserializer:, options:) }
+
+      let(:options) do
+        {
+          filter: {
+            streams: [{ context: 'FooCtx', stream_name: 'NonExisting1' }, stream2.to_hash],
+            event_types: %w[NonExisting2 Foo],
+          }
+        }
+      end
+
+      it 'returns events for the existing part' do
+        expect(subject.map(&:id)).to eq([event5.id])
+      end
+    end
+
+    context 'when reading a mix of non-existing stream filters' do
+      subject { instance.call(PgEventstore::Stream.all_stream, deserializer:, options:) }
+
+      let(:options) do
+        { filter: { streams: [{ context: 'FooCtx', stream_name: 'NonExisting1' }, { context: 'NonExisting2' }] } }
+      end
+
+      it { is_expected.to eq([]) }
+    end
+
+    context 'when combining :from_position, :to_revision, :max_count and :direction' do
+      subject { instance.call(PgEventstore::Stream.all_stream, deserializer:, options:) }
+
+      describe 'ascending order' do
+        let(:options) { { from_position:, to_position:, max_count: 2 } }
+        let(:from_position) { safe_read(stream2).first.global_position }
+        let(:to_position) { safe_read(stream3).first.global_position }
+
+        it 'returns events according to those restrictions' do
+          expect(subject.map(&:id)).to eq([event3.id, event4.id])
         end
+      end
 
-        context 'when :from_position option is provided' do
-          let(:options) { super().merge(from_position: PgEventstore.client.read(stream)[1].global_position) }
+      describe 'descending order' do
+        let(:options) { { from_position:, to_position:, max_count: 2, direction: :desc } }
+        let(:from_position) { safe_read(stream3).first.global_position }
+        let(:to_position) { safe_read(stream2).first.global_position }
 
-          it 'reads events in historical order from the specific position' do
-            expect(subject.map(&:id)).to eq([event3.id, event6.id])
-          end
+        it 'returns events according to those restrictions' do
+          expect(subject.map(&:id)).to eq([event6.id, event5.id])
+        end
+      end
+    end
+
+    context 'when combining :from_revision, :to_revision, :max_count and :direction' do
+      subject { instance.call(stream2, deserializer:, options:) }
+
+      describe 'ascending order' do
+        let(:options) { { from_revision: 0, to_revision: 2, max_count: 2 } }
+
+        it 'returns events according to those restrictions' do
+          expect(subject.map(&:id)).to eq([event3.id, event4.id])
         end
       end
 
-      shared_examples 'reversed events order' do
-        it 'reads 0-stream revision events from old to new ordering' do
-          expect(subject.map(&:id)).to eq([event6.id, event3.id, event1.id])
-        end
+      describe 'descending order' do
+        let(:options) { { from_revision: 2, to_revision: 0, max_count: 2, direction: :desc } }
 
-        context 'when :from_position option is provided' do
-          let(:options) { super().merge(from_position: PgEventstore.client.read(stream)[1].global_position) }
-
-          it 'reads events from old to new ordering from the specific position' do
-            expect(subject.map(&:id)).to eq([event3.id, event1.id])
-          end
+        it 'returns events according to those restrictions' do
+          expect(subject.map(&:id)).to eq([event5.id, event4.id])
         end
       end
+    end
 
-      context 'when no direction is given' do
-        it_behaves_like 'historical events order'
+    describe 'reading with :max_count == nil' do
+      subject { instance.call(PgEventstore::Stream.all_stream, deserializer:, options: { max_count: nil }) }
+
+      before do
+        stub_const('PgEventstore::QueryBuilders::EventsGlobalIndexFiltering::DEFAULT_LIMIT', 3)
       end
 
-      context 'when direction is "Forwards"' do
-        let(:options) { { direction: 'Forwards' } }
-
-        it_behaves_like 'historical events order'
-      end
-
-      context 'when direction is "asc"' do
-        let(:options) { { direction: 'asc' } }
-
-        it_behaves_like 'historical events order'
-      end
-
-      context 'when direction is :asc' do
-        let(:options) { { direction: :asc } }
-
-        it_behaves_like 'historical events order'
-      end
-
-      context 'when direction is "Backwards"' do
-        let(:options) { { direction: 'Backwards' } }
-
-        it_behaves_like 'reversed events order'
-      end
-
-      context 'when direction is "desc"' do
-        let(:options) { { direction: 'desc' } }
-
-        it_behaves_like 'reversed events order'
-      end
-
-      context 'when direction is :desc' do
-        let(:options) { { direction: :desc } }
-
-        it_behaves_like 'reversed events order'
+      it 'returns up to DEFAULT_LIMIT events' do
+        expect(subject.map(&:id)).to eq([event1.id, event2.id, event3.id])
       end
     end
   end

@@ -1,0 +1,16 @@
+module PgEventstore
+  module QueryBuilders
+    module Filters
+      class EventTypeFilter < Struct[untyped]
+        attr_accessor value: String?
+        attr_accessor prefix: bool
+
+        def self.null_filter: -> EventTypeFilter
+
+        def prefix?: -> bool
+
+        def to_sql_value: -> String?
+      end
+    end
+  end
+end
