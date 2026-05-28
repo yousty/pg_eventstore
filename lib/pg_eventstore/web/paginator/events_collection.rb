@@ -32,9 +32,11 @@ module PgEventstore
           return unless collection.size == per_page
 
           from_position = event_global_position(collection.first)
+          filters_collection = QueryBuilders::Filters::Collection.from_options(options)
+          cursor = QueryBuilders::ReadCursor::StreamCursor.from_options(from_position:, max_count: 1, direction: order)
           sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-            PgEventstore::Stream.all_stream,
-            options.merge(from_position:, max_count: 1, direction: order)
+            filters_collection,
+            cursor
           ).unselect.select('global_position').offset(per_page)
           global_position(sql_builder)
         end
@@ -42,9 +44,13 @@ module PgEventstore
         # @return [Integer, nil]
         def prev_page_starting_id
           from_position = event_global_position(collection.first) || starting_id
+          filters_collection = QueryBuilders::Filters::Collection.from_options(options)
+          cursor = QueryBuilders::ReadCursor::StreamCursor.from_options(
+            from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc
+          )
           sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-            PgEventstore::Stream.all_stream,
-            options.merge(from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc)
+            filters_collection,
+            cursor
           ).unselect.select('global_position').offset(1)
           sql_builder =
             SQLBuilder.new.select('global_position').from(sql_builder).order("global_position #{order}").limit(1)
@@ -55,9 +61,11 @@ module PgEventstore
         def total_count
           @total_count ||=
             begin
+              filters_collection = QueryBuilders::Filters::Collection.from_options(options)
+              cursor = QueryBuilders::ReadCursor::StreamCursor.from_options({})
               sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-                PgEventstore::Stream.all_stream,
-                options
+                filters_collection,
+                cursor
               )
               sql_builder.remove_limit.remove_group.remove_order
               count = estimate_count(sql_builder)

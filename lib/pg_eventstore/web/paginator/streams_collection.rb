@@ -52,10 +52,7 @@ module PgEventstore
         def total_count
           @total_count ||=
             begin
-              sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-                PgEventstore::Stream.all_stream,
-                options
-              )
+              sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination(options)
               sql_builder.remove_limit.remove_group.remove_order
               count = estimate_count(sql_builder)
               return count if count > MAX_NUMBER_TO_COUNT
@@ -65,12 +62,6 @@ module PgEventstore
         end
 
         private
-
-        # @param event [PgEventstore::Event, nil]
-        # @return [Integer, nil]
-        def event_global_position(event)
-          event&.link&.global_position || event&.global_position
-        end
 
         # @param sql_builder [PgEventstore::SQLBuilder]
         # @return [Integer]
@@ -84,7 +75,7 @@ module PgEventstore
         # @param sql_builder [PgEventstore::SQLBuilder]
         # @return [Integer]
         def regular_count(sql_builder)
-          sql_builder.unselect.select('count(global_position) as count_all')
+          sql_builder.unselect.select('count(*) as count_all')
 
           connection.with do |conn|
             conn.exec_params(*sql_builder.to_exec_params)
