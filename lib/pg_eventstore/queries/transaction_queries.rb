@@ -60,6 +60,10 @@ module PgEventstore
       retry
     end
 
+    # TODO: next pg gem release (presumably v1.6.4) should already include the fix of PG::Connection#transaction.
+    #       Changes are already in master branch
+    #       https://github.com/ged/ruby-pg/commit/c3d2aabd0a19d20bb1f2b2fa2e5b30f03b043aff
+    #       Once it is released - change pg gem requirement in gemspec to '>= 1.6.4' and remove this implementation.
     # @param conn [PG::Connection]
     # rubocop:disable Lint/RescueException
     def _transaction(conn)
