@@ -148,8 +148,6 @@ module PgEventstore
         stream_parts_filters = []
         event_types_filters = []
         stream_filter&.to_partition_h&.each do |attr, value|
-          next if value.nil?
-
           stream_parts_filters.push(["#{to_table_name}.#{attr} = ?", value])
         end
         event_type_filters.each do |event_type_filter|

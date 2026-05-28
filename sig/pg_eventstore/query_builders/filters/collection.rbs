@@ -4,10 +4,8 @@ module PgEventstore
       class Collection
         @compiled: Array[FilterRow]?
         @event_types: Set[EventTypeFilter]
-        @filters_unique: bool?
-        @index: Index
+        @streams: Index
         @prefix_filter: bool?
-        @streams: Set[StreamFilter]
 
         def self.from_options: (Hash[untyped, untyped] options) -> Collection
 
@@ -18,8 +16,8 @@ module PgEventstore
         def add_stream: (StreamFilter stream_filter) -> void
 
         def collection: -> Array[FilterRow]
-        
-        def filters_unique?: -> bool
+
+        def empty?: -> bool
 
         def has_event_types?: -> bool
 
@@ -35,14 +33,15 @@ module PgEventstore
 
         class Index
 
-          attr_reader children: Hash[Symbol, Index]
-          attr_reader count: Integer
+          attr_reader branches: Hash[Symbol, Index]
 
-          def incr!: -> void
+          attr_accessor leaf: QueryBuilders::Filters::StreamFilter?
+
+          def empty?: -> bool
+
+          def find_non_overlapping: (?Index root) -> Array[QueryBuilders::Filters::StreamFilter]
 
           def index: (StreamFilter stream_filter) -> void
-
-          def uniq?: (StreamFilter stream_filter) -> bool
         end
 
         def compile: -> void

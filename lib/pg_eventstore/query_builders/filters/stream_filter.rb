@@ -29,7 +29,7 @@ module PgEventstore
 
         # @return [Hash]
         def to_partition_h
-          { context:, stream_name: }
+          { context:, stream_name: }.compact
         end
 
         # @return [Hash]

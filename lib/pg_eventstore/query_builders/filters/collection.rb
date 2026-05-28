@@ -14,7 +14,7 @@ module PgEventstore
           # @param options [Hash]
           # @return [self]
           def from_stream_and_options(stream, options)
-            return from_options(options) if stream.system?
+            return from_options(options) if stream.all_stream?
 
             options in { filter: Hash => current_filter }
             current_filter = (current_filter || {}).except(:streams)
@@ -84,12 +84,38 @@ module PgEventstore
           end
         end
 
+        # This class is responsible to index stream filters and compute non-overlapping collection of them. Two stream
+        # filters overlap when one stream filter affects on the same or more partitions as another stream filter.
+        # Example of overlapping filters:
+        #   from_options(
+        #     filter: {
+        #       streams: [
+        #         { context: 'FooCtx' },
+        #         { context: 'FooCtx', stream_name: 'Bar' }
+        #       ]
+        #     }
+        #   )
+        # In this particular case first stream filter affects on all partitions of 'FooCtx' context, including those
+        # partitions, which are related to 'Foo' stream name partitions from the second stream filter. Thus, was can
+        # safely throw away the second filter and keep only the first one.
+        # Example of non-overlapping filters:
+        #   from_options(
+        #     filter: {
+        #       streams: [
+        #         { context: 'FooCtx', stream_name: 'Foo' },
+        #         { context: 'FooCtx', stream_name: 'Bar' }
+        #       ]
+        #     }
+        #   )
+        # This example shows that two filters affect on different set of partitions - ('FooCtx', 'Foo') and
+        # ('FooCtx', 'Bar'). Thus, we keep both of them.
         class Index
-          attr_reader :children, :count
+          attr_reader :branches
+          attr_accessor :leaf
 
           def initialize
-            @children = {}
-            @count = 0
+            @branches = {}
+            @leaf = nil
           end
 
           # @param stream_filter [PgEventstore::QueryBuilders::Filters::StreamFilter]
@@ -97,33 +123,32 @@ module PgEventstore
           def index(stream_filter)
             root = self
             stream_filter.to_h.each_value do |val|
-              root.children[val] ||= self.class.new
-              root = root.children[val]
-              root.incr!
+              root.branches[val] ||= self.class.new
+              root = root.branches[val]
             end
+            root.leaf = stream_filter
           end
 
-          # @return [void]
-          def incr!
-            @count += 1
-          end
-
-          # @param stream_filter [PgEventstore::QueryBuilders::Filters::StreamFilter]
           # @return [Boolean]
-          def uniq?(stream_filter)
-            root = self
-            stream_filter.to_h.each_value.each do |val|
-              root = root.children[val]
+          def empty?
+            branches.empty? && leaf.nil?
+          end
+
+          # @param root [PgEventstore::QueryBuilders::Filters::Collection::Index]
+          # @return [Array<PgEventstore::QueryBuilders::Filters::StreamFilter>]
+          def find_non_overlapping(root = self)
+            return [root.leaf] if root.leaf
+
+            root.branches.each_value.flat_map do |branch|
+              find_non_overlapping(branch)
             end
-            root.count <= 1
           end
         end
         private_constant :Index
 
         def initialize
-          @streams = Set.new
+          @streams = Index.new
           @event_types = Set.new
-          @index = Index.new
           @prefix_filter = false
           reset
         end
@@ -134,20 +159,11 @@ module PgEventstore
           @compiled
         end
 
-        # @return [Boolean]
-        def filters_unique?
-          compile unless @compiled
-          @filters_unique
-        end
-
         # @param stream_filter [PgEventstore::QueryBuilders::Filters::StreamFilter]
         # @return [void]
         def add_stream(stream_filter)
           reset if @compiled
-          return if @streams.include?(stream_filter)
-
-          @index.index(stream_filter)
-          @streams.add(stream_filter)
+          @streams.index(stream_filter)
         end
 
         # @param event_type_filter [PgEventstore::QueryBuilders::Filters::EventTypeFilter]
@@ -165,6 +181,11 @@ module PgEventstore
         end
 
         # @return [Boolean]
+        def empty?
+          @event_types.empty? && @streams.empty?
+        end
+
+        # @return [Boolean]
         def has_prefix_filter?
           @prefix_filter
         end
@@ -175,17 +196,15 @@ module PgEventstore
         # @return [void]
         def reset
           @compiled = nil
-          @filters_unique = nil
         end
 
         # @return [void]
         def compile
-          all_filters_unique = true
           event_types = @event_types.to_a
+          streams = @streams.find_non_overlapping
           @compiled =
-            if @streams.any?
-              @streams.map do |stream_filter|
-                all_filters_unique &&= @index.uniq?(stream_filter)
+            if streams.any?
+              streams.map do |stream_filter|
                 FilterRow.new(stream_filter:, event_type_filters: event_types)
               end
             elsif has_event_types?
@@ -193,7 +212,6 @@ module PgEventstore
             else
               []
             end
-          @filters_unique = all_filters_unique
         end
       end
     end

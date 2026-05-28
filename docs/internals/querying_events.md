@@ -18,40 +18,6 @@ For subscription queries we chose simplicity. It may result in not ideal query p
 
 For Read API queries we chose the best possible plan for the cost of complexity of a query. Opposed to subscription queries - Read API queries are not supposed to handle complex filters with thousands of filter options. Instead, its purpose is to provide fast access to events to ensure the business logic rules.
 
-In some cases, depending on whether all filters are unique we use `UNION ALL`(in case of uniqueness) or `UNION`(in case if any is not unique). `UNION ALL` has better query plan so it should be used where possible.
-
-Filters are unique when their combination of (context, stream_name, stream_id) does not overlap.
-
-Example of non-overlapping filters:
-
--
-```ruby
-{ streams: [{ context: 'Foo' }, { context: 'Bar' }] }
-```
--
-```ruby
-{ streams: [{ context: 'Foo', stream_name: 'Bar', stream_id: '1' }, { context: 'Foo', stream_name: 'Bar', stream_id: '2' }] }
-```
--
-```ruby
-{ streams: [{ context: 'Foo', stream_name: 'Bar' }, { context: 'Foo', stream_name: 'Baz' }] }
-```
-
-Example of overlapping filters:
-
--
-```ruby
-{ streams: [{ context: 'Foo' }, { context: 'Foo', stream_name: 'Bar' }] }
-```
--
-```ruby
-{ streams: [{ context: 'Foo', stream_name: 'Bar' }, { context: 'Foo', stream_name: 'Bar', stream_id: '2' }] }
-```
--
-```ruby
-{ streams: [{ context: 'Foo', stream_name: 'Bar' }, { context: 'Foo', stream_name: 'Baz' }] }
-```
-
 ### Reading from specific stream without events filter
 
 #### For subscription
@@ -239,9 +205,9 @@ select global_position, event_type_partition_id from events_global_index where (
 
 ```sql
 (select global_position, event_type_partition_id from events_global_index where context_partition_id = $1 order by global_position limit $4)
-union all -- or UNION in case filters are not unique
+union all
 (select global_position, event_type_partition_id from events_global_index where context_partition_id = $2 order by global_position limit $4)
-union all -- or UNION in case filters are not unique
+union all
 (select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $3 order by global_position limit $4)
 order by global_position
 limit $4
@@ -281,9 +247,9 @@ select global_position, event_type_partition_id from events_global_index where (
 
 ```sql
 (select global_position, event_type_partition_id from events_global_index where stream_name_partition_id = $1 order by global_position limit $4)
-union all  -- or UNION in case filters are not unique
+union all
 (select global_position, event_type_partition_id from events_global_index where stream_name_partition_id = $2 order by global_position limit $4)
-union all  -- or UNION in case filters are not unique
+union all
 (select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $3 order by global_position limit $4)
 order by global_position
 limit $4
@@ -367,11 +333,11 @@ select global_position, event_type_partition_id from events_global_index where (
 
 ```sql
 (select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $2 order by global_position limit $3)
-union all  -- or UNION in case filters are not unique
+union all
 (select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $1 and event_type_partition_id = $4 order by global_position limit $3)
-union all  -- or UNION in case filters are not unique
+union all
 (select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $2 order by global_position limit $3)
-union all  -- or UNION in case filters are not unique
+union all
 (select global_position, event_type_partition_id from events_global_index where streams_global_index_id = $5 and event_type_partition_id = $4 order by global_position limit $3)
 order by global_position
 limit $3

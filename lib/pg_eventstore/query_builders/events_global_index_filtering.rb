@@ -12,6 +12,9 @@ module PgEventstore
       PRIMARY_TABLE_NAME = 'events_global_index'
 
       class << self
+        # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @return [PgEventstore::SQLBuilder]
         def sql_builder_for_revision_validation_per_type(filters_collection, cursor)
           raise ArgumentError, "Can't build this query using system stream cursor." if cursor.system_stream_cursor?
 
@@ -23,9 +26,12 @@ module PgEventstore
               builder.select('stream_revision')
             end
           end
-          SQLBuilder.union_builders(builders, mode: filters_collection.filters_unique? ? :all : :distinct)
+          SQLBuilder.union_builders(builders, mode: :all)
         end
 
+        # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @return [PgEventstore::SQLBuilder]
         def sql_builder_for_read_grouped(filters_collection, cursor)
           cursor = cursor.dup
           cursor.max_count = 1
@@ -34,20 +40,27 @@ module PgEventstore
           end
           # Do not limit final result
           cursor.max_count = nil
-          union_builders(builders, cursor, mode: filters_collection.filters_unique? ? :all : :distinct)
+          union_builders(builders, cursor, mode: :all)
         end
 
+        # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @return [PgEventstore::SQLBuilder]
         def sql_builder_for_read_common(filters_collection, cursor)
           builders = filters_collection.collection.flat_map do |filter_row|
             filter_row.flatten.map { filtering_from_filter_row(_1, cursor).to_sql_builder }
           end
           return default_filtering(cursor).to_sql_builder if builders.empty?
 
-          union_builders(builders, cursor, mode: filters_collection.filters_unique? ? :all : :distinct)
+          union_builders(builders, cursor, mode: :all)
         end
 
         private
 
+        # @param builders [Array<PgEventstore::SQLBuilder>]
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @param mode [Symbol]
+        # @return [PgEventstore::SQLBuilder]
         def union_builders(builders, cursor, mode:)
           return builders.first if builders.size == 1
 
@@ -61,12 +74,17 @@ module PgEventstore
           top_filtering.to_sql_builder.from(union_builder)
         end
 
+        # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @return [PgEventstore::QueryBuilders::EventsGlobalIndexFiltering]
         def filtering_from_filter_row(filter_row, cursor)
           index_filtering = default_filtering(cursor)
           index_filtering.add_filter_row(filter_row)
           index_filtering
         end
 
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @return [PgEventstore::QueryBuilders::EventsGlobalIndexFiltering]
         def default_filtering(cursor)
           index_filtering = new
           add_direction_and_limit(index_filtering, cursor)
@@ -80,6 +98,9 @@ module PgEventstore
           index_filtering
         end
 
+        # @param index_filtering [PgEventstore::QueryBuilders::EventsGlobalIndexFiltering]
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @return [void]
         def add_direction_and_limit(index_filtering, cursor)
           if cursor.system_stream_cursor?
             index_filtering.add_global_position_direction(cursor.direction)
@@ -105,6 +126,8 @@ module PgEventstore
         PRIMARY_TABLE_NAME
       end
 
+      # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
+      # @return [void]
       def add_filter_row(filter_row)
         stream_filter = filter_row.stream_filter
         event_type_filters = filter_row.event_type_filters
@@ -198,14 +221,6 @@ module PgEventstore
         @sql_builder.order("#{to_table_name}.stream_revision #{SQL_DIRECTIONS[direction]}")
       end
 
-      # @param table_name [String] system stream view name
-      # @return [void]
-      # rubocop:disable Naming/AccessorMethodName
-      def set_source(table_name)
-        @sql_builder.from(%( "#{PG::Connection.escape(table_name)}" #{to_table_name} ))
-      end
-      # rubocop:enable Naming/AccessorMethodName
-
       private
 
       # @param direction [String, Symbol, nil]
@@ -220,6 +235,8 @@ module PgEventstore
         SQL_DIRECTIONS[direction] == 'ASC' ? '<=' : '>='
       end
 
+      # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
+      # @return [String]
       def event_type_comparison_operator(filter_row)
         if filter_row.event_type_filters.size > 1 || filter_row.ambiguous_event_type? ||
            filter_row.event_type_filters.any?(&:prefix?)

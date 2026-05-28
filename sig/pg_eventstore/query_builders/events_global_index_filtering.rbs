@@ -1,0 +1,59 @@
+module PgEventstore
+  module QueryBuilders
+    class EventsGlobalIndexFiltering
+      include BasicFiltering
+
+      DEFAULT_LIMIT: Integer
+      PRIMARY_TABLE_NAME: String
+
+      @sql_builder: SQLBuilder
+
+      def self.sql_builder_for_read_common: (QueryBuilders::Filters::Collection filters_collection,
+          QueryBuilders::ReadCursor::StreamCursor cursor) -> SQLBuilder
+
+      def self.sql_builder_for_read_grouped: (QueryBuilders::Filters::Collection filters_collection,
+          QueryBuilders::ReadCursor::StreamCursor cursor) -> SQLBuilder
+
+      def self.sql_builder_for_revision_validation_per_type: (QueryBuilders::Filters::Collection filters_collection,
+          QueryBuilders::ReadCursor::StreamCursor cursor) -> SQLBuilder
+
+      def initialize: -> void
+
+      def add_filter_row: (QueryBuilders::Filters::FilterRow filter_row) -> void
+
+      def add_global_position_direction: (String? | Symbol? direction) -> void
+
+      def add_limit: (Integer? limit) -> void
+
+      def add_stream_revision_direction: (String? | Symbol? direction) -> void
+
+      def from_position: (Integer? position, String? | Symbol? direction) -> void
+
+      def from_revision: (Integer? revision, String? | Symbol? direction) -> void
+
+      def to_position: (Integer? position, String? | Symbol? direction) -> void
+
+      def to_revision: (Integer? revision, String? | Symbol? direction) -> void
+
+      private
+
+      def self.add_direction_and_limit: (QueryBuilders::EventsGlobalIndexFiltering index_filtering,
+          QueryBuilders::ReadCursor::StreamCursor cursor) -> void
+
+      def self.default_filtering: (QueryBuilders::ReadCursor::StreamCursor cursor)
+        -> QueryBuilders::EventsGlobalIndexFiltering
+
+      def self.filtering_from_filter_row: (QueryBuilders::Filters::FilterRow filter_row,
+          QueryBuilders::ReadCursor::StreamCursor cursor) -> QueryBuilders::EventsGlobalIndexFiltering
+
+      def self.union_builders: (Array[SQLBuilder] builders,
+          QueryBuilders::ReadCursor::StreamCursor cursor, mode: Symbol) -> SQLBuilder
+
+      def direction_operator_from: (Integer? revision, String? | Symbol? direction) -> String
+
+      def direction_operator_to: (Integer? revision, String? | Symbol? direction) -> String
+
+      def event_type_comparison_operator: (QueryBuilders::Filters::FilterRow filter_row) -> String
+    end
+  end
+end
