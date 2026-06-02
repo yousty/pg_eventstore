@@ -72,6 +72,7 @@ module PgEventstore
       TransactionQueries.new(connection)
     end
 
+    # @return [PgEventstore::EventsGlobalIndexQueries]
     def events_global_index_queries
       EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end

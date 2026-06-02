@@ -17,7 +17,7 @@ module PgEventstore
       @event_class_resolver = event_class_resolver
     end
 
-    # @param raw_events [Array<Hash>]
+    # @param raw_events [Array<Hash>, Enumerator<Hash>]
     # @return [Array<PgEventstore::Event>]
     def deserialize_many(raw_events)
       raw_events.map(&method(:deserialize))

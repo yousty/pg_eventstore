@@ -71,6 +71,11 @@ module PgEventstore
       deserialize(pg_result.to_a.first)
     end
 
+    # @param id [Integer] Subscription#id
+    # @param options [Hash]
+    # @option options [Hash] :filter
+    # @param locked_by [Integer] SubscriptionSet#id
+    # @return [void]
     def create_or_replace_view(id, options, locked_by)
       filter_collection = QueryBuilders::Filters::Collection.from_options(options)
       index_filtering = QueryBuilders::EventsGlobalIndexFiltering.new

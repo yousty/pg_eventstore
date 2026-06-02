@@ -1,0 +1,19 @@
+module PgEventstore
+  module SubscriptionFeedStrategy
+    class IndexReadStrategy
+      include SubscriptionFeedStrategy
+
+      INDEX_LOOK_UP_DISTANCE: Integer
+
+      @connection: Connection
+      @query_strategy: QueryStrategy
+      @runners: Array[SubscriptionRunner]
+
+      def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
+      private
+
+      def events_global_index_queries: -> EventsGlobalIndexQueries
+    end
+  end
+end

@@ -10,7 +10,11 @@ module PgEventstore
       DEFAULT_LIMIT = 1_000
 
       class << self
+        # @param id [integer]
         # @param options [Hash]
+        # @option options [Integer, nil] :from_position
+        # @option options [Integer, nil] :to_position
+        # @option options [Integer, nil] :max_count
         # @return [PgEventstore::QueryBuilders::SubscriptionEventsFiltering]
         def build(id, options)
           index_filter = new(id)
@@ -21,6 +25,7 @@ module PgEventstore
         end
       end
 
+      # @param subscription_id [Integer]
       def initialize(subscription_id)
         @subscription_id = subscription_id
         @sql_builder = SQLBuilder.new.select("#{to_table_name}.*").from(to_table_name)

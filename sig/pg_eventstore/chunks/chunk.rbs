@@ -1,11 +1,13 @@
 module PgEventstore
   module Chunks
-    module Chunk
+    module Chunk[unchecked ElemIn, unchecked ElemOut]
       def drained?: -> bool
+
+      def last: -> ElemIn?
 
       def size: -> Integer
 
-      def take: (Integer? size) -> Array[untyped]
+      def take: (Integer? size) -> Array[ElemOut]
     end
   end
 end

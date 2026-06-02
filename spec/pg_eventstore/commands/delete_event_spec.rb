@@ -2,8 +2,10 @@
 
 RSpec.describe PgEventstore::Commands::DeleteEvent do
   let(:instance) { described_class.new(queries) }
-  let(:queries) { PgEventstore::Queries.new(maintenance: maintenance_queries) }
+  let(:queries) { PgEventstore::Queries.new(maintenance: maintenance_queries, events_global_index: events_idx_queries) }
   let(:maintenance_queries) { PgEventstore::MaintenanceQueries.new(PgEventstore.connection) }
+  let(:events_idx_queries) { PgEventstore::EventsGlobalIndexQueries.new(PgEventstore.connection, query_strategy) }
+  let(:query_strategy) { PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection) }
 
   describe '#call' do
     subject { instance.call(event, force:) }

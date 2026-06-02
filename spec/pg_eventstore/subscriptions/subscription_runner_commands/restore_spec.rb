@@ -41,7 +41,11 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::Restore do
 
     before do
       subscription_runner.start
-      subscription_runner.feed(['global_position' => 1])
+      subscription_runner.feed(
+        EventIndexesChunk.create_indexes(
+          [{ 'global_position' => 1, 'event_type_partition_id' => 2 }]
+        )
+      )
       dv(processed_events).wait_until(timeout: 0.5) { _1.size == 1 }
     end
 

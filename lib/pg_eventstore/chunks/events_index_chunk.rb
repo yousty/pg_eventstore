@@ -9,8 +9,6 @@ module PgEventstore
       # @return [Integer]
       MAX_PARTITIONS_TO_RESOLVE_PER_CALL = 100
 
-      attr_reader :last_global_position
-
       # @param indexes [Array<PgEventstore::EventGlobalIndex>]
       # @param connection [PgEventstore::Connection]
       # @param query_strategy [PgEventstore::QueryStrategy]
@@ -22,7 +20,6 @@ module PgEventstore
         @resolve_link_tos = resolve_link_tos
         @idx_direction = detect_direction(indexes[0], indexes[1])
         @raw_events = []
-        @last_global_position = indexes.last.global_position if indexes.any?
         @resolved = indexes.empty?
       end
 
@@ -32,12 +29,19 @@ module PgEventstore
         @raw_events.slice!(0...size)
       end
 
+      # @return [Boolean]
       def drained?
         @indexes.empty? && @raw_events.empty?
       end
 
+      # @return [Integer]
       def size
         @indexes.size + @raw_events.size
+      end
+
+      # @return [PgEventstore::EventGlobalIndex, nil]
+      def last
+        @indexes.last
       end
 
       private

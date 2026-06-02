@@ -65,7 +65,7 @@ module PgEventstore
       return INITIAL_EVENTS_PER_CHUNK if @stats.average_event_processing_time == 0
 
       events_per_chunk = (@subscription.chunk_query_interval / @stats.average_event_processing_time).round
-      events_to_fetch = [events_per_chunk, MAX_EVENTS_PER_CHUNK].min - @events_processor.events_left_in_chunk
+      events_to_fetch = [events_per_chunk, MAX_EVENTS_PER_CHUNK].min - @events_processor.events_left_in_repo
       return 0 if events_to_fetch < 0 # We still have a lot of events in the chunk - no need to fetch more
 
       [events_to_fetch, MIN_EVENTS_PER_CHUNK].max

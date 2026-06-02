@@ -1,0 +1,22 @@
+module PgEventstore
+  module QueryBuilders
+    class SubscriptionEventsFiltering
+      DEFAULT_LIMIT: Integer
+
+      include BasicFiltering
+
+      @sql_builder: SQLBuilder
+      @subscription_id: Integer
+
+      def self.build: (Integer id, Hash[untyped, untyped] options) -> SubscriptionEventsFiltering
+
+      def initialize: (Integer subscription_id) -> void
+
+      def add_limit: (Integer? limit) -> void
+
+      def from_position: (Integer? position) -> void
+
+      def to_position: (Integer? position) -> void
+    end
+  end
+end

@@ -14,6 +14,8 @@ module PgEventstore
 
     private
 
+    def events_global_index_queries: -> EventsGlobalIndexQueries
+
     def transaction_queries: -> TransactionQueries
   end
 end

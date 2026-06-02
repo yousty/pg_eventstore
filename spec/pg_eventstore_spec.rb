@@ -135,7 +135,7 @@ RSpec.describe PgEventstore do
     end
 
     it 'changes connection config' do
-      connection_config = ->(conn) {
+      connection_config = lambda { |conn|
         conn.instance_eval { { uri: @uri, pool_size: @pool_size, pool_timeout: @pool_timeout } }
       }
       expect { subject }.to change {

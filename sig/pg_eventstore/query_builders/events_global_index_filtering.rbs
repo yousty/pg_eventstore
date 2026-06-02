@@ -49,9 +49,9 @@ module PgEventstore
       def self.union_builders: (Array[SQLBuilder] builders,
           QueryBuilders::ReadCursor::StreamCursor cursor, mode: Symbol) -> SQLBuilder
 
-      def direction_operator_from: (Integer? revision, String? | Symbol? direction) -> String
+      def direction_operator_from: (String? | Symbol? direction) -> String
 
-      def direction_operator_to: (Integer? revision, String? | Symbol? direction) -> String
+      def direction_operator_to: (String? | Symbol? direction) -> String
 
       def event_type_comparison_operator: (QueryBuilders::Filters::FilterRow filter_row) -> String
     end

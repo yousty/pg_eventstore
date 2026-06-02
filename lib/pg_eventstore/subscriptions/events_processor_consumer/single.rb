@@ -7,6 +7,9 @@ module PgEventstore
       include EventsProcessorConsumer
 
       class << self
+        # @param handler [#call]
+        # @param deserializer [PgEventstore::EventDeserializer]
+        # @return [PgEventstore::EventsProcessorConsumer::Single]
         def create_consumer(handler, deserializer)
           raw_handler = ->(raw_event) { handler.call(deserializer.deserialize(raw_event)) }
           new(raw_handler)
@@ -19,6 +22,7 @@ module PgEventstore
         @last_unprocessed_event = nil
       end
 
+      # @return [void]
       def clear_unprocessed_events
         @last_unprocessed_event = nil
       end
@@ -26,6 +30,7 @@ module PgEventstore
       # @param callbacks [PgEventstore::Callbacks]
       # @param events_repository [PgEventstore::Chunks::Repository]
       # @param repository_cond [MonitorMixin::ConditionVariable]
+      # @return [void]
       def call(callbacks, events_repository, repository_cond)
         raw_event =
           @last_unprocessed_event ||

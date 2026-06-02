@@ -1,12 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::SubscriptionQueries do
-  let(:instance) do
-    described_class.new(
-      PgEventstore.connection,
-      PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
-    )
-  end
+  let(:instance) { described_class.new(PgEventstore.connection, query_strategy) }
+  let(:query_strategy) { PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection) }
 
   describe '#find_by' do
     subject { instance.find_by(attrs) }
@@ -83,7 +79,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
     describe 'when subscription does not exist' do
       it 'raises error' do
         expect { subject }.to(
-          raise_error(PgEventstore::RecordNotFound, 'Could not find/update "subscriptions" record with 123 id.')
+          raise_error(PgEventstore::RecordNotFound, 'Could not find/update/delete "subscriptions" record by 123.')
         )
       end
     end
@@ -163,106 +159,225 @@ RSpec.describe PgEventstore::SubscriptionQueries do
 
       it 'raises error' do
         expect { subject }.to(
-          raise_error(PgEventstore::RecordNotFound, 'Could not find/update "subscriptions" record with -1 id.')
+          raise_error(PgEventstore::RecordNotFound, 'Could not find/update/delete "subscriptions" record by -1.')
         )
       end
     end
   end
 
-  describe '#subscriptions_events' do
-    subject { instance.subscriptions_events(query_options) }
+  describe '#create_or_replace_view' do
+    describe 'creating and replacing a view' do
+      subject { instance.create_or_replace_view(subscription.id, options, subscriptions_set.id) }
 
-    let(:query_options) { {} }
+      let(:subscription) { SubscriptionsHelper.create }
+      let(:subscriptions_set) { SubscriptionsSetHelper.create }
+      let(:options) { {} }
 
-    context 'when query_options are absent' do
-      it { is_expected.to eq({}) }
+      before do
+        instance.lock!(subscription.id, subscriptions_set.id, force: false)
+      end
+
+      context 'when view does not exist' do
+        it 'creates sql view for the given subscription' do
+          expect { subject }.to change {
+            query_strategy.exec(<<~SQL).to_a
+              select table_name from information_schema.views where table_name like 'subscription_%'
+            SQL
+          }.from([]).to([{ 'table_name' => "subscription_#{subscription.id}" }])
+        end
+      end
+
+      context 'when view already exists' do
+        before do
+          instance.create_or_replace_view(
+            subscription.id,
+            { filter: { event_types: ['Foo'] } }, subscriptions_set.id
+          )
+        end
+
+        it 're-creates it' do
+          view_name = "subscription_#{subscription.id}"
+          expect { subject }.to change {
+            query_strategy.exec_params(<<~SQL, [view_name]).to_a.first&.[]('view_definition')
+              select view_definition from information_schema.views where table_name = $1
+            SQL
+          }.from(a_string_including('Foo'))
+        end
+      end
     end
 
-    context 'when query_options are present' do
-      let(:query_options) do
-        {
-          runner_id1 => { filter: { event_types: ['Foo'] } },
-          runner_id2 => { filter: { streams: [{ context: 'BarCtx' }] } },
-        }
-      end
-      let(:runner_id1) { 1 }
-      let(:runner_id2) { 2 }
 
-      let(:stream1) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'foo', stream_id: '1') }
-      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'foo', stream_id: '2') }
-      let!(:event1) do
-        event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo')
+    describe 'filtering using created sql view' do
+      subject do
+        query_strategy.exec("select * from #{view_name}").map(&PgEventstore::EventGlobalIndex.method(:new))
+      end
+
+      let(:subscription) { SubscriptionsHelper.create }
+      let(:subscriptions_set) { SubscriptionsSetHelper.create }
+      let(:view_name) { "subscription_#{subscription.id}" }
+      let(:options) { {} }
+
+      let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Bar', stream_id: '1') }
+      let(:stream3) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Bar', stream_id: '2') }
+      let(:stream4) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Baz', stream_id: '1') }
+
+      let(:event1) do
+        event = PgEventstore::Event.new(type: 'Foo')
         PgEventstore.client.append_to_stream(stream1, event)
       end
-      let!(:event2) do
-        event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Bar')
-        PgEventstore.client.append_to_stream(stream1, event)
-      end
-      let!(:event3) do
-        event = PgEventstore::Event.new(id: SecureRandom.uuid, type: 'Foo')
+      let(:event2) do
+        event = PgEventstore::Event.new(type: 'Foo')
         PgEventstore.client.append_to_stream(stream2, event)
       end
-      let!(:link) { PgEventstore.client.link_to(stream1, event3) }
+      let(:event3) do
+        event = PgEventstore::Event.new(type: 'Baz')
+        PgEventstore.client.append_to_stream(stream3, event)
+      end
+      let(:event4) do
+        event = PgEventstore::Event.new(type: 'Bar')
+        PgEventstore.client.append_to_stream(stream4, event)
+      end
+      let(:event5) do
+        event = PgEventstore::Event.new(type: 'Bar')
+        PgEventstore.client.append_to_stream(stream4, event)
+      end
 
-      it 'returns events attributes along with the related runner ids' do
-        is_expected.to(
-          match(
-            {
-              runner_id1 => [
-                a_hash_including(
-                  'id' => event1.id, 'runner_id' => runner_id1, 'type' => 'Foo',
-                  **stream1.to_hash.transform_keys(&:to_s)
-                ),
-                a_hash_including(
-                  'id' => event3.id, 'runner_id' => runner_id1, 'type' => 'Foo',
-                  **stream2.to_hash.transform_keys(&:to_s)
-                ),
-              ],
-              runner_id2 => [
-                a_hash_including(
-                  'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
-                  **stream1.to_hash.transform_keys(&:to_s)
-                ),
-                a_hash_including(
-                  'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
-                  **stream1.to_hash.transform_keys(&:to_s)
-                ),
-                a_hash_including(
-                  'id' => link.id, 'runner_id' => runner_id2, 'type' => PgEventstore::Event::LINK_TYPE,
-                  **stream1.to_hash.transform_keys(&:to_s)
-                ),
-              ],
-            }
-          )
+      let(:event_idx_1) do
+        partition = partition_queries.event_type_partition(event1.stream, event1.type)
+        PgEventstore::EventGlobalIndex.new(
+          global_position: event1.global_position,
+          event_type_partition_id: partition['id']
+        )
+      end
+      let(:event_idx_2) do
+        partition = partition_queries.event_type_partition(event2.stream, event2.type)
+        PgEventstore::EventGlobalIndex.new(
+          global_position: event2.global_position,
+          event_type_partition_id: partition['id']
+        )
+      end
+      let(:event_idx_3) do
+        partition = partition_queries.event_type_partition(event3.stream, event3.type)
+        PgEventstore::EventGlobalIndex.new(
+          global_position: event3.global_position,
+          event_type_partition_id: partition['id']
+        )
+      end
+      let(:event_idx_4) do
+        partition = partition_queries.event_type_partition(event4.stream, event4.type)
+        PgEventstore::EventGlobalIndex.new(
+          global_position: event4.global_position,
+          event_type_partition_id: partition['id']
+        )
+      end
+      let(:event_idx_5) do
+        partition = partition_queries.event_type_partition(event5.stream, event5.type)
+        PgEventstore::EventGlobalIndex.new(
+          global_position: event5.global_position,
+          event_type_partition_id: partition['id']
         )
       end
 
-      context 'when :resolve_link_tos option is given' do
-        let(:query_options) do
+      before do
+        instance.lock!(subscription.id, subscriptions_set.id, force: false)
+        instance.create_or_replace_view(subscription.id, options, subscriptions_set.id)
+        event1
+        event2
+        event3
+        event4
+        event5
+      end
+
+      context 'when filters are empty' do
+        it 'returns all indexes' do
+          is_expected.to eq([event_idx_1, event_idx_2, event_idx_3, event_idx_4, event_idx_5])
+        end
+      end
+
+      context 'when event_types: filter is given' do
+        describe 'filtering by string' do
+          let(:options) { { filter: { event_types: ['Foo'] } } }
+
+          it 'filters indexes by the given type' do
+            is_expected.to eq([event_idx_1, event_idx_2])
+          end
+        end
+
+        describe 'filtering by prefix' do
+          let(:options) { { filter: { event_types: [{ prefix: 'Ba' }] } } }
+
+          it 'filters indexes by the given prefix' do
+            is_expected.to eq([event_idx_3, event_idx_4, event_idx_5])
+          end
+        end
+      end
+
+      context 'when :streams filter is given' do
+        let(:options) { { filter: { streams: [{ context: 'FooCtx' }] } } }
+
+        describe 'filtering by :context' do
+          it 'returns indexes of given context' do
+            is_expected.to eq([event_idx_1])
+          end
+        end
+
+        describe 'filtering by :context and :stream_name' do
+          let(:options) { { filter: { streams: [{ context: 'BarCtx', stream_name: 'Bar' }] } } }
+
+          it 'returns indexes of given context and stream name' do
+            is_expected.to eq([event_idx_2, event_idx_3])
+          end
+        end
+
+        describe 'filtering by stream' do
+          let(:options) { { filter: { streams: [stream3.to_hash] } } }
+
+          it 'returns indexes of given context and stream name' do
+            is_expected.to eq([event_idx_3])
+          end
+        end
+
+        describe 'filtering by multiple streams filters' do
+          let(:options) { { filter: { streams: [{ context: 'FooCtx' }, { context: 'BarCtx', stream_name: 'Baz' }] } } }
+
+          it 'returns indexes from intersection of given streams filters' do
+            is_expected.to eq([event_idx_1, event_idx_4, event_idx_5])
+          end
+        end
+
+        context 'when overlapping streams filter is given' do
+          let(:options) do
+            {
+              filter: {
+                streams: [
+                  { context: 'BarCtx' },
+                  { context: 'BarCtx', stream_name: 'Bar' },
+                  { context: 'BarCtx', stream_name: 'Baz', stream_id: '1' }]
+              }
+            }
+          end
+
+          it 'returns indexes for the most common filter' do
+            is_expected.to eq([event_idx_2, event_idx_3, event_idx_4, event_idx_5])
+          end
+        end
+      end
+
+      describe 'combining :streams and :event_types filters' do
+        let(:options) do
           {
-            runner_id2 => { filter: { streams: [{ context: 'BarCtx' }] }, resolve_link_tos: true },
+            filter: {
+              streams: [{ context: 'BarCtx' }],
+              event_types: %w[Foo Bar]
+            }
           }
         end
 
-        it 'resolves links' do
-          is_expected.to(
-            match(
-              runner_id2 => [
-                a_hash_including(
-                  'id' => event1.id, 'runner_id' => runner_id2, 'type' => 'Foo',
-                  **stream1.to_hash.transform_keys(&:to_s)
-                ),
-                a_hash_including(
-                  'id' => event2.id, 'runner_id' => runner_id2, 'type' => 'Bar',
-                  **stream1.to_hash.transform_keys(&:to_s)
-                ),
-                a_hash_including(
-                  'id' => event3.id, 'runner_id' => runner_id2, 'type' => 'Foo',
-                  **stream2.to_hash.transform_keys(&:to_s)
-                ),
-              ]
-            )
-          )
+        it 'returns indexes by the given streams and event types filters' do
+          is_expected.to eq([event_idx_2, event_idx_4, event_idx_5])
         end
       end
     end

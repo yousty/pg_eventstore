@@ -1,6 +1,7 @@
 module PgEventstore
   module Commands
     class RegularStreamReadPaginated < AbstractCommand
+      # Skip this type check because rbs duplicates calls to Enumerator#next
       %a{rbs:test:skip} def call: (Stream stream, deserializer: EventDeserializer,
           ?options: ::Hash[untyped, untyped]) -> ::Enumerator[Array[Event], void]
 

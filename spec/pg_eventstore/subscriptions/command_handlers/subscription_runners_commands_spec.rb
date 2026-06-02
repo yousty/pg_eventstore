@@ -163,7 +163,7 @@ RSpec.describe PgEventstore::CommandHandlers::SubscriptionRunnersCommands do
       end
 
       it_behaves_like 'executes the command' do
-        let(:command_method) { :clear_chunk }
+        let(:command_method) { :clear_events_repository }
         let(:data) { { 'position' => 1 } }
       end
     end

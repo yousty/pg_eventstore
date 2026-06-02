@@ -4,6 +4,8 @@ module PgEventstore
   # @!visibility private
   module EventsProcessorConsumer
     class << self
+      # @param in_batches [Boolean]
+      # @return [Class]
       def consumer_class(in_batches)
         return Multiple if in_batches
 
@@ -23,10 +25,10 @@ module PgEventstore
     end
 
     # @param callbacks [PgEventstore::Callbacks]
-    # @param raw_events [Array<Hash>]
-    # @param raw_events_cond [MonitorMixin::ConditionVariable]
+    # @param repository [PgEventstore::Chunks::Repository]
+    # @param repository_cond [MonitorMixin::ConditionVariable]
     # @return [void]
-    def call(callbacks, raw_events, raw_events_cond)
+    def call(callbacks, repository, repository_cond)
       raise NotImplementedError
     end
 

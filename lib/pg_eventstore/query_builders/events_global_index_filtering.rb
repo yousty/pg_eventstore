@@ -16,7 +16,7 @@ module PgEventstore
         # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
         # @return [PgEventstore::SQLBuilder]
         def sql_builder_for_revision_validation_per_type(filters_collection, cursor)
-          raise ArgumentError, "Can't build this query using system stream cursor." if cursor.system_stream_cursor?
+          raise ArgumentError, 'Can not build this query using "all" stream cursor.' if cursor.all_stream_cursor?
 
           cursor = cursor.dup
           cursor.max_count = 1
@@ -88,7 +88,7 @@ module PgEventstore
         def default_filtering(cursor)
           index_filtering = new
           add_direction_and_limit(index_filtering, cursor)
-          if cursor.system_stream_cursor?
+          if cursor.all_stream_cursor?
             index_filtering.from_position(cursor.from, cursor.direction)
             index_filtering.to_position(cursor.to, cursor.direction)
           else
@@ -102,7 +102,7 @@ module PgEventstore
         # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
         # @return [void]
         def add_direction_and_limit(index_filtering, cursor)
-          if cursor.system_stream_cursor?
+          if cursor.all_stream_cursor?
             index_filtering.add_global_position_direction(cursor.direction)
           else
             index_filtering.add_stream_revision_direction(cursor.direction)

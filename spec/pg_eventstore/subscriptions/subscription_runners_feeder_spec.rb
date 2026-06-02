@@ -5,121 +5,68 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
   let(:config_name) { :default }
 
   describe '#feed' do
-    subject { instance.feed([runner1, runner2]) }
+    subject { instance.feed(runners) }
 
-    let(:runner1) do
-      PgEventstore::SubscriptionRunner.new(
-        stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(
-          consumer: PgEventstore::EventsProcessorConsumer::Single.new(proc {}), graceful_shutdown_timeout: 5
-        ),
-        subscription: SubscriptionsHelper.create_with_connection(name: 'Foo', options: options1)
-      )
-    end
-    let(:runner2) do
-      PgEventstore::SubscriptionRunner.new(
-        stats: PgEventstore::SubscriptionHandlerPerformance.new,
-        events_processor: PgEventstore::EventsProcessor.new(
-          consumer: PgEventstore::EventsProcessorConsumer::Single.new(proc {}), graceful_shutdown_timeout: 5
-        ),
-        subscription: SubscriptionsHelper.create_with_connection(name: 'Bar', options: options2)
-      )
-    end
-    let(:options1) { { filter: { event_types: ['Foo'] } } }
-    let(:options2) { { filter: { streams: [{ context: 'FooCtx' }] } } }
+    context 'when there are no runners' do
+      let(:runners) { [] }
 
-    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
-    let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo') }
-    let(:event2) { PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar') }
-
-    before do
-      allow(runner1).to receive(:feed).and_call_original
-      allow(runner2).to receive(:feed).and_call_original
-      PgEventstore.client.append_to_stream(stream, [event1, event2])
-      runner1.start
-      runner2.start
+      it { is_expected.to eq(nil) }
     end
 
-    after do
-      [runner1, runner2].each(&:stop_async).each(&:wait_for_finish)
-    end
+    context 'when there are runners' do
+      let(:runners) { [runner] }
 
-    shared_examples 'does not feed first runner, feeds second runner' do
-      it 'does not feed first runner' do
-        subject
-        expect(runner1).not_to have_received(:feed)
-      end
-      it 'feeds second runner' do
-        subject
-        expect(runner2).to(
-          have_received(:feed).with([a_hash_including('type' => 'Foo'), a_hash_including('type' => 'Bar')])
+      let(:runner) do
+        PgEventstore::SubscriptionRunner.new(
+          stats: PgEventstore::SubscriptionHandlerPerformance.new,
+          events_processor: PgEventstore::EventsProcessor.new(
+            consumer: PgEventstore::EventsProcessorConsumer::Single.new(proc {}),
+            graceful_shutdown_timeout: 0
+          ),
+          subscription: subscription
         )
       end
-    end
+      let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', set: 'FooSet') }
+      let(:subscriptions_set) { SubscriptionsSetHelper.create_with_connection(name: 'FooSet') }
 
-    it 'feeds first runner with corresponding events' do
-      subject
-      expect(runner1).to have_received(:feed).with([a_hash_including('type' => 'Foo')])
-    end
-    it 'feeds second runner with corresponding events' do
-      subject
-      expect(runner2).to(
-        have_received(:feed).with([a_hash_including('type' => 'Foo'), a_hash_including('type' => 'Bar')])
-      )
-    end
-
-    context 'when first runner is not running' do
       before do
-        runner1.stop_async.wait_for_finish
+        subscription.lock!(subscriptions_set.id)
+        allow(runner).to receive(:checkpoint).and_call_original
       end
 
-      it_behaves_like 'does not feed first runner, feeds second runner'
-    end
-
-    context 'when first runner has already been fed' do
-      before do
-        runner1.subscription.update(last_chunk_fed_at: Time.now.utc)
+      after do
+        runner.stop_async.wait_for_finish
       end
 
-      it_behaves_like 'does not feed first runner, feeds second runner'
-    end
+      context 'when runner is running' do
+        before do
+          runner.start
+        end
 
-    context 'when first runner does not have corresponding events' do
-      let(:options1) { { filter: { event_types: ['Baz'] } } }
+        context 'when runner is idle' do
+          it 'processes it' do
+            subject
+            expect(runner).to have_received(:checkpoint).with(kind_of(Integer))
+          end
+        end
 
-      it_behaves_like 'does not feed first runner, feeds second runner'
-    end
+        context 'when runner is busy' do
+          before do
+            allow(runner).to receive(:time_to_feed?).and_return(false)
+          end
 
-    context 'when safe position is behind last matching event' do
-      let(:publisher) do
-        Thread.new do
-          PgEventstore.client.multiple do
-            PgEventstore.client.append_to_stream(stream, event1)
-            sleep 0.5
+          it 'does not process it' do
+            subject
+            expect(runner).not_to have_received(:checkpoint)
           end
         end
       end
 
-      before do
-        publisher
-        # Let the async publisher to start and then produce another event which will have unsafe global_position
-        sleep 0.1
-        PgEventstore.client.append_to_stream(stream, event1)
-      end
-
-      after do
-        publisher.join
-      end
-
-      it 'feeds first runner with events until the safe position' do
-        subject
-        expect(runner1).to have_received(:feed).with([a_hash_including('type' => 'Foo')])
-      end
-      it 'feeds second runner with events until the safe position' do
-        subject
-        expect(runner2).to(
-          have_received(:feed).with([a_hash_including('type' => 'Foo'), a_hash_including('type' => 'Bar')])
-        )
+      context 'when runner is not running' do
+        it 'does not process it' do
+          subject
+          expect(runner).not_to have_received(:checkpoint)
+        end
       end
     end
   end

@@ -83,9 +83,7 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
       end
 
       context 'when force lock is enabled' do
-        before do
-          instance.force_lock!
-        end
+        let(:force_lock) { true }
 
         it 'locks first subscription' do
           aggregate_failures do
@@ -245,14 +243,6 @@ RSpec.describe PgEventstore::SubscriptionsLifecycle do
 
     it 'returns added subscriptions' do
       is_expected.to eq([subscription1, subscription2])
-    end
-  end
-
-  describe '#force_lock!' do
-    subject { instance.force_lock! }
-
-    it 'force-locks the instance' do
-      expect { subject }.to change { instance.force_locked? }.from(false).to(true)
     end
   end
 

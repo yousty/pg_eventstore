@@ -589,6 +589,8 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     end
     it 'does not Subscription#updated_at of running Subscription too often' do
       subject
+      # wait for another turn to update the checkpoint. After that - no more unnecessary updates should appear
+      dv(subscription_runner1.subscription).wait_until(timeout: 0.5) { _1.current_position == 1 }
       expect { sleep 0.5 }.not_to change { subscription_runner1.subscription.updated_at }
     end
     it 'does not update Subscription#updated_at of stopped Subscription' do

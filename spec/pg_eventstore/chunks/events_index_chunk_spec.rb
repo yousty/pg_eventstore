@@ -190,8 +190,8 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
     end
   end
 
-  describe '#last_global_position' do
-    subject { instance.last_global_position }
+  describe '#last' do
+    subject { instance.last }
 
     let(:instance) do
       described_class.new(
@@ -217,8 +217,8 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
       end
       let(:indexes) { events_index(event1, event2) }
 
-      it 'returns #global_position of the last index' do
-        is_expected.to eq(indexes.last.global_position)
+      it 'returns last index' do
+        is_expected.to eq(indexes.last)
       end
     end
   end

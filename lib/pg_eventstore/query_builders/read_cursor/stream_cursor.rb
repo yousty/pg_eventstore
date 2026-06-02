@@ -16,7 +16,7 @@ module PgEventstore
           #   @return [Integer, nil]
         end
 
-        class SystemStreamCursor < Struct.new(:from_position, :to_position, :direction, :max_count)
+        class AllStreamCursor < Struct.new(:from_position, :to_position, :direction, :max_count)
           # @!attribute from_position
           #   @return [Integer, nil]
           # @!attribute to_position
@@ -35,7 +35,7 @@ module PgEventstore
           # @option options [Integer, nil] :max_count
           # @return [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
           def from_options(options)
-            new(SystemStreamCursor.new(**options.slice(*SystemStreamCursor.members)))
+            new(AllStreamCursor.new(**options.slice(*AllStreamCursor.members)))
           end
 
           # @param options [Hash]
@@ -47,7 +47,7 @@ module PgEventstore
           # @option options [Integer, nil] :max_count
           # @return [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
           def from_stream_and_options(stream, options)
-            return new(SystemStreamCursor.new(**options.slice(*SystemStreamCursor.members))) if stream.system?
+            return new(AllStreamCursor.new(**options.slice(*AllStreamCursor.members))) if stream.all_stream?
 
             new(RegularStreamCursor.new(**options.slice(*RegularStreamCursor.members)))
           end
@@ -63,7 +63,7 @@ module PgEventstore
           case @cursor
           when RegularStreamCursor
             @cursor.from_revision
-          when SystemStreamCursor
+          when AllStreamCursor
             @cursor.from_position
           else
             raise NotImplementedError
@@ -75,7 +75,7 @@ module PgEventstore
           case @cursor
           when RegularStreamCursor
             @cursor.to_revision
-          when SystemStreamCursor
+          when AllStreamCursor
             @cursor.to_position
           else
             raise NotImplementedError
@@ -99,8 +99,8 @@ module PgEventstore
         end
 
         # @return [Boolean]
-        def system_stream_cursor?
-          @cursor.is_a?(SystemStreamCursor)
+        def all_stream_cursor?
+          @cursor.is_a?(AllStreamCursor)
         end
       end
     end

@@ -2,7 +2,7 @@ module PgEventstore
   module Commands
     module RevisionCheck
       class StreamRevisionComparison
-        def self.verdict: (Integer current_revision, Symbol | Integer expected_revision) -> Symbol
+        def self.verdict: (Integer current_revision, Symbol | Integer expected_revision) -> Symbol?
       end
     end
   end

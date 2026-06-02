@@ -109,7 +109,7 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
       it 'raises error' do
         expect { subject }.to(
           raise_error(
-            PgEventstore::RecordNotFound, "Could not find/update \"subscriptions_set\" record with #{id.inspect} id."
+            PgEventstore::RecordNotFound, 'Could not find/update/delete "subscriptions_set" record by 1.'
           )
         )
       end
@@ -187,7 +187,7 @@ RSpec.describe PgEventstore::SubscriptionsSetQueries do
         expect { subject }.to(
           raise_error(
             PgEventstore::RecordNotFound,
-            "Could not find/update \"subscriptions_set\" record with #{subscriptions_set.id.inspect} id."
+            'Could not find/update/delete "subscriptions_set" record by 1.'
           )
         )
       end

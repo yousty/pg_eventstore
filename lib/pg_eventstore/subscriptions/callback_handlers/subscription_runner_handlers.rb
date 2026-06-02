@@ -57,6 +57,9 @@ module PgEventstore
       # @param global_position [Integer]
       # @return [void]
       def checkpoint(subscription, global_position)
+        return if subscription.current_position == subscription.last_chunk_greatest_position &&
+                  subscription.current_position == global_position
+
         subscription.update(current_position: global_position, last_chunk_greatest_position: global_position)
       end
     end

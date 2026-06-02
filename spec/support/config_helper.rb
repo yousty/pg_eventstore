@@ -19,14 +19,16 @@ class ConfigHelper
     private
 
     def setup_logger
-      return unless ENV['DEBUG'] == '1'
-
-      logger = Logger.new($stdout)
-      logger.level = :debug
-      logger.formatter = proc do |_severity, _time, _progname, msg|
-        "#{Niceql::Prettifier.prettify_sql(msg)}\n"
+      if ENV['DEBUG'] == '1'
+        logger = Logger.new($stdout)
+        logger.level = :debug
+        logger.formatter = proc do |_severity, _time, _progname, msg|
+          "#{Niceql::Prettifier.prettify_sql(msg)}\n"
+        end
+        PgEventstore.logger = logger
+      else
+        PgEventstore.logger = nil
       end
-      PgEventstore.logger = logger
     end
   end
 end

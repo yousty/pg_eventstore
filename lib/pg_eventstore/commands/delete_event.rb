@@ -14,6 +14,7 @@ module PgEventstore
       # @return [Boolean]
       def call(event, force:)
         raise ArgumentError, "Event#stream is nil: #{event.inspect}" unless event.stream
+        return false if queries.events_global_index.global_positions_from_db([event]).empty?
 
         check_records_number_to_lock(event) unless force
         queries.maintenance.delete_event(event)

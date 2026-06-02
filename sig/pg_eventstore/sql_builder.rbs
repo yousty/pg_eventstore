@@ -1,11 +1,37 @@
 module PgEventstore
   class SQLBuilder
+    UNION_MODES: Array[Symbol]
+
+    @from_value: (String | SQLBuilder)?
+    @group_values: Array[String]
+    @join_values: Array[untyped]
+    @limit_value: Integer?
+    @offset_value: Integer?
+    @order_values: Array[String]
+    @select_values: Array[String]
+    @union_mode: Symbol
+    @union_values: Array[SQLBuilder]
+    @where_values: Hash[String, Array[untyped]]
+
+    def self.union_builders: (Array[SQLBuilder] builders, ?mode: Symbol) -> SQLBuilder
+
+    def self.wrap_union_builder: (SQLBuilder builder) -> SQLBuilder
+
+    attr_reader positional_values: Array[untyped]
+    attr_reader table_alias: String?
+
+    attr_writer positional_values_size: Integer
+
     def initialize: () -> void
 
     def from_sql: -> String
 
     # _@param_ `sql`
     def select: (String sql) -> self
+
+    def union_builder?: -> bool
+
+    def union_mode=: (Symbol val) -> void
 
     def unselect: () -> self
 
@@ -41,7 +67,7 @@ module PgEventstore
     def offset: (Integer offset) -> self
 
     # _@param_ `another_builder`
-    def union: (PgEventstore::SQLBuilder another_builder) -> self
+    def union: (SQLBuilder another_builder) -> self
 
     # _@param_ `sql`
     def group: (String sql) -> self
@@ -49,11 +75,6 @@ module PgEventstore
     def remove_group: () -> self
 
     def to_exec_params: () -> [String, ::Array[untyped]]
-
-    def positional_values: () -> ::Array[Object]
-
-    # _@param_ `val`
-    def positional_values_size=: (Integer val) -> Integer
 
     def _to_exec_params: () -> [String, ::Array[untyped]]
 
@@ -75,6 +96,6 @@ module PgEventstore
 
     private
 
-    def merge: (SQLBuilder builder)-> String
+    def merge: (SQLBuilder builder) -> String
   end
 end

@@ -114,12 +114,8 @@ RSpec.describe PgEventstore::Subscription do
     let(:set) { 'FooSet' }
     let(:name) { 'MySubscription1' }
     let(:lock_id) { SubscriptionsSetHelper.create.id }
-    let(:queries) do
-      PgEventstore::SubscriptionQueries.new(
-        PgEventstore.connection,
-        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
-      )
-    end
+    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection, query_strategy) }
+    let(:query_strategy) { PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection) }
 
     context 'when Subscription does not exist' do
       it 'creates it' do
@@ -132,6 +128,14 @@ RSpec.describe PgEventstore::Subscription do
         )
       end
       it { is_expected.to eq(subscription) }
+      it 'creates sql view for the given subscription' do
+        prev_subscription = SubscriptionsHelper.create
+        expect { subject }.to change {
+          query_strategy.exec(<<~SQL).to_a
+            select table_name from information_schema.views where table_name like 'subscription_%'
+          SQL
+        }.from([]).to([ 'table_name' => a_string_starting_with("subscription_#{prev_subscription.id + 1}") ])
+      end
 
       describe 'created Subscription' do
         subject { super(); described_class.new(**queries.find_by(set:, name:)) }
@@ -209,6 +213,22 @@ RSpec.describe PgEventstore::Subscription do
           expect(subscription.options_hash).to eq(existing_subscription.reload.options_hash)
         end
         it { is_expected.to eq(subscription) }
+        it 're-creates subscription SQL view' do
+          # Create sql view for further comparison with the behavior of Subscription#lock!. To do so we need to
+          # create SubscriptionsSet, create sql view, drop SubscriptionsSet
+          subscriptions_set = SubscriptionsSetHelper.create_with_connection
+          queries.lock!(existing_subscription.id, subscriptions_set.id, force: true)
+          queries.create_or_replace_view(
+            existing_subscription.id, { filter: { event_types: ['Foo'] } }, subscriptions_set.id
+          )
+          subscriptions_set.delete
+          view_name = "subscription_#{existing_subscription.id}"
+          expect { subject }.to change {
+            query_strategy.exec_params(<<~SQL, [view_name]).to_a.first&.[]('view_definition')
+              select view_definition from information_schema.views where table_name = $1
+            SQL
+          }.from(a_string_including('Foo'))
+        end
       end
 
       context 'when it is not locked' do

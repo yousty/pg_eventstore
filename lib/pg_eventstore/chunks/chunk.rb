@@ -21,6 +21,11 @@ module PgEventstore
       def size
         raise NotImplementedError
       end
+
+      # @return [Object, nil]
+      def last
+        raise NotImplementedError
+      end
     end
   end
 end

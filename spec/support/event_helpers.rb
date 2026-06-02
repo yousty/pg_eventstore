@@ -5,7 +5,11 @@ module EventHelpers
   # @param stream [PgEventstore::Stream]
   # @return [Array<PgEventstore::Event>]
   def safe_read(stream)
-    PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [stream.to_hash] } })
+    if stream.all_stream?
+      PgEventstore.client.read(PgEventstore::Stream.all_stream)
+    else
+      PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { filter: { streams: [stream.to_hash] } })
+    end
   end
 
   # @param events [PgEventstore::Event]

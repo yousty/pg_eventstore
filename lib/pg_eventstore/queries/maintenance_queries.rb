@@ -103,7 +103,7 @@ module PgEventstore
                      returning event_type_partition_id, global_position, stream_revision
             SQL
           end
-          first_updated_event ||= updated_events.first
+          first_updated_event ||= updated_events.min_by { _1['stream_revision'] }
           break if updated_events.empty?
 
           stream_revision += updated_events.size

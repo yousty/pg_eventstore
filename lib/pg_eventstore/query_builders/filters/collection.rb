@@ -110,12 +110,12 @@ module PgEventstore
         # This example shows that two filters affect on different set of partitions - ('FooCtx', 'Foo') and
         # ('FooCtx', 'Bar'). Thus, we keep both of them.
         class Index
-          attr_reader :branches
-          attr_accessor :leaf
+          attr_reader :path
+          attr_accessor :stream_filter
 
           def initialize
-            @branches = {}
-            @leaf = nil
+            @path = {}
+            @stream_filter = nil
           end
 
           # @param stream_filter [PgEventstore::QueryBuilders::Filters::StreamFilter]
@@ -123,23 +123,23 @@ module PgEventstore
           def index(stream_filter)
             root = self
             stream_filter.to_h.each_value do |val|
-              root.branches[val] ||= self.class.new
-              root = root.branches[val]
+              root.path[val] ||= self.class.new
+              root = root.path[val]
             end
-            root.leaf = stream_filter
+            root.stream_filter = stream_filter
           end
 
           # @return [Boolean]
           def empty?
-            branches.empty? && leaf.nil?
+            path.empty? && stream_filter.nil?
           end
 
           # @param root [PgEventstore::QueryBuilders::Filters::Collection::Index]
           # @return [Array<PgEventstore::QueryBuilders::Filters::StreamFilter>]
           def find_non_overlapping(root = self)
-            return [root.leaf] if root.leaf
+            return [root.stream_filter] if root.stream_filter
 
-            root.branches.each_value.flat_map do |branch|
+            root.path.each_value.flat_map do |branch|
               find_non_overlapping(branch)
             end
           end

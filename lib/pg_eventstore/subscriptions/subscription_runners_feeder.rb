@@ -15,7 +15,7 @@ module PgEventstore
       runners = runners.select(&:running?).select(&:time_to_feed?)
       return if runners.empty?
 
-      feed_strategies_collection = SubscriptionFeedStrategies::Collection.create(
+      feed_strategies_collection = SubscriptionFeedStrategy::Collection.create(
         runners,
         connection,
         QueryStrategy::Async.new(connection)

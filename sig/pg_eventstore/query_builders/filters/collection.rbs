@@ -33,9 +33,9 @@ module PgEventstore
 
         class Index
 
-          attr_reader branches: Hash[Symbol, Index]
+          attr_reader path: Hash[String, Index]
 
-          attr_accessor leaf: QueryBuilders::Filters::StreamFilter?
+          attr_accessor stream_filter: QueryBuilders::Filters::StreamFilter?
 
           def empty?: -> bool
 

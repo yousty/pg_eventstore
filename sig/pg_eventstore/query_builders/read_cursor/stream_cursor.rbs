@@ -9,20 +9,20 @@ module PgEventstore
           attr_accessor max_count: Integer?
         end
 
-        class SystemStreamCursor < Struct[untyped]
+        class AllStreamCursor < Struct[untyped]
           attr_accessor from_position: Integer?
           attr_accessor to_position: Integer?
           attr_accessor direction: String? | Symbol?
           attr_accessor max_count: Integer?
         end
 
-        @cursor: RegularStreamCursor | SystemStreamCursor
+        @cursor: RegularStreamCursor | AllStreamCursor
 
         def self.from_options: (Hash[untyped, untyped] options) -> StreamCursor
 
         def self.from_stream_and_options: (Stream stream, Hash[untyped, untyped] options) -> StreamCursor
 
-        def initialize: (RegularStreamCursor | SystemStreamCursor cursor) -> void
+        def initialize: (RegularStreamCursor | AllStreamCursor cursor) -> void
 
         def direction: -> (String | Symbol)?
 
@@ -32,7 +32,7 @@ module PgEventstore
 
         def max_count=: (Integer? val) -> void
 
-        def system_stream_cursor?: -> bool
+        def all_stream_cursor?: -> bool
 
         def to: -> Integer?
       end

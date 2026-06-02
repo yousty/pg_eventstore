@@ -24,14 +24,14 @@ RSpec.describe PgEventstore::SubscriptionServiceQueries do
 
     context 'when unsafe position exists' do
       let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
-      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Bar', stream_id: '1') }
 
       # event1 gets created first, but its transaction finishes last, thus making event2 be in front of event1 for a
       # short period of time
       let(:event1) do
         Thread.new do
-          event = PgEventstore::Event.new
-          PgEventstore.client.multiple do
+          event = PgEventstore::Event.new(type: 'FooT')
+          transaction_queries.transaction(:repeatable_read) do
             PgEventstore.client.append_to_stream(stream1, event)
             sleep 0.2
           end
@@ -39,15 +39,20 @@ RSpec.describe PgEventstore::SubscriptionServiceQueries do
       end
       let(:event2) do
         Thread.new do
-          event = PgEventstore::Event.new
-          PgEventstore.client.multiple do
+          event = PgEventstore::Event.new(type: 'BarT')
+          transaction_queries.transaction(:repeatable_read) do
             sleep 0.1
             PgEventstore.client.append_to_stream(stream2, event)
           end
         end
       end
 
+      let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
+      let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
+
       before do
+        partition_queries.create_partitions(stream1, 'FooT')
+        partition_queries.create_partitions(stream2, 'BarT')
         event1
         event2
       end
@@ -72,18 +77,20 @@ RSpec.describe PgEventstore::SubscriptionServiceQueries do
       let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
       let(:event) do
         event = PgEventstore::Event.new
-        PgEventstore.client.append_to_stream(stream, event)
+        event = PgEventstore.client.append_to_stream(stream, event)
         PgEventstore.maintenance.delete_event(event)
         PgEventstore.connection.with do |conn|
           conn.exec('delete from events_horizon')
         end
         Thread.new do
-          PgEventstore.client.multiple do
+          transaction_queries.transaction(:repeatable_read) do
             PgEventstore.client.append_to_stream(stream, event)
             sleep 0.2
           end
         end
       end
+
+      let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
 
       before do
         event

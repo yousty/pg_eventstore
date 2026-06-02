@@ -8,20 +8,19 @@ module PgEventstore
 
       # @return [String]
       TABLE_NAME = 'partitions'
-      private_constant :TABLE_NAME
 
       class << self
-        # @param filter_collection [PgEventstore::QueryBuilders::Filters::Collection]
+        # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
         # @param scope [Symbol] what kind of partition we want to receive. Available options are :event_type, :context,
         #   :stream_name and :auto. In :auto mode the scope will be calculated based on stream_filters and event_filters
         # @return [PgEventstore::SQLBuilder]
-        def assemble_sql_builder(filter_collection, scope: :event_type)
-          if filter_collection.has_event_types?
+        def assemble_sql_builder(filters_collection, scope: :event_type)
+          if filters_collection.has_event_types?
             # When event type filters are present - they apply constraints as is. Thus, we can't look up partitions by
             # stream attributes separately.
             filtering = new
-            filter_collection.collection.each(&filtering.method(:add_filter_row))
-            set_partitions_scope(filtering, has_stream_name_filter?(filter_collection), true, scope)
+            filters_collection.collection.each(&filtering.method(:add_filter_row))
+            set_partitions_scope(filtering, has_stream_name_filter?(filters_collection), true, scope)
           else
             # When event type filters are absent - we can look up partitions by context and context/stream_name
             # separately, thus potentially producing one-to-one mapping of filter-to-partition with :auto scope. For
@@ -29,7 +28,7 @@ module PgEventstore
             # [{ context: 'FooCtx', stream_name: 'Bar'}, { context: 'BarCtx' }], then we would be able to look up
             # partitions by the exact match, returning only two of them according to the provided filters - stream
             # partition for first filter and context partition for second filter.
-            builders = filter_collection.collection.map do |filter_row|
+            builders = filters_collection.collection.map do |filter_row|
               filtering = new
               filtering.add_filter_row(filter_row)
               set_partitions_scope(filtering, filter_row.stream_filter.stream_name?, false, scope)
@@ -39,11 +38,14 @@ module PgEventstore
             sql_builder ||
               begin
                 filtering = new
-                set_partitions_scope(filtering, has_stream_name_filter?(filter_collection), false, scope)
+                set_partitions_scope(filtering, has_stream_name_filter?(filters_collection), false, scope)
               end
           end
         end
 
+        # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
+        # @param scope [Symbol]
+        # @return [PgEventstore::SQLBuilder]
         def from_filter_row(filter_row, scope: :event_type)
           filtering = new
           filtering.add_filter_row(filter_row)
@@ -52,32 +54,15 @@ module PgEventstore
           set_partitions_scope(filtering, has_stream_name_filter, has_event_type_filters, scope)
         end
 
-        # @param options [Hash]
-        # @return [Array<String>]
-        def extract_event_types_filter(options)
-          options in { filter: { event_types: Array => event_types } }
-          event_types = event_types&.grep(String)
-          event_types || []
-        end
-
-        # @param stream_attrs [Hash]
-        # @return [Boolean]
-        def correct_stream_filter?(stream_attrs)
-          result = (stream_attrs in { context: String, stream_name: String } | { context: String })
-          return true if result
-
-          PgEventstore.logger&.debug(<<~TEXT)
-            Ignoring unsupported stream filter format for grouped read #{stream_attrs.compact.inspect}. \
-            See docs/reading_events.md docs for supported formats.
-          TEXT
-          false
-        end
-
         private
 
-        def has_stream_name_filter?(filter_collection)
-          filter_collection.collection.any? { |filter_row| filter_row.stream_filter&.stream_name? }
+        # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+        # @return [Boolean]
+        # rubocop:disable Naming/PredicatePrefix
+        def has_stream_name_filter?(filters_collection)
+          filters_collection.collection.any? { |filter_row| filter_row.stream_filter&.stream_name? }
         end
+        # rubocop:enable Naming/PredicatePrefix
 
         # @param partitions_filtering [PgEventstore::QueryBuilders::PartitionsFiltering]
         # @param has_stream_name_filters [Boolean]
@@ -142,6 +127,8 @@ module PgEventstore
         TABLE_NAME
       end
 
+      # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
+      # @return [PgEventstore::SQLBuilder]
       def add_filter_row(filter_row)
         stream_filter = filter_row.stream_filter
         event_type_filters = filter_row.event_type_filters
@@ -172,28 +159,34 @@ module PgEventstore
         @sql_builder.where('event_type IS NOT NULL')
       end
 
+      # @return [PgEventstore::SQLBuilder]
       def with_stream_names
         @sql_builder.where('stream_name IS NOT NULL')
       end
 
+      # @return [PgEventstore::SQLBuilder]
       def without_event_types
         @sql_builder.where('event_type IS NULL')
       end
 
+      # @return [PgEventstore::SQLBuilder]
       def without_stream_names
         @sql_builder.where('stream_name IS NULL')
       end
 
+      # @return [PgEventstore::SQLBuilder]
       def order_by_event_type
-        @sql_builder.order("event_type asc, id asc")
+        @sql_builder.order('event_type asc, id asc')
       end
 
+      # @return [PgEventstore::SQLBuilder]
       def order_by_stream_name
-        @sql_builder.order("context asc, stream_name asc")
+        @sql_builder.order('context asc, stream_name asc')
       end
 
+      # @return [PgEventstore::SQLBuilder]
       def order_by_context
-        @sql_builder.order("context asc")
+        @sql_builder.order('context asc')
       end
     end
   end

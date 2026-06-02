@@ -5,6 +5,9 @@ module PgEventstore
     MIN_EVENTS_PER_CHUNK: Integer
     INITIAL_EVENTS_PER_CHUNK: Integer
 
+    @events_processor: EventsProcessor
+    @stats: SubscriptionHandlerPerformance
+
     # Returns the value of attribute subscription.
     attr_reader subscription: Subscription
 

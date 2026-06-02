@@ -10,7 +10,7 @@ module PgEventstore
           attr_accessor revisions: Hash[String, Symbol] | Hash[String, Integer]
         end
 
-        def self.build: (Symbol | Integer | Hash[String, Symbol] |
+        def self.build: ((Symbol | Integer)? | Hash[String, Symbol] |
             Hash[String, Integer] expected_revision) -> (StreamRevision | EventTypeRevisions)?
       end
     end

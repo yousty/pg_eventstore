@@ -160,15 +160,6 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
           expect(last_response.body).to include('Delete stream')
         end
       end
-
-      context 'when filtering by "$streams" system stream' do
-        let(:params) { { filter: { system_stream: '$streams' } } }
-
-        it 'displays 0-stream revision events' do
-          subject
-          expect(rendered_event_ids).to eq([events3.first.id, events1.first.id])
-        end
-      end
     end
 
     describe 'resolving links' do
@@ -1335,12 +1326,12 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       end
 
       context 'when unaccepted stream attributes are passed' do
-        let(:params) { PgEventstore::Stream.system_stream('$some-stream').to_hash }
+        let(:params) { { stream_id: '1' } }
 
         it 'flashes error message' do
           subject
           expect(flash_message).to(
-            eq(message: "Could not delete #{params}. It is not valid stream for deletion.", kind: 'error')
+            eq(message: "Could not delete #{{ context: nil, stream_name: nil, stream_id: '1' }.inspect}. It is not valid stream for deletion.", kind: 'error')
           )
         end
         it 'does not delete anything' do

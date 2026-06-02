@@ -65,7 +65,11 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
       # Feeding is only available when runner is running. So start it, put some events into a chunk and stop it.
       subscription_runner.start
       dv(subscription_runner).wait_until(timeout: 0.1) { _1.state == 'running' }
-      subscription_runner.feed(Array.new(5) { |i| { 'global_position' => i } })
+      subscription_runner.feed(
+        EventIndexesChunk.create_indexes(
+          Array.new(5) { |i| { 'global_position' => i, 'event_type_partition_id' => 2 } }
+        )
+      )
       subscription_runner.stop_async.wait_for_finish
     end
 
@@ -78,8 +82,8 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
     it 'resets subscription#total_processed_events' do
       expect { subject }.to change { subscription.reload.total_processed_events }.to(0)
     end
-    it "resets current runner's chunk" do
-      expect { subject }.to change { events_processor.events_left_in_chunk }.from(be > 0).to(0)
+    it "resets current runner's events repository" do
+      expect { subject }.to change { events_processor.events_left_in_repo }.from(be > 0).to(0)
     end
   end
 end

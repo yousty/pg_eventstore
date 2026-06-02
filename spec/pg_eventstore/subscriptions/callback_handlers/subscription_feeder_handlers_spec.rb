@@ -221,11 +221,7 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
           consumer: PgEventstore::EventsProcessorConsumer::Single.new(proc { |event| precessed_events1.push(event) }),
           graceful_shutdown_timeout: 0
         ),
-        subscription: SubscriptionsHelper.create_with_connection(
-          set: 'Foo',
-          name: 'Bar',
-          options: { filter: { event_types: ['Bar'] } }
-        )
+        subscription: subscription1
       )
     end
     let(:subscription_runner2) do
@@ -235,13 +231,25 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
           consumer: PgEventstore::EventsProcessorConsumer::Single.new(proc { |event| precessed_events2.push(event) }),
           graceful_shutdown_timeout: 0
         ),
-        subscription: SubscriptionsHelper.create_with_connection(
-          set: 'Foo',
-          name: 'Baz',
-          options: { filter: { event_types: ['Baz'] } }
-        )
+        subscription: subscription2
       )
     end
+
+    let(:subscription1) do
+      SubscriptionsHelper.create_with_connection(
+        set: 'Foo',
+        name: 'Bar',
+        options: { filter: { event_types: ['Bar'] } }
+      )
+    end
+    let(:subscription2) do
+      SubscriptionsHelper.create_with_connection(
+        set: 'Foo',
+        name: 'Baz',
+        options: { filter: { event_types: ['Baz'] } }
+      )
+    end
+    let(:subscriptions_set) { SubscriptionsSetHelper.create_with_connection(name: 'Foo') }
 
     let(:precessed_events1) { [] }
     let(:precessed_events2) { [] }
@@ -255,6 +263,8 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
     end
 
     before do
+      subscription1.lock!(subscriptions_set.id)
+      subscription2.lock!(subscriptions_set.id)
       subscriptions_lifecycle.runners.push(subscription_runner1, subscription_runner2)
       subscriptions_lifecycle.runners.each(&:start)
       PgEventstore.client.append_to_stream(stream, [bar_event, baz_event, baz_event])

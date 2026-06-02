@@ -1,0 +1,15 @@
+module PgEventstore
+  module QueryStrategy
+    class Async
+      include QueryStrategy
+
+      @connection: Connection
+
+      def initialize: (Connection connection) -> void
+
+      private
+
+      def run: (Symbol method, *untyped exec_args) -> untyped
+    end
+  end
+end

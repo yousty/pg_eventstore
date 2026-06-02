@@ -56,18 +56,6 @@ module PgEventstore
       @runners.map(&:subscription)
     end
 
-    # Sets the force_lock flag to true. If set - all related Subscriptions will ignore their lock state and will be
-    # locked by the new SubscriptionsSet.
-    # @return [void]
-    def force_lock!
-      message = <<~TEXT
-        Usage of #force_lock! is deprecated and will be removed in v2. Please pass :force_lock keyword argument when \
-        initializing SubscriptionsManager. Example: PgEventstore.subscriptions_manager(force_lock: true)
-      TEXT
-      Utils.deprecation_warning(message)
-      @force_lock = true
-    end
-
     # @return [Boolean]
     def force_locked?
       @force_lock

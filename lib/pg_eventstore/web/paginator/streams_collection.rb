@@ -52,7 +52,7 @@ module PgEventstore
         def total_count
           @total_count ||=
             begin
-              sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination(options)
+              sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination({})
               sql_builder.remove_limit.remove_group.remove_order
               count = estimate_count(sql_builder)
               return count if count > MAX_NUMBER_TO_COUNT

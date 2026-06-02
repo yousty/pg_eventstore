@@ -6,6 +6,8 @@ module PgEventstore
 
       @handler: _RawEventsHandler
 
+      @last_unprocessed_events: Array[Hash[String, untyped]]?
+
       def initialize: (_RawEventsHandler handler) -> void
     end
   end

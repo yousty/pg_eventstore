@@ -107,6 +107,20 @@ PgEventstore.client.append_to_stream(bar_stream, PgEventstore::Event.new(type: '
 
 You will then see the output of your subscription handlers. To gracefully stop the subscriptions process, use `kill -TERM <pid>` command.
 
+### Subscription position
+
+You can set the initial position of new subscription to start with:
+
+```ruby
+subscriptions_manager.subscribe(
+  'MyAwesomeSubscription',
+  handler: proc { |event| puts event },
+  options: { from_position: 123 }
+)
+```
+
+This allows to jump to the certain position to start with and skip unwanted events. Thus, events with #global_position **greater than** 123 will be processed(e.g. 124, 125, ...) only.
+
 ## Overriding Subscription config values
 
 You can override `subscription_pull_interval`, `subscription_max_retries`, `subscription_retries_interval`, `subscription_restart_terminator`, `failed_subscription_notifier` and `subscription_graceful_shutdown_timeout` config values (see [**Configuration**](configuration.md) chapter for details) for the specific subscription by providing the corresponding arguments. Example:

@@ -6,6 +6,7 @@ module PgEventstore
   class SQLBuilder
     class << self
       # @param builders [Array<PgEventstore::SQLBuilder>]
+      # @param mode [Symbol]
       # @return [PgEventstore::SQLBuilder]
       def union_builders(builders, mode: :all)
         union_builder = builders[1..].each_with_object(builders[0]) do |builder, first_builder|
@@ -15,6 +16,8 @@ module PgEventstore
         union_builder
       end
 
+      # @param builder [PgEventstore::SQLBuilder]
+      # @return [PgEventstore::SQLBuilder]
       def wrap_union_builder(builder)
         new.tap do |b|
           b.select('*')
@@ -28,6 +31,8 @@ module PgEventstore
 
     # @return [Array<Object>] sql positional values
     attr_reader :positional_values
+    # @return [String, nil]
+    attr_reader :table_alias
     # @return [Integer]
     attr_writer :positional_values_size
 
@@ -78,7 +83,7 @@ module PgEventstore
       self
     end
 
-    # @param table_name [String | SQLBuilder]
+    # @param table_name [String, SQLBuilder]
     # @return [self]
     def from(table_name)
       @from_value = table_name
@@ -180,10 +185,6 @@ module PgEventstore
       raise "Unknown UNION mode #{val.inspect}. Available modes are: #{UNION_MODES}" unless UNION_MODES.include?(val)
 
       @union_mode = val
-    end
-
-    def table_alias
-      @table_alias
     end
 
     protected

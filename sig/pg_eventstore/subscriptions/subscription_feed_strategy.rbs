@@ -1,0 +1,11 @@
+module PgEventstore
+  module SubscriptionFeedStrategy
+    def add: (*SubscriptionRunner runners) -> Array[SubscriptionRunner]
+
+    def any?: -> bool
+
+    def feed: (Integer safe_position) -> void
+
+    def size: -> Integer
+  end
+end

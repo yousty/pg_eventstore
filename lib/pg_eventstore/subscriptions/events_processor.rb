@@ -13,9 +13,10 @@ module PgEventstore
     # @param graceful_shutdown_timeout [Integer, Float] seconds. Determines how long to wait before force-shutdown
     #   the runner when stopping it using #stop_async
     # @param consumer [PgEventstore::EventsProcessorConsumer]
-    # @param recovery_strategies [Array<PgEventstore::RunnerRecoveryStrategy>]
     # @param events_repository [PgEventstore::Chunks::Repository]
-    def initialize(graceful_shutdown_timeout:, consumer:, events_repository:, recovery_strategies: [])
+    # @param recovery_strategies [Array<PgEventstore::RunnerRecoveryStrategy>]
+    def initialize(graceful_shutdown_timeout:, consumer:, events_repository: Chunks::Repository.new,
+                   recovery_strategies: [])
       @consumer = consumer
       @events_repository = events_repository
       @repository_cond = @events_repository.new_cond
@@ -30,15 +31,16 @@ module PgEventstore
     # @param chunk [PgEventstore::Chunks::Chunk]
     # @return [void]
     def feed(chunk)
-      raise EmptyChunkFedError.new('Empty chunk was fed!') if chunk.empty?
-      raise ArgumentError unless chunk.is_a?(Chunks::EventsIndexChunk)
+      raise EmptyChunkFedError.new('Empty chunk was fed!') if chunk.drained?
 
       within_state(:running) do
-        callbacks.run_callbacks(:feed, chunk.last_global_position)
+        callbacks.run_callbacks(:feed, chunk.last.global_position)
         @events_repository.add_chunk(chunk, condition: @repository_cond)
       end
     end
 
+    # @param global_position [Integer]
+    # @return [void]
     def checkpoint(global_position)
       within_state(:running) do
         return unless @events_repository.empty?
@@ -49,7 +51,7 @@ module PgEventstore
 
     # Number of unprocessed events which are currently in a queue
     # @return [Integer]
-    def events_left_in_chunk
+    def events_left_in_repo
       @events_repository.size
     end
 

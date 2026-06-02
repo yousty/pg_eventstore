@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 module PgEventstore
-  module SubscriptionFeedStrategies
+  # @!visibility private
+  module SubscriptionFeedStrategy
     # @param runners [PgEventstore::SubscriptionRunner, Array<PgEventstore::SubscriptionRunner>]
     # @return [Array<PgEventstore::SubscriptionRunner>]
     def add(*runners)

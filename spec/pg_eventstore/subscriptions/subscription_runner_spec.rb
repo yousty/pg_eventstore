@@ -11,11 +11,14 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
   let(:events_processor) do
     PgEventstore::EventsProcessor.new(
-      consumer: PgEventstore::EventsProcessorConsumer::Single.new(handler), graceful_shutdown_timeout: 5
+      consumer: PgEventstore::EventsProcessorConsumer::Single.new(handler), graceful_shutdown_timeout: 5,
+      recovery_strategies:
     )
   end
   let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo') }
   let(:handler) { proc {} }
+  let(:recovery_strategies) { [] }
+  let(:graceful_shutdown_timeout) { 5 }
 
   describe '#next_chunk_query_opts' do
     subject { instance.next_chunk_query_opts }
@@ -117,7 +120,12 @@ RSpec.describe PgEventstore::SubscriptionRunner do
               instance.start
               dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
               events_processor.feed(
-                [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
+                EventIndexesChunk.create_indexes(
+                  [
+                    { 'event_type_partition_id' => 1, 'global_position' => 1 },
+                    { 'event_type_partition_id' => 3, 'global_position' => 2 },
+                  ]
+                )
               )
             end
 
@@ -136,7 +144,11 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             instance.start
             dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
             stats.track_exec_time { sleep 0.2 }
-            instance.feed(Array.new(100) { |i| { 'id' => i, 'global_position' => i } })
+            instance.feed(
+              EventIndexesChunk.create_indexes(
+                Array.new(100) { |i| { 'event_type_partition_id' => i, 'global_position' => i } }
+              )
+            )
           end
 
           after do
@@ -162,7 +174,12 @@ RSpec.describe PgEventstore::SubscriptionRunner do
               instance.start
               dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
               events_processor.feed(
-                [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
+                EventIndexesChunk.create_indexes(
+                  [
+                    { 'event_type_partition_id' => 1, 'global_position' => 1 },
+                    { 'event_type_partition_id' => 3, 'global_position' => 2 },
+                  ]
+                )
               )
             end
 
@@ -192,7 +209,12 @@ RSpec.describe PgEventstore::SubscriptionRunner do
               instance.start
               dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
               events_processor.feed(
-                [{ 'id' => 1, 'global_position' => 1 }, { 'id' => 3, 'global_position' => 2 }]
+                EventIndexesChunk.create_indexes(
+                  [
+                    { 'event_type_partition_id' => 1, 'global_position' => 1 },
+                    { 'event_type_partition_id' => 3, 'global_position' => 2 },
+                  ]
+                )
               )
             end
 
@@ -208,22 +230,19 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       end
     end
 
-    describe 'the result' do
-      before do
-        subscription.update(
-          current_position: 123, options: { filter: { event_types: ['Foo'] }, resolve_link_tos: true }
-        )
+    describe ':resolve_link_tos' do
+      subject { super()[:resolve_link_tos] }
+
+      context 'when subscription does not define :resolve_link_tos option' do
+        it { is_expected.to eq(false) }
       end
 
-      it 'returns query options' do
-        is_expected.to(
-          eq(
-            filter: { event_types: ['Foo'] },
-            resolve_link_tos: true,
-            from_position: 124,
-            max_count: described_class::INITIAL_EVENTS_PER_CHUNK
-          )
-        )
+      context 'when subscription defines :resolve_link_tos option' do
+        before do
+          subscription.update(options: { resolve_link_tos: true })
+        end
+
+        it { is_expected.to eq(true) }
       end
     end
   end
@@ -261,12 +280,12 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
   describe 'processing async action' do
     subject do
-      instance.feed([event1, event2])
+      instance.feed(EventIndexesChunk.create_indexes([event_idx1, event_idx2]))
       dv.wait_until(timeout: 0.8) { subscription.reload.total_processed_events == 2 }
     end
 
-    let(:event1) { { 'global_position' => 12, 'data' => { 'foo' => 'bar' } } }
-    let(:event2) { { 'global_position' => 23, 'data' => { 'baz' => 'bar' } } }
+    let(:event_idx1) { { 'global_position' => 12, 'event_type_partition_id' => 2 } }
+    let(:event_idx2) { { 'global_position' => 23, 'event_type_partition_id' => 2 } }
     let(:handler) { proc { sleep 0.1 } }
 
     before do
@@ -284,7 +303,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       expect { subject }.to change { subscription.reload.average_event_processing_time }.to(be_between(0.1, 0.11))
     end
     it 'updates Subscription#current_position' do
-      expect { subject }.to change { subscription.reload.current_position }.to(event2['global_position'])
+      expect { subject }.to change { subscription.reload.current_position }.to(event_idx2['global_position'])
     end
     it 'updates Subscription#total_processed_events' do
       expect { subject }.to change { subscription.reload.total_processed_events }.by(2)
@@ -293,7 +312,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
   describe 'on error' do
     subject do
-      instance.feed([event])
+      instance.feed(EventIndexesChunk.create_indexes([event_idx]))
       dv(processed_events).wait_until(timeout: 0.6) { _1.size == 1 }
     end
 
@@ -310,7 +329,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     end
     let(:error) { StandardError.new('You rolled 1. Critical failure!') }
     let(:processed_events) { [] }
-    let(:event) { { 'id' => SecureRandom.uuid, 'global_position' => 1 } }
+    let(:event_idx) { { 'global_position' => 1, 'event_type_partition_id' => 2 } }
     let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', time_between_restarts: 0) }
 
     before do
@@ -336,22 +355,17 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
   describe 'on restart' do
     subject do
-      instance.feed(['id' => SecureRandom.uuid, 'global_position' => 1])
+      instance.feed(EventIndexesChunk.create_indexes([{ 'event_type_partition_id' => 2, 'global_position' => 1 }]))
       dv.wait_until(timeout: 1) { subscription.reload.restart_count > 0 }
     end
 
     let(:handler) { proc { raise 'You rolled 1. Critical failure!' } }
     let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo') }
 
-    let(:events_processor) do
-      PgEventstore::EventsProcessor.new(
-        consumer: PgEventstore::EventsProcessorConsumer::Single.new(handler),
-        graceful_shutdown_timeout: 0,
-        recovery_strategies: [
-          DummyErrorRecovery.new(recoverable_message: 'You rolled 1. Critical failure!', seconds_before_recovery: 0.1),
-        ]
-      )
+    let(:recovery_strategies) do
+      [DummyErrorRecovery.new(recoverable_message: 'You rolled 1. Critical failure!', seconds_before_recovery: 0.1)]
     end
+    let(:graceful_shutdown_timeout) { 0 }
 
     before do
       instance.start
@@ -385,9 +399,14 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'on fed' do
-    subject { instance.feed(raw_events) }
+    subject { instance.feed(EventIndexesChunk.create_indexes(event_indexes)) }
 
-    let(:raw_events) { [{ 'global_position' => 2 }, { 'global_position' => 3 }] }
+    let(:event_indexes) do
+      [
+        { 'global_position' => 2, 'event_type_partition_id' => 2 },
+        { 'global_position' => 3, 'event_type_partition_id' => 2 },
+      ]
+    end
 
     before do
       subscription.update(last_chunk_greatest_position: 1)
@@ -411,10 +430,77 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     end
 
     context 'when events are empty' do
-      let(:raw_events) { [] }
+      let(:event_indexes) { [] }
 
       it 'raises error' do
         expect { subject }.to raise_error(PgEventstore::EmptyChunkFedError)
+      end
+    end
+  end
+
+  describe 'on checkpoint' do
+    subject { instance.checkpoint(position) }
+
+    let(:position) { 123 }
+
+    context 'when instance is running' do
+      before do
+        instance.start
+        dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
+      end
+
+      after do
+        instance.stop_async.wait_for_finish
+      end
+
+      context 'when there are currently no events to process' do
+        it 'updates Subscription#current_position' do
+          expect { subject }.to change { subscription.reload.current_position }.to(position)
+        end
+        it 'updates Subscription#last_chunk_greatest_position' do
+          expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(position)
+        end
+      end
+
+      context 'when there are events to process' do
+        let(:handler) { proc { sleep 0.2 } }
+
+        before do
+          instance.feed(
+            EventIndexesChunk.create_indexes(
+              [
+                { 'event_type_partition_id' => 2, 'global_position' => 1 },
+                { 'event_type_partition_id' => 2, 'global_position' => 2 },
+              ]
+            )
+          )
+        end
+
+        it 'does not update Subscription#current_position' do
+          expect { subject }.not_to change { subscription.reload.current_position }
+        end
+        it 'does not update Subscription#last_chunk_greatest_position' do
+          expect { subject }.not_to change { subscription.reload.last_chunk_greatest_position }
+        end
+      end
+
+      context 'when subscription is already at the given checkpoint' do
+        before do
+          subscription.update(current_position: position, last_chunk_greatest_position: position)
+        end
+
+        it 'does not update the subscription' do
+          expect { subject }.not_to change { subscription.reload.updated_at }
+        end
+      end
+    end
+
+    context 'when instance is not running' do
+      it 'does not update Subscription#current_position' do
+        expect { subject }.not_to change { subscription.reload.current_position }
+      end
+      it 'does not update Subscription#last_chunk_greatest_position' do
+        expect { subject }.not_to change { subscription.reload.last_chunk_greatest_position }
       end
     end
   end

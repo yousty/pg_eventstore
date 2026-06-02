@@ -4,16 +4,20 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
   it { is_expected.to be_a(PgEventstore::Extensions::CallbackHandlersExtension) }
 
   describe '.consume_events' do
-    subject { described_class.consume_events(consumer, callbacks, raw_events, raw_events_cond) }
+    subject { described_class.consume_events(consumer, callbacks, repository, repository_cond) }
 
     let(:callbacks) { PgEventstore::Callbacks.new }
     let(:consumer) do
       PgEventstore::EventsProcessorConsumer::Single.new(proc { |raw_event| processed_events.push(raw_event) })
     end
-    let(:raw_events) { PgEventstore::SynchronizedArray.new([raw_event1, raw_event2]) }
+    let(:repository) do
+      repo = PgEventstore::Chunks::Repository.new
+      repo.add_chunk(InstantChunk.new([raw_event1, raw_event2]))
+      repo
+    end
     let(:raw_event1) { { 'global_position' => 1 } }
     let(:raw_event2) { { 'global_position' => 2 } }
-    let(:raw_events_cond) { raw_events.new_cond }
+    let(:repository_cond) { repository.new_cond }
     let(:processed_events) { [] }
 
     context 'when consumer is Single' do
@@ -21,7 +25,7 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
         expect { subject }.to change { processed_events }.to([raw_event1])
       end
       it 'removes processed event from the queue' do
-        expect { subject }.to change { raw_events }.to([raw_event2])
+        expect { subject }.to change { repository.size }.by(-1)
       end
     end
 
@@ -34,7 +38,7 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
         expect { subject }.to change { processed_events }.to([[raw_event1, raw_event2]])
       end
       it 'removes processed events from the queue' do
-        expect { subject }.to change { raw_events }.to([])
+        expect { subject }.to change { repository.size }.to(0)
       end
     end
   end

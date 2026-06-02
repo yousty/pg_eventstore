@@ -26,14 +26,13 @@ module PgEventstore
         # _@param_ `delimiter`
         def number_with_delimiter: (Integer number, ?delimiter: String) -> String
 
-        # _@param_ `event`
-        def stream_path: (PgEventstore::Event event) -> String
+        def stream_path: (Stream stream) -> String
 
         # _@param_ `starting_id`
         def build_starting_id_link: ((String | Integer)? starting_id) -> String
 
         # _@param_ `params`
-        def build_path: ((::Hash[untyped, untyped] | ::Array[untyped]) params) -> String
+        def build_path: ((::Hash[untyped, untyped] | ::Array[untyped]) params, ?base_url: String) -> String
       end
     end
   end

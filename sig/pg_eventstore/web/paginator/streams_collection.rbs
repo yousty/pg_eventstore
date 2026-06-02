@@ -1,0 +1,30 @@
+module PgEventstore
+  module Web
+    module Paginator
+      class StreamsCollection < BaseCollection
+        SQL_DIRECTIONS: ::Hash[String, Symbol]
+        PER_PAGE: ::Hash[String, Integer]
+        MAX_NUMBER_TO_COUNT: Integer
+
+        @collection: Array[Stream]
+        @total_count: Integer
+
+        def collection: -> Array[Stream]
+
+        def next_page_starting_id: -> Integer?
+
+        def prev_page_starting_id: -> Integer?
+
+        def total_count: -> Integer
+
+        private
+
+        def estimate_count: (SQLBuilder sql_builder) -> Integer
+
+        def regular_count: (SQLBuilder sql_builder) -> Integer
+
+        def starting_position: (SQLBuilder sql_builder) -> Integer?
+      end
+    end
+  end
+end

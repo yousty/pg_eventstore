@@ -95,4 +95,18 @@ RSpec.describe PgEventstore::SubscriptionRunnerHandlers do
       expect { subject }.to change { subscription.reload.state }.to(state)
     end
   end
+
+  describe '.checkpoint' do
+    subject { described_class.checkpoint(subscription, global_position) }
+
+    let(:subscription) { SubscriptionsHelper.create_with_connection }
+    let(:global_position) { 123 }
+
+    it 'updates Subscription#current_position' do
+      expect { subject }.to change { subscription.reload.current_position }.to(global_position)
+    end
+    it 'updates Subscription#last_chunk_greatest_position' do
+      expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(global_position)
+    end
+  end
 end

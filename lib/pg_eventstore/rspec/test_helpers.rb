@@ -37,7 +37,7 @@ module PgEventstore
           conn.exec(<<~SQL)
             SELECT table_name
             FROM information_schema.views
-            WHERE table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name like 'subscription_%'
+            WHERE table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name LIKE 'subscription_%'
           SQL
         end
         views_to_purge = views_to_purge.map { |attrs| attrs['table_name'] }
