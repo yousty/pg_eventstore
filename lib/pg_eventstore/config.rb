@@ -51,6 +51,9 @@ module PgEventstore
     # @!attribute subscription_graceful_shutdown_timeout
     #   @return [Integer] the number of seconds to wait until force-shutdown the subscription during the stop process
     option(:subscription_graceful_shutdown_timeout) { 15 }
+    # @!attribute events_subscription_position_update_interval
+    #   @return [Float, Integer] events subscription position update interval
+    option(:events_subscription_position_update_interval) { 0.2 }
 
     # Computes a value for usage in PgEventstore::Connection
     # @return [Hash]

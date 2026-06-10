@@ -18,7 +18,10 @@ require_relative 'subscriptions_lifecycle'
 require_relative 'callback_handlers/subscription_feeder_handlers'
 require_relative 'callback_handlers/subscription_runner_handlers'
 require_relative 'callback_handlers/events_processor_handlers'
+require_relative 'callback_handlers/events_subscription_position_worker_handlers'
 require_relative 'callback_handlers/commands_handler_handlers'
+require_relative 'commands_handler'
+require_relative 'events_subscription_position_worker'
 require_relative 'subscription_feeder'
 require_relative 'extensions/command_class_lookup_extension'
 require_relative 'extensions/base_command_extension'
@@ -29,7 +32,6 @@ require_relative 'queries/subscription_queries'
 require_relative 'queries/subscription_service_queries'
 require_relative 'queries/subscriptions_set_command_queries'
 require_relative 'queries/subscriptions_set_queries'
-require_relative 'commands_handler'
 
 module PgEventstore
   # The public Subscriptions API, available to the user.

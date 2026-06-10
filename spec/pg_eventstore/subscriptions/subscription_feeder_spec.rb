@@ -371,7 +371,6 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         expect(subscription2.reload.locked_by).to eq(queries.find_by(name: set_name)[:id])
       end
     end
-
     it 'starts CommandsHandler' do
       id = subscription_queries.create(set: set_name, name: subscription2.name)[:id]
       subscriptions_set_id = subscriptions_set_lifecycle.persisted_subscriptions_set.id
@@ -381,6 +380,18 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       expect { subject }.to change {
         dv(subscription_runner2).deferred_wait(timeout: 2) { _1.state == 'stopped' }.state
       }.to('stopped')
+    end
+    it 'starts EventsSubscriptionPositionWorker' do
+      stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+      event = PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
+      index = proc do
+        PgEventstore.connection.with do |c|
+          c.exec('select global_position, subscription_position from events_global_index')
+        end.first
+      end
+      expect { subject }.to change {
+        dv(index).deferred_wait(timeout: 2) { !_1.call['subscription_position'].nil? }.call
+      }.to('global_position' => event.global_position, 'subscription_position' => kind_of(Integer))
     end
 
     context 'when second Subscription is already locked' do
@@ -587,7 +598,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       subject
       expect { sleep 2 }.to change { subscription_runner1.subscription.updated_at }
     end
-    it 'does not Subscription#updated_at of running Subscription too often' do
+    it 'does not update Subscription#updated_at of running Subscription too often' do
       subject
       # wait for another turn to update the checkpoint. After that - no more unnecessary updates should appear
       dv(subscription_runner1.subscription).wait_until(timeout: 0.5) { _1.current_position == 1 }

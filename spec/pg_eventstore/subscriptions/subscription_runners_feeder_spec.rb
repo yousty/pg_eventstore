@@ -31,7 +31,7 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
 
       before do
         subscription.lock!(subscriptions_set.id)
-        allow(runner).to receive(:checkpoint).and_call_original
+        allow(runner).to receive(:feed).and_call_original
       end
 
       after do
@@ -46,7 +46,7 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
         context 'when runner is idle' do
           it 'processes it' do
             subject
-            expect(runner).to have_received(:checkpoint).with(kind_of(Integer))
+            expect(runner).to have_received(:feed).with(kind_of(PgEventstore::Chunks::SubscriptionCheckpointChunk))
           end
         end
 
@@ -57,7 +57,7 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
 
           it 'does not process it' do
             subject
-            expect(runner).not_to have_received(:checkpoint)
+            expect(runner).not_to have_received(:feed)
           end
         end
       end
@@ -65,7 +65,7 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
       context 'when runner is not running' do
         it 'does not process it' do
           subject
-          expect(runner).not_to have_received(:checkpoint)
+          expect(runner).not_to have_received(:feed)
         end
       end
     end

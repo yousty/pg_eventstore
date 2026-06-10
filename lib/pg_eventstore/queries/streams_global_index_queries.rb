@@ -144,13 +144,15 @@ module PgEventstore
       first_result = pg_result.first
       return unless first_result
 
-      StreamGlobalIndex.new(first_result)
+      StreamGlobalIndex.new(**first_result.transform_keys(&:to_sym))
     end
 
     # @param pg_result [PG::Result]
     # @return [Array<PgEventstore::StreamGlobalIndex>]
     def deserialize_many(pg_result)
-      pg_result.map(&StreamGlobalIndex.method(:new))
+      pg_result.map do |attrs|
+        StreamGlobalIndex.new(**attrs.transform_keys(&:to_sym))
+      end
     end
 
     # @return [PgEventstore::PartitionQueries]

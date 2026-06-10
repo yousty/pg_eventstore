@@ -127,3 +127,6 @@ Gemspec/RequireMFA:
 
 Style/StructInheritance:
   Enabled: false
+
+Lint/NonLocalExitFromIterator:
+  Enabled: false

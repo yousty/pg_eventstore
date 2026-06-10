@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict whQdUAdsDDSDfrRlafFSsmDOyMzSpEk72c8M3noj21OnVPkmOF2VOrH0XXYwOPv
+\restrict fz8c1bmVidxjZAbMhGzJdi6cl5Z3c429YxObelprLp9kKRvpVXpvTeKO8WvZ6Qm
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -47,21 +47,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
 
---
--- Name: log_events_horizon(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.log_events_horizon() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO events_horizon(global_position)
-    VALUES (NEW.global_position);
-    RETURN NEW;
-END;
-$$;
-
-
 SET default_tablespace = '';
 
 --
@@ -93,6 +78,7 @@ SET default_table_access_method = heap;
 
 CREATE TABLE public.events_global_index (
     global_position bigint NOT NULL,
+    subscription_position bigint,
     stream_revision bigint NOT NULL,
     context_partition_id bigint NOT NULL,
     stream_name_partition_id bigint NOT NULL,
@@ -121,20 +107,15 @@ ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_p
 
 
 --
--- Name: events_horizon; Type: TABLE; Schema: public; Owner: -
+-- Name: events_subscription_position_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE UNLOGGED TABLE public.events_horizon (
-    global_position bigint NOT NULL,
-    xact_id xid8 DEFAULT pg_current_xact_id() NOT NULL
-);
-
-
---
--- Name: TABLE events_horizon; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.events_horizon IS 'Internal use only. Data is limited to the PostgreSQL cluster in which it was created. DO NOT INCLUDE ITS DATA INTO YOUR DUMP.';
+CREATE SEQUENCE public.events_subscription_position_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 
 --
@@ -460,6 +441,20 @@ ALTER TABLE ONLY public.subscriptions_set
 
 
 --
+-- Name: idx_events_global_index_subscription_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_global_index_subscription_position ON public.events_global_index USING btree (subscription_position) WHERE (subscription_position IS NOT NULL);
+
+
+--
+-- Name: idx_events_global_index_unprocessed; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_global_index_unprocessed ON public.events_global_index USING btree (global_position) WHERE (subscription_position IS NULL);
+
+
+--
 -- Name: idx_events_global_position; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -611,24 +606,10 @@ CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING
 
 
 --
--- Name: idx_xact_id_and_created_at_and_global_position; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_xact_id_and_created_at_and_global_position ON public.events_horizon USING btree (xact_id, global_position);
-
-
---
 -- Name: partition_parts_dep; Type: STATISTICS; Schema: public; Owner: -
 --
 
 CREATE STATISTICS public.partition_parts_dep (dependencies) ON context, stream_name, event_type FROM public.partitions;
-
-
---
--- Name: events log_events_horizon; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER log_events_horizon AFTER INSERT ON public.events FOR EACH ROW EXECUTE FUNCTION public.log_events_horizon();
 
 
 --
@@ -667,5 +648,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict whQdUAdsDDSDfrRlafFSsmDOyMzSpEk72c8M3noj21OnVPkmOF2VOrH0XXYwOPv
+\unrestrict fz8c1bmVidxjZAbMhGzJdi6cl5Z3c429YxObelprLp9kKRvpVXpvTeKO8WvZ6Qm
 

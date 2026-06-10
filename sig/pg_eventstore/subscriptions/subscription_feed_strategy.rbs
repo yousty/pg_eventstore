@@ -4,7 +4,7 @@ module PgEventstore
 
     def any?: -> bool
 
-    def feed: (Integer safe_position) -> void
+    def feed: -> void
 
     def size: -> Integer
   end

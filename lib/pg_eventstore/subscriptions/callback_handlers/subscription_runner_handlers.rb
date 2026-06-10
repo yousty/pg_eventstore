@@ -34,10 +34,12 @@ module PgEventstore
       end
 
       # @param subscription [PgEventstore::Subscription]
-      # @param global_position [Integer]
+      # @param subscription_position [Integer]
       # @return [void]
-      def update_subscription_chunk_stats(subscription, global_position)
-        subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: global_position)
+      def update_subscription_chunk_stats(subscription, subscription_position)
+        return if subscription.last_chunk_greatest_position == subscription_position
+
+        subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: subscription_position)
       end
 
       # @param subscription [PgEventstore::Subscription]

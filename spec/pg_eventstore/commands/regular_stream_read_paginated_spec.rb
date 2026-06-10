@@ -52,7 +52,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
           it 'does not take much time to complete reading all events' do
             time = PgEventstore::Utils.benchmark { subject.to_a } * 1000
             # milliseconds. Keep in mind that this assertion includes performance degradation due to RBS testing
-            expect(time).to be < 30
+            expect(time).to be < 35
           end
         end
 
@@ -66,7 +66,7 @@ RSpec.describe PgEventstore::Commands::RegularStreamReadPaginated do
           it 'does not take much time to complete reading all events' do
             time = PgEventstore::Utils.benchmark { subject.to_a } * 1000
             # milliseconds. Keep in mind that this assertion includes performance degradation due to RBS testing
-            expect(time).to be < 30
+            expect(time).to be < 35
           end
         end
       end

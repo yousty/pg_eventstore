@@ -20,12 +20,9 @@ module PgEventstore
         connection,
         QueryStrategy::Async.new(connection)
       )
-      safe_position = subscription_service_queries.safe_global_position
       query_runner = AsyncQueryRunner.new
       feed_strategies_collection.each do |strategy|
-        query_runner.async do
-          strategy.feed(safe_position)
-        end
+        query_runner.async { strategy.feed }
       end
       query_runner.run
     end
@@ -35,11 +32,6 @@ module PgEventstore
     # @return [PgEventstore::Connection]
     def connection
       PgEventstore.connection(@config_name)
-    end
-
-    # @return [PgEventstore::SubscriptionServiceQueries]
-    def subscription_service_queries
-      SubscriptionServiceQueries.new(connection)
     end
   end
 end

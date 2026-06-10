@@ -3,10 +3,10 @@ module PgEventstore
     def self.benchmark: { -> untyped } -> Float
 
     # _@param_ `object`
-    def self.deep_transform_keys: (untyped object) { (untyped key) -> untyped } -> Object
+    def self.deep_transform_keys: (untyped object) { (untyped key) -> untyped } -> untyped
 
     # _@param_ `object`
-    def self.deep_dup: (untyped object) -> Object
+    def self.deep_dup: (untyped object) -> untyped
 
     def self.deprecation_warning: (String message) -> void
 
@@ -27,9 +27,9 @@ module PgEventstore
 
     def self.original_global_position: (Hash[untyped, untyped] raw_event) -> Integer
 
-    def self.unwrap_exception: (WrappedException | StandardError wrapped_exception)-> StandardError
+    def self.unwrap_exception: (WrappedException | StandardError wrapped_exception) -> StandardError
 
-    def self.wrap_exception: (StandardError exception, **untyped extra)-> WrappedException
+    def self.wrap_exception: (StandardError exception, **untyped extra) -> WrappedException
 
     def self.write_to_file: (String file_path, String content) -> void
   end

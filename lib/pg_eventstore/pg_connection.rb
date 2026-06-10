@@ -13,6 +13,16 @@ module PgEventstore
       super
     end
 
+    def send_query_params(sql, params)
+      log(sql, params)
+      super
+    end
+
+    def send_query(sql)
+      log(sql, [])
+      super
+    end
+
     def compile(sql, params)
       return sql if params.empty?
 

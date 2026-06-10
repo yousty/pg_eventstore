@@ -4,13 +4,19 @@ module PgEventstore
   module QueryBuilders
     module Filters
       # @!visibility private
-      class StreamFilter < Struct.new(:context, :stream_name, :stream_id)
+      class StreamFilter
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
         # @!attribute context
         #   @return [String]
+        attribute(:context)
         # @!attribute stream_name
         #   @return [String, nil]
+        attribute(:stream_name)
         # @!attribute stream_id
         #   @return [String, nil]
+        attribute(:stream_id)
 
         # @return [Boolean]
         def context?

@@ -39,6 +39,8 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
     let(:position_handler_before) { double('PositionHandlerBefore') }
     let(:position_handler_after) { double('PositionHandlerAfter') }
 
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+
     before do
       callbacks.define_callback(:process, :around, on_process_cbx)
       allow(position_handler_before).to receive(:call)
@@ -63,10 +65,10 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
     end
 
     context 'when there are some events' do
-      let(:raw_indexes) { [raw_index1, raw_index2] }
-      let(:raw_index1) { { 'global_position' => 123, 'event_type_partition_id' => 2 } }
-      let(:raw_index2) { { 'global_position' => 125, 'event_type_partition_id' => 2 } }
-      let(:chunk) { EventIndexesChunk.create_indexes(raw_indexes) }
+      let(:event1) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:event2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:indexes) { prepare_subscription_indexes([event1, event2]) }
+      let(:chunk) { create_subscription_index_chunk(indexes) }
 
       before do
         repository.add_chunk(chunk)
@@ -78,28 +80,24 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
       it 'runs :process callbacks for first event' do
         subject
         aggregate_failures do
-          expect(position_handler_before).to have_received(:call).with(raw_index1['global_position'])
-          expect(position_handler_after).to have_received(:call).with(raw_index1['global_position'])
+          expect(position_handler_before).to have_received(:call).with(indexes.first.subscription_position)
+          expect(position_handler_after).to have_received(:call).with(indexes.first.subscription_position)
         end
       end
       it 'does not run :process callbacks for second event' do
         subject
         aggregate_failures do
-          expect(position_handler_before).not_to have_received(:call).with(raw_index2['global_position'])
-          expect(position_handler_after).not_to have_received(:call).with(raw_index2['global_position'])
+          expect(position_handler_before).not_to have_received(:call).with(indexes.last.subscription_position)
+          expect(position_handler_after).not_to have_received(:call).with(indexes.last.subscription_position)
         end
       end
       it 'processes first event' do
-        raw_event1 = {
-          'global_position' => raw_index1['global_position'], 'id' => '00000000-0000-0000-0000-000000000001'
-        }
+        raw_event1 = a_hash_including('global_position' => event1.global_position, 'id' => event1.id)
         subject
         expect(raw_event_handler).to have_received(:call).with(raw_event1)
       end
       it 'does not process second event' do
-        raw_event2 = {
-          'global_position' => raw_index2['global_position'], 'id' => '00000000-0000-0000-0000-000000000002'
-        }
+        raw_event2 = a_hash_including('global_position' => event2.global_position, 'id' => event2.id)
         subject
         expect(raw_event_handler).not_to have_received(:call).with(raw_event2)
       end
@@ -107,16 +105,40 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
         expect { subject }.to change { chunk.size }.by(-1)
       end
       it 'clears @last_unprocessed_event' do
-        instance.instance_variable_set(:@last_unprocessed_event, { 'global_position' => 1 })
+        unprocessed_event = PgEventstore::Chunks::SubscriptionEventsIndexChunk::RawEventWithCommitPosition.new(
+          attributes: {}, subscription_position: 1
+        )
+        instance.instance_variable_set(:@last_unprocessed_event, unprocessed_event)
         expect { subject }.to change { instance.instance_variable_get(:@last_unprocessed_event) }.to(nil)
       end
     end
 
+    context 'when checkpoint event is consumed' do
+      let(:chunk) { PgEventstore::Chunks::SubscriptionCheckpointChunk.new(position) }
+      let(:position) { 123 }
+      let(:checkpoint_handler) { double('Checkpoint Handler') }
+
+      before do
+        repository.add_chunk(chunk)
+        allow(checkpoint_handler).to receive(:call)
+        callbacks.define_callback(:checkpoint, :before, proc { |pos| checkpoint_handler.call(pos) })
+      end
+
+      it 'does not call handler' do
+        subject
+        expect(raw_event_handler).not_to have_received(:call)
+      end
+      it 'runs :checkpoint callback' do
+        subject
+        expect(checkpoint_handler).to have_received(:call).with(position)
+      end
+    end
+
     context 'when handler raises an error' do
-      let(:raw_indexes) { [raw_index1, raw_index2] }
-      let(:raw_index1) { { 'global_position' => 123, 'event_type_partition_id' => 2 } }
-      let(:raw_index2) { { 'global_position' => 125, 'event_type_partition_id' => 2 } }
-      let(:chunk) { EventIndexesChunk.create_indexes(raw_indexes) }
+      let(:event1) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:event2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:indexes) { prepare_subscription_indexes([event1, event2]) }
+      let(:chunk) { create_subscription_index_chunk(indexes) }
 
       let(:handler) { proc { raise error_class, 'Oops!' } }
       let(:error_class) { Class.new(StandardError) }
@@ -139,7 +161,7 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
         rescue PgEventstore::WrappedException
         end
         aggregate_failures do
-          expect(position_handler_before).to have_received(:call).with(raw_index1['global_position'])
+          expect(position_handler_before).to have_received(:call).with(indexes.first.subscription_position)
           expect(position_handler_after).not_to have_received(:call)
         end
       end
@@ -152,16 +174,13 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
         }.to change { chunk.size }.by(-1)
       end
       it 'persists unprocessed event into @last_unprocessed_event' do
-        unprocessed_event = {
-          'global_position' => raw_index1['global_position'],
-          'id' => '00000000-0000-0000-0000-000000000001',
-        }
+        unprocessed_event_attrs = a_hash_including('global_position' => event1.global_position, 'id' => event1.id)
         expect {
           begin
             subject
           rescue PgEventstore::WrappedException
           end
-        }.to change { instance.instance_variable_get(:@last_unprocessed_event) }.to(unprocessed_event)
+        }.to change { instance.instance_variable_get(:@last_unprocessed_event)&.attributes }.to(unprocessed_event_attrs)
       end
       # rubocop:disable RSpec/MultipleExpectations
       it 'raises the error' do
@@ -169,15 +188,15 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
           aggregate_failures do
             expect(error.original_exception).to be_a(error_class)
             expect(error.original_exception.message).to eq('Oops!')
-            expect(error.extra).to eq(global_position: raw_index1['global_position'])
+            expect(error.extra).to eq(global_position: indexes.first.subscription_position)
           end
         end
       end
       # rubocop:enable RSpec/MultipleExpectations
 
       context 'when event which caused an exception is a link event' do
-        let(:chunk) { EventIndexesChunk.create_indexes([raw_index], make_links: true, links_starting_id: 321) }
-        let(:raw_index) { { 'global_position' => 123, 'event_type_partition_id' => 2 } }
+        let(:event1) { PgEventstore.client.link_to(stream, event2) }
+        let(:chunk) { create_subscription_index_chunk(indexes, resolve_link_tos: true) }
 
         # rubocop:disable RSpec/MultipleExpectations
         it 'raises the error with correct global position' do
@@ -185,7 +204,7 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
             aggregate_failures do
               expect(error.original_exception).to be_a(error_class)
               expect(error.original_exception.message).to eq('Oops!')
-              expect(error.extra).to eq(global_position: 321)
+              expect(error.extra).to eq(global_position: indexes.first.subscription_position)
             end
           end
         end

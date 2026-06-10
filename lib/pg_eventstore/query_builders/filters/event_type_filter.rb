@@ -4,7 +4,10 @@ module PgEventstore
   module QueryBuilders
     module Filters
       # @!visibility private
-      class EventTypeFilter < Struct.new(:value, :prefix)
+      class EventTypeFilter
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
         class << self
           # @return [PgEventstore::QueryBuilders::Filters::EventTypeFilter]
           def null_filter
@@ -14,8 +17,10 @@ module PgEventstore
 
         # @!attribute value
         #   @return [String, nil]
+        attribute(:value)
         # @!attribute prefix
         #   @return [Boolean]
+        attribute(:prefix)
 
         # @return [Boolean]
         def prefix?

@@ -49,9 +49,10 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
   end
 
   describe '#feed' do
-    subject { instance.feed(safe_position) }
-
-    let(:safe_position) { 150 }
+    subject do
+      instance.feed
+      sleep 0.2 # Wait for the events to process if any
+    end
 
     let(:subscription1) do
       SubscriptionsHelper.create_with_connection(
@@ -95,13 +96,16 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
     let(:handler2) { proc { |raw_event| processed_events2.push(raw_event['global_position']) } }
 
     before do
+      # Stub timeout to allow faster attempts to pick events to process
+      stub_const('PgEventstore::EventsProcessorConsumer::Single::EVENT_WAIT_TIMEOUT', 0.1)
       subscription1.lock!(subscriptions_set.id)
       subscription2.lock!(subscriptions_set.id)
       instance.add(runner1, runner2)
       runner1.start
       runner2.start
-      # Set events global_position sequence value to easily test safe position
-      query_strategy.exec("select setval('events_global_position_seq'::regclass, 123, false)")
+      # Set events global_position sequence value to easily test :to_position. 123 will be the global_position of the
+      # first created event
+      reset_events_subscription_position(123)
     end
 
     after do
@@ -115,12 +119,12 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
       it 'checkpoints first subscription' do
         expect { subject }.to change {
           subscription1.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
-        }.to([safe_position, safe_position])
+        }.to([0, 0])
       end
       it 'checkpoints second subscription' do
         expect { subject }.to change {
           subscription2.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
-        }.to([safe_position, safe_position])
+        }.to([0, 0])
       end
     end
 
@@ -130,46 +134,22 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
         stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
         PgEventstore.client.append_to_stream(stream, event)
       end
+      let!(:index) { prepare_subscription_indexes([event]).first }
 
-      context 'when safe position is less than the position of existing event' do
-        let(:safe_position) { 10 }
-
-        it 'does not process it' do
-          expect { subject }.not_to change { dv(processed_events1).deferred_wait(timeout: 0.1) { _1.size == 1 } }
-        end
-        it 'checkpoints first subscription' do
+      describe 'default behavior' do
+        it 'processes the event' do
           expect { subject }.to change {
-            subscription1.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
-          }.to([safe_position, safe_position])
-        end
-        it 'checkpoints second subscription' do
-          expect { subject }.to change {
-            subscription2.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
-          }.to([safe_position, safe_position])
-        end
-      end
-
-      context 'when safe position is greater than or equal to the position of existing event' do
-        let(:safe_position) { event.global_position }
-
-        it 'processes it by first subscription' do
-          expect { subject }.to change {
-            dv(processed_events1).deferred_wait(timeout: 0.1) { _1.size == 1 }
+            dv(processed_events1).deferred_wait(timeout: 0.5) { _1.size == 1 }
           }.to([event.global_position])
         end
-        it 'does not process by of second subscription' do
-          expect { subject }.not_to change { dv(processed_events2).deferred_wait(timeout: 0.1) { _1.size == 1 } }
-        end
         it 'checkpoints second subscription' do
           expect { subject }.to change {
             subscription2.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
-          }.to([safe_position, safe_position])
+          }.to([index.subscription_position, index.subscription_position])
         end
       end
 
       context "when index look up distance is less than event's position" do
-        let(:safe_position) { event.global_position + 10 }
-
         before do
           stub_const("#{described_class}::INDEX_LOOK_UP_DISTANCE", 10)
         end
@@ -190,27 +170,20 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
       end
 
       context "when :from_position is greater than event's position" do
-        let(:from_position_sub1) { event.global_position }
-        let(:safe_position) { event.global_position + 20 }
-
-        before do
-          stub_const("#{described_class}::INDEX_LOOK_UP_DISTANCE", 10)
-        end
+        let(:from_position_sub1) { index.subscription_position + 10 }
 
         it 'does not process the event' do
           expect { subject }.not_to change { dv(processed_events1).deferred_wait(timeout: 0.1) { _1.size == 1 } }
         end
         it 'checkpoints first subscription' do
-          checkpoint = from_position_sub1 + described_class::INDEX_LOOK_UP_DISTANCE + 1
           expect { subject }.to change {
             subscription1.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
-          }.to([checkpoint, checkpoint])
+          }.to([index.subscription_position, index.subscription_position])
         end
         it 'checkpoints second subscription' do
-          checkpoint = described_class::INDEX_LOOK_UP_DISTANCE + 1
           expect { subject }.to change {
             subscription2.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
-          }.to([checkpoint, checkpoint])
+          }.to([index.subscription_position, index.subscription_position])
         end
       end
 
@@ -231,7 +204,7 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
 
         it 'processes only one event' do
           expect { subject }.to change {
-            dv(processed_events1).deferred_wait(timeout: 0.1) { _1.size == 2 }
+            dv(processed_events1).deferred_wait(timeout: 0.5) { _1.size == 2 }
           }.to([event.global_position])
         end
       end

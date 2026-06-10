@@ -2,6 +2,9 @@ module PgEventstore
   module QueryBuilders
     module Filters
       class StreamFilter
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
         attr_accessor context: String
         attr_accessor stream_name: String?
         attr_accessor stream_id: String?

@@ -3,182 +3,82 @@
 RSpec.describe PgEventstore::SubscriptionServiceQueries do
   let(:instance) { described_class.new(PgEventstore.connection) }
 
-  describe '#safe_global_position' do
-    subject { instance.safe_global_position }
+  describe '#assign_subscription_position' do
+    subject { instance.assign_subscription_position }
 
-    context 'when safe position exists' do
+    context 'when there are events to update' do
       let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
-      let(:event) do
-        event = PgEventstore::Event.new
-        PgEventstore.client.append_to_stream(stream, event)
-      end
-
-      before do
-        event
-      end
-
-      it 'returns it' do
-        is_expected.to eq(event.global_position)
-      end
-    end
-
-    context 'when unsafe position exists' do
-      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
-      let(:stream2) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Bar', stream_id: '1') }
-
-      # event1 gets created first, but its transaction finishes last, thus making event2 be in front of event1 for a
-      # short period of time
-      let(:event1) do
-        Thread.new do
-          event = PgEventstore::Event.new(type: 'FooT')
-          transaction_queries.transaction(:repeatable_read) do
-            PgEventstore.client.append_to_stream(stream1, event)
-            sleep 0.2
-          end
-        end
-      end
-      let(:event2) do
-        Thread.new do
-          event = PgEventstore::Event.new(type: 'BarT')
-          transaction_queries.transaction(:repeatable_read) do
-            sleep 0.1
-            PgEventstore.client.append_to_stream(stream2, event)
-          end
+      let!(:event) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let!(:index) do
+        proc do
+          PgEventstore.connection.with do |c|
+            c.exec('select global_position, subscription_position from events_global_index')
+          end.first
         end
       end
 
-      let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
-      let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
-
-      before do
-        partition_queries.create_partitions(stream1, 'FooT')
-        partition_queries.create_partitions(stream2, 'BarT')
-        event1
-        event2
-      end
-
-      after do
-        event1.join
-      end
-
-      it 'returns default position' do
-        event2.join
-        is_expected.to eq(0)
-      end
-    end
-
-    context 'when events_horizon does not exist' do
-      it 'returns default position' do
-        is_expected.to eq(0)
-      end
-    end
-
-    context 'when events_horizon is created concurrently(regular event concurrency)' do
-      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
-      let(:event) do
-        event = PgEventstore::Event.new
-        event = PgEventstore.client.append_to_stream(stream, event)
-        PgEventstore.maintenance.delete_event(event)
-        PgEventstore.connection.with do |conn|
-          conn.exec('delete from events_horizon')
-        end
-        Thread.new do
-          transaction_queries.transaction(:repeatable_read) do
-            PgEventstore.client.append_to_stream(stream, event)
-            sleep 0.2
-          end
-        end
-      end
-
-      let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
-
-      before do
-        event
-      end
-
-      it 'returns safe position' do
-        instance.safe_global_position
-        event.join
-        latest_position = PgEventstore.client.read(PgEventstore::Stream.all_stream).last.global_position
-        is_expected.to eq(latest_position)
-      end
-    end
-
-    context 'when events_horizon is created concurrently(another #safe_global_position concurrency)' do
-      let(:safe_position1) { Thread.new { instance.safe_global_position } }
-      let(:safe_position2) { Thread.new { instance.safe_global_position } }
-
-      before do
-        allow(instance).to receive(:init_events_horizon).and_wrap_original do |orig, *args, **kwargs, &blk|
-          PgEventstore.client.multiple do
-            orig.call(*args, **kwargs, &blk).tap do
-              sleep 0.2
-            end
-          end
-        end
-      end
-
-      it 'creates only one initial record with default position' do
-        [safe_position1, safe_position2].each(&:join)
-        total_count = PgEventstore.connection.with do |c|
-          c.exec('select count(*) c from events_horizon').to_a.first['c']
-        end
-        aggregate_failures do
-          expect(total_count).to eq(1)
-          is_expected.to eq(0)
-        end
-      end
-    end
-  end
-
-  describe '#events_horizon_present?' do
-    subject { instance.events_horizon_present? }
-
-    context 'when there is no positions' do
-      it { is_expected.to eq(false) }
-    end
-
-    context 'when there is some position' do
-      before do
-        instance.init_events_horizon
-      end
-
-      it { is_expected.to eq(true) }
-    end
-  end
-
-  describe '#init_events_horizon' do
-    subject { instance.init_events_horizon }
-
-    context 'when some position already exists' do
-      before do
-        stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
-        PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
-      end
-
-      it 'does not create another one' do
-        expect { subject }.not_to change {
-          PgEventstore.connection.with do |conn|
-            conn.exec('select count(*) c from events_horizon').to_a.first['c']
-          end
-        }.from(1)
-      end
-    end
-
-    context 'when no position exists' do
-      it 'creates default one' do
-        aggregate_failures do
-          expect { subject }.to change {
+      context 'when there is another #assign_subscription_position running' do
+        let(:concurrent_process) do
+          Thread.new do
             PgEventstore.connection.with do |conn|
-              conn.exec('select count(*) c from events_horizon').to_a.first['c']
+              conn.transaction do
+                described_class.new(PgEventstore.connection).assign_subscription_position
+                synchronizer.push(:sig)
+                sleep 1
+              end
             end
-          }.by(1)
-          pos = PgEventstore.connection.with do |c|
-            c.exec('select global_position from events_horizon').to_a.first['global_position']
           end
-          expect(pos).to eq(0)
+        end
+        let(:synchronizer) { Thread::Queue.new }
+
+        before do
+          concurrent_process
+          synchronizer.pop
+        end
+
+        after do
+          concurrent_process.exit
+        end
+
+        it { is_expected.to eq(nil) }
+        it 'does not update indexes' do
+          expect { subject }.not_to change {
+            index.call
+          }.from('global_position' => event.global_position, 'subscription_position' => nil)
         end
       end
+
+      context 'when there are no concurrent #assign_subscription_position running' do
+        before do
+          reset_events_subscription_position
+        end
+
+        it 'returns the number of updated records' do
+          is_expected.to eq(1)
+        end
+        it 'updates indexes' do
+          expect { subject }.to change {
+            index.call
+          }.from('global_position' => event.global_position, 'subscription_position' => nil).
+            to('global_position' => event.global_position, 'subscription_position' => 1)
+        end
+      end
+    end
+  end
+
+  describe '#max_subscription_position' do
+    subject { instance.max_subscription_position }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(5) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+
+    before do
+      indexes
+    end
+
+    it 'returns max global_position' do
+      is_expected.to eq(indexes.last.subscription_position)
     end
   end
 end

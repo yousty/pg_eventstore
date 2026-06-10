@@ -37,9 +37,8 @@ module PgEventstore
         @runners.any?
       end
 
-      # @param safe_position [Integer]
       # @return [void]
-      def feed(safe_position)
+      def feed
         runners_query_options = @runners.to_h do |runner|
           next_chunk_query_opts = runner.next_chunk_query_opts
           next_chunk_query_opts[:to_position] =
@@ -49,7 +48,7 @@ module PgEventstore
         grouped_indexes = events_global_index_queries.fetch_indexes_for_subscriptions(runners_query_options)
         @runners.each do |runner|
           if grouped_indexes[runner.id]
-            chunk = Chunks::EventsIndexChunk.new(
+            chunk = Chunks::SubscriptionEventsIndexChunk.new(
               grouped_indexes[runner.id],
               @connection,
               QueryStrategy::Foreground.new(@connection),
@@ -57,16 +56,26 @@ module PgEventstore
             )
             runner.feed(chunk)
           else
-            runner.checkpoint(runners_query_options[runner.id][:to_position])
+            runner.feed(Chunks::SubscriptionCheckpointChunk.new(runners_query_options[runner.id][:to_position]))
           end
         end
       end
 
       private
 
+      # @return [Integer]
+      def safe_position
+        subscription_service_queries.max_subscription_position || 0
+      end
+
       # @return [PgEventstore::EventsGlobalIndexQueries]
       def events_global_index_queries
         EventsGlobalIndexQueries.new(@connection, @query_strategy)
+      end
+
+      # @return [PgEventstore::SubscriptionServiceQueries]
+      def subscription_service_queries
+        SubscriptionServiceQueries.new(@connection)
       end
     end
   end

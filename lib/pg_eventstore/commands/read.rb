@@ -25,7 +25,7 @@ module PgEventstore
         raise NotSupportedError, '#read does not support look up by prefix.' if filter_collection.has_prefix_filter?
 
         indexes = queries.events_global_index.fetch_indexes_for_read_api(filter_collection, cursor)
-        repo = queries.events_global_index.compute_chunks_repo(indexes, options[:resolve_link_tos] || false)
+        repo = queries.events_global_index.compute_read_api_chunks_repo(indexes, options[:resolve_link_tos] || false)
         deserializer.deserialize_many(repo.consume_all)
       end
     end

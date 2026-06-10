@@ -61,15 +61,16 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::ResetPosition do
     end
     let(:handler) { proc { sleep 0.5 } }
 
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(5) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
+
     before do
       # Feeding is only available when runner is running. So start it, put some events into a chunk and stop it.
       subscription_runner.start
       dv(subscription_runner).wait_until(timeout: 0.1) { _1.state == 'running' }
-      subscription_runner.feed(
-        EventIndexesChunk.create_indexes(
-          Array.new(5) { |i| { 'global_position' => i, 'event_type_partition_id' => 2 } }
-        )
-      )
+      subscription_runner.feed(chunk)
       subscription_runner.stop_async.wait_for_finish
     end
 

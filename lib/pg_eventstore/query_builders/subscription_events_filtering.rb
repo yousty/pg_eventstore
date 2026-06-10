@@ -40,7 +40,7 @@ module PgEventstore
       def from_position(position)
         return unless position
 
-        @sql_builder.where("#{to_table_name}.global_position >= ?", position)
+        @sql_builder.where("#{to_table_name}.subscription_position >= ?", position)
       end
 
       # @param position [Integer, nil]
@@ -48,7 +48,7 @@ module PgEventstore
       def to_position(position)
         return unless position
 
-        @sql_builder.where("#{to_table_name}.global_position <= ?", position)
+        @sql_builder.where("#{to_table_name}.subscription_position <= ?", position)
       end
 
       # @param limit [Integer, nil]

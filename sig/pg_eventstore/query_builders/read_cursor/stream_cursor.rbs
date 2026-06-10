@@ -2,14 +2,20 @@ module PgEventstore
   module QueryBuilders
     module ReadCursor
       class StreamCursor
-        class RegularStreamCursor < Struct[untyped]
+        class RegularStreamCursor
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
           attr_accessor from_revision: Integer?
           attr_accessor to_revision: Integer?
           attr_accessor direction: String? | Symbol?
           attr_accessor max_count: Integer?
         end
 
-        class AllStreamCursor < Struct[untyped]
+        class AllStreamCursor
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
           attr_accessor from_position: Integer?
           attr_accessor to_position: Integer?
           attr_accessor direction: String? | Symbol?

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
+RSpec.describe PgEventstore::Chunks::ReadApiEventsIndexChunk do
   describe '#take' do
     subject { instance.take(size) }
 
@@ -28,7 +28,7 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
       let(:event2) do
         PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new(type: 'Bar'))
       end
-      let(:indexes) { events_index(event1, event2) }
+      let(:indexes) { read_api_indexes(event1, event2) }
 
       context 'when size is nil' do
         it 'returns all events' do
@@ -64,7 +64,7 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
       let(:event2) do
         PgEventstore.client.link_to(stream, event1)
       end
-      let(:indexes) { events_index(event1, event2) }
+      let(:indexes) { read_api_indexes(event1, event2) }
 
       context 'when resolve_link_tos is false' do
         it 'returns raw events as is' do
@@ -107,7 +107,7 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
       let(:event2) do
         PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new(type: 'Bar'))
       end
-      let(:indexes) { events_index(event1, event2) }
+      let(:indexes) { read_api_indexes(event1, event2) }
 
       context 'when indexes are not resolved all in once' do
         before do
@@ -161,7 +161,7 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
       let(:event2) do
         PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new(type: 'Bar'))
       end
-      let(:indexes) { events_index(event1, event2) }
+      let(:indexes) { read_api_indexes(event1, event2) }
 
       context 'when indexes are not resolved all in once' do
         before do
@@ -215,7 +215,7 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
       let(:event2) do
         PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new(type: 'Bar'))
       end
-      let(:indexes) { events_index(event1, event2) }
+      let(:indexes) { read_api_indexes(event1, event2) }
 
       it 'returns last index' do
         is_expected.to eq(indexes.last)
@@ -249,7 +249,7 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
           Array.new(max_partitions_to_resolve + 1) { PgEventstore::Event.new(type: "Foo-#{_1}") }
         )
       end
-      let(:indexes) { events_index(*events) }
+      let(:indexes) { read_api_indexes(*events) }
 
       it 'resolves first MAX_PARTITIONS_TO_RESOLVE_PER_CALL indexes' do
         expect { subject }.to change {
@@ -272,7 +272,7 @@ RSpec.describe PgEventstore::Chunks::EventsIndexChunk do
           Array.new(max_partitions_to_resolve) { [PgEventstore::Event.new(type: "Foo-#{_1}")] * 2 }.flatten
         )
       end
-      let(:indexes) { events_index(*events) }
+      let(:indexes) { read_api_indexes(*events) }
 
       it 'resolves all indexes at once' do
         expect { subject }.to change {

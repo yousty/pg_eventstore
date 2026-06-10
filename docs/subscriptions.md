@@ -109,6 +109,12 @@ You will then see the output of your subscription handlers. To gracefully stop t
 
 ### Subscription position
 
+Internally, each event has its own subscription position assigned. This happens in the background process with `config.events_subscription_position_update_interval` interval(in seconds) whenever you start any subscription. The algorithm of assigning of event subscription position is deterministic and events processing by subscriptions based on that value is idempotent. The event subscription position ordering may differ from `Event#global_position` ordering, but it correlates with a stream revision ordering inside a single stream, meaning that an event with stream revision `0` can't be processed earlier than event with stream revision `1` if they both belong to the same stream.
+
+Let's say you never run subscriptions, and you have now plenty of events without an assigned subscription position. What will happen if you start any subscription? The worker which is responsible for assigning those positions will need to process every existing event. It does so in batches of 100k records(current implementation), each batch takes 1-2 seconds to finish(depending on your hardware). Thus, if your subscription targets some events farther from the beginning of your events history - it will require some time to get there. 
+
+#### Setting starting position
+
 You can set the initial position of new subscription to start with:
 
 ```ruby
@@ -119,7 +125,7 @@ subscriptions_manager.subscribe(
 )
 ```
 
-This allows to jump to the certain position to start with and skip unwanted events. Thus, events with #global_position **greater than** 123 will be processed(e.g. 124, 125, ...) only.
+This allows to jump to the certain position to start with and skip unwanted events. Please note that **this is not** an `Event#global_position` value, but rather subscription position of the event. You can find corresponding subscription position of an event in admin web UI. 
 
 ## Overriding Subscription config values
 

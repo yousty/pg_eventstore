@@ -8,21 +8,28 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
 
     let(:callbacks) { PgEventstore::Callbacks.new }
     let(:consumer) do
-      PgEventstore::EventsProcessorConsumer::Single.new(proc { |raw_event| processed_events.push(raw_event) })
+      PgEventstore::EventsProcessorConsumer::Single.new(
+        proc { |raw_event| processed_positions.push(raw_event['global_position']) }
+      )
     end
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:event1) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+    let(:event2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+    let(:indexes) { prepare_subscription_indexes([event1, event2]) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
+
     let(:repository) do
       repo = PgEventstore::Chunks::Repository.new
-      repo.add_chunk(InstantChunk.new([raw_event1, raw_event2]))
+      repo.add_chunk(chunk)
       repo
     end
-    let(:raw_event1) { { 'global_position' => 1 } }
-    let(:raw_event2) { { 'global_position' => 2 } }
     let(:repository_cond) { repository.new_cond }
-    let(:processed_events) { [] }
+    let(:processed_positions) { [] }
 
     context 'when consumer is Single' do
       it 'processes first event in the queue' do
-        expect { subject }.to change { processed_events }.to([raw_event1])
+        expect { subject }.to change { processed_positions }.to([event1.global_position])
       end
       it 'removes processed event from the queue' do
         expect { subject }.to change { repository.size }.by(-1)
@@ -31,11 +38,13 @@ RSpec.describe PgEventstore::EventsProcessorHandlers do
 
     context 'when consumer is Multiple' do
       let(:consumer) do
-        PgEventstore::EventsProcessorConsumer::Multiple.new(proc { |raw_events| processed_events.push(raw_events) })
+        PgEventstore::EventsProcessorConsumer::Multiple.new(
+          proc { |raw_events| processed_positions.push(raw_events.map { _1['global_position'] }) }
+        )
       end
 
       it 'processes all events in the queue' do
-        expect { subject }.to change { processed_events }.to([[raw_event1, raw_event2]])
+        expect { subject }.to change { processed_positions }.to([[event1.global_position, event2.global_position]])
       end
       it 'removes processed events from the queue' do
         expect { subject }.to change { repository.size }.to(0)

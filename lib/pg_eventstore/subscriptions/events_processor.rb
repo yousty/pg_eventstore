@@ -34,18 +34,8 @@ module PgEventstore
       raise EmptyChunkFedError.new('Empty chunk was fed!') if chunk.drained?
 
       within_state(:running) do
-        callbacks.run_callbacks(:feed, chunk.last.global_position)
+        callbacks.run_callbacks(:feed, chunk.last.subscription_position)
         @events_repository.add_chunk(chunk, condition: @repository_cond)
-      end
-    end
-
-    # @param global_position [Integer]
-    # @return [void]
-    def checkpoint(global_position)
-      within_state(:running) do
-        return unless @events_repository.empty?
-
-        callbacks.run_callbacks(:checkpoint, global_position)
       end
     end
 

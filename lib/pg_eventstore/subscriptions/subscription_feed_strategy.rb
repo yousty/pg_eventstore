@@ -19,9 +19,8 @@ module PgEventstore
       raise NotImplementedError
     end
 
-    # @param safe_position [Integer]
     # @return [void]
-    def feed(safe_position)
+    def feed
       raise NotImplementedError
     end
   end

@@ -9,7 +9,7 @@ module PgEventstore
 
     def self.update_subscription_error: (Subscription subscription, WrappedException error) -> void
 
-    def self.update_subscription_chunk_stats: (Subscription subscription, Integer global_position) -> void
+    def self.update_subscription_chunk_stats: (Subscription subscription, Integer subscription_position) -> void
 
     def self.update_subscription_restarts: (Subscription subscription) -> void
 

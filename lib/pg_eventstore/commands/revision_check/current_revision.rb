@@ -5,14 +5,22 @@ module PgEventstore
     module RevisionCheck
       # @!visibility private
       class CurrentRevision
-        class StreamRevision < Struct.new(:revision)
+        class StreamRevision
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
           # @!attribute revision
           #   @return [Integer]
+          attribute(:revision)
         end
 
-        class EventTypeRevisions < Struct.new(:revisions)
+        class EventTypeRevisions
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
           # @!attribute revisions
           #   @return [Hash<String, Integer>]
+          attribute(:revisions)
         end
 
         class << self

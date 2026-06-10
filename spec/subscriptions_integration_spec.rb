@@ -673,9 +673,10 @@ RSpec.describe 'Subscriptions integration' do
         wait_until(timeout: 2) do |chunks|
         chunks.all? { |events| events.size == expected_events.size }
       end
-
+      expected_subscription_positions = prepare_subscription_indexes(expected_events).map(&:subscription_position)
       aggregate_failures do
         [processed_events1, processed_events2, processed_events3, processed_events4].each.with_index(1) do |events, i|
+          subscription_positions = prepare_subscription_indexes(events).map(&:subscription_position)
           expect(events.size).to(
             eq(expected_events.size),
             <<~TEXT
@@ -683,7 +684,7 @@ RSpec.describe 'Subscriptions integration' do
               db: #{expected_events.size}
             TEXT
           )
-          expect(events.map(&:global_position)).to eq(expected_events.map(&:global_position))
+          expect(subscription_positions).to eq(expected_subscription_positions)
         end
       end
     end

@@ -15,24 +15,31 @@ RSpec.describe PgEventstore::EventsProcessor do
   end
 
   describe '#feed' do
-    subject { instance.feed(EventIndexesChunk.create_indexes(raw_indexes)) }
+    subject { instance.feed(chunk) }
 
-    let(:raw_indexes) { [event_index1, event_index2] }
-    let(:event_index1) { { 'global_position' => 3, 'event_type_partition_id' => 2 } }
-    let(:event_index2) { { 'global_position' => 4, 'event_type_partition_id' => 2 } }
-    let(:event_index_in_queue1) { { 'global_position' => 1, 'event_type_partition_id' => 3 } }
-    let(:event_index_in_queue2) { { 'global_position' => 2, 'event_type_partition_id' => 3 } }
-    let(:feed_callback) { proc { |latest_global_position| global_position_receiver.call(latest_global_position) } }
-    let(:global_position_receiver) { double('Global position receiver') }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:event1) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+    let(:event2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+    let(:event3) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+    let(:event4) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+
+    let(:indexes) { prepare_subscription_indexes([event1, event2]) }
+    let(:indexes_in_queue) { prepare_subscription_indexes([event3, event4]) }
+
+    let(:chunk) { create_subscription_index_chunk(indexes) }
+    let(:chunk_in_queue) { create_subscription_index_chunk(indexes_in_queue) }
+
+    let(:feed_callback) { proc { |pos| subscription_position_receiver.call(pos) } }
+    let(:subscription_position_receiver) { double('Global position receiver') }
     let(:handler) { proc { |raw_event| sleep 0.5; processed_events.push(raw_event['id']) } }
 
     before do
       instance.start
       # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
       dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-      instance.feed(EventIndexesChunk.create_indexes([event_index_in_queue1, event_index_in_queue2]))
+      instance.feed(chunk_in_queue)
       dv(processed_events).wait_until(timeout: 0.1) { !_1.empty? }
-      allow(global_position_receiver).to receive(:call)
+      allow(subscription_position_receiver).to receive(:call)
       instance.define_callback(:feed, :after, feed_callback)
     end
 
@@ -46,11 +53,11 @@ RSpec.describe PgEventstore::EventsProcessor do
       end
       it 'executes :feed action' do
         subject
-        expect(global_position_receiver).to have_received(:call).with(4)
+        expect(subscription_position_receiver).to have_received(:call).with(indexes.last.subscription_position)
       end
 
-      context 'when no event indexes are fed' do
-        let(:raw_indexes) { [] }
+      context 'when empty chunk is fed' do
+        let(:chunk) { create_subscription_index_chunk([]) }
 
         it 'raises error' do
           expect { subject }.to raise_error(PgEventstore::EmptyChunkFedError)
@@ -62,7 +69,7 @@ RSpec.describe PgEventstore::EventsProcessor do
         end
         it 'does not execute :feed action' do
           subject rescue nil
-          expect(global_position_receiver).not_to have_received(:call).with(nil)
+          expect(subscription_position_receiver).not_to have_received(:call).with(nil)
         end
       end
     end
@@ -77,7 +84,7 @@ RSpec.describe PgEventstore::EventsProcessor do
       end
       it 'does not execute :feed action' do
         subject
-        expect(global_position_receiver).not_to have_received(:call).with(nil)
+        expect(subscription_position_receiver).not_to have_received(:call).with(nil)
       end
     end
   end
@@ -85,18 +92,17 @@ RSpec.describe PgEventstore::EventsProcessor do
   describe '#events_left_in_repo' do
     subject { instance.events_left_in_repo }
 
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:event1) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+    let(:event2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+    let(:indexes) { prepare_subscription_indexes([event1, event2]) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
+
     before do
       instance.start
       # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
       dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-      instance.feed(
-        EventIndexesChunk.create_indexes(
-          [
-            { 'global_position' => 1, 'event_type_partition_id' => 2 },
-            { 'global_position' => 2, 'event_type_partition_id' => 2 },
-          ]
-        )
-      )
+      instance.feed(chunk)
     end
 
     after do
@@ -123,15 +129,16 @@ RSpec.describe PgEventstore::EventsProcessor do
     end
     let(:synchronizer) { Thread::Queue.new }
 
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(5) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
+
     before do
       instance.start
       # give runner time to try to consume first event and then get into sleep, so we can test changes in the chunk
       dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-      instance.feed(
-        EventIndexesChunk.create_indexes(
-          Array.new(5) { |i| { 'global_position' => i, 'event_type_partition_id' => 2 } }
-        )
-      )
+      instance.feed(chunk)
       dv(instance).wait_until(timeout: 0.2) { _1.state == 'dead' }
     end
 
@@ -154,14 +161,12 @@ RSpec.describe PgEventstore::EventsProcessor do
   end
 
   describe 'async action' do
-    subject { instance.feed(EventIndexesChunk.create_indexes(raw_indexes)) }
+    subject { instance.feed(chunk) }
 
-    let(:raw_indexes) do
-      [
-        { 'global_position' => 123, 'event_type_partition_id' => 2 },
-        { 'global_position' => 124, 'event_type_partition_id' => 2 },
-      ]
-    end
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
 
     before do
       instance.start
@@ -173,8 +178,8 @@ RSpec.describe PgEventstore::EventsProcessor do
 
     it 'processes the given events' do
       expect { subject }.to change {
-        dv(processed_events).deferred_wait(timeout: 0.6) { _1.size == raw_indexes.size }
-      }.to(raw_indexes.map { _1['global_position'] })
+        dv(processed_events).deferred_wait(timeout: 0.6) { _1.size == events.size }
+      }.to(events.map(&:global_position))
     end
   end
 
@@ -187,6 +192,11 @@ RSpec.describe PgEventstore::EventsProcessor do
     let(:handler) do
       proc { sleep 0.2; raise error }
     end
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, [PgEventstore::Event.new]) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
 
     before do
       instance.define_callback(:error, :after, on_error_cbx)
@@ -202,7 +212,7 @@ RSpec.describe PgEventstore::EventsProcessor do
       # Let the runner start and die
       dv(instance).wait_until(timeout: 0.1) { _1.state == 'dead' }
       # Feed the processor to trigger the error
-      instance.feed(EventIndexesChunk.create_indexes([{ 'global_position' => 1, 'event_type_partition_id' => 2 }]))
+      instance.feed(chunk)
       aggregate_failures do
         expect(error_receiver).not_to have_received(:call)
         sleep 0.5
@@ -222,6 +232,11 @@ RSpec.describe PgEventstore::EventsProcessor do
       proc { raise 'Oops!' }
     end
 
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, [PgEventstore::Event.new]) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
+
     before do
       instance.define_callback(:restart, :after, on_restart_cbx)
       allow(restart_receiver).to receive(:call)
@@ -234,7 +249,7 @@ RSpec.describe PgEventstore::EventsProcessor do
 
     it 'runs :restart action' do
       # Feed the processor to trigger the error
-      instance.feed(EventIndexesChunk.create_indexes([ 'global_position' => 1, 'event_type_partition_id' => 2 ]))
+      instance.feed(chunk)
       # Let the runner time to die
       dv(instance).wait_until(timeout: 0.6) { _1.state == 'dead' }
       subject
@@ -266,17 +281,16 @@ RSpec.describe PgEventstore::EventsProcessor do
   describe 'on async action processed' do
     subject { instance.start }
 
-    let(:on_process_cbx) { proc { |global_position| global_position_receiver.call(global_position) } }
-    let(:global_position_receiver) { double('Global position receiver') }
-    let(:raw_indexes) do
-      [
-        { 'global_position' => 123, 'event_type_partition_id' => 2 },
-        { 'global_position' => 124, 'event_type_partition_id' => 2 },
-      ]
-    end
+    let(:on_process_cbx) { proc { |pos| subscription_position_receiver.call(pos) } }
+    let(:subscription_position_receiver) { double('Subscription position receiver') }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
 
     before do
-      allow(global_position_receiver).to receive(:call)
+      allow(subscription_position_receiver).to receive(:call)
       instance.define_callback(:process, :after, on_process_cbx)
     end
 
@@ -289,15 +303,15 @@ RSpec.describe PgEventstore::EventsProcessor do
       #  Let the runner start
       dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
       aggregate_failures do
-        expect(global_position_receiver).not_to have_received(:call)
+        expect(subscription_position_receiver).not_to have_received(:call)
         # Feed the processor to trigger the event processing
-        instance.feed(EventIndexesChunk.create_indexes(raw_indexes))
+        instance.feed(chunk)
         # Let the runner to process the given events
-        dv(processed_events).wait_until(timeout: 0.6) { _1.size == raw_indexes.size }
+        dv(processed_events).wait_until(timeout: 0.6) { _1.size == events.size }
         # After half a second we perform the same test over the same object, but with different expectation to prove
         # that the action is actually asynchronous
-        expect(global_position_receiver).to have_received(:call).with(123)
-        expect(global_position_receiver).to have_received(:call).with(124)
+        expect(subscription_position_receiver).to have_received(:call).with(indexes.first.subscription_position)
+        expect(subscription_position_receiver).to have_received(:call).with(indexes.last.subscription_position)
       end
     end
   end

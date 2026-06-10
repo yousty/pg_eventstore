@@ -90,10 +90,10 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
       is_expected.to(
         eq(
           [
-            PgEventstore::EventGlobalIndex.new(
+            PgEventstore::EventGlobalIndex::ReadApiRepr.new(
               global_position: event2.global_position, stream_revision: 1, event_type_partition_id: bar_partition_id
             ),
-            PgEventstore::EventGlobalIndex.new(
+            PgEventstore::EventGlobalIndex::ReadApiRepr.new(
               global_position: event3.global_position, stream_revision: 2, event_type_partition_id: foo_partition_id
             ),
           ]
@@ -103,6 +103,8 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
   end
 
   describe '#fetch_indexes_for_subscriptions' do
+    let(:subscription_service_queries) { PgEventstore::SubscriptionServiceQueries.new(PgEventstore.connection) }
+
     describe 'grouping result by subscription id' do
       subject { instance.fetch_indexes_for_subscriptions(grouped_opts) }
 
@@ -135,6 +137,8 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
       before do
         subscription1.lock!(subscriptions_set.id)
         subscription2.lock!(subscriptions_set.id)
+        reset_events_subscription_position
+        subscription_service_queries.assign_subscription_position
       end
 
       it 'returns EventGlobalIndex-es grouped by subscription id' do
@@ -143,13 +147,17 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
         is_expected.to(
           eq(
             subscription1.id => [
-              PgEventstore::EventGlobalIndex.new(
-                global_position: event1.global_position, event_type_partition_id: foo_partition_id
+              PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+                global_position: event1.global_position,
+                event_type_partition_id: foo_partition_id,
+                subscription_position: 1
               ),
             ],
             subscription2.id => [
-              PgEventstore::EventGlobalIndex.new(
-                global_position: event2.global_position, event_type_partition_id: bar_partition_id
+              PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+                global_position: event2.global_position,
+                event_type_partition_id: bar_partition_id,
+                subscription_position: 2
               ),
             ]
           )
@@ -181,6 +189,8 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
 
       before do
         subscription.lock!(subscriptions_set.id)
+        reset_events_subscription_position
+        subscription_service_queries.assign_subscription_position
       end
 
       context 'when :max_count cursor option is given' do
@@ -192,8 +202,10 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
           is_expected.to(
             eq(
               [
-                PgEventstore::EventGlobalIndex.new(
-                  global_position: events[0].global_position, event_type_partition_id: foo_partition_id
+                PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+                  global_position: events[0].global_position,
+                  event_type_partition_id: foo_partition_id,
+                  subscription_position: 1
                 ),
               ]
             )
@@ -203,14 +215,16 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
 
       context 'when :from_position cursor option is given' do
         before do
-          cursor_opts[:from_position] = events[2].global_position
+          cursor_opts[:from_position] = 3
           stub_const('PgEventstore::QueryBuilders::SubscriptionEventsFiltering::DEFAULT_LIMIT', 3)
         end
 
         it 'returns the result of up to DEFAULT_LIMIT indexes, starting at the given position' do
-          indexes = [events[2], events[3], events[4]].map do |event|
-            PgEventstore::EventGlobalIndex.new(
-              global_position: event.global_position, event_type_partition_id: foo_partition_id
+          indexes = [events[2], events[3], events[4]].map.with_index(3) do |event, index|
+            PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+              global_position: event.global_position,
+              event_type_partition_id: foo_partition_id,
+              subscription_position: index
             )
           end
           is_expected.to eq(indexes)
@@ -219,13 +233,15 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
 
       context 'when :to_position cursor option is given' do
         before do
-          cursor_opts[:to_position] = events[2].global_position
+          cursor_opts[:to_position] = 3
         end
 
         it 'limits the result by returning indexes up to that position' do
-          indexes = [events[0], events[1], events[2]].map do |event|
-            PgEventstore::EventGlobalIndex.new(
-              global_position: event.global_position, event_type_partition_id: foo_partition_id
+          indexes = [events[0], events[1], events[2]].map.with_index(1) do |event, index|
+            PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+              global_position: event.global_position,
+              event_type_partition_id: foo_partition_id,
+              subscription_position: index
             )
           end
           is_expected.to eq(indexes)
@@ -234,14 +250,16 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
 
       context 'when :to_position and :from_position cursor options are given' do
         before do
-          cursor_opts[:from_position] = events[2].global_position
-          cursor_opts[:to_position] = events[5].global_position
+          cursor_opts[:from_position] = 3
+          cursor_opts[:to_position] = 6
         end
 
         it 'limits the result to be between those positions' do
-          indexes = [events[2], events[3], events[4], events[5]].map do |event|
-            PgEventstore::EventGlobalIndex.new(
-              global_position: event.global_position, event_type_partition_id: foo_partition_id
+          indexes = [events[2], events[3], events[4], events[5]].map.with_index(3) do |event, index|
+            PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+              global_position: event.global_position,
+              event_type_partition_id: foo_partition_id,
+              subscription_position: index
             )
           end
           is_expected.to eq(indexes)
@@ -250,15 +268,17 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
 
       context 'when :to_position, :from_position and :max_count cursor options are given' do
         before do
-          cursor_opts[:from_position] = events[2].global_position
-          cursor_opts[:to_position] = events[5].global_position
+          cursor_opts[:from_position] = 3
+          cursor_opts[:to_position] = 6
           cursor_opts[:max_count] = 2
         end
 
         it 'limits the result to be between those positions, but no more than :max_count entities' do
-          indexes = [events[2], events[3]].map do |event|
-            PgEventstore::EventGlobalIndex.new(
-              global_position: event.global_position, event_type_partition_id: foo_partition_id
+          indexes = [events[2], events[3]].map.with_index(3) do |event, index|
+            PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+              global_position: event.global_position,
+              event_type_partition_id: foo_partition_id,
+              subscription_position: index
             )
           end
           is_expected.to eq(indexes)
@@ -276,7 +296,7 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
       PgEventstore.client.append_to_stream(stream, Array.new(5) { event })
     end
 
-    it 'max global_position' do
+    it 'returns max global_position' do
       is_expected.to eq(events.last.global_position)
     end
   end

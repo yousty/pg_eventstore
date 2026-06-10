@@ -1,5 +1,8 @@
 module PgEventstore
-  class StreamGlobalIndex  < Struct[untyped]
+  class StreamGlobalIndex
+    include Extensions::OptionsExtension
+    include Extensions::OptionsDefaults
+
     INITIAL_STARTING_POSITION: Integer
 
     attr_accessor id: Integer

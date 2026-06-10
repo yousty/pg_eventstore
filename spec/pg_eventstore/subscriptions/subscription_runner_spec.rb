@@ -11,7 +11,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
   let(:events_processor) do
     PgEventstore::EventsProcessor.new(
-      consumer: PgEventstore::EventsProcessorConsumer::Single.new(handler), graceful_shutdown_timeout: 5,
+      consumer: PgEventstore::EventsProcessorConsumer::Single.new(handler),
+      graceful_shutdown_timeout: 5,
       recovery_strategies:
     )
   end
@@ -116,17 +117,15 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           end
 
           context 'when there are events left in the queue' do
+            let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+            let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+            let(:indexes) { prepare_subscription_indexes(events) }
+            let(:chunk) { create_subscription_index_chunk(indexes) }
+
             before do
               instance.start
               dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-              events_processor.feed(
-                EventIndexesChunk.create_indexes(
-                  [
-                    { 'event_type_partition_id' => 1, 'global_position' => 1 },
-                    { 'event_type_partition_id' => 3, 'global_position' => 2 },
-                  ]
-                )
-              )
+              events_processor.feed(chunk)
             end
 
             after do
@@ -140,15 +139,16 @@ RSpec.describe PgEventstore::SubscriptionRunner do
         end
 
         context 'when there are a lot of events left in the chunk' do
+          let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+          let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(100) { PgEventstore::Event.new }) }
+          let(:indexes) { prepare_subscription_indexes(events) }
+          let(:chunk) { create_subscription_index_chunk(indexes) }
+
           before do
             instance.start
             dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
             stats.track_exec_time { sleep 0.2 }
-            instance.feed(
-              EventIndexesChunk.create_indexes(
-                Array.new(100) { |i| { 'event_type_partition_id' => i, 'global_position' => i } }
-              )
-            )
+            instance.feed(chunk)
           end
 
           after do
@@ -170,17 +170,15 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           end
 
           context 'when there are events left in the queue' do
+            let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+            let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+            let(:indexes) { prepare_subscription_indexes(events) }
+            let(:chunk) { create_subscription_index_chunk(indexes) }
+
             before do
               instance.start
               dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-              events_processor.feed(
-                EventIndexesChunk.create_indexes(
-                  [
-                    { 'event_type_partition_id' => 1, 'global_position' => 1 },
-                    { 'event_type_partition_id' => 3, 'global_position' => 2 },
-                  ]
-                )
-              )
+              events_processor.feed(chunk)
             end
 
             after do
@@ -205,17 +203,15 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           end
 
           context 'when there are events left in the queue' do
+            let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+            let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+            let(:indexes) { prepare_subscription_indexes(events) }
+            let(:chunk) { create_subscription_index_chunk(indexes) }
+
             before do
               instance.start
               dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-              events_processor.feed(
-                EventIndexesChunk.create_indexes(
-                  [
-                    { 'event_type_partition_id' => 1, 'global_position' => 1 },
-                    { 'event_type_partition_id' => 3, 'global_position' => 2 },
-                  ]
-                )
-              )
+              events_processor.feed(chunk)
             end
 
             after do
@@ -280,12 +276,14 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
   describe 'processing async action' do
     subject do
-      instance.feed(EventIndexesChunk.create_indexes([event_idx1, event_idx2]))
+      instance.feed(chunk)
       dv.wait_until(timeout: 0.8) { subscription.reload.total_processed_events == 2 }
     end
 
-    let(:event_idx1) { { 'global_position' => 12, 'event_type_partition_id' => 2 } }
-    let(:event_idx2) { { 'global_position' => 23, 'event_type_partition_id' => 2 } }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
     let(:handler) { proc { sleep 0.1 } }
 
     before do
@@ -303,7 +301,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       expect { subject }.to change { subscription.reload.average_event_processing_time }.to(be_between(0.1, 0.11))
     end
     it 'updates Subscription#current_position' do
-      expect { subject }.to change { subscription.reload.current_position }.to(event_idx2['global_position'])
+      expect { subject }.to change { subscription.reload.current_position }.to(indexes.last.subscription_position)
     end
     it 'updates Subscription#total_processed_events' do
       expect { subject }.to change { subscription.reload.total_processed_events }.by(2)
@@ -312,7 +310,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
   describe 'on error' do
     subject do
-      instance.feed(EventIndexesChunk.create_indexes([event_idx]))
+      instance.feed(chunk)
       dv(processed_events).wait_until(timeout: 0.6) { _1.size == 1 }
     end
 
@@ -329,8 +327,12 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     end
     let(:error) { StandardError.new('You rolled 1. Critical failure!') }
     let(:processed_events) { [] }
-    let(:event_idx) { { 'global_position' => 1, 'event_type_partition_id' => 2 } }
     let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', time_between_restarts: 0) }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(1) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
 
     before do
       instance.start
@@ -355,7 +357,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
   describe 'on restart' do
     subject do
-      instance.feed(EventIndexesChunk.create_indexes([{ 'event_type_partition_id' => 2, 'global_position' => 1 }]))
+      instance.feed(chunk)
       dv.wait_until(timeout: 1) { subscription.reload.restart_count > 0 }
     end
 
@@ -366,6 +368,11 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       [DummyErrorRecovery.new(recoverable_message: 'You rolled 1. Critical failure!', seconds_before_recovery: 0.1)]
     end
     let(:graceful_shutdown_timeout) { 0 }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
 
     before do
       instance.start
@@ -399,14 +406,12 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'on fed' do
-    subject { instance.feed(EventIndexesChunk.create_indexes(event_indexes)) }
+    subject { instance.feed(chunk) }
 
-    let(:event_indexes) do
-      [
-        { 'global_position' => 2, 'event_type_partition_id' => 2 },
-        { 'global_position' => 3, 'event_type_partition_id' => 2 },
-      ]
-    end
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
 
     before do
       subscription.update(last_chunk_greatest_position: 1)
@@ -425,12 +430,14 @@ RSpec.describe PgEventstore::SubscriptionRunner do
         }.to(be_between(Time.now.utc, Time.now.utc + 1))
       end
       it 'updates subscription#last_chunk_greatest_position' do
-        expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(3)
+        expect { subject }.to change {
+          subscription.reload.last_chunk_greatest_position
+        }.to(indexes.last.subscription_position)
       end
     end
 
     context 'when events are empty' do
-      let(:event_indexes) { [] }
+      let(:indexes) { [] }
 
       it 'raises error' do
         expect { subject }.to raise_error(PgEventstore::EmptyChunkFedError)
@@ -439,9 +446,17 @@ RSpec.describe PgEventstore::SubscriptionRunner do
   end
 
   describe 'on checkpoint' do
-    subject { instance.checkpoint(position) }
+    subject do
+      instance.feed(checkpoint_chunk)
+      dv(instance).wait_until(timeout: 0.2) { _1.subscription.current_position == position }
+    end
 
     let(:position) { 123 }
+    let(:checkpoint_chunk) { PgEventstore::Chunks::SubscriptionCheckpointChunk.new(position) }
+
+    before do
+      stub_const('PgEventstore::EventsProcessorConsumer::Single::EVENT_WAIT_TIMEOUT', 0.1)
+    end
 
     context 'when instance is running' do
       before do
@@ -463,24 +478,29 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       end
 
       context 'when there are events to process' do
-        let(:handler) { proc { sleep 0.2 } }
+        let(:handler) do
+          processed_positions = self.processed_positions
+          proc { processed_positions.push(_1['global_position']) }
+        end
+        let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+        let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(2) { PgEventstore::Event.new }) }
+        let(:indexes) { prepare_subscription_indexes(events) }
+        let(:chunk) { create_subscription_index_chunk(indexes) }
+
+        let(:processed_positions) { [] }
 
         before do
-          instance.feed(
-            EventIndexesChunk.create_indexes(
-              [
-                { 'event_type_partition_id' => 2, 'global_position' => 1 },
-                { 'event_type_partition_id' => 2, 'global_position' => 2 },
-              ]
-            )
-          )
+          instance.feed(chunk)
         end
 
-        it 'does not update Subscription#current_position' do
-          expect { subject }.not_to change { subscription.reload.current_position }
+        it 'updates Subscription#current_position to checkpoint' do
+          expect { subject }.to change { subscription.reload.current_position }.to(position)
         end
-        it 'does not update Subscription#last_chunk_greatest_position' do
-          expect { subject }.not_to change { subscription.reload.last_chunk_greatest_position }
+        it 'updates Subscription#last_chunk_greatest_position to checkpoint' do
+          expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(position)
+        end
+        it 'does not process checkpoint event' do
+          expect { subject }.to change { processed_positions }.to(events.map(&:global_position))
         end
       end
 

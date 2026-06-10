@@ -110,8 +110,3 @@ threads = CONCURRENCY.times.map do |t|
   end
 end
 threads.each(&:join)
-
-PgEventstore.connection(:_eventstore_db_connection).with do |conn|
-  conn.exec('CLUSTER events_global_index USING idx_events_idx_on_global_position')
-  conn.exec('VACUUM (ANALYZE) events_global_index;')
-end

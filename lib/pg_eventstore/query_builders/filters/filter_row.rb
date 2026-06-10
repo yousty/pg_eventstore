@@ -4,11 +4,16 @@ module PgEventstore
   module QueryBuilders
     module Filters
       # @!visibility private
-      class FilterRow < Struct.new(:stream_filter, :event_type_filters)
+      class FilterRow
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
         # @!attribute stream_filter
         #   @return [PgEventstore::QueryBuilders::Filters::StreamFilter, nil]
+        attribute(:stream_filter)
         # @!attribute event_type_filters
         #   @return [Array<PgEventstore::QueryBuilders::Filters::EventTypeFilter>]
+        attribute(:event_type_filters)
 
         # @return [Array<PgEventstore::QueryBuilders::Filters::FilterRow>]
         def flatten

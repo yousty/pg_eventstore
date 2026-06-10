@@ -3,9 +3,11 @@
 module PgEventstore
   # @!visibility private
   class SubscriptionServiceQueries
+    # Max number of events_global_index records to update
     # @return [Integer]
-    DEFAULT_SAFE_POSITION = 0
-    private_constant :DEFAULT_SAFE_POSITION
+    MAX_INDEX_RECORDS_TO_UPDATE_SUBSCRIPTION_POSITION = 100_000
+    # @return [Integer]
+    INDEXES_UPDATE_LOCK_ID = 462_315_339_855_922
 
     # @!attribute connection
     #   @return [PgEventstore::Connection]
@@ -17,51 +19,41 @@ module PgEventstore
       @connection = connection
     end
 
-    # @return [Integer]
-    def safe_global_position
-      result = transaction_queries.transaction(read_only: true) do
+    # @return [Integer, nil] number of updated records
+    def assign_subscription_position
+      transaction_queries.transaction(:read_committed) do
         connection.with do |conn|
-          conn.exec(<<~SQL)
-            SELECT MAX(global_position) as global_position
-              FROM events_horizon
-              WHERE xact_id < pg_snapshot_xmin(pg_current_snapshot())
+          locked = conn.exec_params(
+            'select pg_try_advisory_xact_lock($1::bigint) as locked',
+            [INDEXES_UPDATE_LOCK_ID]
+          ).first['locked']
+          return unless locked
+
+          conn.exec_params(<<~SQL, [MAX_INDEX_RECORDS_TO_UPDATE_SUBSCRIPTION_POSITION]).cmd_tuples
+            WITH fresh_events
+                     AS MATERIALIZED (SELECT global_position,
+                                             nextval('events_subscription_position_seq'::regclass) AS
+                                                 subscription_position
+                                      FROM events_global_index
+                                      WHERE subscription_position IS NULL
+                                      ORDER BY global_position
+                                      LIMIT $1 FOR UPDATE)
+            UPDATE events_global_index
+            SET subscription_position = fresh_events.subscription_position
+            FROM fresh_events
+            WHERE events_global_index.global_position = fresh_events.global_position
           SQL
         end
       end
-
-      global_position = result.to_a.first&.dig('global_position')
-      return global_position if global_position
-
-      if global_position.nil? && !events_horizon_present?
-        init_events_horizon
-        return safe_global_position
-      end
-      # events_horizon table is not empty, but there is no safe position yet. Thus, we wait for the safe position by
-      # returning default value which will prevent from fetching events with gaps
-      DEFAULT_SAFE_POSITION
     end
 
-    # @return [Boolean]
-    def events_horizon_present?
-      result = connection.with do |conn|
-        conn.exec(<<~SQL)
-          SELECT true as presence FROM events_horizon LIMIT 1
-        SQL
-      end
-      result.to_a.first&.dig('presence') || false
-    end
-
-    # @return [void]
-    def init_events_horizon
-      transaction_queries.transaction do
-        return if events_horizon_present?
-
-        max_pos = events_global_index_queries.max_global_position || DEFAULT_SAFE_POSITION
-        connection.with do |conn|
-          conn.exec_params(<<~SQL, [max_pos])
-            INSERT INTO events_horizon (global_position, xact_id) VALUES ($1, DEFAULT)
-          SQL
-        end
+    # @return [Integer, nil]
+    def max_subscription_position
+      builder = SQLBuilder.new.from(QueryBuilders::EventsGlobalIndexFiltering::PRIMARY_TABLE_NAME)
+      builder.select('max(subscription_position) as max_subscription_position')
+      builder.where('subscription_position is not null')
+      connection.with do |conn|
+        conn.exec_params(*builder.to_exec_params).first['max_subscription_position']
       end
     end
 
@@ -70,11 +62,6 @@ module PgEventstore
     # @return [PgEventstore::TransactionQueries]
     def transaction_queries
       TransactionQueries.new(connection)
-    end
-
-    # @return [PgEventstore::EventsGlobalIndexQueries]
-    def events_global_index_queries
-      EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

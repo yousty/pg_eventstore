@@ -267,7 +267,8 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
       subscription2.lock!(subscriptions_set.id)
       subscriptions_lifecycle.runners.push(subscription_runner1, subscription_runner2)
       subscriptions_lifecycle.runners.each(&:start)
-      PgEventstore.client.append_to_stream(stream, [bar_event, baz_event, baz_event])
+      events = PgEventstore.client.append_to_stream(stream, [bar_event, baz_event, baz_event])
+      prepare_subscription_indexes(events)
     end
 
     after do
@@ -480,6 +481,38 @@ RSpec.describe PgEventstore::SubscriptionFeederHandlers do
       expect { subject }.to change {
         subscriptions_set_lifecycle.persisted_subscriptions_set.reload.restart_count
       }.by(1)
+    end
+  end
+
+  describe '.start_events_subscription_position_worker' do
+    subject { described_class.start_events_subscription_position_worker(worker) }
+
+    let(:worker) { PgEventstore::EventsSubscriptionPositionWorker.new(:default) }
+
+    after do
+      worker.stop_async.wait_for_finish
+    end
+
+    it 'starts the worker' do
+      expect { subject }.to change { worker.state }.to('running')
+    end
+  end
+
+  describe '.stop_events_subscription_position_worker' do
+    subject { described_class.stop_events_subscription_position_worker(worker) }
+
+    let(:worker) { PgEventstore::EventsSubscriptionPositionWorker.new(:default) }
+
+    before do
+      worker.start
+    end
+
+    after do
+      worker.stop_async.wait_for_finish
+    end
+
+    it 'stops the worker' do
+      expect { subject }.to change { worker.state }.to('stopped')
     end
   end
 end

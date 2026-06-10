@@ -1,7 +1,10 @@
 module PgEventstore
   module QueryBuilders
     module Filters
-      class EventTypeFilter < Struct[untyped]
+      class EventTypeFilter
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
         attr_accessor value: String?
         attr_accessor prefix: bool
 

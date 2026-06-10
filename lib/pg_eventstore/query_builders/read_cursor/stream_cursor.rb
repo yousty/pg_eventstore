@@ -5,26 +5,40 @@ module PgEventstore
     module ReadCursor
       # @!visibility private
       class StreamCursor
-        class RegularStreamCursor < Struct.new(:from_revision, :to_revision, :direction, :max_count)
+        class RegularStreamCursor
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
           # @!attribute from_revision
           #   @return [Integer, nil]
+          attribute(:from_revision)
           # @!attribute to_revision
           #   @return [Integer, nil]
+          attribute(:to_revision)
           # @!attribute direction
           #   @return [String, Symbol, nil]
+          attribute(:direction)
           # @!attribute max_count
           #   @return [Integer, nil]
+          attribute(:max_count)
         end
 
-        class AllStreamCursor < Struct.new(:from_position, :to_position, :direction, :max_count)
+        class AllStreamCursor
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
           # @!attribute from_position
           #   @return [Integer, nil]
+          attribute(:from_position)
           # @!attribute to_position
           #   @return [Integer, nil]
+          attribute(:to_position)
           # @!attribute direction
           #   @return [String, Symbol, nil]
+          attribute(:direction)
           # @!attribute max_count
           #   @return [Integer, nil]
+          attribute(:max_count)
         end
 
         class << self
@@ -35,7 +49,7 @@ module PgEventstore
           # @option options [Integer, nil] :max_count
           # @return [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
           def from_options(options)
-            new(AllStreamCursor.new(**options.slice(*AllStreamCursor.members)))
+            new(AllStreamCursor.new(**options))
           end
 
           # @param options [Hash]
@@ -47,9 +61,9 @@ module PgEventstore
           # @option options [Integer, nil] :max_count
           # @return [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
           def from_stream_and_options(stream, options)
-            return new(AllStreamCursor.new(**options.slice(*AllStreamCursor.members))) if stream.all_stream?
+            return new(AllStreamCursor.new(**options)) if stream.all_stream?
 
-            new(RegularStreamCursor.new(**options.slice(*RegularStreamCursor.members)))
+            new(RegularStreamCursor.new(**options))
           end
         end
 

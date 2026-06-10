@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+- New config option `config.events_subscription_position_update_interval`. See more in [Configuration](docs/configuration.md) docs
+- **Breaking change**: `:from_position` option of `SubscriptionManager#subscribe`, "Current position" column in admin web UI, "Reset position" form in admin web UI now refers to the event subscription position instead `Event#global_position`. See more information in related docs [Subscription position](docs/subscriptions.md#subscription-position)
+- **Breaking change**: Drop `pg_cron` dependency
 - Remove deprecated `SubscriptionsManager#force_lock!`
 - New feature: explicit support of Dynamic Consistency Boundaries when publishing events. You can now provide "event type"-to-"expected stream revision" hash map into `:expected_revision` option. It allows to validate against stream revision at the specific event type instead validating the whole stream. Example: `PgEventstore.client.append_to_stream(stream, events, options: { expected_revision: { 'Foo' => 10, 'Bar' => 20 } })` 
 - **Breaking change**: `WrongExpectedRevisionError#new` now requires `:verdict` keyword argument. `Client#append_to_stream` now also may raise `WrongExpectedTypesRevisionError` error in case `:expected_revision` option is "event type"-to-"expected stream revision" hash map

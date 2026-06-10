@@ -206,10 +206,11 @@ RSpec.describe PgEventstore::SubscriptionQueries do
       end
     end
 
-
     describe 'filtering using created sql view' do
       subject do
-        query_strategy.exec("select * from #{view_name}").map(&PgEventstore::EventGlobalIndex.method(:new))
+        query_strategy.exec("select * from #{view_name}").map do |attrs|
+          PgEventstore::EventGlobalIndex::SubscriptionRepr.new(**attrs.transform_keys(&:to_sym))
+        end
       end
 
       let(:subscription) { SubscriptionsHelper.create }
@@ -245,41 +246,12 @@ RSpec.describe PgEventstore::SubscriptionQueries do
         PgEventstore.client.append_to_stream(stream4, event)
       end
 
-      let(:event_idx_1) do
-        partition = partition_queries.event_type_partition(event1.stream, event1.type)
-        PgEventstore::EventGlobalIndex.new(
-          global_position: event1.global_position,
-          event_type_partition_id: partition['id']
-        )
-      end
-      let(:event_idx_2) do
-        partition = partition_queries.event_type_partition(event2.stream, event2.type)
-        PgEventstore::EventGlobalIndex.new(
-          global_position: event2.global_position,
-          event_type_partition_id: partition['id']
-        )
-      end
-      let(:event_idx_3) do
-        partition = partition_queries.event_type_partition(event3.stream, event3.type)
-        PgEventstore::EventGlobalIndex.new(
-          global_position: event3.global_position,
-          event_type_partition_id: partition['id']
-        )
-      end
-      let(:event_idx_4) do
-        partition = partition_queries.event_type_partition(event4.stream, event4.type)
-        PgEventstore::EventGlobalIndex.new(
-          global_position: event4.global_position,
-          event_type_partition_id: partition['id']
-        )
-      end
-      let(:event_idx_5) do
-        partition = partition_queries.event_type_partition(event5.stream, event5.type)
-        PgEventstore::EventGlobalIndex.new(
-          global_position: event5.global_position,
-          event_type_partition_id: partition['id']
-        )
-      end
+      let(:indexes) { prepare_subscription_indexes([event1, event2, event3, event4, event5]) }
+      let(:event_idx1) { indexes[0] }
+      let(:event_idx2) { indexes[1] }
+      let(:event_idx3) { indexes[2] }
+      let(:event_idx4) { indexes[3] }
+      let(:event_idx5) { indexes[4] }
 
       before do
         instance.lock!(subscription.id, subscriptions_set.id, force: false)
@@ -289,11 +261,12 @@ RSpec.describe PgEventstore::SubscriptionQueries do
         event3
         event4
         event5
+        PgEventstore::SubscriptionServiceQueries.new(PgEventstore.connection).assign_subscription_position
       end
 
       context 'when filters are empty' do
         it 'returns all indexes' do
-          is_expected.to eq([event_idx_1, event_idx_2, event_idx_3, event_idx_4, event_idx_5])
+          is_expected.to eq([event_idx1, event_idx2, event_idx3, event_idx4, event_idx5])
         end
       end
 
@@ -302,7 +275,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           let(:options) { { filter: { event_types: ['Foo'] } } }
 
           it 'filters indexes by the given type' do
-            is_expected.to eq([event_idx_1, event_idx_2])
+            is_expected.to eq([event_idx1, event_idx2])
           end
         end
 
@@ -310,7 +283,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           let(:options) { { filter: { event_types: [{ prefix: 'Ba' }] } } }
 
           it 'filters indexes by the given prefix' do
-            is_expected.to eq([event_idx_3, event_idx_4, event_idx_5])
+            is_expected.to eq([event_idx3, event_idx4, event_idx5])
           end
         end
       end
@@ -320,7 +293,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
 
         describe 'filtering by :context' do
           it 'returns indexes of given context' do
-            is_expected.to eq([event_idx_1])
+            is_expected.to eq([event_idx1])
           end
         end
 
@@ -328,7 +301,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           let(:options) { { filter: { streams: [{ context: 'BarCtx', stream_name: 'Bar' }] } } }
 
           it 'returns indexes of given context and stream name' do
-            is_expected.to eq([event_idx_2, event_idx_3])
+            is_expected.to eq([event_idx2, event_idx3])
           end
         end
 
@@ -336,7 +309,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           let(:options) { { filter: { streams: [stream3.to_hash] } } }
 
           it 'returns indexes of given context and stream name' do
-            is_expected.to eq([event_idx_3])
+            is_expected.to eq([event_idx3])
           end
         end
 
@@ -344,7 +317,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           let(:options) { { filter: { streams: [{ context: 'FooCtx' }, { context: 'BarCtx', stream_name: 'Baz' }] } } }
 
           it 'returns indexes from intersection of given streams filters' do
-            is_expected.to eq([event_idx_1, event_idx_4, event_idx_5])
+            is_expected.to eq([event_idx1, event_idx4, event_idx5])
           end
         end
 
@@ -355,13 +328,14 @@ RSpec.describe PgEventstore::SubscriptionQueries do
                 streams: [
                   { context: 'BarCtx' },
                   { context: 'BarCtx', stream_name: 'Bar' },
-                  { context: 'BarCtx', stream_name: 'Baz', stream_id: '1' }]
+                  { context: 'BarCtx', stream_name: 'Baz', stream_id: '1' },
+                ]
               }
             }
           end
 
           it 'returns indexes for the most common filter' do
-            is_expected.to eq([event_idx_2, event_idx_3, event_idx_4, event_idx_5])
+            is_expected.to eq([event_idx2, event_idx3, event_idx4, event_idx5])
           end
         end
       end
@@ -371,13 +345,13 @@ RSpec.describe PgEventstore::SubscriptionQueries do
           {
             filter: {
               streams: [{ context: 'BarCtx' }],
-              event_types: %w[Foo Bar]
+              event_types: %w[Foo Bar],
             }
           }
         end
 
         it 'returns indexes by the given streams and event types filters' do
-          is_expected.to eq([event_idx_2, event_idx_4, event_idx_5])
+          is_expected.to eq([event_idx2, event_idx4, event_idx5])
         end
       end
     end

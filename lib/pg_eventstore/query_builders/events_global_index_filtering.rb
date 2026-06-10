@@ -221,6 +221,13 @@ module PgEventstore
         @sql_builder.order("#{to_table_name}.stream_revision #{SQL_DIRECTIONS[direction]}")
       end
 
+      # @return [void]
+      def for_subscription
+        @sql_builder.select("#{to_table_name}.subscription_position")
+        @sql_builder.where('subscription_position is not null')
+        @sql_builder.order("#{to_table_name}.subscription_position asc")
+      end
+
       private
 
       # @param direction [String, Symbol, nil]

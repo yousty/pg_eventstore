@@ -6,6 +6,9 @@ module PgEventstore
     class Multiple
       include EventsProcessorConsumer
 
+      # @return [Float, Integer]
+      EVENTS_WAIT_TIMEOUT = 0.5
+
       class << self
         # @param handler [#call]
         # @param deserializer [PgEventstore::EventDeserializer]
@@ -34,15 +37,22 @@ module PgEventstore
       def call(callbacks, events_repository, repository_cond)
         events_to_process =
           @last_unprocessed_events ||
-          events_repository.wait_and_consume(entities_num: nil, timeout: 0.5, condition: repository_cond)
+          events_repository.wait_and_consume(
+            entities_num: nil, timeout: EVENTS_WAIT_TIMEOUT, condition: repository_cond
+          )
         return if events_to_process.empty?
 
-        callbacks.run_callbacks(:process, Utils.original_global_position(events_to_process.last)) do
-          @handler.call(events_to_process)
+        if events_to_process.first.is_a?(Chunks::SubscriptionCheckpointChunk::Checkpoint)
+          callbacks.run_callbacks(:checkpoint, events_to_process.first.subscription_position)
+          return
+        end
+
+        callbacks.run_callbacks(:process, events_to_process.last.subscription_position) do
+          @handler.call(events_to_process.map(&:attributes))
         rescue => exception
           @last_unprocessed_events = events_to_process
           raise Utils.wrap_exception(
-            exception, global_positions: events_to_process.map(&Utils.method(:original_global_position))
+            exception, subscription_positions: events_to_process.map(&:subscription_position)
           )
         else
           clear_unprocessed_events

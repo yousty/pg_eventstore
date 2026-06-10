@@ -1,6 +1,8 @@
 module PgEventstore
   module EventsProcessorConsumer
     class Single
+      EVENT_WAIT_TIMEOUT: Float | Integer
+
       include EventsProcessorConsumer
       extend ClassMethods
 

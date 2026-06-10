@@ -3,13 +3,25 @@
 module PgEventstore
   module Chunks
     # @!visibility private
-    class EventsIndexChunk
+    class SubscriptionEventsIndexChunk
       include Chunk
+
+      class RawEventWithCommitPosition
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
+        # @!attribute subscription_position
+        #   @return [Integer]
+        attribute(:subscription_position)
+        # @!attribute attributes
+        #   @return [Hash<String, Object>]
+        attribute(:attributes)
+      end
 
       # @return [Integer]
       MAX_PARTITIONS_TO_RESOLVE_PER_CALL = 100
 
-      # @param indexes [Array<PgEventstore::EventGlobalIndex>]
+      # @param indexes [Array<PgEventstore::EventGlobalIndex::SubscriptionRepr>]
       # @param connection [PgEventstore::Connection]
       # @param query_strategy [PgEventstore::QueryStrategy]
       # @param resolve_link_tos [Boolean]
@@ -23,7 +35,7 @@ module PgEventstore
         @resolved = indexes.empty?
       end
 
-      # @return [Array<Hash>] raw events array
+      # @return [Array<RawEventWithCommitPosition>] raw events array
       def take(size)
         resolve_indexes unless resolved?
         @raw_events.slice!(0...size)
@@ -39,20 +51,20 @@ module PgEventstore
         @indexes.size + @raw_events.size
       end
 
-      # @return [PgEventstore::EventGlobalIndex, nil]
+      # @return [PgEventstore::EventGlobalIndex::SubscriptionRepr, nil]
       def last
         @indexes.last
       end
 
       private
 
-      # @param idx1 [PgEventstore::EventGlobalIndex, nil]
-      # @param idx2 [PgEventstore::EventGlobalIndex, nil]
+      # @param idx1 [PgEventstore::EventGlobalIndex::SubscriptionRepr, nil]
+      # @param idx2 [PgEventstore::EventGlobalIndex::SubscriptionRepr, nil]
       # @return [Symbol]
       def detect_direction(idx1, idx2)
         return :asc if idx1.nil? || idx2.nil?
 
-        idx1.global_position > idx2.global_position ? :desc : :asc
+        idx1.subscription_position > idx2.subscription_position ? :desc : :asc
       end
 
       # @return [Boolean]
@@ -63,11 +75,19 @@ module PgEventstore
       # @return [void]
       def resolve_indexes
         indexes_to_resolve = @indexes.slice!(range_to_slice)
+        global_to_sub_position_map = indexes_to_resolve.to_h { [_1.global_position, _1.subscription_position] }
         raw_events = events_global_index_queries.resolve_indexes(
           indexes_to_resolve,
-          direction: @idx_direction,
           resolve_link_tos: @resolve_link_tos
         )
+        raw_events = raw_events.map do |attrs|
+          global_position = attrs['link'] ? attrs['link']['global_position'] : attrs['global_position']
+          RawEventWithCommitPosition.new(
+            attributes: attrs,
+            subscription_position: global_to_sub_position_map[global_position]
+          )
+        end
+        raw_events = sort(raw_events)
         @raw_events.push(*raw_events)
         @resolved = @indexes.empty?
       rescue => exception
@@ -92,6 +112,16 @@ module PgEventstore
           end
         end
         0..latest_index
+      end
+
+      # @param raw_events [Array<RawEventWithCommitPosition>]
+      # @return [Array<RawEventWithCommitPosition>]
+      def sort(raw_events)
+        if @idx_direction == :asc
+          raw_events.sort_by(&:subscription_position)
+        else
+          raw_events.sort_by { |e1, e2| e2.subscription_position <=> e1.subscription_position }
+        end
       end
 
       # @return [PgEventstore::EventsGlobalIndexQueries]

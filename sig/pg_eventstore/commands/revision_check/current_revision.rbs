@@ -2,11 +2,17 @@ module PgEventstore
   module Commands
     module RevisionCheck
       class CurrentRevision
-        class StreamRevision < Struct[untyped]
+        class StreamRevision
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
           attr_accessor revision: Integer
         end
 
-        class EventTypeRevisions < Struct[untyped]
+        class EventTypeRevisions
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
           attr_accessor revisions: Hash[String, Integer]
         end
 

@@ -79,7 +79,7 @@ module PgEventstore
     def create_or_replace_view(id, options, locked_by)
       filter_collection = QueryBuilders::Filters::Collection.from_options(options)
       index_filtering = QueryBuilders::EventsGlobalIndexFiltering.new
-      index_filtering.add_global_position_direction(:asc)
+      index_filtering.for_subscription
       filter_collection.collection.each(&index_filtering.method(:add_filter_row))
       view_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
 

@@ -1,0 +1,6 @@
+module PgEventstore
+  class EventsSubscriptionPositionWorkerHandlers
+    def self.assign_subscription_position: (SubscriptionServiceQueries subscription_service_queries,
+          Integer | Float update_interval) -> void
+  end
+end

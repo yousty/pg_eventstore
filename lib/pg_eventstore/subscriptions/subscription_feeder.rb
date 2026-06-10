@@ -30,6 +30,7 @@ module PgEventstore
       @subscriptions_set_lifecycle = subscriptions_set_lifecycle
       @subscriptions_lifecycle = subscriptions_lifecycle
       @commands_handler = CommandsHandler.new(@config_name, self, @subscriptions_lifecycle.runners)
+      @events_subscription_position_worker = EventsSubscriptionPositionWorker.new(@config_name)
       attach_runner_callbacks
     end
 
@@ -77,6 +78,12 @@ module PgEventstore
         :before_runner_started, :before,
         SubscriptionFeederHandlers.setup_handler(:start_cmds_handler, @commands_handler)
       )
+      @basic_runner.define_callback(
+        :before_runner_started, :before,
+        SubscriptionFeederHandlers.setup_handler(
+          :start_events_subscription_position_worker, @events_subscription_position_worker
+        )
+      )
 
       @basic_runner.define_callback(
         :after_runner_died, :before,
@@ -107,6 +114,12 @@ module PgEventstore
       @basic_runner.define_callback(
         :after_runner_stopped, :before,
         SubscriptionFeederHandlers.setup_handler(:stop_commands_handler, @commands_handler)
+      )
+      @basic_runner.define_callback(
+        :after_runner_stopped, :before,
+        SubscriptionFeederHandlers.setup_handler(
+          :stop_events_subscription_position_worker, @events_subscription_position_worker
+        )
       )
 
       @basic_runner.define_callback(
