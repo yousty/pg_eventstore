@@ -2,7 +2,8 @@
 
 ## Append your first event
 
-The easiest way to append an event is to create an event object and a stream object and call the client's `#append_to_stream` method.
+The easiest way to append an event is to create an event object and a stream object and call the client's
+`#append_to_stream` method.
 
 ```ruby
 require 'securerandom'
@@ -18,7 +19,8 @@ PgEventstore.client.append_to_stream(stream, event)
 
 ## Appending multiple events
 
-You can pass an array of events to the `#append_to_stream` method. This way events will be appended one-by-one. **This operation is atomic and it guarantees that events are added to the stream in the given order.**
+You can pass an array of events to the `#append_to_stream` method. This way events will be appended one-by-one. **This
+operation is atomic and it guarantees that events are added to the stream in the given order.**
 
 ```ruby
 require 'securerandom'
@@ -34,9 +36,11 @@ PgEventstore.client.append_to_stream(stream, [event1, event2])
 
 ### Duplicated event id
 
-If two events with the same id are appended to any stream - `pg_eventstore` will only append one event, and the second command will raise an error.
+If two events with the same id are appended to any stream - `pg_eventstore` will only append one event, and the second
+command will raise an error.
 
 ```ruby
+
 class SomethingHappened < PgEventstore::Event
 end
 
@@ -49,9 +53,12 @@ PgEventstore.client.append_to_stream(stream, event)
 
 ## Handling concurrency
 
-When appending events to a stream you can supply a stream state or stream revision. You can use this to tell `pg_eventstore` what state or version you expect the stream to be in when you append. If the stream isn't in that state then an exception will be thrown.
+When appending events to a stream you can supply a stream state or stream revision. You can use this to tell
+`pg_eventstore` what state or version you expect the stream to be in when you append. If the stream isn't in that state
+then an exception will be thrown.
 
-For example if we try to append two records expecting both times that the stream doesn't exist we will get an exception on the second:
+For example if we try to append two records expecting both times that the stream doesn't exist we will get an exception
+on the second:
 
 ```ruby
 require 'securerandom'
@@ -76,7 +83,8 @@ Here are possible values of `:expected_revision` option:
 - `:stream_exists`. Expects a stream to be present when appending an event
 - a revision number(Integer). Expects a stream to be in the given revision.
 
-This check can be used to implement optimistic concurrency. When you retrieve a stream, you take note of the current version number, then when you save it back you can determine if somebody else has modified the record in the meantime.
+This check can be used to implement optimistic concurrency. When you retrieve a stream, you take note of the current
+version number, then when you save it back you can determine if somebody else has modified the record in the meantime.
 
 ```ruby
 require 'securerandom'
@@ -102,17 +110,24 @@ PgEventstore.client.append_to_stream(stream, event2, options: { expected_revisio
 ### What to do when a PgEventstore::WrongExpectedRevisionError error is risen?
 
 Imagine the following scenario:
+
 1. You load events of a stream to build the state of your business object represented by the stream.
 2. You check your business rules to see if you can change that object's state the way you want to change it.
 3. If no business rules have been violated, you have the go to publish the event representing the state change.
-4. To make sure the new event will follow the last event you used to build your object state, you retrieve that last event's revision and increase it by one. You now have the expected revision for the event to be published.
-5. You publish the event but retrieve a `WrongExpectedRevisionError`. This means another process has appended an event to the same stream, after you were loading your business object, while you were checking your business rules.
-6. Now you need to repeat the process: load your business objects from the updated events stream, apply your business rules and if there is still no violation, try to append the event with the updated stream revision. You can do this procedure until the event is published or a maximum number of retries has been reached.
+4. To make sure the new event will follow the last event you used to build your object state, you retrieve that last
+   event's revision and increase it by one. You now have the expected revision for the event to be published.
+5. You publish the event but retrieve a `WrongExpectedRevisionError`. This means another process has appended an event
+   to the same stream, after you were loading your business object, while you were checking your business rules.
+6. Now you need to repeat the process: load your business objects from the updated events stream, apply your business
+   rules and if there is still no violation, try to append the event with the updated stream revision. You can do this
+   procedure until the event is published or a maximum number of retries has been reached.
 
-The following example shows the described retry procedure, with a simple business rule that does not allow adding an event after a `UserRemoved` event:
+The following example shows the described retry procedure, with a simple business rule that does not allow adding an
+event after a `UserRemoved` event:
 
 ```ruby
 require 'securerandom'
+
 class UserAboutMeChanged < PgEventstore::Event
 end
 
@@ -121,7 +136,7 @@ end
 
 def latest_event(stream)
   PgEventstore.client.read(stream, options: { max_count: 1, direction: 'Backwards' }).first
-rescue PgEventstore::StreamNotFoundError  
+rescue PgEventstore::StreamNotFoundError
 end
 
 def publish_event(stream, event)
@@ -138,7 +153,7 @@ def publish_event(stream, event)
     retries_count += 1
     raise if retries_count > 3
     retry
-  end  
+  end
 end
 
 stream = PgEventstore::Stream.new(context: 'UserProfile', stream_name: 'User', stream_id: SecureRandom.uuid)
@@ -149,7 +164,9 @@ publish_event(stream, event)
 
 ## Middlewares
 
-If you would like to skip some of your registered middlewares from processing events before they get appended to a stream - you should use the `:middlewares` argument which allows you to override the list of middlewares you would like to use.
+If you would like to skip some of your registered middlewares from processing events before they get appended to a
+stream - you should use the `:middlewares` argument which allows you to override the list of middlewares you would like
+to use.
 
 Let's say you have these registered middlewares:
 
@@ -159,7 +176,8 @@ PgEventstore.configure do |config|
 end
 ```
 
-And you want to skip `FooMiddleware` and `BazMiddleware`. You simply have to provide an array of corresponding middleware keys you would like to use:
+And you want to skip `FooMiddleware` and `BazMiddleware`. You simply have to provide an array of corresponding
+middleware keys you would like to use:
 
 ```ruby
 event = PgEventstore::Event.new

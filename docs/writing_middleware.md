@@ -1,8 +1,12 @@
 # Writing middleware
 
-Middlewares are objects that modify events before they are appended to a stream, or right after they are read from a stream. Middleware object must respond to `#serialize` and `#deserialize` methods. The `#serialize` method is called each time an event is going to be appended. The `#deserialize` method is called each time an event is read from a stream. There are two ways how you can define a middleware:
+Middlewares are objects that modify events before they are appended to a stream, or right after they are read from a
+stream. Middleware object must respond to `#serialize` and `#deserialize` methods. The `#serialize` method is called
+each time an event is going to be appended. The `#deserialize` method is called each time an event is read from a
+stream. There are two ways how you can define a middleware:
 
-- by defining your class and including `PgEventstore::Middleware` module in it. This way you can override only one of its methods, or both of them. Example:
+- by defining your class and including `PgEventstore::Middleware` module in it. This way you can override only one of
+  its methods, or both of them. Example:
 
 ```ruby
 # Override #serialize only to define your custom logic
@@ -38,11 +42,15 @@ end
 
 # Configure your middlewares
 PgEventstore.configure do |config|
-  config.middlewares = { my_awesome_serializer: MyAwesomeSerializer.new, my_awesome_deserializer: MyAwesomeDeserializer.new, my_awesome_middleware: MyAwesomeMiddleware.new }
+  config.middlewares = { 
+    my_awesome_serializer: MyAwesomeSerializer.new, 
+    my_awesome_deserializer: MyAwesomeDeserializer.new, 
+    my_awesome_middleware: MyAwesomeMiddleware.new 
+  }
 end
 ```
 
-- implement your own object that implements `#serialize` and `#deserialize` methods. Example: 
+- implement your own object that implements `#serialize` and `#deserialize` methods. Example:
 
 ```ruby
 require 'securerandom'
@@ -99,7 +107,7 @@ class ExtractLargePayload
     def resolve_large_payload(payload_key)
       JSON.parse(Faraday.get("https://my.awesome.api/api/large_payload", { payload_key: payload_key }).body)['value']
     end
-  end  
+  end
 end
 
 # Configure our middlewares
@@ -127,9 +135,13 @@ PgEventstore.client.read(stream).last
 
 ## Remarks
 
-It is important to know that `pg_eventstore` may retry commands. In that case `#serialize` and `#deserialize` methods may also be retried. You have to make sure that the implementation of `#serialize` and `#deserialize` always returns the same result for the same input, and it does not create duplications. Let's look at the `#serialize` implementation from the example above:
+It is important to know that `pg_eventstore` may retry commands. In that case `#serialize` and `#deserialize` methods
+may also be retried. You have to make sure that the implementation of `#serialize` and `#deserialize` always returns the
+same result for the same input, and it does not create duplications. Let's look at the `#serialize` implementation from
+the example above:
 
 ```ruby
+
 def serialize(event)
   return if event.fields_with_large_payloads.empty?
 
@@ -153,8 +165,13 @@ def extract_large_payload_async(field_name, value)
 end
 ```
 
-Private method `#extract_large_payload_async` should return the same result when passing the same `field_name` and `value` arguments values, and `POST https://my.awesome.api/api/extract_large_payload` may not want to produce duplicates when called multiple times with the same payload.
+Private method `#extract_large_payload_async` should return the same result when passing the same `field_name` and
+`value` arguments values, and `POST https://my.awesome.api/api/extract_large_payload` may not want to produce duplicates
+when called multiple times with the same payload.
 
 ## Async vs Sync implementation
 
-You may notice that the extracting of a large payload is asynchronous in the example above. It is recommended approach of the implementation of `#serialize` method to increase overall performance. But if it hard for you to guarantee the persistence of a payload value - you can go with sync approach, thus not allowing event to be persisted if a payload extraction request fails.
+You may notice that the extracting of a large payload is asynchronous in the example above. It is recommended approach
+of the implementation of `#serialize` method to increase overall performance. But if it hard for you to guarantee the
+persistence of a payload value - you can go with sync approach, thus not allowing event to be persisted if a payload
+extraction request fails.

@@ -54,6 +54,7 @@ Example:
 
 ```ruby
 require 'securerandom'
+
 class SomethingHappened < PgEventstore::Event
 end
 
