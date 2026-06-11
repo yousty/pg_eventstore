@@ -327,6 +327,81 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     end
   end
 
+  describe 'GET /streams' do
+    subject { get '/streams', params }
+
+    let(:params) { {} }
+
+    describe 'streams' do
+      let!(:streams) do
+        20.times.map do |t|
+          stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: "stream-#{t}")
+          PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
+          stream
+        end
+      end
+      let(:visible_stream_ids) { nokogiri_body.css('tbody td:nth-child(4)').map(&:inner_text).map(&:strip) }
+
+      it 'displays last 10 streams' do
+        subject
+        expect(visible_stream_ids).to eq(streams.reverse.first(10).map(&:stream_id))
+      end
+      it_behaves_like 'admin web ui config'
+
+      context 'when the limit is set to 20' do
+        let(:params) { { per_page: 20 } }
+
+        it 'displays up to 100 events' do
+          subject
+          expect(visible_stream_ids).to eq(streams.reverse.map(&:stream_id))
+        end
+      end
+
+      context 'when starting_id is provided' do
+        let(:params) do
+          starting_position = PgEventstore.client.read(PgEventstore::Stream.all_stream)[18].global_position
+          { starting_id: starting_position }
+        end
+
+        it 'displays streams from the given starting position' do
+          subject
+          expect(visible_stream_ids).to eq(streams.reverse[1..10].map(&:stream_id))
+        end
+      end
+
+      context 'when order is provided' do
+        let(:params) { { order: :asc } }
+
+        it 'displays first 10 streams' do
+          subject
+          expect(visible_stream_ids).to eq(streams.first(10).map(&:stream_id))
+        end
+      end
+    end
+
+    describe 'XSS protection in an stream parts' do
+      let(:stream) do
+        PgEventstore::Stream.new(context: '<script xss>', stream_name: '<script xss>', stream_id: '<script xss>')
+      end
+      let!(:event) do
+        PgEventstore.client.append_to_stream(
+          stream,
+          PgEventstore::Event.new(
+            type: '<script xss>', data: { foo: '<script xss>' }, metadata: { foo: '<script xss>' }
+          )
+        )
+      end
+      let!(:link) do
+        PgEventstore.client.link_to(stream, event)
+      end
+
+      it 'does not include unescaped content' do
+        subject
+        expect(last_response.body).not_to include('<script xss>')
+      end
+    end
+  end
+
   describe 'POST /change_config' do
     subject { post '/change_config', params }
 

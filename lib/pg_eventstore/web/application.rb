@@ -169,11 +169,19 @@ module PgEventstore
             resolve_link_tos: resolve_link_tos?,
           }
         )
+        @gp_to_sp_map = EventsGlobalIndexQueries.new(
+          PgEventstore.connection(current_config),
+          QueryStrategy::Foreground.new(PgEventstore.connection(current_config))
+        ).subscription_positions_from_db(@collection.collection)
 
         if request.xhr?
           content_type 'application/json'
           halt 200, {
-            events: erb(:'home/partials/events', { layout: false }, { events: @collection.collection }),
+            events: erb(
+              :'home/partials/events',
+              { layout: false },
+              { events: @collection.collection, gp_to_sp_map: @gp_to_sp_map }
+            ),
             total_count: total_count(@collection.total_count),
             pagination: erb(:'home/partials/pagination_links', { layout: false }, { collection: @collection }),
           }.to_json

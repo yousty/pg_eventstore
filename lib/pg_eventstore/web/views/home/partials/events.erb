@@ -1,6 +1,13 @@
 <% events.each do |event| %>
   <tr>
     <td><%= event.global_position %></td>
+    <td>
+      <% if gp_to_sp_map[event.global_position] %>
+        <%= gp_to_sp_map[event.global_position] %>
+      <% else %>
+        <i>Not yet assigned</i>
+      <% end %>
+    </td>
     <td><%= event.stream_revision %></td>
     <td><%= empty_characters_fallback(h event.stream.context) %></td>
     <td><%= empty_characters_fallback(h event.stream.stream_name) %></td>

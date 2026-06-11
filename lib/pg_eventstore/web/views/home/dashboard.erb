@@ -135,6 +135,7 @@
                     <a href="<%= sort_url('asc') %>"><i class="fa fa-sort-asc"></i></a>
                   <% end %>
                 </th>
+                <th>Subscription position</th>
                 <th>Stream revision</th>
                 <th>Context</th>
                 <th>Stream name</th>
@@ -146,7 +147,7 @@
               </tr>
               </thead>
               <tbody>
-                <%= erb :'home/partials/events', { layout: false }, { events: @collection.collection } %>
+                <%= erb :'home/partials/events', { layout: false }, { events: @collection.collection, gp_to_sp_map: @gp_to_sp_map } %>
               </tbody>
             </table>
           </div>

@@ -33,6 +33,8 @@ module PgEventstore
     def resolve_indexes: (Array[EventGlobalIndex::ReadApiRepr] | Array[EventGlobalIndex::SubscriptionRepr] indexes,
         ?direction: (String | Symbol)?, resolve_link_tos: bool) -> Array[Hash[String, untyped]]
 
+    def subscription_positions_from_db: (Array[Event] events) -> Hash[Integer, Integer?]
+
     private
 
     def deserialize: (PG::Result pg_result, ?repr: Symbol?) ->
