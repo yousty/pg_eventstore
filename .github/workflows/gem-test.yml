@@ -22,12 +22,6 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
-      - name: Build PostgreSQL image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: pg_eventstore/postgres_with_pg_cron
       - name: Run PostgreSQL
         if: ${{ !steps.skip-workflow.outputs.skip }}
         run: docker compose up --detach
