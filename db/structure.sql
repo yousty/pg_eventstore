@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fz8c1bmVidxjZAbMhGzJdi6cl5Z3c429YxObelprLp9kKRvpVXpvTeKO8WvZ6Qm
+\restrict nCmHf03yJVAIWDjHe5onU4bHALySCrraEDVaHjLYvMUPgeYYpaVJIL9XEr3ilwo
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -444,7 +444,7 @@ ALTER TABLE ONLY public.subscriptions_set
 -- Name: idx_events_global_index_subscription_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_global_index_subscription_position ON public.events_global_index USING btree (subscription_position) WHERE (subscription_position IS NOT NULL);
+CREATE INDEX idx_events_global_index_subscription_position ON public.events_global_index USING btree (subscription_position) INCLUDE (global_position, context_partition_id, stream_name_partition_id, event_type_partition_id, streams_global_index_id) WHERE (subscription_position IS NOT NULL);
 
 
 --
@@ -648,5 +648,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fz8c1bmVidxjZAbMhGzJdi6cl5Z3c429YxObelprLp9kKRvpVXpvTeKO8WvZ6Qm
+\unrestrict nCmHf03yJVAIWDjHe5onU4bHALySCrraEDVaHjLYvMUPgeYYpaVJIL9XEr3ilwo
 

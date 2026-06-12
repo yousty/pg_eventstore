@@ -41,7 +41,15 @@ CREATE INDEX idx_events_idx_on_streams_idx_id_N_e_type_part_id_n_revision ON pub
     USING btree (streams_global_index_id, event_type_partition_id, stream_revision) INCLUDE (global_position);
 
 CREATE INDEX idx_events_global_index_subscription_position ON public.events_global_index
-    USING btree (subscription_position) WHERE subscription_position IS NOT NULL;
+    USING btree (subscription_position)
+    INCLUDE (
+        global_position,
+        context_partition_id,
+        stream_name_partition_id,
+        event_type_partition_id,
+        streams_global_index_id
+        )
+    WHERE subscription_position IS NOT NULL;
 
 CREATE INDEX idx_events_global_index_unprocessed ON public.events_global_index USING btree (global_position)
     WHERE subscription_position IS NULL;
