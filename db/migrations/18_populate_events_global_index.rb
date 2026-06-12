@@ -59,8 +59,6 @@ threads = CONCURRENCY.times.map do |t|
             break if events.empty?
 
             global_position = events.last['global_position']
-            lock.synchronize { processed += events.size }
-
             stream_builders = events.map do |event|
               sql_builder = PgEventstore::SQLBuilder.new.from('streams_global_index')
               sql_builder.select(%( id, #{event['global_position']} as event_global_position ))
@@ -89,10 +87,8 @@ threads = CONCURRENCY.times.map do |t|
               SQL
             end
 
-            # Only log from the first thread to prevent messages spam
-            next unless t == 0
-
             lock.synchronize do
+              processed += events.size
               time_was = time
               time = Time.now
 

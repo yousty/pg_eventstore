@@ -225,6 +225,27 @@ module PgEventstore
       "event_types_#{Digest::MD5.hexdigest("#{stream.context}-#{stream.stream_name}-#{event_type}")[0..5]}"
     end
 
+    # @param partition [PgEventstore::Partition]
+    # @return [void]
+    def detach_event_type_partition(partition)
+      parent = deserialize(find_by_ids([partition.parent_stream_name_partition_id]).first)
+      connection.with do |conn|
+        conn.exec("alter table #{parent.table_name} detach partition #{partition.table_name}")
+      end
+    end
+
+    # @param partition [PgEventstore::Partition]
+    # @return [void]
+    def attach_event_type_partition(partition)
+      parent = deserialize(find_by_ids([partition.parent_stream_name_partition_id]).first)
+      connection.with do |conn|
+        event_type = conn.escape_string(partition.event_type)
+        conn.exec(
+          "alter table #{parent.table_name} attach partition #{partition.table_name} for values in ('#{event_type}')"
+        )
+      end
+    end
+
     private
 
     # @param attrs [Hash]

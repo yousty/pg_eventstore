@@ -95,12 +95,8 @@ threads = CONCURRENCY.times.map do |t|
           SQL
         end
 
-        lock.synchronize { processed += events.size }
-
-        # Only log from the first thread to prevent messages spam
-        next unless t == 0
-
         lock.synchronize do
+          processed += events.size
           time_was = time
           time = Time.now
 
@@ -118,6 +114,8 @@ end
 threads.each(&:join)
 
 PgEventstore.connection(:_eventstore_db_connection).with do |conn|
+  puts 'Running cluster on streams_global_index. This may take some time.'
   conn.exec('CLUSTER streams_global_index USING idx_streams_global_index_on_starting_position')
-  conn.exec('VACUUM (ANALYZE) streams_global_index;')
+  puts 'Running vacuum on streams_global_index. This may take some time.'
+  conn.exec('VACUUM (ANALYZE) streams_global_index')
 end

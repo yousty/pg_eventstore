@@ -4,6 +4,8 @@ module PgEventstore
 
     def initialize: (Connection connection) -> void
 
+    def attach_event_type_partition: (Partition partition) -> void
+
     def create_context_partition: (Stream stream) -> ::Hash[untyped, untyped]
 
     def create_stream_name_partition: (Stream stream, String context_partition_name,
@@ -11,6 +13,8 @@ module PgEventstore
 
     def create_event_type_partition: (Stream stream, String event_type, String stream_name_partition_name,
         Integer context_partition_id, Integer stream_name_partition_id) -> ::Hash[untyped, untyped]
+
+    def detach_event_type_partition: (Partition partition) -> void
 
     def partition_required?: (Stream stream, String event_type) -> bool
 
