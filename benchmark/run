@@ -80,8 +80,12 @@ EXPLANATION = {
 end
 
 random_stream_attrs = PgEventstore.connection.with do |conn|
-  conn.exec('select context, stream_name, stream_id from events order by random() limit 2')
-end.to_a.each { _1.transform_keys!(&:to_sym) }
+  conn.exec(<<~SQL)
+    select stream_id, p.context, p.stream_name from streams_global_index,
+                 lateral (select context, stream_name from partitions where id = streams_global_index.partition_id) p
+                 order by random() limit 2;
+  SQL
+end.map { _1.transform_keys(&:to_sym) }
 
 read_tests = {
   'Reading from "all" stream' => -> {
