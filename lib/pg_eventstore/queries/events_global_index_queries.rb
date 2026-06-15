@@ -144,17 +144,6 @@ module PgEventstore
       @query_strategy.exec_params(*builder.to_exec_params).map { _1['global_position'] }
     end
 
-    # @param events [Array<PgEventstore::Event>]
-    # @return [Hash]
-    def subscription_positions_from_db(events)
-      builder = SQLBuilder.new.from(QueryBuilders::EventsGlobalIndexFiltering::PRIMARY_TABLE_NAME)
-      builder.select('global_position, subscription_position')
-      builder.where('global_position = ANY(?::bigint[])', events.map(&:global_position))
-      @query_strategy.exec_params(*builder.to_exec_params).to_h do |attrs|
-        [attrs['global_position'], attrs['subscription_position']]
-      end
-    end
-
     private
 
     # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]

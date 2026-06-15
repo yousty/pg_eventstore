@@ -4,9 +4,11 @@ RSpec.describe PgEventstore::EventsSubscriptionPositionWorkerHandlers do
   it { is_expected.to be_a(PgEventstore::Extensions::CallbackHandlersExtension) }
 
   describe '.assign_subscription_position' do
-    subject { described_class.assign_subscription_position(subscription_service_queries, update_interval) }
+    subject { described_class.assign_subscription_position(event_subscription_position_queries, update_interval) }
 
-    let(:subscription_service_queries) { PgEventstore::SubscriptionServiceQueries.new(PgEventstore.connection) }
+    let(:event_subscription_position_queries) do
+      PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection)
+    end
     let(:update_interval) { 2.1 }
 
     before do
@@ -18,7 +20,7 @@ RSpec.describe PgEventstore::EventsSubscriptionPositionWorkerHandlers do
         Thread.new do
           PgEventstore.connection.with do |conn|
             conn.transaction do
-              subscription_service_queries.assign_subscription_position
+              event_subscription_position_queries.assign_subscription_position
               synchronizer.push(:sig)
               sleep 1
             end
@@ -65,7 +67,7 @@ RSpec.describe PgEventstore::EventsSubscriptionPositionWorkerHandlers do
       context 'when the number of updated records is greater than max number of records to update per run' do
         before do
           stub_const(
-            'PgEventstore::SubscriptionServiceQueries::MAX_INDEX_RECORDS_TO_UPDATE_SUBSCRIPTION_POSITION',
+            'PgEventstore::EventSubscriptionPositionQueries::MAX_INDEX_RECORDS_TO_UPDATE_SUBSCRIPTION_POSITION',
             1
           )
         end

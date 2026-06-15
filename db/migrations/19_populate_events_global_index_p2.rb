@@ -1,22 +1,17 @@
 # frozen_string_literal: true
 
-puts 'Running cluster on events_global_index. This may take some time.'
-PgEventstore.connection(:_eventstore_db_connection).with do |conn|
-  conn.exec('CLUSTER events_global_index USING idx_events_idx_on_global_position')
-end
-
-subscription_service_queries = PgEventstore::SubscriptionServiceQueries.new(
+event_subscription_position_queries = PgEventstore::EventSubscriptionPositionQueries.new(
   PgEventstore.connection(:_eventstore_db_connection)
 )
 
 total_count = PgEventstore.connection(:_eventstore_db_connection).with do |conn|
-  conn.exec('select count(*) as c_all from events_global_index where subscription_position is null')
+  conn.exec('select count(*) as c_all from event_subscription_positions_unprocessed')
 end.first['c_all'] || 0
 processed = 0
 puts "Assigning event subscription positions. Total count: #{total_count} events."
 
 loop do
-  updated_num = subscription_service_queries.assign_subscription_position
+  updated_num = event_subscription_position_queries.assign_subscription_position
   break if updated_num == 0
 
   processed += updated_num
@@ -24,7 +19,7 @@ loop do
 end
 
 puts
-puts 'Running vacuum on events_global_index. This may take some time.'
 PgEventstore.connection(:_eventstore_db_connection).with do |conn|
-  conn.exec('VACUUM (ANALYZE) events_global_index')
+  puts 'Running vacuum on event_subscription_positions_unprocessed. This may take some time.'
+  conn.exec('VACUUM (ANALYZE) event_subscription_positions_unprocessed')
 end

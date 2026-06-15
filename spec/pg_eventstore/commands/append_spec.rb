@@ -8,22 +8,23 @@ RSpec.describe PgEventstore::Commands::Append do
       partitions: partition_queries,
       transactions: transaction_queries,
       events_global_index: events_global_index_queries,
-      streams_global_index: streams_global_index_queries
+      streams_global_index: streams_global_index_queries,
+      event_subscription_positions: event_subscription_position_queries
     )
   end
   let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
   let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
   let(:events_global_index_queries) do
-    PgEventstore::EventsGlobalIndexQueries.new(
-      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
-    )
+    PgEventstore::EventsGlobalIndexQueries.new(PgEventstore.connection, query_strategy)
   end
   let(:streams_global_index_queries) do
-    PgEventstore::StreamsGlobalIndexQueries.new(
-      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
-    )
+    PgEventstore::StreamsGlobalIndexQueries.new(PgEventstore.connection, query_strategy)
   end
   let(:event_queries) { PgEventstore::EventQueries.new(PgEventstore.connection) }
+  let(:event_subscription_position_queries) do
+    PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection)
+  end
+  let(:query_strategy) { PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection) }
   let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, event_class_resolver) }
   let(:event_modifier) do
     PgEventstore::Commands::EventModifiers::PrepareRegularEvent.new(PgEventstore::EventSerializer.new(middlewares))
@@ -50,11 +51,18 @@ RSpec.describe PgEventstore::Commands::Append do
             expect(subject.first.stream_revision).to eq(stream_revision)
           end
         end
+        it 'creates unprocessed subscription position' do
+          builder = PgEventstore::SQLBuilder.new.from('event_subscription_positions_unprocessed')
+          builder.select('count(*) as c_all')
+          expect { subject }.to change { query_strategy.exec_params(*builder.to_exec_params).first['c_all'] || 0 }.by(1)
+        end
 
         describe 'appended event' do
           subject { super(); PgEventstore.client.read(stream).last }
 
           before do
+            # Assign attributes that should be re-assigned during the append process. This way we ensure user-defined
+            # value does not propagate into the database
             event.link_global_position = -1
             event.link_partition_id = -1
             event.stream_revision = -1
@@ -73,6 +81,23 @@ RSpec.describe PgEventstore::Commands::Append do
               expect(subject.link_global_position).to eq(nil)
               expect(subject.link_partition_id).to eq(nil)
             end
+          end
+        end
+
+        describe 'created unprocessed position' do
+          let(:created_event) { PgEventstore.client.read(stream).last }
+          let(:position) do
+            builder = PgEventstore::SQLBuilder.new.from('event_subscription_positions_unprocessed')
+            builder.order('global_position desc').limit(1)
+            query_strategy.exec_params(*builder.to_exec_params).first
+          end
+
+          before do
+            subject
+          end
+
+          it 'has correct attributes' do
+            expect(position).to eq('global_position' => created_event.global_position)
           end
         end
       end

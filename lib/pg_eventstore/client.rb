@@ -35,7 +35,8 @@ module PgEventstore
         events: event_queries,
         transactions: transaction_queries,
         events_global_index: events_global_index_queries,
-        streams_global_index: streams_global_index_queries
+        streams_global_index: streams_global_index_queries,
+        event_subscription_positions: event_subscription_position_queries
       )
       result = Commands::Append.new(queries).call(
         stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
@@ -211,7 +212,8 @@ module PgEventstore
         events: event_queries,
         transactions: transaction_queries,
         events_global_index: events_global_index_queries,
-        streams_global_index: streams_global_index_queries
+        streams_global_index: streams_global_index_queries,
+        event_subscription_positions: event_subscription_position_queries
       )
       result = Commands::LinkTo.new(queries).call(
         stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
@@ -270,6 +272,11 @@ module PgEventstore
     # @return [PgEventstore::StreamsGlobalIndexQueries]
     def streams_global_index_queries
       StreamsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
+    end
+
+    # @return [PgEventstore::EventSubscriptionPositionQueries]
+    def event_subscription_position_queries
+      EventSubscriptionPositionQueries.new(connection)
     end
   end
 end

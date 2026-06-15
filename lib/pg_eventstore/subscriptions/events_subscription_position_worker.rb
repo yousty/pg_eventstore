@@ -28,15 +28,15 @@ module PgEventstore
         :process_async, :before,
         EventsSubscriptionPositionWorkerHandlers.setup_handler(
           :assign_subscription_position,
-          subscription_service_queries,
+          event_subscription_position_queries,
           config.events_subscription_position_update_interval
         )
       )
     end
 
-    # @return [PgEventstore::SubscriptionServiceQueries]
-    def subscription_service_queries
-      SubscriptionServiceQueries.new(connection)
+    # @return [PgEventstore::EventSubscriptionPositionQueries]
+    def event_subscription_position_queries
+      EventSubscriptionPositionQueries.new(connection)
     end
 
     # @return [PgEventstore::Connection]

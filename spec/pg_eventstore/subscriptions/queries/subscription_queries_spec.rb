@@ -261,7 +261,7 @@ RSpec.describe PgEventstore::SubscriptionQueries do
         event3
         event4
         event5
-        PgEventstore::SubscriptionServiceQueries.new(PgEventstore.connection).assign_subscription_position
+        PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection).assign_subscription_position
       end
 
       context 'when filters are empty' do

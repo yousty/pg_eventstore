@@ -384,13 +384,13 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     it 'starts EventsSubscriptionPositionWorker' do
       stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
       event = PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
-      index = proc do
+      position = proc do
         PgEventstore.connection.with do |c|
-          c.exec('select global_position, subscription_position from events_global_index')
+          c.exec('select global_position, subscription_position from event_subscription_positions')
         end.first
       end
       expect { subject }.to change {
-        dv(index).deferred_wait(timeout: 2) { !_1.call['subscription_position'].nil? }.call
+        dv(position).deferred_wait(timeout: 2) { !_1.call['subscription_position'].nil? }.call
       }.to('global_position' => event.global_position, 'subscription_position' => kind_of(Integer))
     end
 

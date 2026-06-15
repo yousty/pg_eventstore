@@ -1,5 +1,5 @@
 module PgEventstore
-  class SubscriptionServiceQueries
+  class EventSubscriptionPositionQueries
     INDEXES_UPDATE_LOCK_ID: Integer
     MAX_INDEX_RECORDS_TO_UPDATE_SUBSCRIPTION_POSITION: Integer
 
@@ -7,9 +7,13 @@ module PgEventstore
 
     def initialize: (Connection connection) -> void
 
-    def assign_subscription_position: -> Integer?
+    def create_unprocessed_positions: (Array[Hash[String, untyped]] raw_events) -> void
 
     def max_subscription_position: -> Integer?
+
+    def subscription_positions_from_db: (Array[Event] events) -> Hash[Integer, Integer?]
+
+    def assign_subscription_position: -> Integer?
 
     private
 

@@ -8,7 +8,8 @@ RSpec.describe PgEventstore::Commands::LinkTo do
       partitions: partition_queries,
       transactions: transaction_queries,
       events_global_index: events_global_index_queries,
-      streams_global_index: streams_global_index_queries
+      streams_global_index: streams_global_index_queries,
+      event_subscription_positions: event_subscription_position_queries
     )
   end
   let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
@@ -24,6 +25,9 @@ RSpec.describe PgEventstore::Commands::LinkTo do
     )
   end
   let(:event_queries) { PgEventstore::EventQueries.new(PgEventstore.connection) }
+  let(:event_subscription_position_queries) do
+    PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection)
+  end
   let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, event_class_resolver) }
   let(:event_modifier) do
     PgEventstore::Commands::EventModifiers::PrepareLinkEvent.new(

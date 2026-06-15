@@ -15,7 +15,7 @@ RSpec.describe PgEventstore::EventsSubscriptionPositionWorker do
     let!(:index) do
       proc do
         PgEventstore.connection.with do |c|
-          c.exec('select global_position, subscription_position from events_global_index')
+          c.exec('select global_position, subscription_position from event_subscription_positions')
         end.first
       end
     end

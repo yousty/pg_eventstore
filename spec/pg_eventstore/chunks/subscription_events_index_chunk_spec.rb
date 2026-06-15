@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::Chunks::SubscriptionEventsIndexChunk do
-  let(:subscription_service_queries) { PgEventstore::SubscriptionServiceQueries.new(PgEventstore.connection) }
+  let(:event_subscription_position_queries) { PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection) }
 
   describe '#take' do
     subject { instance.take(size) }
@@ -137,13 +137,17 @@ RSpec.describe PgEventstore::Chunks::SubscriptionEventsIndexChunk do
         reset_events_subscription_position
         event1
         event2
-        subscription_service_queries.assign_subscription_position
+        event_subscription_position_queries.assign_subscription_position
         PgEventstore.connection.with do |conn|
           conn.exec_params(
             'update events set global_position = 0 where global_position = $1', [event2.global_position]
           )
           conn.exec_params(
             'update events_global_index set global_position = 0 where global_position = $1', [event2.global_position]
+          )
+          conn.exec_params(
+            'update event_subscription_positions set global_position = 0 where global_position = $1',
+            [event2.global_position]
           )
         end
         event2.global_position = 0

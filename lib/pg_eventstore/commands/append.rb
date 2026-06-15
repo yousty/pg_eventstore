@@ -40,6 +40,7 @@ module PgEventstore
             end
             queries.streams_global_index.update(stream_index.id, **stream_idx_attrs_to_update)
             queries.events_global_index.index_events(created_events, partitions, stream_index.id)
+            queries.event_subscription_positions.create_unprocessed_positions(created_events)
           end
         end
         # It is important to return events in the form they were persisted into the database instead passing them

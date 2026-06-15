@@ -169,9 +169,8 @@ module PgEventstore
             resolve_link_tos: resolve_link_tos?,
           }
         )
-        @gp_to_sp_map = EventsGlobalIndexQueries.new(
-          PgEventstore.connection(current_config),
-          QueryStrategy::Foreground.new(PgEventstore.connection(current_config))
+        @gp_to_sp_map = EventSubscriptionPositionQueries.new(
+          PgEventstore.connection(current_config)
         ).subscription_positions_from_db(@collection.collection)
 
         if request.xhr?

@@ -40,6 +40,8 @@ module PgEventstore
 
     def event_deserializer: (Array[Middleware] middlewares) -> EventDeserializer
 
+    def event_subscription_position_queries: -> EventSubscriptionPositionQueries
+
     def events_global_index_queries: -> EventsGlobalIndexQueries
 
     def event_queries: -> EventQueries

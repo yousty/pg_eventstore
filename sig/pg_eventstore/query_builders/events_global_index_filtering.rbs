@@ -27,6 +27,8 @@ module PgEventstore
 
       def add_stream_revision_direction: (String? | Symbol? direction) -> void
 
+      def for_subscription: -> void
+
       def from_position: (Integer? position, String? | Symbol? direction) -> void
 
       def from_revision: (Integer? revision, String? | Symbol? direction) -> void

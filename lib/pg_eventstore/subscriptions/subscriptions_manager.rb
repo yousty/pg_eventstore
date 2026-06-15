@@ -29,7 +29,7 @@ require_relative 'subscription_feeder_commands'
 require_relative 'subscription_runner_commands'
 require_relative 'queries/subscription_command_queries'
 require_relative 'queries/subscription_queries'
-require_relative 'queries/subscription_service_queries'
+require_relative 'queries/event_subscription_position_queries'
 require_relative 'queries/subscriptions_set_command_queries'
 require_relative 'queries/subscriptions_set_queries'
 

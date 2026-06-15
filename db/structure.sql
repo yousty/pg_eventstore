@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict nCmHf03yJVAIWDjHe5onU4bHALySCrraEDVaHjLYvMUPgeYYpaVJIL9XEr3ilwo
+\restrict Kn2DiygedBzFdViJEC0YgtGSl4TdSD0sJFzaVxGmIkolmsy1hEW8ZCEdd5OasIl
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -49,6 +49,46 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 SET default_tablespace = '';
 
+SET default_table_access_method = heap;
+
+--
+-- Name: event_subscription_positions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_subscription_positions (
+    global_position bigint NOT NULL,
+    subscription_position bigint NOT NULL
+);
+
+
+--
+-- Name: event_subscription_positions_subscription_position_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.event_subscription_positions_subscription_position_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: event_subscription_positions_subscription_position_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.event_subscription_positions_subscription_position_seq OWNED BY public.event_subscription_positions.subscription_position;
+
+
+--
+-- Name: event_subscription_positions_unprocessed; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_subscription_positions_unprocessed (
+    global_position bigint CONSTRAINT event_subscription_positions_unprocess_global_position_not_null NOT NULL
+);
+
+
 --
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
@@ -70,15 +110,12 @@ CREATE TABLE public.events (
 PARTITION BY LIST (context);
 
 
-SET default_table_access_method = heap;
-
 --
 -- Name: events_global_index; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.events_global_index (
     global_position bigint NOT NULL,
-    subscription_position bigint,
     stream_revision bigint NOT NULL,
     context_partition_id bigint NOT NULL,
     stream_name_partition_id bigint NOT NULL,
@@ -104,18 +141,6 @@ CREATE SEQUENCE public.events_global_position_seq
 --
 
 ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_position;
-
-
---
--- Name: events_subscription_position_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.events_subscription_position_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
 
 
 --
@@ -344,6 +369,13 @@ ALTER SEQUENCE public.subscriptions_set_id_seq OWNED BY public.subscriptions_set
 
 
 --
+-- Name: event_subscription_positions subscription_position; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_subscription_positions ALTER COLUMN subscription_position SET DEFAULT nextval('public.event_subscription_positions_subscription_position_seq'::regclass);
+
+
+--
 -- Name: events global_position; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -441,17 +473,24 @@ ALTER TABLE ONLY public.subscriptions_set
 
 
 --
--- Name: idx_events_global_index_subscription_position; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_event_subscription_positions_gposition_n_sposition; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_global_index_subscription_position ON public.events_global_index USING btree (subscription_position) INCLUDE (global_position, context_partition_id, stream_name_partition_id, event_type_partition_id, streams_global_index_id) WHERE (subscription_position IS NOT NULL);
+CREATE INDEX idx_event_subscription_positions_gposition_n_sposition ON public.event_subscription_positions USING btree (global_position, subscription_position);
 
 
 --
--- Name: idx_events_global_index_unprocessed; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_event_subscription_positions_sposition_n_gposition; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_global_index_unprocessed ON public.events_global_index USING btree (global_position) WHERE (subscription_position IS NULL);
+CREATE INDEX idx_event_subscription_positions_sposition_n_gposition ON public.event_subscription_positions USING btree (subscription_position, global_position);
+
+
+--
+-- Name: idx_event_subscription_positions_unprocessed_gposition; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_subscription_positions_unprocessed_gposition ON public.event_subscription_positions_unprocessed USING btree (global_position);
 
 
 --
@@ -648,5 +687,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict nCmHf03yJVAIWDjHe5onU4bHALySCrraEDVaHjLYvMUPgeYYpaVJIL9XEr3ilwo
+\unrestrict Kn2DiygedBzFdViJEC0YgtGSl4TdSD0sJFzaVxGmIkolmsy1hEW8ZCEdd5OasIl
 

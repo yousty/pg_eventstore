@@ -29,7 +29,7 @@ module EventHelpers
   # @param value [Integer] position to reset to. The sequence starts with the given value
   def reset_events_subscription_position(value = 1)
     PgEventstore.connection.with do |conn|
-      conn.exec("select setval('events_subscription_position_seq'::regclass, #{value}, false)")
+      conn.exec("select setval('event_subscription_positions_subscription_position_seq'::regclass, #{value}, false)")
     end
   end
 
@@ -38,11 +38,11 @@ module EventHelpers
   def prepare_subscription_indexes(events)
     return [] if events.empty?
 
-    PgEventstore::SubscriptionServiceQueries.new(PgEventstore.connection).assign_subscription_position
+    PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection).assign_subscription_position
     index_filtering = PgEventstore::QueryBuilders::EventsGlobalIndexFiltering.new
     index_filtering.for_subscription
     builder = index_filtering.to_sql_builder
-    builder.where('global_position = any(?)', events.map(&:global_position))
+    builder.where('events_global_index.global_position = any(?)', events.map(&:global_position))
     PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params).map do |attrs|
         attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)

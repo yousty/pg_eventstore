@@ -1,7 +1,6 @@
 CREATE TABLE public.events_global_index
 (
     global_position          bigint NOT NULL,
-    subscription_position    bigint,
     stream_revision          bigint NOT NULL,
     context_partition_id     bigint NOT NULL,
     stream_name_partition_id bigint NOT NULL,
@@ -40,18 +39,22 @@ CREATE INDEX idx_events_idx_on_streams_idx_id_N_e_type_part_id_n_position ON pub
 CREATE INDEX idx_events_idx_on_streams_idx_id_N_e_type_part_id_n_revision ON public.events_global_index
     USING btree (streams_global_index_id, event_type_partition_id, stream_revision) INCLUDE (global_position);
 
-CREATE INDEX idx_events_global_index_subscription_position ON public.events_global_index
-    USING btree (subscription_position)
-    INCLUDE (
-        global_position,
-        context_partition_id,
-        stream_name_partition_id,
-        event_type_partition_id,
-        streams_global_index_id
-        )
-    WHERE subscription_position IS NOT NULL;
+CREATE TABLE public.event_subscription_positions
+(
+    global_position       bigint    NOT NULL,
+    subscription_position bigserial NOT NULL
+);
 
-CREATE INDEX idx_events_global_index_unprocessed ON public.events_global_index USING btree (global_position)
-    WHERE subscription_position IS NULL;
+CREATE TABLE public.event_subscription_positions_unprocessed
+(
+    global_position bigint NOT NULL
+);
 
-CREATE SEQUENCE events_subscription_position_seq;
+CREATE INDEX idx_event_subscription_positions_sposition_N_gposition ON public.event_subscription_positions
+    USING btree (subscription_position, global_position);
+
+CREATE INDEX idx_event_subscription_positions_gposition_N_sposition ON public.event_subscription_positions
+    USING btree (global_position, subscription_position);
+
+CREATE INDEX idx_event_subscription_positions_unprocessed_gposition ON public.event_subscription_positions_unprocessed
+    USING btree (global_position);

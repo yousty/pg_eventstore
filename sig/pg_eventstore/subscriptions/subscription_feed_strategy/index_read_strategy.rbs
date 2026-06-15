@@ -13,11 +13,11 @@ module PgEventstore
 
       private
 
+      def event_subscription_position_queries: -> EventSubscriptionPositionQueries
+
       def events_global_index_queries: -> EventsGlobalIndexQueries
 
       def safe_position: -> Integer
-
-      def subscription_service_queries: -> SubscriptionServiceQueries
     end
   end
 end

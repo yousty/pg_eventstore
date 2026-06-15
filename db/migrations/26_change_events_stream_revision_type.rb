@@ -17,7 +17,9 @@ PgEventstore.connection(:_eventstore_db_connection).with do |conn|
       puts "Starting changing stream_revision from int to bigint for #{partition.event_type.inspect} event type partition."
       conn.exec("ALTER TABLE #{partition.table_name} ALTER COLUMN stream_revision TYPE bigint")
     end
+
     conn.exec('ALTER TABLE events ALTER COLUMN stream_revision TYPE bigint')
+
     event_type_partitions.each do |partition|
       partition_queries.attach_event_type_partition(partition)
     end

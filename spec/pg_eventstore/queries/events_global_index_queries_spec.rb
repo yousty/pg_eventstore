@@ -103,7 +103,9 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
   end
 
   describe '#fetch_indexes_for_subscriptions' do
-    let(:subscription_service_queries) { PgEventstore::SubscriptionServiceQueries.new(PgEventstore.connection) }
+    let(:event_subscription_position_queries) do
+      PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection)
+    end
 
     describe 'grouping result by subscription id' do
       subject { instance.fetch_indexes_for_subscriptions(grouped_opts) }
@@ -138,7 +140,7 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
         subscription1.lock!(subscriptions_set.id)
         subscription2.lock!(subscriptions_set.id)
         reset_events_subscription_position
-        subscription_service_queries.assign_subscription_position
+        event_subscription_position_queries.assign_subscription_position
       end
 
       it 'returns EventGlobalIndex-es grouped by subscription id' do
@@ -190,7 +192,7 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
       before do
         subscription.lock!(subscriptions_set.id)
         reset_events_subscription_position
-        subscription_service_queries.assign_subscription_position
+        event_subscription_position_queries.assign_subscription_position
       end
 
       context 'when :max_count cursor option is given' do
@@ -314,38 +316,6 @@ RSpec.describe PgEventstore::EventsGlobalIndexQueries do
 
     it 'returns global positions of existing events' do
       is_expected.to eq([persisted_event.global_position])
-    end
-  end
-
-  describe '#subscription_positions_from_db' do
-    subject do
-      instance.subscription_positions_from_db([non_existing_event, persisted_event, event_with_subscription_positions])
-    end
-
-    let(:persisted_event) do
-      stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
-      PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
-    end
-    let(:non_existing_event) do
-      PgEventstore::Event.new(global_position: -1)
-    end
-    let(:event_with_subscription_positions) do
-      stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
-      PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
-    end
-
-    before do
-      event_with_subscription_positions
-      PgEventstore::SubscriptionServiceQueries.new(PgEventstore.connection).assign_subscription_position
-      persisted_event
-    end
-
-    it 'returns global_position-to-subscription_position map' do
-      is_expected.to(
-        match(
-          persisted_event.global_position => nil, event_with_subscription_positions.global_position => kind_of(Integer)
-        )
-      )
     end
   end
 end

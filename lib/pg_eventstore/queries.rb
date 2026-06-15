@@ -9,6 +9,7 @@ require_relative 'query_builders/events_filtering'
 require_relative 'query_builders/partitions_filtering'
 require_relative 'query_builders/events_global_index_filtering'
 require_relative 'query_builders/streams_global_index_filtering'
+require_relative 'query_builders/event_subscription_positions_filtering'
 require_relative 'queries/transaction_queries'
 require_relative 'queries/event_queries'
 require_relative 'queries/partition_queries'
@@ -40,5 +41,8 @@ module PgEventstore
     # @!attribute maintenance
     #   @return [PgEventstore::StreamsGlobalIndexQueries, nil]
     attribute(:streams_global_index)
+    # @!attribute event_subscription_positions
+    #   @return [PgEventstore::EventSubscriptionPositionQueries, nil]
+    attribute(:event_subscription_positions)
   end
 end

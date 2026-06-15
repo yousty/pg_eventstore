@@ -65,7 +65,7 @@ module PgEventstore
 
       # @return [Integer]
       def safe_position
-        subscription_service_queries.max_subscription_position || 0
+        event_subscription_position_queries.max_subscription_position || 0
       end
 
       # @return [PgEventstore::EventsGlobalIndexQueries]
@@ -73,9 +73,9 @@ module PgEventstore
         EventsGlobalIndexQueries.new(@connection, @query_strategy)
       end
 
-      # @return [PgEventstore::SubscriptionServiceQueries]
-      def subscription_service_queries
-        SubscriptionServiceQueries.new(@connection)
+      # @return [PgEventstore::EventSubscriptionPositionQueries]
+      def event_subscription_position_queries
+        EventSubscriptionPositionQueries.new(@connection)
       end
     end
   end
