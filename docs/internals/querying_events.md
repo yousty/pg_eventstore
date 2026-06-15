@@ -12,6 +12,9 @@ Additionally, we differentiate a query to index table and a query to `events` ta
 - `events_global_index` table which holds summary about events
 - `streams_global_index` table which holds summary about event streams
 
+There is a separate `event_subscription_positions` table that holds the information about event subscription position -
+a position of the event at which it gets processed by a subscription.
+
 ## Building a query
 
 The intention behind different approaches is to have predictable SQL query plan for billions of records while covering
@@ -19,10 +22,10 @@ all possible filtering cases and not depend on data distribution inside the data
 
 For subscription queries we chose simplicity. It may result in not ideal query plan, but it allows to accept filters of
 any size(e.g. let's say you need to build a projection, based on 1000 event types). Which is why every subscription
-query range is limited with `global_position >= $1 and global_position <= $1`. It is totally acceptable during catch-up
-phase, when a subscription starts from zero position and walks through entire database. Such limitation does not affect
-much when processing events on the edge of its position, too. Thus, even if PostgreSQL decides to fall back to seq
-scan - it is additionally limited by the `global_position` range we provide.
+query range is limited with `subscription_position >= $1 and subscription_position <= $1`. It is totally acceptable
+during catch-up phase, when a subscription starts from zero position and walks through entire database. Such limitation
+does not affect much when processing events on the edge of its position, too. Thus, even if PostgreSQL decides to fall
+back to seq scan - it is additionally limited by the `subscription_position` range we provide.
 
 For Read API queries we chose the best possible plan for the cost of complexity of a query. Opposed to subscription
 queries - Read API queries are not supposed to handle complex filters with thousands of filter options. Instead, its
@@ -78,11 +81,14 @@ limit $4
 #### For subscription
 
 ```sql
-select global_position, event_type_partition_id, subscription_position
+select events_global_index.global_position,
+       events_global_index.event_type_partition_id,
+       event_subscription_positions.subscription_position
 from events_global_index
-where subscription_position >= $1
-  and subscription_position <= $2
-order by subscription_position
+         join event_subscription_positions using (global_position)
+where event_subscription_positions.subscription_position >= $1
+  and event_subscription_positions.subscription_position <= $2
+order by event_subscription_positions.subscription_position
 limit $3
 ```
 
@@ -114,12 +120,15 @@ Example:
 #### For subscription
 
 ```sql
-select global_position, event_type_partition_id, subscription_position
+select events_global_index.global_position,
+       events_global_index.event_type_partition_id,
+       event_subscription_positions.subscription_position
 from events_global_index
+         join event_subscription_positions using (global_position)
 where event_type_partition_id in ($1)
-  and subscription_position >= $2
-  and subscription_position <= $3
-order by subscription_position
+  and event_subscription_positions.subscription_position >= $1
+  and event_subscription_positions.subscription_position <= $2
+order by event_subscription_positions.subscription_position
 limit $4
 ```
 
@@ -164,12 +173,15 @@ Example:
 #### For subscription
 
 ```sql
-select global_position, event_type_partition_id, subscription_position
+select events_global_index.global_position,
+       events_global_index.event_type_partition_id,
+       event_subscription_positions.subscription_position
 from events_global_index
+         join event_subscription_positions using (global_position)
 where context_partition_id in ($1)
-  and subscription_position >= $2
-  and subscription_position <= $3
-order by subscription_position
+  and event_subscription_positions.subscription_position >= $1
+  and event_subscription_positions.subscription_position <= $2
+order by event_subscription_positions.subscription_position
 limit $4
 ```
 
@@ -214,12 +226,15 @@ Example:
 Note: context constraint is already a part of stream name constraint
 
 ```sql
-select global_position, event_type_partition_id, subscription_position
+select events_global_index.global_position,
+       events_global_index.event_type_partition_id,
+       event_subscription_positions.subscription_position
 from events_global_index
+         join event_subscription_positions using (global_position)
 where stream_name_partition_id in ($1)
-  and subscription_position >= $2
-  and subscription_position <= $3
-order by subscription_position
+  and event_subscription_positions.subscription_position >= $1
+  and event_subscription_positions.subscription_position <= $2
+order by event_subscription_positions.subscription_position
 limit $4
 ```
 
@@ -263,12 +278,15 @@ Example:
 #### For subscription
 
 ```sql
-select global_position, event_type_partition_id, subscription_position
+select events_global_index.global_position,
+       events_global_index.event_type_partition_id,
+       event_subscription_positions.subscription_position
 from events_global_index
+         join event_subscription_positions using (global_position)
 where (context_partition_id in ($1) or streams_global_index_id in ($2))
-  and subscription_position >= $3
-  and subscription_position <= $4
-order by subscription_position
+  and event_subscription_positions.subscription_position >= $1
+  and event_subscription_positions.subscription_position <= $2
+order by event_subscription_positions.subscription_position
 limit $5
 ```
 
@@ -320,12 +338,15 @@ Example:
 Note: context constraint is already a part of stream name constraint
 
 ```sql
-select global_position, event_type_partition_id, subscription_position
+select events_global_index.global_position,
+       events_global_index.event_type_partition_id,
+       event_subscription_positions.subscription_position
 from events_global_index
+         join event_subscription_positions using (global_position)
 where (stream_name_partition_id in ($1) or streams_global_index_id in ($2))
-  and subscription_position >= $3
-  and subscription_position <= $4
-order by subscription_position
+  and event_subscription_positions.subscription_position >= $1
+  and event_subscription_positions.subscription_position <= $2
+order by event_subscription_positions.subscription_position
 limit $5
 ```
 
@@ -375,13 +396,16 @@ Example:
 #### For subscription
 
 ```sql
-select global_position, event_type_partition_id, subscription_position
+select events_global_index.global_position,
+       events_global_index.event_type_partition_id,
+       event_subscription_positions.subscription_position
 from events_global_index
+         join event_subscription_positions using (global_position)
 where event_type_partition_id in ($1)
   and streams_global_index_id in ($2)
-  and subscription_position >= $3
-  and subscription_position <= $4
-order by subscription_position
+  and event_subscription_positions.subscription_position >= $1
+  and event_subscription_positions.subscription_position <= $2
+order by event_subscription_positions.subscription_position
 limit $5
 ```
 
@@ -447,14 +471,17 @@ Note, that in case with `{ context: 'FooCtx' }` and `event_types: %w[Foo Bar]` w
 partitions list `$3`
 
 ```sql
-select global_position, event_type_partition_id, subscription_position
+select events_global_index.global_position,
+       events_global_index.event_type_partition_id,
+       event_subscription_positions.subscription_position
 from events_global_index
+         join event_subscription_positions using (global_position)
 where (
     (event_type_partition_id in ($1) and streams_global_index_id in ($2)) or event_type_partition_id in ($3)
     )
-  and subscription_position >= $4
-  and subscription_position <= $5
-order by subscription_position
+  and event_subscription_positions.subscription_position >= $1
+  and event_subscription_positions.subscription_position <= $2
+order by event_subscription_positions.subscription_position
 limit $6
 ```
 
