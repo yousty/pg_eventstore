@@ -39,6 +39,7 @@ processed = 0
 processed_was = 0
 time = Time.now
 lock = Thread::Mutex.new
+sub_partitions_count_cache = {}
 threads = CONCURRENCY.times.map do |t|
   Thread.new do
     tables.each do |table|
@@ -64,16 +65,42 @@ threads = CONCURRENCY.times.map do |t|
           sliced_events.each do |event|
             query_runner.async do
               query_strategy = PgEventstore::QueryStrategy::Async.new(PgEventstore.connection(:_eventstore_db_connection))
-              context = PG::Connection.escape(event['context'])
-              stream_name = PG::Connection.escape(event['stream_name'])
-              stream_id = PG::Connection.escape(event['stream_id'])
-              q = <<~SQL
-                select max(stream_revision) as stream_revision
-                from events
-                where context = '#{context}' and stream_name = '#{stream_name}' and stream_id = '#{stream_id}'
-              SQL
-              attrs = query_strategy.exec(q).to_a.first
-              event['stream_revision'] = attrs['stream_revision']
+              context = event['context']
+              stream_name = event['stream_name']
+              stream_id = event['stream_id']
+              sub_partitions_count_cache[[context, stream_name]] ||= query_strategy.exec_params(
+                'select count(*) as c_all from partitions where context = $1 and stream_name = $2',
+                [context, stream_name]
+              ).first['c_all']
+              if sub_partitions_count_cache[[context, stream_name]] > 50
+                sub_partitions = query_strategy.exec_params(<<~SQL, [context, stream_name]).map { _1['table_name'] }
+                  select table_name from partitions where context = $1 and stream_name = $2 and event_type is not null
+                SQL
+                max_revisions = []
+                sub_partitions.each_slice(50) do |table_names|
+                  q_parts = table_names.map do |table_name|
+                    <<~SQL
+                      select max(stream_revision) as stream_revision
+                      from #{table_name}
+                      where context = $1 and stream_name = $2 and stream_id = $3
+                    SQL
+                  end
+                  q_parts = q_parts.map { "(#{_1})" }.join(' union all ')
+                  q = "select max(stream_revision) as stream_revision from (#{q_parts})"
+                  max_revisions.push(
+                    query_strategy.exec_params(q, [context, stream_name, stream_id]).first['stream_revision']
+                  )
+                end
+                event['stream_revision'] = max_revisions.max
+              else
+                q = <<~SQL
+                  select max(stream_revision) as stream_revision
+                  from events
+                  where context = $1 and stream_name = $2 and stream_id = $3
+                SQL
+                attrs = query_strategy.exec_params(q, [context, stream_name, stream_id]).to_a.first
+                event['stream_revision'] = attrs['stream_revision']
+              end
             end
           end
           query_runner.run
@@ -97,6 +124,8 @@ threads = CONCURRENCY.times.map do |t|
 
         lock.synchronize do
           processed += events.size
+          next if Time.now - time < 2
+
           time_was = time
           time = Time.now
 

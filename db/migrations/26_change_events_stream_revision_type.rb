@@ -11,18 +11,21 @@ partition_queries = PgEventstore::PartitionQueries.new(PgEventstore.connection(:
 event_type_partitions = partition_queries.partitions(filters)
 
 PgEventstore.connection(:_eventstore_db_connection).with do |conn|
-  conn.transaction do
-    event_type_partitions.each do |partition|
+  event_type_partitions.each do |partition|
+    begin
       partition_queries.detach_event_type_partition(partition)
-      puts "Starting changing stream_revision from int to bigint for #{partition.event_type.inspect} event type partition."
-      conn.exec("ALTER TABLE #{partition.table_name} ALTER COLUMN stream_revision TYPE bigint")
+    rescue PG::UndefinedTable
+      # the partition was already detached in previous runs. Just proceed to the next step
     end
 
-    conn.exec('ALTER TABLE events ALTER COLUMN stream_revision TYPE bigint')
+    puts "Starting changing stream_revision from int to bigint for #{partition.event_type.inspect} event type partition."
+    conn.exec("ALTER TABLE #{partition.table_name} ALTER COLUMN stream_revision TYPE bigint")
+  end
 
-    event_type_partitions.each do |partition|
-      partition_queries.attach_event_type_partition(partition)
-    end
+  conn.exec('ALTER TABLE events ALTER COLUMN stream_revision TYPE bigint')
+
+  event_type_partitions.each do |partition|
+    partition_queries.attach_event_type_partition(partition)
   end
 end
 

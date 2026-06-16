@@ -73,22 +73,28 @@ threads = CONCURRENCY.times.map do |t|
             end.to_a
             stream_ids = stream_ids.to_h { [_1['event_global_position'], _1['id']] }
 
-            values = events.map do |event|
+            events_idx_values = []
+            global_positions = []
+            events.each do |event|
               stream_idx_id = stream_ids[event['global_position']]
               ctx_partition_id = context_partitions[event['context']]
               stream_name_partition_id = stream_name_part['id']
               event_type_partition_id = event_type_part['id']
-              "(#{event['global_position']}, #{ctx_partition_id}, #{stream_name_partition_id}, #{event_type_partition_id}, #{stream_idx_id}, #{event['stream_revision']})"
-            end.join(',')
+              events_idx_values << "(#{event['global_position']}, #{ctx_partition_id}, #{stream_name_partition_id}, #{event_type_partition_id}, #{stream_idx_id}, #{event['stream_revision']})"
+              global_positions << "(#{event['global_position']})"
+            end
 
             PgEventstore.connection(:_eventstore_db_connection).with do |conn|
               conn.exec(<<~SQL)
-                INSERT INTO events_global_index ("global_position", "context_partition_id", "stream_name_partition_id", "event_type_partition_id", "streams_global_index_id", "stream_revision") VALUES #{values}
+                INSERT INTO events_global_index ("global_position", "context_partition_id", "stream_name_partition_id", "event_type_partition_id", "streams_global_index_id", "stream_revision") VALUES #{events_idx_values.join(',')};
+                INSERT INTO event_subscription_positions_unprocessed ("global_position") VALUES #{global_positions.join(',')};
               SQL
             end
 
             lock.synchronize do
               processed += events.size
+              next if Time.now - time < 2
+
               time_was = time
               time = Time.now
 
