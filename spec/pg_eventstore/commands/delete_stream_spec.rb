@@ -25,6 +25,13 @@ RSpec.describe PgEventstore::Commands::DeleteStream do
         PgEventstore.client.append_to_stream(another_stream, events)
       end
 
+      before do
+        query_strategy.exec_params(
+          'insert into event_subscription_positions ("global_position") values ($1), ($2)',
+          events.map(&:global_position)
+        )
+      end
+
       it 'deletes events of the given stream' do
         expect { subject }.to change { safe_read(stream) }.from(events).to([])
       end
@@ -32,7 +39,31 @@ RSpec.describe PgEventstore::Commands::DeleteStream do
       it 'deletes related events global index' do
         expect { subject }.to change {
           query_strategy.exec_params(
-            'select global_position from events_global_index where global_position = ANY($1::bigint[])',
+            'select global_position from events_global_index where global_position = any($1::bigint[])',
+            [events.map(&:global_position)]
+          ).map { _1['global_position'] }
+        }.to([])
+      end
+      it 'deletes the record from "events" table' do
+        expect { subject }.to change {
+          query_strategy.exec_params(
+            'select global_position from events where global_position = any($1::bigint[])',
+            [events.map(&:global_position)]
+          ).map { _1['global_position'] }
+        }.to([])
+      end
+      it 'deletes the record from "event_subscription_positions_unprocessed" table' do
+        expect { subject }.to change {
+          query_strategy.exec_params(
+            'select global_position from event_subscription_positions_unprocessed where global_position = any($1::bigint[])',
+            [events.map(&:global_position)]
+          ).map { _1['global_position'] }
+        }.to([])
+      end
+      it 'deletes the record from "event_subscription_positions" table' do
+        expect { subject }.to change {
+          query_strategy.exec_params(
+            'select global_position from event_subscription_positions where global_position = any($1::bigint[])',
             [events.map(&:global_position)]
           ).map { _1['global_position'] }
         }.to([])

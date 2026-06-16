@@ -56,6 +56,8 @@ module PgEventstore
               delete from events
                      where context = '#{context}' and stream_name = '#{stream_name}' and type = '#{event_type}'
                            and global_position in (#{positions});
+              delete from event_subscription_positions where global_position in (#{positions});
+              delete from event_subscription_positions_unprocessed where global_position in (#{positions});
             SQL
           end
           connection.with do |conn|
@@ -88,6 +90,21 @@ module PgEventstore
 
         return delete_stream(stream) if current_stream_revision == 0 && deleted_event['stream_revision'] == 0
 
+        affected_partition = partition_queries.find_by_ids([deleted_event['event_type_partition_id']]).first
+        connection.with do |conn|
+          delete_args = [
+            affected_partition['context'],
+            affected_partition['stream_name'],
+            affected_partition['event_type'],
+            deleted_event['global_position'],
+          ]
+          conn.exec_params(<<~SQL, delete_args)
+            with _1 as (delete from events where context = $1 and stream_name = $2 and type = $3 and global_position = $4),
+             _2 as (delete from event_subscription_positions where global_position = $4),
+             _3 as (delete from event_subscription_positions_unprocessed where global_position = $4)
+             select 1;
+          SQL
+        end
         first_updated_event = nil
         stream_revision = deleted_event['stream_revision']
         loop do

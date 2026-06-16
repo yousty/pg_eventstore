@@ -91,8 +91,38 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
           end
           let(:another_stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '2') }
 
+          before do
+            query_strategy.exec_params(
+              'insert into event_subscription_positions ("global_position") values ($1)', [event.global_position]
+            )
+          end
+
           it 'deletes the given event' do
             expect { subject }.to change { safe_read(stream).map(&:id) }.to(rest_events.map(&:id))
+          end
+          it 'deletes the record from "events" table' do
+            expect { subject }.to change {
+              query_strategy.exec_params(
+                'select global_position from events where global_position = $1',
+                [event.global_position]
+              ).to_a.first&.[]('global_position')
+            }.to(nil)
+          end
+          it 'deletes the record from "event_subscription_positions_unprocessed" table' do
+            expect { subject }.to change {
+              query_strategy.exec_params(
+                'select global_position from event_subscription_positions_unprocessed where global_position = $1',
+                [event.global_position]
+              ).to_a.first&.[]('global_position')
+            }.to(nil)
+          end
+          it 'deletes the record from "event_subscription_positions" table' do
+            expect { subject }.to change {
+              query_strategy.exec_params(
+                'select global_position from event_subscription_positions where global_position = $1',
+                [event.global_position]
+              ).to_a.first&.[]('global_position')
+            }.to(nil)
           end
           it 'adjusts stream revisions of the rest of events' do
             expect { subject }.to change { safe_read(stream).map(&:stream_revision) }.to((0...rest_events.size).to_a)
