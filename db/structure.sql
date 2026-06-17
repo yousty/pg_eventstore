@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Kn2DiygedBzFdViJEC0YgtGSl4TdSD0sJFzaVxGmIkolmsy1hEW8ZCEdd5OasIl
+\restrict Yx87BaCdS555L8srC9EmyrLhakkVAMDF7JLhFhRSOJvgwC6zm5L0ze5HefjKgGw
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -141,6 +141,17 @@ CREATE SEQUENCE public.events_global_position_seq
 --
 
 ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_position;
+
+
+--
+-- Name: maintenance_tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.maintenance_tasks (
+    task_name character varying NOT NULL COLLATE pg_catalog."POSIX",
+    locked_at timestamp without time zone,
+    performed_at timestamp without time zone
+);
 
 
 --
@@ -559,6 +570,13 @@ CREATE INDEX idx_events_idx_on_streams_idx_id_n_revision ON public.events_global
 
 
 --
+-- Name: idx_maintenance_tasks_task_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_maintenance_tasks_task_name ON public.maintenance_tasks USING btree (task_name);
+
+
+--
 -- Name: idx_partitions_by_context; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -687,5 +705,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Kn2DiygedBzFdViJEC0YgtGSl4TdSD0sJFzaVxGmIkolmsy1hEW8ZCEdd5OasIl
+\unrestrict Yx87BaCdS555L8srC9EmyrLhakkVAMDF7JLhFhRSOJvgwC6zm5L0ze5HefjKgGw
 
