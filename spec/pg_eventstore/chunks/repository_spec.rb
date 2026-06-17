@@ -156,13 +156,13 @@ RSpec.describe PgEventstore::Chunks::Repository do
   end
 
   describe '#wait_and_consume' do
-    subject { instance.wait_and_consume(entities_num: entities_to_consume, timeout:, condition:) }
-
     let(:condition) { instance.new_cond }
     let(:timeout) { 0.5 }
     let(:entities_to_consume) { 2 }
 
     context 'when no entities appear during the wait time' do
+      subject { instance.wait_and_consume(entities_num: entities_to_consume, timeout:, condition:) }
+
       it { is_expected.to eq([]) }
       it 'waits up to :timeout seconds' do
         expect(PgEventstore::Utils.benchmark { subject }).to be_between(timeout, timeout + 0.1)
@@ -179,7 +179,7 @@ RSpec.describe PgEventstore::Chunks::Repository do
       end
       let(:consumer) do
         Thread.new do
-          result.push(*subject)
+          result.push(*instance.wait_and_consume(entities_num: entities_to_consume, timeout:, condition:))
         end
       end
       let(:result) { [] }
