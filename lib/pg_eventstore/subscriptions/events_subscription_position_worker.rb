@@ -9,6 +9,13 @@ module PgEventstore
 
     def_delegators :@basic_runner, :start, :stop, :state, :stop_async, :wait_for_finish
 
+    class ReindexTime
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
+
+      option(:time)
+    end
+
     # @param config_name [Symbol]
     def initialize(config_name)
       @config_name = config_name
@@ -17,6 +24,7 @@ module PgEventstore
         async_shutdown_time: 5,
         recovery_strategies: [RunnerRecoveryStrategies::RestoreConnection.new(config_name)]
       )
+      @next_reindex_at = ReindexTime.new
       attach_runner_callbacks
     end
 
@@ -30,6 +38,14 @@ module PgEventstore
           :assign_subscription_position,
           event_subscription_position_queries,
           config.events_subscription_position_update_interval
+        )
+      )
+      @basic_runner.define_callback(
+        :process_async, :before,
+        EventsSubscriptionPositionWorkerHandlers.setup_handler(
+          :reindex,
+          event_subscription_position_queries,
+          @next_reindex_at
         )
       )
     end

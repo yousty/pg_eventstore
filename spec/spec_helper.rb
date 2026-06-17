@@ -92,4 +92,5 @@ RSpec.configure do |config|
   config.include Rack::Test::Methods, type: :request
   config.include RequestsHelper, type: :request
   config.include DeferredValueExt
+  config.include MaintenanceHelpers
 end

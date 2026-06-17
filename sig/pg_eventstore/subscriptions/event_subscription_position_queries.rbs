@@ -1,7 +1,11 @@
 module PgEventstore
   class EventSubscriptionPositionQueries
-    INDEXES_UPDATE_LOCK_ID: Integer
+    ASSIGN_SUBSCRIPTION_POSITIONS_LOCK_ID: Integer
     MAX_INDEX_RECORDS_TO_UPDATE_SUBSCRIPTION_POSITION: Integer
+    REINDEX_PERIOD: Integer
+    UNPROCESSED_POSITIONS_INDEX_NAME: String
+    UNPROCESSED_POSITIONS_INDEX_SIZE_THRESHOLD: Integer
+    UNPROCESSED_POSITIONS_LOCK_EXPIRES_IN: Integer
 
     attr_reader connection: Connection
 
@@ -11,11 +15,15 @@ module PgEventstore
 
     def max_subscription_position: -> Integer?
 
+    def reindex_unprocessed_positions: -> Time?
+
     def subscription_positions_from_db: (Array[Event] events) -> Hash[Integer, Integer?]
 
     def assign_subscription_position: -> Integer?
 
     private
+
+    def index_size: (String index_name) -> Integer
 
     def transaction_queries: -> TransactionQueries
   end

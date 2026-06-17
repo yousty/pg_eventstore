@@ -79,4 +79,64 @@ RSpec.describe PgEventstore::EventsSubscriptionPositionWorkerHandlers do
       end
     end
   end
+
+  describe '.reindex' do
+    subject { described_class.reindex(event_sposition_queries, next_reindex_at) }
+
+    let(:event_sposition_queries) { PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection) }
+    let(:next_reindex_at) { PgEventstore::EventsSubscriptionPositionWorker::ReindexTime.new(time:) }
+    let(:time) { Time.now.utc - 1 }
+
+    before do
+      allow(event_sposition_queries).to receive(:reindex_unprocessed_positions).and_call_original
+    end
+
+    context 'when reindex was performed recently' do
+      let(:time) { Time.now.utc + 10 }
+
+      it 'does not run another one' do
+        subject
+        expect(event_sposition_queries).not_to have_received(:reindex_unprocessed_positions)
+      end
+      it 'does not update next_reindex_at' do
+        expect { subject }.not_to change { next_reindex_at.time }
+      end
+    end
+
+    context 'when reindex was performed long time ago' do
+      it 'runs reindex' do
+        subject
+        expect(event_sposition_queries).to have_received(:reindex_unprocessed_positions)
+      end
+      it 'updates next_reindex_at' do
+        expect { subject }.to change { next_reindex_at.time }.to be > Time.now.utc + 1
+      end
+    end
+
+    context 'when reindex was not performed at all' do
+      let(:time) { nil }
+
+      it 'runs reindex' do
+        subject
+        expect(event_sposition_queries).to have_received(:reindex_unprocessed_positions)
+      end
+      it 'updates next_reindex_at' do
+        expect { subject }.to change { next_reindex_at.time }.to be > Time.now.utc + 1
+      end
+    end
+
+    context 'when reindex action fails' do
+      before do
+        allow(event_sposition_queries).to receive(:reindex_unprocessed_positions).and_return(nil)
+      end
+
+      it 'runs reindex' do
+        subject
+        expect(event_sposition_queries).to have_received(:reindex_unprocessed_positions)
+      end
+      it 'does not update next_reindex_at' do
+        expect { subject }.not_to change { next_reindex_at.time }
+      end
+    end
+  end
 end

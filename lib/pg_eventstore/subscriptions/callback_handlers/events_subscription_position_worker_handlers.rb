@@ -19,6 +19,18 @@ module PgEventstore
           sleep update_interval
         end
       end
+
+      # @param event_subscription_position_queries [PgEventstore::EventSubscriptionPositionQueries]
+      # @param next_reindex_at [PgEventstore::EventsSubscriptionPositionWorker::ReindexTime]
+      # @return [void]
+      def reindex(event_subscription_position_queries, next_reindex_at)
+        return if next_reindex_at.time && next_reindex_at.time > Time.now
+
+        time = event_subscription_position_queries.reindex_unprocessed_positions
+        return unless time
+
+        next_reindex_at.time = time
+      end
     end
   end
 end
