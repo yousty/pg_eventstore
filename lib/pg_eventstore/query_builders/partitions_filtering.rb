@@ -74,10 +74,10 @@ module PgEventstore
           when :event_type
             partitions_filtering.with_event_types
             partitions_filtering.order_by_event_type
+            partitions_filtering.to_sql_builder
           when :stream_name
             filter = QueryBuilders::PartitionsFiltering.new
             filter.without_event_types
-            filter.with_stream_names
             filter.order_by_stream_name
             builder = filter.to_sql_builder
             builder.where(
@@ -116,9 +116,19 @@ module PgEventstore
 
       def initialize
         @sql_builder = SQLBuilder.new.select("#{to_table_name}.*").from(to_table_name)
+        @has_event_types = []
+        @has_stream_names = []
+        @wants_event_type = false
+        @wants_stream_name = false
       end
 
       def to_sql_builder
+        if @wants_event_type && (@has_event_types.empty? || !@has_event_types.all?)
+          @sql_builder.where('event_type IS NOT NULL')
+        end
+        if @wants_stream_name && (@has_stream_names.empty? || !@has_stream_names.all?)
+          @sql_builder.where('stream_name IS NOT NULL')
+        end
         @sql_builder
       end
 
@@ -128,10 +138,13 @@ module PgEventstore
       end
 
       # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
-      # @return [PgEventstore::SQLBuilder]
+      # @return [void]
       def add_filter_row(filter_row)
         stream_filter = filter_row.stream_filter
         event_type_filters = filter_row.event_type_filters
+        @has_stream_names.push(stream_filter&.stream_name? || false)
+        @has_event_types.push(event_type_filters.any?)
+
         stream_parts_filters = []
         event_types_filters = []
         stream_filter&.to_partition_h&.each do |attr, value|
@@ -151,42 +164,47 @@ module PgEventstore
         sql += ' and ' if sql != '' && event_types_query&.any?
         sql += "(#{event_types_query.join(' or ')})" if event_types_query&.any?
         @sql_builder.where_or(sql, *stream_parts_filters_values, *event_types_values)
+        nil
       end
 
-      # @return [PgEventstore::SQLBuilder]
+      # @return [void]
       def with_event_types
-        with_stream_names
-        @sql_builder.where('event_type IS NOT NULL')
+        @wants_event_type = true
       end
 
-      # @return [PgEventstore::SQLBuilder]
+      # @return [void]
       def with_stream_names
-        @sql_builder.where('stream_name IS NOT NULL')
+        @wants_stream_name = true
       end
 
-      # @return [PgEventstore::SQLBuilder]
+      # @return [void]
       def without_event_types
         @sql_builder.where('event_type IS NULL')
+        nil
       end
 
-      # @return [PgEventstore::SQLBuilder]
+      # @return [void]
       def without_stream_names
         @sql_builder.where('stream_name IS NULL')
+        nil
       end
 
-      # @return [PgEventstore::SQLBuilder]
+      # @return [void]
       def order_by_event_type
         @sql_builder.order('event_type asc, id asc')
+        nil
       end
 
-      # @return [PgEventstore::SQLBuilder]
+      # @return [void]
       def order_by_stream_name
         @sql_builder.order('context asc, stream_name asc')
+        nil
       end
 
-      # @return [PgEventstore::SQLBuilder]
+      # @return [void]
       def order_by_context
         @sql_builder.order('context asc')
+        nil
       end
     end
   end

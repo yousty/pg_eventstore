@@ -2,6 +2,9 @@ module PgEventstore
   module QueryBuilders
     module Filters
       class FilterRow
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
         attr_accessor stream_filter: StreamFilter?
         attr_accessor event_type_filters: Array[EventTypeFilter]
 

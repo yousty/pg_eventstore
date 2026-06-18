@@ -5,7 +5,11 @@ module PgEventstore
 
       TABLE_NAME: String
 
+      @has_event_types: Array[bool]
+      @has_stream_names: Array[bool]
       @sql_builder: SQLBuilder
+      @wants_event_type: bool
+      @wants_stream_name: bool
 
       def self.assemble_sql_builder: (Filters::Collection filters_collection,
           ?scope: Symbol) -> SQLBuilder
@@ -13,21 +17,21 @@ module PgEventstore
       def self.from_filter_row: (Filters::FilterRow filter_row,
           ?scope: Symbol) -> SQLBuilder
 
-      def add_filter_row: (Filters::FilterRow filter_row) -> SQLBuilder
+      def add_filter_row: (Filters::FilterRow filter_row) -> void
 
-      def order_by_context: -> SQLBuilder
+      def order_by_context: -> void
 
-      def order_by_event_type: -> SQLBuilder
+      def order_by_event_type: -> void
 
-      def order_by_stream_name: -> SQLBuilder
+      def order_by_stream_name: -> void
 
-      def with_event_types: -> SQLBuilder
+      def with_event_types: -> void
 
-      def with_stream_names: -> SQLBuilder
+      def with_stream_names: -> void
 
-      def without_event_types: -> SQLBuilder
+      def without_event_types: -> void
 
-      def without_stream_names: -> SQLBuilder
+      def without_stream_names: -> void
 
       private
 
