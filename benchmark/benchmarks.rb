@@ -44,7 +44,7 @@ class Benchmarks
           stream = PgEventstore::Stream.new(
             context:,
             stream_name:,
-            stream_id: SecureRandom.uuid
+            stream_id: SecureRandom.uuid_v7
           )
           events = 1000.times.map do |event_num|
             PgEventstore::Event.new(data: { foo: "foo-#{event_num}" }, type: EVENT_TYPES[event_num % EVENT_TYPES.size])

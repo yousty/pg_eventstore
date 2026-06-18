@@ -11,7 +11,7 @@ require 'securerandom'
 class SomethingHappened < PgEventstore::Event
 end
 
-event = SomethingHappened.new(data: { user_id: SecureRandom.uuid, title: "Something happened" })
+event = SomethingHappened.new(data: { user_id: SecureRandom.uuid_v7, title: "Something happened" })
 stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.append_to_stream(stream, event)
 # => #<SomethingHappened:0x0 @context="MyAwesomeContext", @created_at=2023-11-30 14:47:31.296229 UTC, @data={"title"=>"Something happened", "user_id"=>"be52a81c-ad5b-4cfd-a039-0b7276974e6b"}, @global_position=7, @id="0b01137b-bdd8-4f0d-8ccf-f8c959e3a324", @link_global_position=nil, @metadata={}, @stream_id="f37b82f2-4152-424d-ab6b-0cc6f0a53aae", @stream_name="SomeStream", @stream_revision=0, @type="SomethingHappened">
@@ -28,8 +28,8 @@ require 'securerandom'
 class SomethingHappened < PgEventstore::Event
 end
 
-event1 = SomethingHappened.new(data: { user_id: SecureRandom.uuid, title: "Something happened 1" })
-event2 = SomethingHappened.new(data: { user_id: SecureRandom.uuid, title: "Something happened 2" })
+event1 = SomethingHappened.new(data: { user_id: SecureRandom.uuid_v7, title: "Something happened 1" })
+event2 = SomethingHappened.new(data: { user_id: SecureRandom.uuid_v7, title: "Something happened 2" })
 stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.append_to_stream(stream, [event1, event2])
 ```
@@ -44,7 +44,7 @@ command will raise an error.
 class SomethingHappened < PgEventstore::Event
 end
 
-event = SomethingHappened.new(id: SecureRandom.uuid)
+event = SomethingHappened.new(id: SecureRandom.uuid_v7)
 stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
 PgEventstore.client.append_to_stream(stream, event)
 # Raises PG::UniqueViolation error
@@ -68,7 +68,7 @@ end
 
 event1 = SomethingHappened.new(data: { foo: :bar })
 event2 = SomethingHappened.new(data: { bar: :baz })
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: SecureRandom.uuid)
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: SecureRandom.uuid_v7)
 
 # Successfully appends an event
 PgEventstore.client.append_to_stream(stream, event1, options: { expected_revision: :no_stream })
@@ -92,7 +92,7 @@ require 'securerandom'
 class SomethingHappened < PgEventstore::Event
 end
 
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: SecureRandom.uuid)
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: SecureRandom.uuid_v7)
 event1 = SomethingHappened.new(data: { foo: :bar })
 event2 = SomethingHappened.new(data: { bar: :baz })
 
@@ -156,7 +156,7 @@ def publish_event(stream, event)
   end
 end
 
-stream = PgEventstore::Stream.new(context: 'UserProfile', stream_name: 'User', stream_id: SecureRandom.uuid)
+stream = PgEventstore::Stream.new(context: 'UserProfile', stream_name: 'User', stream_id: SecureRandom.uuid_v7)
 event = UserAboutMeChanged.new(data: { user_id: '123', about_me: 'hi there!' })
 
 publish_event(stream, event)
