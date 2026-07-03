@@ -1,0 +1,57 @@
+module PgEventstore
+  module QueryBuilders
+    class IndexBasedEventsFiltering
+      include BasicFiltering
+
+      ABSTRACT_TABLE_NAME: String
+      DEFAULT_LIMIT: Integer
+
+      @sql_builder: SQLBuilder
+
+      def self.sql_builder_for_event_type_revision_validation: (
+          Stream stream,
+          Commands::RevisionCheck::ExpectedRevision::EventTypeRevision expected_revision
+        ) -> SQLBuilder
+
+      def self.sql_builder_for_event_type_with_markers_revision_validation: (
+          Stream stream,
+          Commands::RevisionCheck::ExpectedRevision::EventTypeRevisionWithMarkers expected_revision
+        ) -> SQLBuilder
+
+      def self.sql_builder_for_markers_revision_validation: (
+          Stream stream,
+          Commands::RevisionCheck::ExpectedRevision::MarkersRevision expected_revision
+        ) -> SQLBuilder
+
+      def self.sql_builder_for_read_common: (
+          Array[Filters::FilterRow | Filters::MarkerFilterRow] filter_rows,
+          ReadCursor::StreamCursor cursor
+        ) -> SQLBuilder
+
+      def self.sql_builder_for_read_grouped: (
+          Array[Filters::FilterRow | Filters::MarkerFilterRow] filter_rows,
+          ReadCursor::StreamCursor cursor
+        ) -> SQLBuilder
+
+      def self.sql_builder_for_subscriptions: (
+          Array[Filters::FilterRow | Filters::MarkerFilterRow] filter_rows,
+          ReadCursor::StreamCursor cursor
+        ) -> SQLBuilder
+
+      def add_global_position_direction: ((String | Symbol)? direction) -> void
+
+      def add_limit: (Integer? limit) -> void
+
+      private
+
+      def self.finalize_subscription_builders: (Array[SQLBuilder] builders) -> SQLBuilder
+
+      def self.union_builders: (
+          Array[SQLBuilder] builders,
+          QueryBuilders::ReadCursor::StreamCursor cursor,
+          mode: Symbol,
+          ?requires_limit: bool
+        ) -> SQLBuilder
+    end
+  end
+end

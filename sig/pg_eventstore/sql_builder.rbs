@@ -5,7 +5,7 @@ module PgEventstore
     @from_value: (String | SQLBuilder)?
     @group_values: Array[String]
     @join_values: Array[untyped]
-    @limit_value: Integer?
+    @limit_value: String? | Integer?
     @offset_value: Integer?
     @order_values: Array[String]
     @select_values: Array[String]
@@ -29,6 +29,8 @@ module PgEventstore
     # _@param_ `sql`
     def select: (String sql) -> self
 
+    def select_id_only: -> self
+
     def union_builder?: -> bool
 
     def union_mode=: (Symbol val) -> void
@@ -45,8 +47,7 @@ module PgEventstore
     # _@param_ `arguments` — positional values
     def where_or: (String sql, *Object arguments) -> self
 
-    # _@param_ `table_name`
-    def from: (String | SQLBuilder table_name) -> self
+    def from: (String | SQLBuilder table_name, ?table_alias: String?) -> self
 
     # _@param_ `sql`
     #
@@ -59,7 +60,7 @@ module PgEventstore
     def remove_order: () -> self
 
     # _@param_ `limit`
-    def limit: (Integer limit) -> self
+    def limit: (String | Integer limit) -> self
 
     def remove_limit: () -> self
 

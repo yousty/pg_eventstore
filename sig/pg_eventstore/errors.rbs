@@ -45,27 +45,37 @@ module PgEventstore
   end
 
   class WrongExpectedTypesRevisionError < Error
-    attr_accessor stream: Stream
-    attr_accessor revisions: Hash[String, Integer]
-    attr_accessor expected_revisions: Hash[String, Integer | Symbol]
-    attr_accessor verdicts: Array[[Symbol, String]]
+    class Verdict
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
 
-    def initialize: (revisions: Hash[String, Integer], expected_revisions: Hash[String, Integer | Symbol],
-        stream: Stream, verdicts: Array[[Symbol, String]]) -> void
+      attr_accessor verdict: Symbol
+      attr_accessor event_type: String | Symbol
+      attr_accessor current_revision: Integer
+      attr_accessor expected_revision: Integer | Symbol
+      attr_accessor expected_markers: Array[String]?
+    end
+
+    attr_accessor stream: Stream
+    attr_accessor verdicts: Array[Verdict]
+
+    def initialize: (stream: Stream, verdicts: Array[Verdict]) -> void
 
     private
 
-    def user_friendly_message: () -> String
+    def event_descr: (Verdict verdict) -> String
 
-    def expected_event_exists: (String event_type) -> String
+    def event_is_absent: (Verdict verdict) -> String
 
-    def expected_no_event: (String event_type) -> String
+    def event_is_present: (Verdict verdict) -> String
 
-    def current_no_event: (String event_type) -> String
+    def event_revision_does_not_match: (Verdict verdict) -> String
 
-    def unmatched_event_revision: (String event_type) -> String
+    def revision_descr: (Verdict verdict) -> String
 
     def stream_descr: -> String
+
+    def user_friendly_message: -> String
   end
 
   class RecordNotFound < Error

@@ -4,12 +4,12 @@ RSpec.describe PgEventstore::Commands::SystemStreamReadPaginated do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
     PgEventstore::Queries.new(
-      events_global_index: events_global_index_queries,
+      index_filtering: index_filtering_queries,
       streams_global_index: streams_global_index_queries
     )
   end
-  let(:events_global_index_queries) do
-    PgEventstore::EventsGlobalIndexQueries.new(
+  let(:index_filtering_queries) do
+    PgEventstore::IndexFilteringQueries.new(
       PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
     )
   end

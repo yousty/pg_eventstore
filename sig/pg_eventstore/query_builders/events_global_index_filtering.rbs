@@ -8,18 +8,27 @@ module PgEventstore
 
       @sql_builder: SQLBuilder
 
-      def self.sql_builder_for_read_common: (QueryBuilders::Filters::Collection filters_collection,
-          QueryBuilders::ReadCursor::StreamCursor cursor) -> SQLBuilder
+      def self.default_filtering: (ReadCursor::StreamCursor cursor) -> EventsGlobalIndexFiltering
 
-      def self.sql_builder_for_read_grouped: (QueryBuilders::Filters::Collection filters_collection,
-          QueryBuilders::ReadCursor::StreamCursor cursor) -> SQLBuilder
+      def self.for_read_common: (
+          Filters::FilterRow filter_row,
+          ReadCursor::StreamCursor cursor
+        )-> SQLBuilder
 
-      def self.sql_builder_for_revision_validation_per_type: (QueryBuilders::Filters::Collection filters_collection,
-          QueryBuilders::ReadCursor::StreamCursor cursor) -> SQLBuilder
+      def self.for_read_grouped: (
+          Filters::FilterRow filter_row,
+          ReadCursor::StreamCursor cursor
+        )-> SQLBuilder
+
+      def self.for_revision_validation_per_type: (
+          Filters::FilterRow filter_row, 
+          ReadCursor::StreamCursor cursor,
+          Integer seq_num
+        )-> SQLBuilder
 
       def initialize: -> void
 
-      def add_filter_row: (QueryBuilders::Filters::FilterRow filter_row) -> void
+      def add_filter_row: (Filters::FilterRow filter_row) -> void
 
       def add_global_position_direction: (String? | Symbol? direction) -> void
 
@@ -39,23 +48,21 @@ module PgEventstore
 
       private
 
-      def self.add_direction_and_limit: (QueryBuilders::EventsGlobalIndexFiltering index_filtering,
-          QueryBuilders::ReadCursor::StreamCursor cursor) -> void
+      def self.add_direction_and_limit: (
+          EventsGlobalIndexFiltering index_filtering,
+          ReadCursor::StreamCursor cursor
+        ) -> void
 
-      def self.default_filtering: (QueryBuilders::ReadCursor::StreamCursor cursor)
-        -> QueryBuilders::EventsGlobalIndexFiltering
-
-      def self.filtering_from_filter_row: (QueryBuilders::Filters::FilterRow filter_row,
-          QueryBuilders::ReadCursor::StreamCursor cursor) -> QueryBuilders::EventsGlobalIndexFiltering
-
-      def self.union_builders: (Array[SQLBuilder] builders,
-          QueryBuilders::ReadCursor::StreamCursor cursor, mode: Symbol) -> SQLBuilder
+      def self.filtering_from_filter_row: (
+          Filters::FilterRow filter_row,
+          ReadCursor::StreamCursor cursor
+        ) -> EventsGlobalIndexFiltering
 
       def direction_operator_from: (String? | Symbol? direction) -> String
 
       def direction_operator_to: (String? | Symbol? direction) -> String
 
-      def event_type_comparison_operator: (QueryBuilders::Filters::FilterRow filter_row) -> String
+      def event_type_comparison: -> Array[String]
     end
   end
 end

@@ -5,6 +5,8 @@ module PgEventstore
         include Extensions::OptionsExtension
         include Extensions::OptionsDefaults
 
+        def self.null_filter_row: -> FilterRow
+
         attr_accessor stream_filter: StreamFilter?
         attr_accessor event_type_filters: Array[EventTypeFilter]
 

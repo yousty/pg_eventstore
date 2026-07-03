@@ -26,9 +26,11 @@ module PgEventstore
           RETURNING *
       SQL
 
-      connection.with do |conn|
+      result = connection.with do |conn|
         conn.exec_params(sql, values)
-      end.to_a
+      end
+      # "returning" statement has no guarantees about the order in which rows are returned. Thus, sort them explicitly
+      result.sort_by { _1['stream_revision'] }
     end
 
     private

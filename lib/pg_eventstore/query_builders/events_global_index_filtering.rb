@@ -12,75 +12,27 @@ module PgEventstore
       PRIMARY_TABLE_NAME = 'events_global_index'
 
       class << self
-        # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
+        # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
         # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @param seq_num [Integer]
         # @return [PgEventstore::SQLBuilder]
-        def sql_builder_for_revision_validation_per_type(filters_collection, cursor)
-          raise ArgumentError, 'Can not build this query using "all" stream cursor.' if cursor.all_stream_cursor?
-
-          cursor = cursor.dup
-          cursor.max_count = 1
-          builders = filters_collection.collection.flat_map do |filter_row|
-            filter_row.flatten.map do |flattened_row|
-              builder = filtering_from_filter_row(flattened_row, cursor).to_sql_builder
-              builder.select('stream_revision')
-            end
-          end
-          SQLBuilder.union_builders(builders, mode: :all)
-        end
-
-        # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
-        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
-        # @return [PgEventstore::SQLBuilder]
-        def sql_builder_for_read_grouped(filters_collection, cursor)
-          cursor = cursor.dup
-          cursor.max_count = 1
-          builders = filters_collection.collection.flat_map do |filter_row|
-            filter_row.flatten.map { filtering_from_filter_row(_1, cursor).to_sql_builder }
-          end
-          # Do not limit final result
-          cursor.max_count = nil
-          union_builders(builders, cursor, mode: :all)
-        end
-
-        # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
-        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
-        # @return [PgEventstore::SQLBuilder]
-        def sql_builder_for_read_common(filters_collection, cursor)
-          builders = filters_collection.collection.flat_map do |filter_row|
-            filter_row.flatten.map { filtering_from_filter_row(_1, cursor).to_sql_builder }
-          end
-          return default_filtering(cursor).to_sql_builder if builders.empty?
-
-          union_builders(builders, cursor, mode: :all)
-        end
-
-        private
-
-        # @param builders [Array<PgEventstore::SQLBuilder>]
-        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
-        # @param mode [Symbol]
-        # @return [PgEventstore::SQLBuilder]
-        def union_builders(builders, cursor, mode:)
-          return builders.first if builders.size == 1
-
-          union_builder = SQLBuilder.union_builders(builders, mode:)
-          top_filtering = new
-          # Union builder always has fixed columns in SELECT (global_position and event_type_partition_id). Thus,
-          # define SystemStreamOptions that is resolved to the sorting by global_position instead of possible
-          # sorting by stream_revision which may not be present among the columns list
-          cursor = ReadCursor::StreamCursor.from_options(direction: cursor.direction, max_count: cursor.max_count)
-          add_direction_and_limit(top_filtering, cursor)
-          top_filtering.to_sql_builder.from(union_builder)
+        def for_revision_validation_per_type(filter_row, cursor, seq_num)
+          builder = filtering_from_filter_row(filter_row, cursor).to_sql_builder
+          builder.unselect.select("stream_revision, #{seq_num} as sequence_number")
         end
 
         # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
         # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
-        # @return [PgEventstore::QueryBuilders::EventsGlobalIndexFiltering]
-        def filtering_from_filter_row(filter_row, cursor)
-          index_filtering = default_filtering(cursor)
-          index_filtering.add_filter_row(filter_row)
-          index_filtering
+        # @return [PgEventstore::SQLBuilder]
+        def for_read_grouped(filter_row, cursor)
+          filtering_from_filter_row(filter_row, cursor).to_sql_builder
+        end
+
+        # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @return [PgEventstore::SQLBuilder]
+        def for_read_common(filter_row, cursor)
+          filtering_from_filter_row(filter_row, cursor).to_sql_builder
         end
 
         # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
@@ -95,6 +47,17 @@ module PgEventstore
             index_filtering.from_revision(cursor.from, cursor.direction)
             index_filtering.to_revision(cursor.to, cursor.direction)
           end
+          index_filtering
+        end
+
+        private
+
+        # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
+        # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
+        # @return [PgEventstore::QueryBuilders::EventsGlobalIndexFiltering]
+        def filtering_from_filter_row(filter_row, cursor)
+          index_filtering = default_filtering(cursor)
+          index_filtering.add_filter_row(filter_row)
           index_filtering
         end
 
@@ -131,13 +94,13 @@ module PgEventstore
       def add_filter_row(filter_row)
         stream_filter = filter_row.stream_filter
         event_type_filters = filter_row.event_type_filters
-        event_type_comparison_operator = event_type_comparison_operator(filter_row)
+        operator, rhs = event_type_comparison(filter_row)
         # Collapse context/stream name & event type filters into event type filters
         if filter_row.collapsable_into_event_types_only?
           affected_partitions = PartitionsFiltering.from_filter_row(filter_row)
-          partitions_builder = affected_partitions.unselect.select('id')
+          partitions_builder = affected_partitions.select_id_only
           return @sql_builder.where_or(
-            "event_type_partition_id #{event_type_comparison_operator} ?",
+            "#{to_table_name}.event_type_partition_id #{operator} #{rhs}",
             partitions_builder
           )
         end
@@ -146,20 +109,22 @@ module PgEventstore
         if stream_filter&.stream?
           streams_filter = StreamsGlobalIndexFiltering.new
           streams_filter.add_filter_row(filter_row)
-          query_parts << ['streams_global_index_id = ?', streams_filter.to_sql_builder.unselect.select('id')]
+          query_parts << [
+            "#{to_table_name}.streams_global_index_id = ?", streams_filter.to_sql_builder.select_id_only
+          ]
         elsif stream_filter&.context?
           affected_partitions = PartitionsFiltering.from_filter_row(filter_row, scope: :context)
-          query_parts << ['context_partition_id = ?', affected_partitions.unselect.select('id')]
+          query_parts << ["#{to_table_name}.context_partition_id = ?", affected_partitions.select_id_only]
         elsif stream_filter&.stream_name?
           affected_partitions = PartitionsFiltering.from_filter_row(filter_row, scope: :stream_name)
-          query_parts << ['stream_name_partition_id = ?', affected_partitions.unselect.select('id')]
+          query_parts << ["#{to_table_name}.stream_name_partition_id = ?", affected_partitions.select_id_only]
         end
 
         if event_type_filters.any?
           affected_partitions = PartitionsFiltering.from_filter_row(filter_row)
           query_parts << [
-            "event_type_partition_id #{event_type_comparison_operator} ?",
-            affected_partitions.unselect.select('id'),
+            "#{to_table_name}.event_type_partition_id #{operator} #{rhs}",
+            affected_partitions.select_id_only,
           ]
         end
 
@@ -226,8 +191,12 @@ module PgEventstore
         spos_table_name = EventSubscriptionPositionsFiltering::PRIMARY_TABLE_NAME
         @sql_builder.select("#{spos_table_name}.subscription_position")
         @sql_builder.join("join #{spos_table_name} using(global_position)")
-        @sql_builder.where("#{spos_table_name}.subscription_position is not null")
+        @sql_builder.where("#{spos_table_name}.subscription_position >= from_position")
+        @sql_builder.where("#{spos_table_name}.subscription_position <= to_position")
+        @sql_builder.where("#{to_table_name}.global_position >= from_gpos")
+        @sql_builder.where("#{to_table_name}.global_position <= to_gpos")
         @sql_builder.order("#{spos_table_name}.subscription_position asc")
+        @sql_builder.limit('max_count')
       end
 
       private
@@ -245,14 +214,13 @@ module PgEventstore
       end
 
       # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
-      # @return [String]
-      def event_type_comparison_operator(filter_row)
-        if filter_row.event_type_filters.size > 1 || filter_row.ambiguous_event_type? ||
-           filter_row.event_type_filters.any?(&:prefix?)
-          return 'in'
+      # @return [Array<String>]
+      def event_type_comparison(filter_row)
+        if filter_row.event_type_filters.size > 1 || filter_row.ambiguous_event_type?
+          ['=', 'any(array(?)::bigint[])']
+        else
+          ['=', '?']
         end
-
-        '='
       end
     end
   end

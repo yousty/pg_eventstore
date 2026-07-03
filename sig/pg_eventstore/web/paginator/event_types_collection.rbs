@@ -18,6 +18,10 @@ module PgEventstore
         def next_page_starting_id: () -> String?
 
         def direction_operator: () -> String
+
+        private
+
+        def compute_event_type_filter: (SQLBuilder builder) -> void
       end
     end
   end

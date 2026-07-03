@@ -31,21 +31,64 @@ module PgEventstore
               end
             in [CurrentRevision::EventTypeRevisions, ExpectedRevision::EventTypeRevisions]
               verdicts = []
-              expected_revision.revisions.each do |event_type, expected|
-                current = current_revision.revisions[event_type] || Event::NON_EXISTING_EVENT_REVISION
-                verdict = EventTypeRevisionsComparison.verdict(current, expected, event_type)
-                verdicts << verdict if verdict
+              rev_check_indexes = current_revision.revisions.to_h { [_1.sequence_number, _1] }
+              expected_revision.revisions.each do |revision|
+                index = find_index(revision, rev_check_indexes)
+                verdict =
+                  case revision
+                  when ExpectedRevision::EventTypeRevision
+                    EventTypeRevisionsComparison.verdict(
+                      index.stream_revision,
+                      revision.expected_revision,
+                      event_type: revision.event_type
+                    )
+                  when ExpectedRevision::EventTypeRevisionWithMarkers
+                    EventTypeRevisionsComparison.verdict(
+                      index.stream_revision,
+                      revision.expected_revision,
+                      expected_markers: revision.markers,
+                      event_type: revision.event_type
+                    )
+                  when ExpectedRevision::MarkersRevision
+                    EventTypeRevisionsComparison.verdict(
+                      index.stream_revision,
+                      revision.expected_revision,
+                      expected_markers: revision.markers
+                    )
+                  else
+                    Utils.missing_implementation!(revision)
+                  end
+                verdicts.push(verdict) if verdict
               end
-              if verdicts.any?
-                raise WrongExpectedTypesRevisionError.new(
-                  revisions: current_revision.revisions,
-                  expected_revisions: expected_revision.revisions,
-                  stream:,
-                  verdicts:
-                )
-              end
+              raise WrongExpectedTypesRevisionError.new(stream:, verdicts:) if verdicts.any?
             else
-              raise ArgumentError, "Incorrect combination: #{current_revision.inspect} and #{expected_revision.inspect}"
+              Utils.missing_implementation!([current_revision, expected_revision])
+            end
+          end
+
+          private
+
+          # @param expected_revision [ExpectedRevision::EventTypeRevision,
+          #   ExpectedRevision::EventTypeRevisionWithMarkers, ExpectedRevision::MarkersRevision]
+          # @param rev_check_indexes [Hash<Integer, PgEventstore::EventGlobalIndex::RevisionCheckRepr>]
+          # @return [PgEventstore::EventGlobalIndex::RevisionCheckRepr]
+          def find_index(expected_revision, rev_check_indexes)
+            from_dictionary = rev_check_indexes[expected_revision.sequence_number]
+            return from_dictionary if from_dictionary
+
+            case expected_revision
+            when ExpectedRevision::EventTypeRevision
+              EventGlobalIndex::RevisionCheckRepr.new(
+                sequence_number: expected_revision.sequence_number, stream_revision: Event::NON_EXISTING_EVENT_REVISION
+              )
+            when ExpectedRevision::EventTypeRevisionWithMarkers, ExpectedRevision::MarkersRevision
+              EventGlobalIndex::RevisionCheckRepr.new(
+                sequence_number: expected_revision.sequence_number,
+                stream_revision: Event::NON_EXISTING_EVENT_REVISION,
+                marker: Event::SYSTEM_SYMBOL
+              )
+            else
+              Utils.missing_implementation!(expected_revision)
             end
           end
         end

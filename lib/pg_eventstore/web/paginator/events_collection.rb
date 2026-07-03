@@ -34,8 +34,8 @@ module PgEventstore
           from_position = event_global_position(collection.first)
           filters_collection = QueryBuilders::Filters::Collection.from_options(options)
           cursor = QueryBuilders::ReadCursor::StreamCursor.from_options(from_position:, max_count: 1, direction: order)
-          sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-            filters_collection,
+          sql_builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_read_common(
+            filters_collection.collection,
             cursor
           ).unselect.select('global_position').offset(per_page)
           global_position(sql_builder)
@@ -48,8 +48,8 @@ module PgEventstore
           cursor = QueryBuilders::ReadCursor::StreamCursor.from_options(
             from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc
           )
-          sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-            filters_collection,
+          sql_builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_read_common(
+            filters_collection.collection,
             cursor
           ).unselect.select('global_position').offset(1)
           sql_builder =
@@ -63,8 +63,8 @@ module PgEventstore
             begin
               filters_collection = QueryBuilders::Filters::Collection.from_options(options)
               cursor = QueryBuilders::ReadCursor::StreamCursor.from_options({})
-              sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(
-                filters_collection,
+              sql_builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_read_common(
+                filters_collection.collection,
                 cursor
               )
               sql_builder.remove_limit.remove_group.remove_order

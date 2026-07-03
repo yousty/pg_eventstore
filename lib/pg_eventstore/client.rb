@@ -36,7 +36,9 @@ module PgEventstore
         transactions: transaction_queries,
         events_global_index: events_global_index_queries,
         streams_global_index: streams_global_index_queries,
-        event_subscription_positions: event_subscription_position_queries
+        event_subscription_positions: event_subscription_position_queries,
+        event_markers: event_marker_queries,
+        index_filtering: index_filtering_queries
       )
       result = Commands::Append.new(queries).call(
         stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
@@ -121,7 +123,7 @@ module PgEventstore
     # @raise [PgEventstore::StreamNotFoundError]
     def read(stream, options: {}, middlewares: nil)
       queries = Queries.new(
-        events_global_index: events_global_index_queries,
+        index_filtering: index_filtering_queries,
         streams_global_index: streams_global_index_queries
       )
       Commands::Read.new(queries).call(
@@ -139,7 +141,7 @@ module PgEventstore
     def read_paginated(stream, options: {}, middlewares: nil)
       cmd_class = stream.system? ? Commands::SystemStreamReadPaginated : Commands::RegularStreamReadPaginated
       queries = Queries.new(
-        events_global_index: events_global_index_queries,
+        index_filtering: index_filtering_queries,
         streams_global_index: streams_global_index_queries
       )
       cmd_class.new(queries).call(
@@ -161,7 +163,7 @@ module PgEventstore
     # @return [Array<PgEventstore::Event>]
     def read_grouped(stream, options: {}, middlewares: nil)
       queries = Queries.new(
-        events_global_index: events_global_index_queries,
+        index_filtering: index_filtering_queries,
         streams_global_index: streams_global_index_queries
       )
       Commands::ReadGrouped.new(queries).call(
@@ -213,7 +215,9 @@ module PgEventstore
         transactions: transaction_queries,
         events_global_index: events_global_index_queries,
         streams_global_index: streams_global_index_queries,
-        event_subscription_positions: event_subscription_position_queries
+        event_subscription_positions: event_subscription_position_queries,
+        event_markers: event_marker_queries,
+        index_filtering: index_filtering_queries
       )
       result = Commands::LinkTo.new(queries).call(
         stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
@@ -277,6 +281,16 @@ module PgEventstore
     # @return [PgEventstore::EventSubscriptionPositionQueries]
     def event_subscription_position_queries
       EventSubscriptionPositionQueries.new(connection)
+    end
+
+    # @return [PgEventstore::EventMarkerQueries]
+    def event_marker_queries
+      EventMarkerQueries.new(connection, QueryStrategy::Foreground.new(connection))
+    end
+
+    # @return [PgEventstore::IndexFilteringQueries]
+    def index_filtering_queries
+      IndexFilteringQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

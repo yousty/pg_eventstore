@@ -6,15 +6,12 @@ module PgEventstore
     class SubscriptionEventsFiltering
       include BasicFiltering
 
-      # @return [Integer]
-      DEFAULT_LIMIT = 1_000
-
       class << self
         # @param id [integer]
         # @param options [Hash]
-        # @option options [Integer, nil] :from_position
-        # @option options [Integer, nil] :to_position
-        # @option options [Integer, nil] :max_count
+        # @option options [Integer] :from_position
+        # @option options [Integer] :to_position
+        # @option options [Integer] :max_count
         # @return [PgEventstore::QueryBuilders::SubscriptionEventsFiltering]
         def build(id, options)
           index_filter = new(id)
@@ -28,38 +25,54 @@ module PgEventstore
       # @param subscription_id [Integer]
       def initialize(subscription_id)
         @subscription_id = subscription_id
-        @sql_builder = SQLBuilder.new.select("#{to_table_name}.*").from(to_table_name)
+        @from_position = 0
+        @to_position = 0
+        @max_count = 0
+        @sql_builder = SQLBuilder.new.select("#{to_table_name}.*")
+        compute_from
       end
 
       def to_sql_builder
+        compute_from
         @sql_builder
       end
 
       # @param position [Integer, nil]
       # @return [void]
       def from_position(position)
-        return unless position
+        raise ArgumentError, 'position must be valid number' unless position.is_a?(Integer)
 
-        @sql_builder.where("#{to_table_name}.subscription_position >= ?", position)
+        @from_position = position
       end
 
       # @param position [Integer, nil]
       # @return [void]
       def to_position(position)
-        return unless position
+        raise ArgumentError, 'position must be valid number' unless position.is_a?(Integer)
 
-        @sql_builder.where("#{to_table_name}.subscription_position <= ?", position)
+        @to_position = position
       end
 
       # @param limit [Integer, nil]
       # @return [void]
       def add_limit(limit)
-        @sql_builder.limit(limit || DEFAULT_LIMIT)
+        raise ArgumentError, 'limit must be valid number' unless limit.is_a?(Integer)
+
+        @max_count = limit
       end
 
       # @return [String]
       def to_table_name
         "subscription_#{@subscription_id}"
+      end
+
+      private
+
+      def compute_from
+        @sql_builder.from(
+          "#{to_table_name}(#{@from_position}, #{@to_position}, #{@max_count})",
+          table_alias: to_table_name
+        )
       end
     end
   end

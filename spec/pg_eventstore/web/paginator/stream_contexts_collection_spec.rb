@@ -18,13 +18,20 @@ RSpec.describe PgEventstore::Web::Paginator::StreamContextsCollection do
     let(:stream3) { PgEventstore::Stream.new(context: 'FazCtx', stream_name: 'Faz', stream_id: '1') }
     let(:stream4) { PgEventstore::Stream.new(context: 'BarCtx', stream_name: 'Bar', stream_id: '1') }
     let(:stream5) { PgEventstore::Stream.new(context: 'BazCtx', stream_name: 'Baz', stream_id: '1') }
+    let(:stream6) { PgEventstore::Stream.new(context: 'fooCtx', stream_name: 'foo', stream_id: '1') }
+    let(:stream7) { PgEventstore::Stream.new(context: 'fokCtx', stream_name: 'foo', stream_id: '1') }
+    let(:stream8) { PgEventstore::Stream.new(context: 'barfooCtx', stream_name: 'foo', stream_id: '1') }
 
     before do
-      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream5, PgEventstore::Event.new)
+      events = Array.new(2) { PgEventstore::Event.new }
+      PgEventstore.client.append_to_stream(stream1, events)
+      PgEventstore.client.append_to_stream(stream2, events)
+      PgEventstore.client.append_to_stream(stream3, events)
+      PgEventstore.client.append_to_stream(stream4, events)
+      PgEventstore.client.append_to_stream(stream5, events)
+      PgEventstore.client.append_to_stream(stream6, events)
+      PgEventstore.client.append_to_stream(stream7, events)
+      PgEventstore.client.append_to_stream(stream8, events)
     end
 
     it 'returns contexts according to the page limit and in the given order' do
@@ -48,33 +55,35 @@ RSpec.describe PgEventstore::Web::Paginator::StreamContextsCollection do
     end
 
     context 'when query option is provided' do
-      let(:options) { { query: 'F' } }
-
-      it 'returns contexts, filtered by that option' do
-        is_expected.to eq([{ 'context' => 'FazCtx' }, { 'context' => 'FokCtx' }])
-      end
-
-      context 'when order is :desc' do
-        let(:order) { :desc }
-
-        it 'returns contexts, filtered by that option, properly ordered' do
-          is_expected.to eq([{ 'context' => 'FooCtx' }, { 'context' => 'FokCtx' }])
-        end
-      end
-
-      context 'when query is downcased' do
+      context 'when query length is less than 3 symbols' do
         let(:options) { { query: 'f' } }
 
-        it 'ignores case sensitivity' do
-          is_expected.to eq([{ 'context' => 'FazCtx' }, { 'context' => 'FokCtx' }])
+        it 'returns case-sensitive result that starts from the given filter' do
+          is_expected.to eq([{ 'context' => 'fokCtx' }, { 'context' => 'fooCtx' }])
+        end
+
+        context 'when order is :desc' do
+          let(:order) { :desc }
+
+          it 'returns contexts, filtered by that option, properly ordered' do
+            is_expected.to eq([{ 'context' => 'fooCtx' }, { 'context' => 'fokCtx' }])
+          end
         end
       end
 
-      context 'when query matches a substring in the middle of the word' do
-        let(:options) { { query: 'zCtx' } }
+      context 'when query length is gte 3 symbols' do
+        let(:options) { { query: 'foo' } }
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq([{ 'context' => 'BazCtx' }, { 'context' => 'FazCtx' }])
+        it 'returns case-insensitive result, filtered by any part of the word by the given filter' do
+          is_expected.to eq([{ 'context' => 'FooCtx' }, { 'context' => 'barfooCtx' }])
+        end
+
+        context 'when order is :desc' do
+          let(:order) { :desc }
+
+          it 'returns contexts, filtered by that option, properly ordered' do
+            is_expected.to eq([{ 'context' => 'fooCtx' }, { 'context' => 'barfooCtx' }])
+          end
         end
       end
     end
@@ -163,10 +172,20 @@ RSpec.describe PgEventstore::Web::Paginator::StreamContextsCollection do
       end
 
       context 'when query matches a substring in the middle of the word' do
-        let(:options) { { query: 'a' } }
+        context 'when query length is less than 3 symbols' do
+          let(:options) { { query: 'a' } }
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq('FazCtx')
+          it 'does not recognize it' do
+            is_expected.to eq(nil)
+          end
+        end
+
+        context 'when query length is gte 3 symbols' do
+          let(:options) { { query: 'ctx' } }
+
+          it 'recognizes it' do
+            is_expected.to eq('FazCtx')
+          end
         end
       end
     end
@@ -196,10 +215,21 @@ RSpec.describe PgEventstore::Web::Paginator::StreamContextsCollection do
 
       context 'when query matches a substring in the middle of the word' do
         let(:starting_id) { 'BarCtx' }
-        let(:options) { { query: 'a' } }
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq('FazCtx')
+        context 'when query length is less than 3 symbols' do
+          let(:options) { { query: 'a' } }
+
+          it 'does not recognize it' do
+            is_expected.to eq(nil)
+          end
+        end
+
+        context 'when query length is gte 3 symbols' do
+          let(:options) { { query: 'ctx' } }
+
+          it 'recognizes it' do
+            is_expected.to eq('FazCtx')
+          end
         end
       end
     end

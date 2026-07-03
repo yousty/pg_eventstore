@@ -34,6 +34,7 @@ module PgEventstore
         **attrs.slice('context', 'stream_name', 'stream_id').transform_keys(&:to_sym)
       )
       event.link = without_middlewares.deserialize(attrs['link']) if attrs.key?('link')
+      event.markers = event.metadata.delete(Event::MARKERS_METADATA_KEY) || []
       event
     end
 

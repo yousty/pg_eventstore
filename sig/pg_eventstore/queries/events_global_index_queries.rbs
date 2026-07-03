@@ -6,27 +6,13 @@ module PgEventstore
 
     def initialize: (Connection connection, QueryStrategy query_strategy) -> void
 
-    def compute_read_api_chunks_repo: (Array[EventGlobalIndex::ReadApiRepr] indexes,
-        bool resolve_link_tos) -> Chunks::Repository
-
-    def create_global_indexes: (Array[[Integer, Integer]] indexes) -> void
-
-    def fetch_grouped_indexes_for_read_api: (QueryBuilders::Filters::Collection filters_collection,
-        QueryBuilders::ReadCursor::StreamCursor cursor) -> Array[EventGlobalIndex::ReadApiRepr]
-
-    def fetch_indexes_for_read_api: (QueryBuilders::Filters::Collection filters_collection,
-        QueryBuilders::ReadCursor::StreamCursor cursor) -> Array[EventGlobalIndex::ReadApiRepr]
-
-    def fetch_indexes_for_revision_validation: (QueryBuilders::Filters::Collection filters_collection,
-        QueryBuilders::ReadCursor::StreamCursor cursor) -> Array[EventGlobalIndex::ReadApiRepr]
-
     def fetch_indexes_for_subscriptions: (Hash[Integer, Hash[Symbol, untyped]] grouped_opts) ->
       Hash[Integer, Array[EventGlobalIndex::SubscriptionRepr]]
 
     def global_positions_from_db: (Array[Event] events) -> Array[Integer]
 
     def index_events: (Array[Hash[String, untyped]] raw_events, Array[Partition] affected_partitions,
-        Integer stream_index_id) -> void
+        Integer stream_index_id) -> Array[EventGlobalIndex::WriteApiRepr]
 
     def max_global_position: -> Integer?
 
@@ -36,10 +22,13 @@ module PgEventstore
     private
 
     def deserialize: (PG::Result pg_result, ?repr: Symbol?) ->
-      (Array[EventGlobalIndex] | Array[EventGlobalIndex::ReadApiRepr] | Array[EventGlobalIndex::SubscriptionRepr])
-
-    def expand_event_types: (QueryBuilders::Filters::Collection filters_collection) ->
-      QueryBuilders::Filters::Collection
+      (
+        Array[EventGlobalIndex] |
+        Array[EventGlobalIndex::ReadApiRepr] |
+        Array[EventGlobalIndex::SubscriptionRepr] |
+          Array[EventGlobalIndex::WriteApiRepr] |
+          Array[EventGlobalIndex::RevisionCheckRepr]
+      )
 
     def links_resolver: -> LinksResolver
 

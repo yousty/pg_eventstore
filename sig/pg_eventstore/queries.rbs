@@ -9,5 +9,7 @@ module PgEventstore
     attr_accessor events_global_index: EventsGlobalIndexQueries?
     attr_accessor streams_global_index: StreamsGlobalIndexQueries?
     attr_accessor event_subscription_positions: EventSubscriptionPositionQueries?
+    attr_accessor event_markers: EventMarkerQueries?
+    attr_accessor index_filtering: IndexFilteringQueries?
   end
 end

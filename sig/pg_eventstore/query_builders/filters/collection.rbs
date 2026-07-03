@@ -4,8 +4,11 @@ module PgEventstore
       class Collection
         @compiled: Array[FilterRow]?
         @event_types: Set[EventTypeFilter]
+        @incomplete_markers_filter: bool
+        @incomplete_stream_filter: bool
+        @markers: Set[MarkerFilter]
         @streams: Index
-        @prefix_filter: bool?
+        @prefix_filter: bool
 
         def self.from_options: (Hash[untyped, untyped] options) -> Collection
 
@@ -13,19 +16,30 @@ module PgEventstore
 
         def add_event_type: (EventTypeFilter event_type_filter) -> untyped
 
+        def add_marker: (MarkerFilter marker_filter) -> void
+
         def add_stream: (StreamFilter stream_filter) -> void
 
-        def collection: -> Array[FilterRow]
+        def collection: -> Array[FilterRow | MarkerFilterRow]
 
         def empty?: -> bool
 
         def has_event_types?: -> bool
 
+        def has_incomplete_markers_filter?: -> bool
+
+        def has_incomplete_stream_filter?: -> bool
+
+        def has_markers?: -> bool
+
         def has_prefix_filter?: -> bool
 
         private
 
-        def self.extract_event_types_filter: (Collection instance, Array[String]? event_types) -> void
+        def self.extract_event_types_filter: (
+            Collection instance,
+            Array[String | Hash[untyped, untyped]] event_types
+          ) -> void
 
         def self.extract_streams_filter: (Collection instance, Array[Hash[Symbol, untyped]]? streams) -> void
 
@@ -45,6 +59,23 @@ module PgEventstore
         end
 
         def compile: -> void
+
+        def marker_filter_overlaps_with_event_type_filter?: (
+            MarkerFilter marker_filter,
+            Array[EventTypeFilter] prefix_filters
+          ) -> bool
+
+        def marker_filter_overlaps_with_prefix_filter?: (
+            MarkerFilter marker_filter,
+            Array[EventTypeFilter] prefix_filters
+          ) -> bool
+
+        def non_overlapping_event_types: -> Array[Array[EventTypeFilter]]
+
+        def non_overlapping_markers: (
+            Array[EventTypeFilter] event_types_with_prefixes,
+            Array[EventTypeFilter] event_types_without_prefixes
+          ) -> Array[MarkerFilter]
 
         def reset: -> void
       end

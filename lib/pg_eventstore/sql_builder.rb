@@ -8,7 +8,9 @@ module PgEventstore
       # @param builders [Array<PgEventstore::SQLBuilder>]
       # @param mode [Symbol]
       # @return [PgEventstore::SQLBuilder]
-      def union_builders(builders, mode: :all)
+      def union_builders(builders, mode: :union_all)
+        Utils.assert!(!builders.empty?, "Can't union empty array!")
+
         union_builder = builders[1..].each_with_object(builders[0]) do |builder, first_builder|
           first_builder.union(builder)
         end
@@ -26,7 +28,7 @@ module PgEventstore
       end
     end
 
-    UNION_MODES = %i[all distinct].freeze
+    UNION_MODES = %i[union_all union_distinct intersect_all intersect_distinct].freeze
     private_constant :UNION_MODES
 
     # @return [Array<Object>] sql positional values
@@ -50,7 +52,7 @@ module PgEventstore
       @positional_values = []
       @positional_values_size = 0
       @union_values = []
-      @union_mode = :all
+      @union_mode = :union_all
       @table_alias = nil
     end
 
@@ -58,6 +60,14 @@ module PgEventstore
     # @return [self]
     def select(sql)
       @select_values.push(sql)
+      self
+    end
+
+    # @return [PgEventstore::SQLBuilder]
+    def select_id_only
+      raise 'You have to call #from first' unless @table_alias
+
+      remove_order.unselect.select("#{@table_alias}.id")
       self
     end
 
@@ -84,10 +94,11 @@ module PgEventstore
     end
 
     # @param table_name [String, SQLBuilder]
+    # @param table_alias [String, nil]
     # @return [self]
-    def from(table_name)
+    def from(table_name, table_alias: nil)
       @from_value = table_name
-      @table_alias = table_name.is_a?(SQLBuilder) ? table_name.table_alias : table_name
+      @table_alias = table_alias || (table_name.is_a?(SQLBuilder) ? table_name.table_alias : table_name)
       self
     end
 
@@ -112,10 +123,16 @@ module PgEventstore
       self
     end
 
-    # @param limit [Integer]
+    # @param limit [String, Integer]
     # @return [self]
     def limit(limit)
-      @limit_value = limit.to_i
+      @limit_value =
+        case limit
+        when String
+          limit.start_with?(/\d/) ? limit.to_i : PG::Connection.escape(limit)
+        else
+          limit
+        end
       self
     end
 
@@ -201,7 +218,7 @@ module PgEventstore
       return @from_value if @from_value.is_a?(String)
 
       sql = merge(@from_value)
-      "(#{sql}) #{@from_value.table_alias}"
+      "(#{sql}) #{@table_alias}"
     end
 
     private
@@ -226,7 +243,19 @@ module PgEventstore
       union_parts += @union_values.map do |builder|
         "(#{merge(builder)})"
       end
-      union_mode_sql = @union_mode == :all ? 'UNION ALL' : 'UNION'
+      union_mode_sql =
+        case @union_mode
+        when :union_all
+          'UNION ALL'
+        when :union_distinct
+          'UNION'
+        when :intersect_all
+          'INTERSECT ALL'
+        when :intersect_distinct
+          'INTERSECT'
+        else
+          Utils.missing_implementation!(@union_mode)
+        end
       union_parts.join(" #{union_mode_sql} ")
     end
 

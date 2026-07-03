@@ -132,6 +132,19 @@ module PgEventstore
         yield
         Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
       end
+
+      # @param truthy [boolish]
+      # @param message [String, nil]
+      # @raise ArgumentError
+      def assert!(truthy, message = nil)
+        raise ArgumentError, message unless truthy
+      end
+
+      # @param obj
+      # @raise NotImplementedError
+      def missing_implementation!(obj)
+        raise NotImplementedError, obj.inspect
+      end
     end
   end
 end

@@ -8,27 +8,36 @@ module PgEventstore
         class << self
           # @param current_revision [Integer]
           # @param expected_revision [Symbol, Integer]
-          # @param event_type [String]
-          # @return [[Symbol, String]]
-          def verdict(current_revision, expected_revision, event_type)
+          # @param expected_markers [Array<String>, nil]
+          # @param event_type [String, Symbol]
+          # @return [PgEventstore::WrongExpectedTypesRevisionError::Verdict, nil]
+          def verdict(current_revision, expected_revision, expected_markers: nil, event_type: :any)
             return if expected_revision == :any
 
-            case [current_revision, expected_revision]
-            in [Event::NON_EXISTING_EVENT_REVISION, Integer]
-              [:expected_to_have_event_with_given_revision, event_type]
-            in [Integer, Integer]
-              [:unmatched_event_revision, event_type] unless current_revision == expected_revision
-            in [Integer, Symbol]
-              if current_revision == Event::NON_EXISTING_EVENT_REVISION && expected_revision == :event_exists
-                return [:expected_to_have_event, event_type]
+            verdict_sym =
+              case [current_revision, expected_revision]
+              in [Event::NON_EXISTING_EVENT_REVISION, Integer]
+                :event_is_absent
+              in [Integer, Integer]
+                :event_revision_does_not_match unless current_revision == expected_revision
+              in [Integer, Symbol]
+                if current_revision == Event::NON_EXISTING_EVENT_REVISION && expected_revision == :event_exists
+                  :event_is_absent
+                elsif current_revision > Event::NON_EXISTING_EVENT_REVISION && expected_revision == :no_event
+                  :event_is_present
+                end
+              else
+                Utils.missing_implementation!([current_revision, expected_revision])
               end
+            return unless verdict_sym
 
-              if current_revision > Event::NON_EXISTING_EVENT_REVISION && expected_revision == :no_event
-                [:expected_not_to_have_event, event_type]
-              end
-            else
-              raise ArgumentError
-            end
+            WrongExpectedTypesRevisionError::Verdict.new(
+              verdict: verdict_sym,
+              event_type:,
+              current_revision:,
+              expected_revision:,
+              expected_markers:
+            )
           end
         end
       end

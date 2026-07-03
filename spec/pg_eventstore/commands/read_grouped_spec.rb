@@ -4,13 +4,13 @@ RSpec.describe PgEventstore::Commands::ReadGrouped do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
     PgEventstore::Queries.new(
-      events_global_index: events_global_index_queries,
+      index_filtering: index_filtering_queries,
       streams_global_index: streams_global_index_queries
     )
   end
   let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
-  let(:events_global_index_queries) do
-    PgEventstore::EventsGlobalIndexQueries.new(
+  let(:index_filtering_queries) do
+    PgEventstore::IndexFilteringQueries.new(
       PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
     )
   end
@@ -114,7 +114,7 @@ RSpec.describe PgEventstore::Commands::ReadGrouped do
 
       context 'when :event_types filter is not provided' do
         it 'raises error' do
-          expect { subject }.to raise_error(ArgumentError, '#read_grouped requires :event_types filter.')
+          expect { subject }.to raise_error(ArgumentError, '#read_grouped requires correct :event_types filter.')
         end
       end
 
@@ -455,6 +455,620 @@ RSpec.describe PgEventstore::Commands::ReadGrouped do
 
         it 'returns events according to those restrictions' do
           expect(subject.map(&:id)).to eq([event5.id, event4.id, event3.id])
+        end
+      end
+    end
+  end
+
+  describe 'filtering markers of the specific stream' do
+    subject { instance.call(stream, options:, deserializer:).map { _1.data['id'] } }
+
+    let(:options) { {} }
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { [] }
+
+    before do
+      another_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '2')
+      # Create another stream to ensure its events don't appear in the result suddenly
+      PgEventstore.client.append_to_stream(another_stream, PgEventstore::Event.new(markers: %w[foo bar baz]))
+      PgEventstore.client.append_to_stream(stream, events)
+    end
+
+    context 'when there are no matching events' do
+      let(:options) { { filter: { event_types: [{ markers: %w[foo bar] }] } } }
+
+      let(:unmatched_event) { PgEventstore::Event.new(type: 'FooBar', data: { id: 1 }) }
+      let(:events) { [unmatched_event] }
+
+      it { is_expected.to eq([]) }
+    end
+
+    context 'when multiple events of same type has the given marker' do
+      let(:options) { { filter: { event_types: [{ markers: %w[foo bar] }] } } }
+
+      let(:event1) { PgEventstore::Event.new(type: 'Foo', data: { id: 1 }, markers: %w[foo]) }
+      let(:event2) { PgEventstore::Event.new(type: 'Foo', data: { id: 2 }, markers: %w[bar]) }
+      let(:event3) { PgEventstore::Event.new(type: 'Foo', data: { id: 3 }, markers: %w[foo bar]) }
+      let(:unmatched_event) { PgEventstore::Event.new(type: 'Foo', data: { id: 4 }, markers: %w[baz]) }
+      let(:events) { [event1, event2, event3, unmatched_event] }
+
+      it 'returns events, grouped by the given markers' do
+        is_expected.to eq([1, 2])
+      end
+
+      describe 'from revision' do
+        before do
+          options[:from_revision] = 1
+        end
+
+        it 'returns events, grouped by the given markers, from the given revision' do
+          is_expected.to eq([2, 3])
+        end
+      end
+
+      describe 'to revision' do
+        before do
+          options[:to_revision] = 1
+        end
+
+        it 'returns events, grouped by the given markers, to the given revision' do
+          is_expected.to eq([1, 2])
+        end
+      end
+
+      describe 'descending order' do
+        before do
+          options[:direction] = :desc
+        end
+
+        it 'returns events, grouped by the given markers, in reverse order' do
+          is_expected.to eq([3])
+        end
+
+        describe 'from revision' do
+          before do
+            options[:from_revision] = 1
+          end
+
+          it 'returns events, grouped by the given markers, in reverse order, from the given revision' do
+            is_expected.to eq([2, 1])
+          end
+        end
+
+        describe 'to revision' do
+          before do
+            options[:to_revision] = 1
+          end
+
+          it 'returns events, grouped by the given markers, to the given revision' do
+            is_expected.to eq([3])
+          end
+        end
+      end
+    end
+
+    describe 'combination of markers filter, marker filter with event type and type filter' do
+      let(:options) do
+        {
+          filter: {
+            event_types: [
+              'Baz',
+              { type: 'Bar', markers: %w[foo] },
+              { markers: %w[foo bar] },
+            ],
+          },
+        }
+      end
+
+      let(:event1) { PgEventstore::Event.new(type: 'Foo', data: { id: 1 }, markers: %w[foo]) }
+      let(:event2) { PgEventstore::Event.new(type: 'Bar', data: { id: 2 }, markers: %w[bar]) }
+      let(:event3) { PgEventstore::Event.new(type: 'Baz', data: { id: 3 }) }
+      let(:event4) { PgEventstore::Event.new(type: 'Baz', data: { id: 4 }) }
+      let(:event5) { PgEventstore::Event.new(type: 'Bar', data: { id: 5 }, markers: %w[foo]) }
+      let(:event6) { PgEventstore::Event.new(type: 'Foo', data: { id: 6 }, markers: %w[foo bar]) }
+
+      let(:unmatched_event1) { PgEventstore::Event.new(type: 'Bar', data: { id: 6 }, markers: %w[baz]) }
+      let(:unmatched_event2) { PgEventstore::Event.new(type: 'FooBar', data: { id: 7 }) }
+      let(:events) { [event1, event2, event3, event4, event5, event6, unmatched_event1, unmatched_event2] }
+
+      it 'returns events, grouped by the given markers and types' do
+        is_expected.to eq([1, 2, 3, 5])
+      end
+
+      describe 'from revision' do
+        before do
+          options[:from_revision] = 3
+        end
+
+        it 'returns events, grouped by the given markers and types, from the given revision' do
+          is_expected.to eq([4, 5, 6])
+        end
+      end
+
+      describe 'to revision' do
+        before do
+          options[:to_revision] = 3
+        end
+
+        it 'returns events, grouped by the given markers and types, to the given revision' do
+          is_expected.to eq([1, 2, 3])
+        end
+      end
+
+      describe 'from revision and to revision' do
+        before do
+          options[:from_revision] = 1
+          options[:to_revision] = 4
+        end
+
+        it 'returns events, grouped by the given markers and types within the given revision range' do
+          is_expected.to eq([2, 3, 5])
+        end
+      end
+
+      describe 'descending order' do
+        before do
+          options[:direction] = :desc
+        end
+
+        it 'returns events, grouped by the given markers and types in reverse order' do
+          is_expected.to eq([6, 5, 4])
+        end
+
+        describe 'from revision' do
+          before do
+            options[:from_revision] = 3
+          end
+
+          it 'returns events, grouped by the given markers and types, from the given revision, in reverse order' do
+            is_expected.to eq([4, 2, 1])
+          end
+        end
+
+        describe 'to revision' do
+          before do
+            options[:to_revision] = 1
+          end
+
+          it 'returns events, grouped by the given markers and types, to the given revision, in reverse order' do
+            is_expected.to eq([6, 5, 4])
+          end
+        end
+
+        describe 'from revision and to revision' do
+          before do
+            options[:from_revision] = 4
+            options[:to_revision] = 1
+          end
+
+          it 'returns events, grouped by the given markers and types within the given revision range, in reverse order' do
+            is_expected.to eq([5, 4, 2])
+          end
+        end
+      end
+    end
+  end
+
+  describe 'filtering markers of the "all" stream' do
+    subject { instance.call(PgEventstore::Stream.all_stream, options:, deserializer:).map { _1.data['id'] } }
+
+    let(:options) { {} }
+    let(:events) { [] }
+
+    let(:event_position) do
+      lambda do |id|
+        PgEventstore.client.read(PgEventstore::Stream.all_stream).find { _1.data['id'] == id }.global_position
+      end
+    end
+
+    before do
+      events.each do |stream, event|
+        PgEventstore.client.append_to_stream(stream, event)
+      end
+    end
+
+    describe 'filtering by markers' do
+      let(:options) { { filter: { event_types: [{ markers: %w[foo bar] }] } } }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+
+      let(:event1) { PgEventstore::Event.new(type: 'Foo', data: { id: 1 }, markers: %w[foo]) }
+      let(:event2) { PgEventstore::Event.new(type: 'Foo', data: { id: 2 }, markers: %w[bar]) }
+      let(:event3) { PgEventstore::Event.new(type: 'Foo', data: { id: 3 }, markers: %w[foo bar]) }
+      let(:unmatched_event) { PgEventstore::Event.new(type: 'Foo', data: { id: 4 }, markers: %w[baz]) }
+      let(:events) { [[stream1, event1], [stream2, event2], [stream2, event3], [stream1, unmatched_event]] }
+
+      it 'returns events, grouped by the given markers' do
+        is_expected.to eq([1, 2])
+      end
+
+      describe 'from position' do
+        before do
+          options[:from_position] = event_position.call(2)
+        end
+
+        it 'returns events, grouped by the given markers, from the given position' do
+          is_expected.to eq([2, 3])
+        end
+      end
+
+      describe 'to position' do
+        before do
+          options[:to_position] = event_position.call(2)
+        end
+
+        it 'returns events, grouped by the given markers, to the given position' do
+          is_expected.to eq([1, 2])
+        end
+      end
+
+      describe 'descending order' do
+        before do
+          options[:direction] = :desc
+        end
+
+        it 'returns events, grouped by the given markers, in reverse order' do
+          is_expected.to eq([3])
+        end
+
+        describe 'from position' do
+          before do
+            options[:from_position] = event_position.call(2)
+          end
+
+          it 'returns events, grouped by the given markers, in reverse order, from the given position' do
+            is_expected.to eq([2, 1])
+          end
+        end
+
+        describe 'to position' do
+          before do
+            options[:to_position] = event_position.call(2)
+          end
+
+          it 'returns events, grouped by the given markers, to the given position' do
+            is_expected.to eq([3])
+          end
+        end
+      end
+    end
+
+    describe 'filtering by context and markers' do
+      let(:options) { { filter: { streams: [{ context: 'FooCtx' }], event_types: [{ markers: %w[foo bar] }] } } }
+
+      it 'raises error' do
+        expect { subject }.to raise_error(PgEventstore::NotSupportedError)
+      end
+    end
+
+    describe 'filtering by context, stream name and markers' do
+      let(:options) do
+        { filter: { streams: [{ context: 'FooCtx', stream_name: 'Foo' }], event_types: [{ markers: %w[foo bar] }] } }
+      end
+
+      it 'raises error' do
+        expect { subject }.to raise_error(PgEventstore::NotSupportedError)
+      end
+    end
+
+    describe 'filtering by stream and markers' do
+      let(:options) { { filter: { streams: [stream1.to_hash], event_types: [{ markers: %w[foo bar] }] } } }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '2') }
+
+      let(:event1) { PgEventstore::Event.new(type: 'Foo', data: { id: 1 }, markers: %w[foo]) }
+      let(:event2) { PgEventstore::Event.new(type: 'Bar', data: { id: 2 }, markers: %w[bar]) }
+      let(:event3) { PgEventstore::Event.new(type: 'Baz', data: { id: 3 }, markers: %w[foo bar]) }
+      let(:event4) { PgEventstore::Event.new(type: 'FooBar', data: { id: 4 }, markers: %w[bar]) }
+      let(:unmatched_event1) { PgEventstore::Event.new(type: 'Foo', data: { id: 5 }, markers: %w[baz]) }
+      let(:unmatched_event2) { PgEventstore::Event.new(type: 'FooBar', data: { id: 6 }, markers: %w[foo-baz]) }
+      let(:unmatched_event3) { PgEventstore::Event.new(type: 'Bar', data: { id: 7 }, markers: %w[foo]) }
+
+      let(:events) do
+        [
+          [stream1, unmatched_event1],
+          [stream1, event1],
+          [stream1, unmatched_event2],
+          [stream1, event2],
+          [stream2, unmatched_event3],
+          [stream1, event3],
+          [stream1, event4],
+        ]
+      end
+
+      it 'returns events, grouped by the given markers' do
+        is_expected.to eq([1, 2])
+      end
+
+      describe 'from position' do
+        before do
+          options[:from_position] = event_position.call(2)
+        end
+
+        it 'returns events, grouped by the given markers, from the given position' do
+          is_expected.to eq([2, 3])
+        end
+      end
+
+      describe 'to position' do
+        before do
+          options[:to_position] = event_position.call(1)
+        end
+
+        it 'returns events, grouped by the given markers, to the given position' do
+          is_expected.to eq([1])
+        end
+      end
+
+      describe 'from position and to position' do
+        before do
+          options[:from_position] = event_position.call(2)
+          options[:to_position] = event_position.call(4)
+        end
+
+        it 'returns events, grouped by the given markers, within the given position' do
+          is_expected.to eq([2, 3])
+        end
+      end
+
+      describe 'descending order' do
+        before do
+          options[:direction] = :desc
+        end
+
+        it 'returns events, grouped by the given markers, in reverse order' do
+          is_expected.to eq([4, 3])
+        end
+
+        describe 'from position' do
+          before do
+            options[:from_position] = event_position.call(3)
+          end
+
+          it 'returns events, grouped by the given markers, from the given position, in reverse order' do
+            is_expected.to eq([3])
+          end
+        end
+
+        describe 'to position' do
+          before do
+            options[:to_position] = event_position.call(4)
+          end
+
+          it 'returns events, grouped by the given markers, to the given position, in reverse order' do
+            is_expected.to eq([4])
+          end
+        end
+
+        describe 'from position and to position' do
+          before do
+            options[:from_position] = event_position.call(4)
+            options[:to_position] = event_position.call(2)
+          end
+
+          it 'returns events, grouped by the given markers, within the given position, in reverse order' do
+            is_expected.to eq([4, 3])
+          end
+        end
+      end
+    end
+
+    describe 'filtering by stream and markers with event types' do
+      let(:options) { { filter: { streams: [stream1.to_hash], event_types: [{ type: 'Bar', markers: %w[bar foo] }] } } }
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '2') }
+
+      let(:event1) { PgEventstore::Event.new(type: 'Bar', data: { id: 1 }, markers: %w[foo]) }
+      let(:event2) { PgEventstore::Event.new(type: 'Bar', data: { id: 2 }, markers: %w[bar]) }
+      let(:event3) { PgEventstore::Event.new(type: 'Bar', data: { id: 3 }, markers: %w[foo bar]) }
+      let(:event4) { PgEventstore::Event.new(type: 'Bar', data: { id: 4 }, markers: %w[bar]) }
+      let(:unmatched_event1) { PgEventstore::Event.new(type: 'Foo', data: { id: 5 }, markers: %w[foo bar]) }
+      let(:unmatched_event2) { PgEventstore::Event.new(type: 'FooBar', data: { id: 6 }, markers: %w[bar]) }
+      let(:unmatched_event3) { PgEventstore::Event.new(type: 'Bar', data: { id: 7 }, markers: %w[bar]) }
+
+      let(:events) do
+        [
+          [stream1, unmatched_event1],
+          [stream1, event1],
+          [stream1, unmatched_event2],
+          [stream1, event2],
+          [stream2, unmatched_event3],
+          [stream1, event3],
+          [stream1, event4],
+        ]
+      end
+
+      it 'returns events, grouped by the given markers' do
+        is_expected.to eq([1, 2])
+      end
+
+      describe 'from position' do
+        before do
+          options[:from_position] = event_position.call(2)
+        end
+
+        it 'returns events, grouped by the given markers, from the given position' do
+          is_expected.to eq([2, 3])
+        end
+      end
+
+      describe 'to position' do
+        before do
+          options[:to_position] = event_position.call(1)
+        end
+
+        it 'returns events, grouped by the given markers, to the given position' do
+          is_expected.to eq([1])
+        end
+      end
+
+      describe 'from position and to position' do
+        before do
+          options[:from_position] = event_position.call(2)
+          options[:to_position] = event_position.call(4)
+        end
+
+        it 'returns events, grouped by the given markers, within the given position' do
+          is_expected.to eq([2, 3])
+        end
+      end
+
+      describe 'descending order' do
+        before do
+          options[:direction] = :desc
+        end
+
+        it 'returns events, grouped by the given markers, in reverse order' do
+          is_expected.to eq([4, 3])
+        end
+
+        describe 'from position' do
+          before do
+            options[:from_position] = event_position.call(3)
+          end
+
+          it 'returns events, grouped by the given markers, from the given position, in reverse order' do
+            is_expected.to eq([3])
+          end
+        end
+
+        describe 'to position' do
+          before do
+            options[:to_position] = event_position.call(4)
+          end
+
+          it 'returns events, grouped by the given markers, to the given position, in reverse order' do
+            is_expected.to eq([4])
+          end
+        end
+
+        describe 'from position and to position' do
+          before do
+            options[:from_position] = event_position.call(4)
+            options[:to_position] = event_position.call(2)
+          end
+
+          it 'returns events, grouped by the given markers, within the given position, in reverse order' do
+            is_expected.to eq([4, 3])
+          end
+        end
+      end
+    end
+
+    describe 'filtering by combination of markers, markers with event type and type filters' do
+      let(:options) do
+        {
+          filter: {
+            event_types: [
+              'Baz',
+              { type: 'Bar', markers: %w[foo] },
+              { markers: %w[foo bar] },
+            ],
+          },
+        }
+      end
+
+      let(:stream1) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:stream2) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '2') }
+
+      let(:event1) { PgEventstore::Event.new(type: 'Foo', data: { id: 1 }, markers: %w[foo]) }
+      let(:event2) { PgEventstore::Event.new(type: 'Bar', data: { id: 2 }, markers: %w[bar]) }
+      let(:event3) { PgEventstore::Event.new(type: 'Baz', data: { id: 3 }) }
+      let(:event4) { PgEventstore::Event.new(type: 'Baz', data: { id: 4 }) }
+      let(:event5) { PgEventstore::Event.new(type: 'Bar', data: { id: 5 }, markers: %w[foo]) }
+      let(:event6) { PgEventstore::Event.new(type: 'Foo', data: { id: 6 }, markers: %w[foo bar]) }
+
+      let(:unmatched_event1) { PgEventstore::Event.new(type: 'Bar', data: { id: 6 }, markers: %w[baz]) }
+      let(:unmatched_event2) { PgEventstore::Event.new(type: 'FooBar', data: { id: 7 }) }
+      let(:events) do
+        [
+          [stream1, event1],
+          [stream1, unmatched_event1],
+          [stream2, event2],
+          [stream1, event3],
+          [stream2, unmatched_event2],
+          [stream2, event4],
+          [stream2, event5],
+          [stream1, event6],
+        ]
+      end
+
+      it 'returns events, grouped by the given markers and types' do
+        is_expected.to eq([1, 2, 3, 5])
+      end
+
+      describe 'from position' do
+        before do
+          options[:from_position] = event_position.call(4)
+        end
+
+        it 'returns events, grouped by the given markers and types, from the given position' do
+          is_expected.to eq([4, 5, 6])
+        end
+      end
+
+      describe 'to position' do
+        before do
+          options[:to_position] = event_position.call(4)
+        end
+
+        it 'returns events, grouped by the given markers and types, to the given position' do
+          is_expected.to eq([1, 2, 3])
+        end
+      end
+
+      describe 'from position and to position' do
+        before do
+          options[:from_position] = event_position.call(2)
+          options[:to_position] = event_position.call(5)
+        end
+
+        it 'returns events, grouped by the given markers and types within the given position range' do
+          is_expected.to eq([2, 3, 5])
+        end
+      end
+
+      describe 'descending order' do
+        before do
+          options[:direction] = :desc
+        end
+
+        it 'returns events, grouped by the given markers and types in reverse order' do
+          is_expected.to eq([6, 5, 4])
+        end
+
+        describe 'from position' do
+          before do
+            options[:from_position] = event_position.call(4)
+          end
+
+          it 'returns events, grouped by the given markers and types, from the given position, in reverse order' do
+            is_expected.to eq([4, 2, 1])
+          end
+        end
+
+        describe 'to position' do
+          before do
+            options[:to_position] = event_position.call(2)
+          end
+
+          it 'returns events, grouped by the given markers and types, to the given revision, in reverse order' do
+            is_expected.to eq([6, 5, 4])
+          end
+        end
+
+        describe 'from position and to position' do
+          before do
+            options[:from_position] = event_position.call(5)
+            options[:to_position] = event_position.call(2)
+          end
+
+          it 'returns events, grouped by the given markers and types within the given revision range, in reverse order' do
+            is_expected.to eq([5, 4, 2])
+          end
         end
       end
     end

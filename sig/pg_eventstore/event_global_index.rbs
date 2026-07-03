@@ -4,7 +4,7 @@ module PgEventstore
     include Extensions::OptionsDefaults
 
     def self.create_representation: (Hash[untyped, untyped] attributes,
-        repr: Symbol?) -> (EventGlobalIndex | SubscriptionRepr | ReadApiRepr)
+        repr: Symbol?) -> (EventGlobalIndex | SubscriptionRepr | ReadApiRepr | WriteApiRepr | RevisionCheckRepr)
 
     attr_accessor global_position: Integer
     attr_accessor subscription_position: Integer?
@@ -15,8 +15,10 @@ module PgEventstore
     attr_accessor streams_global_index_id: Integer
 
     module ReprType
+      REVISION_CHECK: Symbol
       SUBSCRIPTION: Symbol
       READ_API: Symbol
+      WRITE_API: Symbol
     end
 
     class SubscriptionRepr
@@ -34,7 +36,23 @@ module PgEventstore
 
       attr_accessor global_position: Integer
       attr_accessor event_type_partition_id: Integer
-      attr_accessor stream_revision: Integer?
+    end
+
+    class WriteApiRepr
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
+
+      attr_accessor global_position: Integer
+      attr_accessor event_type_partition_id: Integer
+      attr_accessor stream_revision: Integer
+    end
+
+    class RevisionCheckRepr
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
+
+      attr_accessor sequence_number: Integer
+      attr_accessor stream_revision: Integer
     end
   end
 end

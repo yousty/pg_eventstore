@@ -3,6 +3,8 @@
 require_relative 'stream_filter'
 require_relative 'event_type_filter'
 require_relative 'filter_row'
+require_relative 'marker_filter'
+require_relative 'marker_filter_row'
 
 module PgEventstore
   module QueryBuilders
@@ -42,15 +44,25 @@ module PgEventstore
           private
 
           # @param instance [PgEventstore::QueryBuilders::Filters::Collection]
-          # @param event_types [Array<String>, nil]
+          # @param event_types [Array<String>]
           # @return [void]
           def extract_event_types_filter(instance, event_types)
-            event_types&.each do |event_type|
+            event_types.each do |event_type|
               case event_type
               in String
-                instance.add_event_type(EventTypeFilter.new(value: event_type, prefix: false))
+                instance.add_event_type(EventTypeFilter.new(event_type: event_type, prefix: false))
               in { prefix: String => prefix }
-                instance.add_event_type(EventTypeFilter.new(value: prefix, prefix: true))
+                instance.add_event_type(EventTypeFilter.new(event_type: prefix, prefix: true))
+              in { markers: Array => markers, **opts }
+                str_markers = markers.grep(String)
+                if str_markers.empty?
+                  PgEventstore.logger&.debug("Unsupported #{event_type.inspect} markers filter.")
+                  next
+                end
+                opts in { type: String => type }
+                instance.add_marker(MarkerFilter.new(event_type: type, markers: str_markers))
+              in { type: String => type }
+                instance.add_event_type(EventTypeFilter.new(event_type: type, prefix: false))
               else
                 PgEventstore.logger&.debug("Unsupported #{event_type.inspect} event type filter.")
               end
@@ -149,7 +161,10 @@ module PgEventstore
         def initialize
           @streams = Index.new
           @event_types = Set.new
+          @markers = Set.new
           @prefix_filter = false
+          @incomplete_stream_filter = false
+          @incomplete_markers_filter = false
           reset
         end
 
@@ -163,6 +178,7 @@ module PgEventstore
         # @return [void]
         def add_stream(stream_filter)
           reset if @compiled
+          @incomplete_stream_filter ||= stream_filter.context? || stream_filter.stream_name?
           @streams.index(stream_filter)
         end
 
@@ -174,6 +190,14 @@ module PgEventstore
           @event_types.add(event_type_filter)
         end
 
+        # @param marker_filter [PgEventstore::QueryBuilders::Filters::MarkerFilter]
+        # @return [void]
+        def add_marker(marker_filter)
+          reset if @compiled
+          @incomplete_markers_filter ||= marker_filter.event_type.nil?
+          @markers.add(marker_filter)
+        end
+
         # rubocop:disable Naming/PredicatePrefix
         # @return [Boolean]
         def has_event_types?
@@ -181,13 +205,28 @@ module PgEventstore
         end
 
         # @return [Boolean]
+        def has_markers?
+          @markers.any?
+        end
+
+        # @return [Boolean]
         def empty?
-          @event_types.empty? && @streams.empty?
+          @event_types.empty? && @streams.empty? && @markers.empty?
         end
 
         # @return [Boolean]
         def has_prefix_filter?
           @prefix_filter
+        end
+
+        # @return [Boolean]
+        def has_incomplete_stream_filter?
+          @incomplete_stream_filter
+        end
+
+        # @return [Boolean]
+        def has_incomplete_markers_filter?
+          @incomplete_markers_filter
         end
         # rubocop:enable Naming/PredicatePrefix
 
@@ -200,18 +239,82 @@ module PgEventstore
 
         # @return [void]
         def compile
-          event_types = @event_types.to_a
+          event_types_with_prefixes, event_types_without_prefixes = non_overlapping_event_types
+          markers = non_overlapping_markers(event_types_with_prefixes, event_types_without_prefixes)
+          event_types = event_types_with_prefixes + event_types_without_prefixes
           streams = @streams.find_non_overlapping
           @compiled =
             if streams.any?
-              streams.map do |stream_filter|
-                FilterRow.new(stream_filter:, event_type_filters: event_types)
+              streams.flat_map do |stream_filter|
+                rows = []
+                rows << FilterRow.new(stream_filter:, event_type_filters: event_types) if has_event_types?
+                markers.each do |marker_filter|
+                  rows << MarkerFilterRow.new(stream_filter:, marker_filter:)
+                end
+                rows = [FilterRow.new(stream_filter:, event_type_filters: [])] if rows.empty?
+                rows
               end
-            elsif has_event_types?
-              [FilterRow.new(event_type_filters: event_types)]
             else
-              []
+              rows = []
+              rows << FilterRow.new(event_type_filters: event_types) if has_event_types?
+              markers.each do |marker_filter|
+                rows << MarkerFilterRow.new(marker_filter:)
+              end
+              rows
             end
+        end
+
+        # @return [Array<Array<PgEventstore::QueryBuilders::Filters::EventTypeFilter>>]
+        def non_overlapping_event_types
+          with_prefixes = []
+          without_prefixes = []
+          @event_types.each do |event_type_filter|
+            if event_type_filter.prefix?
+              with_prefixes.push(event_type_filter)
+            else
+              without_prefixes.push(event_type_filter)
+            end
+          end
+          return [[], without_prefixes] if with_prefixes.empty?
+
+          with_prefixes = with_prefixes.sort_by(&:event_type)
+          with_prefixes = with_prefixes.each_with_object([with_prefixes.first]) do |event_type_filter, result|
+            result.push(event_type_filter) unless event_type_filter.event_type.start_with?(result.last.event_type)
+          end
+
+          without_prefixes = without_prefixes.reject do |event_type_filter|
+            with_prefixes.any? { |prefix| event_type_filter.event_type.start_with?(prefix.event_type) }
+          end
+          [with_prefixes, without_prefixes]
+        end
+
+        # @param event_types_with_prefixes [Array<PgEventstore::QueryBuilders::Filters::EventTypeFilter>]
+        # @param event_types_without_prefixes [Array<PgEventstore::QueryBuilders::Filters::EventTypeFilter>]
+        # @return [Array<PgEventstore::QueryBuilders::Filters::MarkerFilter>]
+        def non_overlapping_markers(event_types_with_prefixes, event_types_without_prefixes)
+          markers = @markers.group_by(&:event_type).map do |event_type, filters|
+            MarkerFilter.new(event_type:, markers: filters.flat_map(&:markers).uniq)
+          end
+          markers.reject do |marker|
+            next false if marker.event_type.nil?
+
+            marker_filter_overlaps_with_prefix_filter?(marker, event_types_with_prefixes) ||
+              marker_filter_overlaps_with_event_type_filter?(marker, event_types_without_prefixes)
+          end
+        end
+
+        # @param marker_filter [PgEventstore::QueryBuilders::Filters::MarkerFilter]
+        # @param prefix_filters [Array<PgEventstore::QueryBuilders::Filters::EventTypeFilter>]
+        # @return [Boolean]
+        def marker_filter_overlaps_with_prefix_filter?(marker_filter, prefix_filters)
+          prefix_filters.any? { marker_filter.event_type.start_with?(_1.event_type) }
+        end
+
+        # @param marker_filter [PgEventstore::QueryBuilders::Filters::MarkerFilter]
+        # @param event_type_filters [Array<PgEventstore::QueryBuilders::Filters::EventTypeFilter>]
+        def marker_filter_overlaps_with_event_type_filter?(marker_filter, event_type_filters)
+          event_type_filter = EventTypeFilter.new(event_type: marker_filter.event_type, prefix: false)
+          event_type_filters.include?(event_type_filter)
         end
       end
     end

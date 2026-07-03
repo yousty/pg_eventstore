@@ -128,13 +128,13 @@ RSpec.describe PgEventstore::Subscription do
         )
       end
       it { is_expected.to eq(subscription) }
-      it 'creates sql view for the given subscription' do
+      it 'creates function for the given subscription' do
         prev_subscription = SubscriptionsHelper.create
         expect { subject }.to change {
           query_strategy.exec(<<~SQL).to_a
-            select table_name from information_schema.views where table_name like 'subscription_%'
+            select proname from pg_proc where proname like 'subscription_%'
           SQL
-        }.from([]).to([ 'table_name' => a_string_starting_with("subscription_#{prev_subscription.id + 1}") ])
+        }.from([]).to([{ 'proname' => a_string_starting_with("subscription_#{prev_subscription.id + 1}") }])
       end
 
       describe 'created Subscription' do
@@ -214,18 +214,18 @@ RSpec.describe PgEventstore::Subscription do
         end
         it { is_expected.to eq(subscription) }
         it 're-creates subscription SQL view' do
-          # Create sql view for further comparison with the behavior of Subscription#lock!. To do so we need to
-          # create SubscriptionsSet, create sql view, drop SubscriptionsSet
+          # Create function for further comparison with the behavior of Subscription#lock!. To do so we need to
+          # create SubscriptionsSet, create function, drop SubscriptionsSet
           subscriptions_set = SubscriptionsSetHelper.create_with_connection
           queries.lock!(existing_subscription.id, subscriptions_set.id, force: true)
-          queries.create_or_replace_view(
+          queries.create_or_replace_table_function(
             existing_subscription.id, { filter: { event_types: ['Foo'] } }, subscriptions_set.id
           )
           subscriptions_set.delete
-          view_name = "subscription_#{existing_subscription.id}"
+          func_name = "subscription_#{existing_subscription.id}"
           expect { subject }.to change {
-            query_strategy.exec_params(<<~SQL, [view_name]).to_a.first&.[]('view_definition')
-              select view_definition from information_schema.views where table_name = $1
+            query_strategy.exec_params(<<~SQL, [func_name]).to_a.first&.[]('src')
+              select pg_get_functiondef(pg_proc.oid) as src from pg_proc where proname = $1
             SQL
           }.from(a_string_including('Foo'))
         end

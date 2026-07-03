@@ -248,7 +248,7 @@ RSpec.describe PgEventstore::Client do
 
       context 'when :event_types filter is not provided' do
         it 'raises error' do
-          expect { subject }.to raise_error(ArgumentError, '#read_grouped requires :event_types filter.')
+          expect { subject }.to raise_error(ArgumentError, '#read_grouped requires correct :event_types filter.')
         end
       end
 

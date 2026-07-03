@@ -80,7 +80,7 @@ module PgEventstore
           when AllStreamCursor
             @cursor.from_position
           else
-            raise NotImplementedError
+            Utils.missing_implementation!(@cursor)
           end
         end
 
@@ -92,7 +92,7 @@ module PgEventstore
           when AllStreamCursor
             @cursor.to_position
           else
-            raise NotImplementedError
+            Utils.missing_implementation!(@cursor)
           end
         end
 

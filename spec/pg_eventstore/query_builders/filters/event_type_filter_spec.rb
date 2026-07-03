@@ -7,7 +7,7 @@ RSpec.describe PgEventstore::QueryBuilders::Filters::EventTypeFilter do
     it 'returns null filter' do
       aggregate_failures do
         is_expected.to be_a(described_class)
-        expect(subject.value).to eq(nil)
+        expect(subject.event_type).to eq(nil)
         expect(subject.prefix).to eq(false)
       end
     end
@@ -16,7 +16,7 @@ RSpec.describe PgEventstore::QueryBuilders::Filters::EventTypeFilter do
   describe '#prefix?' do
     subject { instance.prefix? }
 
-    let(:instance) { described_class.new(value: 'Foo', prefix:) }
+    let(:instance) { described_class.new(event_type: 'Foo', prefix:) }
     let(:prefix) { false }
 
     context 'when filter is a prefix' do
@@ -33,7 +33,7 @@ RSpec.describe PgEventstore::QueryBuilders::Filters::EventTypeFilter do
   describe '#to_sql_value' do
     subject { instance.to_sql_value }
 
-    let(:instance) { described_class.new(value: 'Foo', prefix:) }
+    let(:instance) { described_class.new(event_type: 'Foo', prefix:) }
     let(:prefix) { false }
 
     context 'when filter is a prefix' do

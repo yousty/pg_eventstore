@@ -1,8 +1,11 @@
 module PgEventstore
   class Event
+    MARKERS_METADATA_KEY: String
     NON_EXISTING_EVENT_REVISION: Integer
     LINK_TYPE: String
     PRIMARY_TABLE_NAME: String
+    SYSTEM_KEY_PREFIX: String
+    SYSTEM_SYMBOL: String
 
     include Extensions::OptionsExtension
 
@@ -35,6 +38,8 @@ module PgEventstore
     attr_accessor stream_revision: Integer?
 
     attr_accessor data: ::Hash[untyped, untyped]
+
+    attr_accessor markers: ::Array[String]
 
     attr_accessor metadata: ::Hash[untyped, untyped]
 

@@ -24,16 +24,18 @@ CREATE INDEX idx_events_idx_on_e_type_part_id_N_position ON public.events_global
     USING btree (event_type_partition_id, global_position);
 
 -- (context, stream_name, stream_id, global_position)
+-- Including stream_revision keeps us from creating another index to cover event markers queries
 CREATE INDEX idx_events_idx_on_streams_idx_id_N_position ON public.events_global_index
-    USING btree (streams_global_index_id, global_position) INCLUDE (event_type_partition_id);
+    USING btree (streams_global_index_id, global_position) INCLUDE (event_type_partition_id, stream_revision);
 
 -- (context, stream_name, stream_id, stream_revision)
 CREATE INDEX idx_events_idx_on_streams_idx_id_N_revision ON public.events_global_index
     USING btree (streams_global_index_id, stream_revision) INCLUDE (event_type_partition_id, global_position);
 
 -- (context, stream_name, event_type, stream_id, global_position)
+-- Including stream_revision keeps us from creating another index to cover event markers queries
 CREATE INDEX idx_events_idx_on_streams_idx_id_N_e_type_part_id_n_position ON public.events_global_index
-    USING btree (streams_global_index_id, event_type_partition_id, global_position);
+    USING btree (streams_global_index_id, event_type_partition_id, global_position) INCLUDE (stream_revision);
 
 -- (context, stream_name, event_type, stream_id, stream_revision)
 CREATE INDEX idx_events_idx_on_streams_idx_id_N_e_type_part_id_n_revision ON public.events_global_index

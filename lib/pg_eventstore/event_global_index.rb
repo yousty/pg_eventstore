@@ -55,26 +55,58 @@ module PgEventstore
       # @!attribute event_type_partition_id
       #   @return [Integer]
       attribute(:event_type_partition_id)
+    end
+
+    # EventGlobalIndex representation that is used in Write API
+    class WriteApiRepr
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
+
+      # @!attribute global_position
+      #   @return [Integer]
+      attribute(:global_position)
+      # @!attribute event_type_partition_id
+      #   @return [Integer]
+      attribute(:event_type_partition_id)
       # @!attribute stream_revision
-      #   @return [Integer, nil]
+      #   @return [Integer]
       attribute(:stream_revision)
+    end
+
+    # EventGlobalIndex representation for revision validation in #append_to_stream
+    class RevisionCheckRepr
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
+
+      # @!attribute stream_revision
+      #   @return [Integer]
+      attribute(:stream_revision)
+      # @!attribute sequence_number
+      #   @return [Integer]
+      attribute(:sequence_number)
     end
 
     module ReprType
       SUBSCRIPTION = :subscription
       READ_API = :read_api
+      WRITE_API = :write_api
+      REVISION_CHECK = :revision_check
     end
 
     class << self
       # @param attributes [Hash<Symbol, Object>]
       # @param repr [Symbol, nil]
-      # @return [EventGlobalIndex, EventGlobalIndex::SubscriptionRepr, EventGlobalIndex::ReadApiRepr]
+      # @return [EventGlobalIndex, SubscriptionRepr, ReadApiRepr, WriteApiRepr, RevisionCheckRepr]
       def create_representation(attributes, repr: nil)
         case repr
         when ReprType::SUBSCRIPTION
           SubscriptionRepr.new(**attributes)
         when ReprType::READ_API
           ReadApiRepr.new(**attributes)
+        when ReprType::WRITE_API
+          WriteApiRepr.new(**attributes)
+        when ReprType::REVISION_CHECK
+          RevisionCheckRepr.new(**attributes)
         else
           new(**attributes)
         end

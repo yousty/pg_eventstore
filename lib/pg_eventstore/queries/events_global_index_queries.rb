@@ -18,7 +18,7 @@ module PgEventstore
     # @param raw_events [Array<Hash>]
     # @param affected_partitions [Array<PgEventstore::Partition>]
     # @param stream_index_id [Integer]
-    # @return [void]
+    # @return [Array<PgEventstore::EventGlobalIndex::WriteApiRepr>]
     def index_events(raw_events, affected_partitions, stream_index_id)
       partitions = affected_partitions.to_h { [_1.event_type, _1] }
       values = raw_events.map do |event_attrs|
@@ -34,53 +34,15 @@ module PgEventstore
       end
       values = values.join(',')
 
-      @query_strategy.exec(<<~SQL)
+      result = @query_strategy.exec(<<~SQL)
         INSERT INTO events_global_index
           ("global_position", "stream_revision", "context_partition_id", "stream_name_partition_id",
            "event_type_partition_id", "streams_global_index_id")
         VALUES #{values}
+        RETURNING global_position, stream_revision, event_type_partition_id
       SQL
-    end
-
-    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
-    # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
-    # @return [Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
-    def fetch_indexes_for_revision_validation(filters_collection, cursor)
-      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_revision_validation_per_type(
-        filters_collection, cursor
-      )
-      deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params), repr: EventGlobalIndex::ReprType::READ_API)
-    end
-
-    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
-    # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
-    # @return [Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
-    def fetch_indexes_for_read_api(filters_collection, cursor)
-      if filters_collection.collection.any?(&:ambiguous_event_type?)
-        filters_collection = expand_event_types(filters_collection)
-      end
-      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_common(filters_collection, cursor)
-      deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params), repr: EventGlobalIndex::ReprType::READ_API)
-    end
-
-    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
-    # @param cursor [PgEventstore::QueryBuilders::ReadCursor::StreamCursor]
-    # @return [Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
-    def fetch_grouped_indexes_for_read_api(filters_collection, cursor)
-      if filters_collection.collection.any?(&:ambiguous_event_type?)
-        filters_collection = expand_event_types(filters_collection)
-      end
-      sql_builder = QueryBuilders::EventsGlobalIndexFiltering.sql_builder_for_read_grouped(filters_collection, cursor)
-      deserialize(@query_strategy.exec_params(*sql_builder.to_exec_params), repr: EventGlobalIndex::ReprType::READ_API)
-    end
-
-    # @param indexes [Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
-    # @param resolve_link_tos [Boolean]
-    # @return [PgEventstore::Chunks::Repository]
-    def compute_read_api_chunks_repo(indexes, resolve_link_tos)
-      repo = Chunks::Repository.new
-      repo.add_chunk(Chunks::ReadApiEventsIndexChunk.new(indexes, connection, @query_strategy, resolve_link_tos))
-      repo
+      # "returning" statement has no guarantees about the order in which rows are returned. Thus, sort them explicitly
+      deserialize(result, repr: EventGlobalIndex::ReprType::WRITE_API).sort_by(&:stream_revision)
     end
 
     # @param grouped_opts [Hash]
@@ -146,43 +108,6 @@ module PgEventstore
 
     private
 
-    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
-    # @return [PgEventstore::QueryBuilders::Filters::Collection]
-    def expand_event_types(filters_collection)
-      filter_rows = filters_collection.collection
-      to_expand = filter_rows.select(&:ambiguous_event_type?)
-      rest_filter_rows = filter_rows - to_expand
-      partition_builders = to_expand.map do |filter_row|
-        partitions_filtering = QueryBuilders::PartitionsFiltering.new
-        partitions_filtering.with_event_types
-        partitions_filtering.add_filter_row(filter_row)
-        partitions_filtering.to_sql_builder.unselect.select('context, stream_name, event_type')
-      end
-      final_partition_builder = SQLBuilder.union_builders(partition_builders)
-      adjuster_filters_collection = QueryBuilders::Filters::Collection.new
-      expanded_partitions_list = @query_strategy.exec_params(*final_partition_builder.to_exec_params).to_a
-      if expanded_partitions_list.empty?
-        # Failed to fetch partitions from the database, because no related partitions exist yet by the given criteria
-        event_type_filter = QueryBuilders::Filters::EventTypeFilter.null_filter
-        adjuster_filters_collection.add_event_type(event_type_filter)
-      else
-        expanded_partitions_list.each do |attrs|
-          stream_filter = QueryBuilders::Filters::StreamFilter.new(
-            context: attrs['context'],
-            stream_name: attrs['stream_name']
-          )
-          event_type_filter = QueryBuilders::Filters::EventTypeFilter.new(value: attrs['event_type'], prefix: false)
-          adjuster_filters_collection.add_stream(stream_filter)
-          adjuster_filters_collection.add_event_type(event_type_filter)
-        end
-      end
-      rest_filter_rows.each do |filter_row|
-        adjuster_filters_collection.add_stream(filter_row.stream_filter) if filter_row.stream_filter
-        filter_row.event_type_filters.each(&adjuster_filters_collection.method(:add_event_type))
-      end
-      adjuster_filters_collection
-    end
-
     # @return [PgEventstore::PartitionQueries]
     def partition_queries
       PartitionQueries.new(connection)
@@ -195,7 +120,8 @@ module PgEventstore
 
     # @param repr [Symbol, nil]
     # @return [Array<PgEventstore::EventGlobalIndex>, Array<PgEventstore::EventGlobalIndex::SubscriptionRepr>,
-    #   Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
+    #   Array<PgEventstore::EventGlobalIndex::ReadApiRepr>, Array<PgEventstore::EventGlobalIndex::WriteApiRepr>,
+    #   Array<PgEventstore::EventGlobalIndex::RevisionCheckRepr>]
     def deserialize(pg_result, repr: nil)
       pg_result.map do |attrs|
         EventGlobalIndex.create_representation(attrs.transform_keys(&:to_sym), repr:)

@@ -1,6 +1,15 @@
 module PgEventstore
   module QueryBuilders
     module BasicFiltering
+      module ClassMethods
+
+        def ascending?: ((String | Symbol)? order) -> bool
+
+        def descending?: ((String | Symbol)? order) -> bool
+
+        def reverse_order: ((String | Symbol)? order) -> Symbol
+      end
+
       SQL_DIRECTIONS: Hash[String | Symbol, String]
 
       def to_exec_params: -> [String, Array[untyped]]

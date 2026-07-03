@@ -1,0 +1,17 @@
+module PgEventstore
+  module QueryBuilders
+    class EventMarkersFiltering
+      PRIMARY_TABLE_NAME: String
+
+      include BasicFiltering
+
+      @sql_builder: SQLBuilder
+
+      def self.sql_builder_by_names: (Array[String] names) -> SQLBuilder
+
+      def add_name: (String name) -> void
+
+      def add_names: (Array[String] names) -> void
+    end
+  end
+end

@@ -6,7 +6,7 @@ module PgEventstore
 
     def initialize: (Connection connection, QueryStrategy query_strategy) -> void
 
-    def create_or_replace_view: (Integer id, Hash[untyped, untyped] options, Integer locked_by) -> void
+    def create_or_replace_table_function: (Integer id, Hash[untyped, untyped] options, Integer locked_by) -> void
 
     def find_or_create_by: (::Hash[untyped, untyped] attrs) -> ::Hash[Symbol, untyped]
 

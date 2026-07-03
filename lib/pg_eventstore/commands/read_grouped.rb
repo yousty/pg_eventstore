@@ -23,11 +23,22 @@ module PgEventstore
         if filter_collection.has_prefix_filter?
           raise NotSupportedError, '#read_grouped does not support look up by prefix.'
         end
-        raise ArgumentError, '#read_grouped requires :event_types filter.' unless filter_collection.has_event_types?
+        if !filter_collection.has_event_types? && !filter_collection.has_markers?
+          raise ArgumentError, '#read_grouped requires correct :event_types filter.'
+        end
+
+        if filter_collection.has_incomplete_markers_filter? && filter_collection.has_incomplete_stream_filter?
+          error_message = <<~TEXT.strip
+            #read_paginated does not support look up by context/context & stream name and markers filter without \
+            specifying event type explicitly. Please add specific event type to your markers filter. \
+            Example: { filter: { event_types: [{ type: 'Foo', markers: ['foo', 'bar'] }] } }
+          TEXT
+          raise NotSupportedError, error_message
+        end
         queries.streams_global_index.stream_exists?(stream) || raise(StreamNotFoundError, stream) unless stream.system?
 
-        indexes = queries.events_global_index.fetch_grouped_indexes_for_read_api(filter_collection, cursor)
-        repo = queries.events_global_index.compute_read_api_chunks_repo(indexes, options[:resolve_link_tos] || false)
+        indexes = queries.index_filtering.fetch_grouped_indexes_for_read_api(filter_collection, cursor)
+        repo = queries.index_filtering.compute_read_api_chunks_repo(indexes, options[:resolve_link_tos] || false)
         deserializer.deserialize_many(repo.consume_all)
       end
     end

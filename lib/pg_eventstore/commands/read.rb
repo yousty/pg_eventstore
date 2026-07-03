@@ -24,8 +24,17 @@ module PgEventstore
         cursor = QueryBuilders::ReadCursor::StreamCursor.from_stream_and_options(stream, options)
         raise NotSupportedError, '#read does not support look up by prefix.' if filter_collection.has_prefix_filter?
 
-        indexes = queries.events_global_index.fetch_indexes_for_read_api(filter_collection, cursor)
-        repo = queries.events_global_index.compute_read_api_chunks_repo(indexes, options[:resolve_link_tos] || false)
+        if filter_collection.has_incomplete_markers_filter? && filter_collection.has_incomplete_stream_filter?
+          error_message = <<~TEXT.strip
+            #read does not support look up by context/context & stream name and markers filter without specifying \
+            event type explicitly. Please add specific event type to your markers filter. \
+            Example: { filter: { event_types: [{ type: 'Foo', markers: ['foo', 'bar'] }] } }
+          TEXT
+          raise NotSupportedError, error_message
+        end
+
+        indexes = queries.index_filtering.fetch_indexes_for_read_api(filter_collection, cursor)
+        repo = queries.index_filtering.compute_read_api_chunks_repo(indexes, options[:resolve_link_tos] || false)
         deserializer.deserialize_many(repo.consume_all)
       end
     end

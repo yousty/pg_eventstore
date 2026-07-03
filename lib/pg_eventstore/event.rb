@@ -7,6 +7,10 @@ module PgEventstore
     # @return [String] a type of link event
     LINK_TYPE = '$>'
     # @return [String]
+    SYSTEM_SYMBOL = "\u2592"
+    # @return [String]
+    MARKERS_METADATA_KEY = "#{SYSTEM_SYMBOL}m".freeze
+    # @return [String]
     PRIMARY_TABLE_NAME = 'events'
     # @return [Integer]
     NON_EXISTING_EVENT_REVISION = -1
@@ -29,6 +33,9 @@ module PgEventstore
     # @!attribute data
     #   @return [Hash] event's data
     attribute(:data) { {} }
+    # @!attribute markers
+    #   @return [Array<String>] a revision of an event inside event's stream
+    attribute(:markers) { [] }
     # @!attribute metadata
     #   @return [Hash] event's metadata
     attribute(:metadata) { {} }

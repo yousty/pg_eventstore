@@ -85,7 +85,7 @@ module PgEventstore
       when :expected_not_to_have_stream
         expected_no_stream
       else
-        raise NotImplementedError
+        Utils.missing_implementation!(verdict)
       end
     end
 
@@ -119,26 +119,37 @@ module PgEventstore
   end
 
   class WrongExpectedTypesRevisionError < Error
+    class Verdict
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
+
+      # @!attribute verdict
+      #   @return [Symbol]
+      attribute(:verdict)
+      # @!attribute event_type
+      #   @return [String, Symbol]
+      attribute(:event_type)
+      # @!attribute current_revision
+      #   @return [Integer]
+      attribute(:current_revision)
+      # @!attribute expected_revision
+      #   @return [Integer, Symbol]
+      attribute(:expected_revision)
+      # @!attribute expected_markers
+      #   @return [Array<String>, nil]
+      attribute(:expected_markers)
+    end
+
     # @!attribute stream
     #   @return [PgEventstore::Stream]
     attr_reader :stream
-    # @!attribute revisions
-    #   @return [Hash]
-    attr_reader :revisions
-    # @!attribute expected_revisions
-    #   @return [Hash]
-    attr_reader :expected_revisions
-    # @!attribute verdict
-    #   @return [Array<Array<Symbol, String>>]
+    # @!attribute verdicts
+    #   @return [Array<PgEventstore::WrongExpectedTypesRevisionError::Verdict>]
     attr_reader :verdicts
 
-    # @param revisions [Hash]
-    # @param expected_revisions [Hash]
     # @param stream [PgEventstore::Stream]
-    # @param verdicts [Array<Array<Symbol, String>>]
-    def initialize(revisions:, expected_revisions:, stream:, verdicts:)
-      @revisions = revisions
-      @expected_revisions = expected_revisions
+    # @param verdicts [Array<PgEventstore::WrongExpectedTypesRevisionError::Verdict>]
+    def initialize(stream:, verdicts:)
       @stream = stream
       @verdicts = verdicts
       super(user_friendly_message)
@@ -149,56 +160,74 @@ module PgEventstore
     # @return [String]
     def user_friendly_message
       messages =
-        verdicts.map do |verdict, event_type|
-          case verdict
-          when :expected_to_have_event_with_given_revision
-            current_no_event(event_type)
-          when :unmatched_event_revision
-            unmatched_event_revision(event_type)
-          when :expected_to_have_event
-            expected_event_exists(event_type)
-          when :expected_not_to_have_event
-            expected_no_event(event_type)
+        verdicts.map do |verdict|
+          case verdict.verdict
+          when :event_is_absent
+            event_is_absent(verdict)
+          when :event_revision_does_not_match
+            event_revision_does_not_match(verdict)
+          when :event_is_present
+            event_is_present(verdict)
           else
-            raise NotImplementedError
+            Utils.missing_implementation!(verdict.verdict)
           end
         end
       messages.join('; ')
     end
 
-    # @param event_type [String]
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
     # @return [String]
-    def expected_event_exists(event_type)
-      "Expected #{stream_descr} stream to contain #{event_type.inspect}, but it doesn't."
-    end
-
-    # @param event_type [String]
-    # @return [String]
-    def expected_no_event(event_type)
-      "Expected #{stream_descr} stream does not contain #{event_type.inspect}, but it actually exists."
-    end
-
-    # @param event_type [String]
-    # @return [String]
-    def current_no_event(event_type)
+    def event_is_absent(verdict)
       <<~TEXT.strip
-        Expected #{stream_descr} to have #{event_type.inspect} event with #{expected_revisions[event_type]} revision, \
+        Expected #{stream_descr} stream to contain #{event_descr(verdict)} with #{revision_descr(verdict)}, \
         but this event does not exist.
       TEXT
     end
 
-    # @param event_type [String]
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
     # @return [String]
-    def unmatched_event_revision(event_type)
+    def event_is_present(verdict)
+      "Expected #{stream_descr} stream not to contain #{event_descr(verdict)}, but it actually exists."
+    end
+
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
+    # @return [String]
+    def event_revision_does_not_match(verdict)
       <<~TEXT.strip
-        Expected #{stream_descr} stream to contain #{event_type.inspect} event with #{expected_revisions[event_type]} \
-        revision, but it actually has #{revisions[event_type]} revision.
+        Expected #{stream_descr} stream to contain #{event_descr(verdict)} with #{revision_descr(verdict)}, \
+        but it actually has #{verdict.current_revision} revision.
       TEXT
     end
 
     # @return [String]
     def stream_descr
       stream.to_hash.inspect
+    end
+
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
+    # @return [String]
+    def event_descr(verdict)
+      if verdict.event_type == :any
+        markers = verdict.expected_markers.map(&:inspect).join(', ')
+        "any event with some of #{markers} marker(s)"
+      elsif verdict.expected_markers
+        markers = verdict.expected_markers.map(&:inspect).join(', ')
+        "#{verdict.event_type.inspect} event with some of #{markers} marker(s)"
+      else
+        "#{verdict.event_type.inspect} event"
+      end
+    end
+
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
+    # @return [String]
+    def revision_descr(verdict)
+      if verdict.expected_revision.is_a?(Integer)
+        "#{verdict.expected_revision} revision"
+      elsif verdict.expected_revision == :event_exists
+        'some revision'
+      else
+        "#{verdict.expected_revision.inspect} revision"
+      end
     end
   end
 

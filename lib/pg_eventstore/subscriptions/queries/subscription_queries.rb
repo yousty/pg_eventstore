@@ -76,13 +76,10 @@ module PgEventstore
     # @option options [Hash] :filter
     # @param locked_by [Integer] SubscriptionSet#id
     # @return [void]
-    def create_or_replace_view(id, options, locked_by)
+    def create_or_replace_table_function(id, options, locked_by)
       filter_collection = QueryBuilders::Filters::Collection.from_options(options)
-      index_filtering = QueryBuilders::EventsGlobalIndexFiltering.new
-      index_filtering.for_subscription
-      filter_collection.collection.each(&index_filtering.method(:add_filter_row))
-      view_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
-
+      builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_subscriptions(filter_collection.collection)
+      function_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
       transaction_queries.transaction(:read_committed) do
         connection.with do |conn|
           attrs = conn.exec_params('select * from subscriptions where id = $1 for update', [id]).to_a.first
@@ -91,8 +88,42 @@ module PgEventstore
             raise(WrongLockIdError.new(attrs['set'], attrs['name'], attrs['locked_by']))
           end
 
-          compiled = conn.compile(*index_filtering.to_exec_params)
-          conn.exec("create or replace view #{view_name} as #{compiled}")
+          compiled = conn.compile(*builder.to_exec_params)
+          compiled = <<~SQL
+            create or replace function #{function_name}(
+              from_position bigint,
+              to_position bigint,
+              max_count int
+            )
+            returns table (
+              global_position bigint,
+              event_type_partition_id bigint,
+              subscription_position bigint
+            )
+            language plpgsql
+            stable
+            parallel safe
+            as $$
+            declare
+              from_gpos bigint;
+              to_gpos bigint;
+            begin
+              with candidates as (
+                select esp.global_position
+                from event_subscription_positions esp
+                where esp.subscription_position >= from_position
+                  and esp.subscription_position <= to_position
+              )
+              /* + 0 here is to keep PostgreSQL from trying to optimize the query by picking wrong index */
+              select coalesce(min(candidates.global_position + 0), 0), coalesce(max(candidates.global_position + 0), 0)
+              into from_gpos, to_gpos
+              from candidates;
+
+              return query #{compiled};
+            end;
+            $$;
+          SQL
+          conn.exec(compiled)
         end
       end
     end

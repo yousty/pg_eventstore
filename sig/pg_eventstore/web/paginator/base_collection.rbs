@@ -2,6 +2,8 @@ module PgEventstore
   module Web
     module Paginator
       class BaseCollection
+        MIN_QUERY_SIZE_FOR_ADVANCE_SEARCH: Integer
+
         def initialize: (
             Symbol config_name,
             starting_id: (String | Integer)?,

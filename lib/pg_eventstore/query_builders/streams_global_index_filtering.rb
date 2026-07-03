@@ -42,9 +42,12 @@ module PgEventstore
       # @param filter_row [PgEventstore::QueryBuilders::Filters::FilterRow]
       # @return [void]
       def add_filter_row(filter_row)
+        stream_filter = filter_row.stream_filter
+        raise ArgumentError, "Invalid stream filter: #{stream_filter}" unless stream_filter&.stream?
+
         affected_partitions = PartitionsFiltering.from_filter_row(filter_row, scope: :stream_name)
-        builder = affected_partitions.unselect.select('id')
-        @sql_builder.where_or('partition_id = ? and stream_id = ?', builder, filter_row.stream_filter.stream_id)
+        builder = affected_partitions.select_id_only
+        @sql_builder.where_or('partition_id = ? and stream_id = ?', builder, stream_filter.stream_id)
       end
 
       # @param position [Integer, nil]

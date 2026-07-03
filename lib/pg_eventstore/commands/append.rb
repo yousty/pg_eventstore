@@ -20,17 +20,24 @@ module PgEventstore
         raise ArgumentError, 'No events to append.' if events.empty?
 
         events = events.map(&event_modifier.method(:call))
+        markers = events.flat_map(&:markers).uniq
+        revision_to_marker_ids_map = {}
         raw_events = queries.transactions.transaction(:repeatable_read) do
           partitions = prepare_partitions(stream, events)
           stream_index = queries.streams_global_index.find_or_create_by(stream)
+          markers_map = queries.event_markers.find_or_create_by(markers).to_h { [_1.name, _1.id] } if markers.any?
           revision = stream_index.stream_revision
           expected_revision = RevisionCheck::ExpectedRevision.build(options[:expected_revision])
           current_revision = RevisionCheck::CurrentRevision.build(
-            stream, revision, expected_revision, partitions, queries.events_global_index
+            stream, revision, expected_revision, queries.index_filtering
           )
           RevisionCheck::StreamRevisionCheck.assert_eq!(current_revision, expected_revision, stream)
           events.each.with_index(1) do |event, index|
             event.stream_revision = revision + index
+            event.markers.each do |event_marker|
+              revision_to_marker_ids_map[revision + index] ||= []
+              revision_to_marker_ids_map[revision + index].push(markers_map[event_marker])
+            end
           end
           revision += events.size
           queries.events.insert(stream, events).tap do |created_events|
@@ -39,8 +46,13 @@ module PgEventstore
               stream_idx_attrs_to_update[:starting_position] = created_events.first['global_position']
             end
             queries.streams_global_index.update(stream_index.id, **stream_idx_attrs_to_update)
-            queries.events_global_index.index_events(created_events, partitions, stream_index.id)
+            write_api_events_idx = queries.events_global_index.index_events(created_events, partitions, stream_index.id)
             queries.event_subscription_positions.create_unprocessed_positions(created_events)
+            if markers.any?
+              queries.event_markers.create_indexes(
+                stream_index.id, write_api_events_idx, revision_to_marker_ids_map
+              )
+            end
           end
         end
         # It is important to return events in the form they were persisted into the database instead passing them

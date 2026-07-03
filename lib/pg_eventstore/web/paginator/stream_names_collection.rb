@@ -12,9 +12,9 @@ module PgEventstore
           @collection ||=
             begin
               sql_builder = SQLBuilder.new.select('stream_name').from('partitions')
-              sql_builder.where('event_type is null and context = ?', options[:context])
-              sql_builder.where('stream_name ilike ?', "%#{options[:query]}%")
+              sql_builder.where('event_type is null and stream_name is not null and context = ?', options[:context])
               sql_builder.where("stream_name #{direction_operator} ?", starting_id) if starting_id
+              compute_stream_name_filter(sql_builder)
               sql_builder.limit(per_page).order("stream_name #{order}")
               connection.with do |conn|
                 conn.exec_params(*sql_builder.to_exec_params)
@@ -29,10 +29,9 @@ module PgEventstore
           starting_id = collection.first['stream_name']
           sql_builder = SQLBuilder.new.select('stream_name').from('partitions')
           sql_builder.where("stream_name #{direction_operator} ?", starting_id)
-          sql_builder.where('stream_name ilike ?', "%#{options[:query]}%")
+          compute_stream_name_filter(sql_builder)
           sql_builder.where('event_type is null and context = ?', options[:context])
           sql_builder.limit(1).offset(per_page).order("stream_name #{order}")
-
           connection.with do |conn|
             conn.exec_params(*sql_builder.to_exec_params)
           end.to_a.dig(0, 'stream_name')
@@ -43,6 +42,21 @@ module PgEventstore
         # @return [String]
         def direction_operator
           order == :asc ? '>=' : '<='
+        end
+
+        # @param builder [PgEventstore::SQLBuilder]
+        # @return [void]
+        def compute_stream_name_filter(builder)
+          query = options[:query].to_s
+          if query.size < MIN_QUERY_SIZE_FOR_ADVANCE_SEARCH
+            builder.where('stream_name like ?', "#{query}%")
+          else
+            builder.where(
+              'context || ? || stream_name ilike ?',
+              PgEventstore::Event::SYSTEM_SYMBOL,
+              "#{options[:context]}#{PgEventstore::Event::SYSTEM_SYMBOL}%#{query}%"
+            )
+          end
         end
       end
     end

@@ -9,25 +9,30 @@ RSpec.describe PgEventstore::Commands::LinkTo do
       transactions: transaction_queries,
       events_global_index: events_global_index_queries,
       streams_global_index: streams_global_index_queries,
-      event_subscription_positions: event_subscription_position_queries
+      event_subscription_positions: event_subscription_position_queries,
+      index_filtering: index_filtering_queries,
+      event_markers: event_marker_queries
     )
   end
   let(:transaction_queries) { PgEventstore::TransactionQueries.new(PgEventstore.connection) }
   let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
   let(:events_global_index_queries) do
-    PgEventstore::EventsGlobalIndexQueries.new(
-      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
-    )
+    PgEventstore::EventsGlobalIndexQueries.new(PgEventstore.connection, query_strategy)
   end
   let(:streams_global_index_queries) do
-    PgEventstore::StreamsGlobalIndexQueries.new(
-      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
-    )
+    PgEventstore::StreamsGlobalIndexQueries.new(PgEventstore.connection, query_strategy)
   end
   let(:event_queries) { PgEventstore::EventQueries.new(PgEventstore.connection) }
   let(:event_subscription_position_queries) do
     PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection)
   end
+  let(:index_filtering_queries) do
+    PgEventstore::IndexFilteringQueries.new(PgEventstore.connection, query_strategy)
+  end
+  let(:event_marker_queries) do
+    PgEventstore::EventMarkerQueries.new(PgEventstore.connection, query_strategy)
+  end
+  let(:query_strategy) { PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection) }
   let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, event_class_resolver) }
   let(:event_modifier) do
     PgEventstore::Commands::EventModifiers::PrepareLinkEvent.new(
@@ -84,7 +89,30 @@ RSpec.describe PgEventstore::Commands::LinkTo do
               expect(subject.link_partition_id).to(
                 eq(partition_queries.event_type_partition(events_stream, event.type)['id'])
               )
+              expect(subject.markers).to eq([])
             end
+          end
+        end
+
+        describe 'markers' do
+          let(:created_link) { PgEventstore.client.read(projection_stream).last }
+          let(:middlewares) { [dummy_middleware.new] }
+          let(:dummy_middleware) do
+            Class.new do
+              include PgEventstore::Middleware
+
+              def serialize(event)
+                event.markers = %w[foo bar]
+              end
+            end
+          end
+
+          before do
+            subject
+          end
+
+          it 'persists markers' do
+            expect(created_link.markers).to eq(%w[foo bar])
           end
         end
       end

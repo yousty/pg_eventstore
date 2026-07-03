@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Yx87BaCdS555L8srC9EmyrLhakkVAMDF7JLhFhRSOJvgwC6zm5L0ze5HefjKgGw
+\restrict 9GJQmtbPB5Q3AACIvJkljwsuhtRC8qarm9VkspCOjCecZxaEU5rIEKSAJ8LNiH6
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -18,6 +18,20 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
 
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
@@ -50,6 +64,48 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: event_markers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_markers (
+    id bigint NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: event_markers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.event_markers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: event_markers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.event_markers_id_seq OWNED BY public.event_markers.id;
+
+
+--
+-- Name: event_markers_index; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_markers_index (
+    marker_id bigint NOT NULL,
+    streams_global_index_id bigint NOT NULL,
+    event_type_partition_id bigint NOT NULL,
+    global_position bigint NOT NULL,
+    stream_revision bigint NOT NULL
+);
+
 
 --
 -- Name: event_subscription_positions; Type: TABLE; Schema: public; Owner: -
@@ -380,6 +436,13 @@ ALTER SEQUENCE public.subscriptions_set_id_seq OWNED BY public.subscriptions_set
 
 
 --
+-- Name: event_markers id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_markers ALTER COLUMN id SET DEFAULT nextval('public.event_markers_id_seq'::regclass);
+
+
+--
 -- Name: event_subscription_positions subscription_position; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -484,6 +547,48 @@ ALTER TABLE ONLY public.subscriptions_set
 
 
 --
+-- Name: idx_event_markers_index_on_marker_n_partition_n_pos; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_index_on_marker_n_partition_n_pos ON public.event_markers_index USING btree (marker_id, event_type_partition_id, global_position);
+
+
+--
+-- Name: idx_event_markers_index_on_marker_n_pos; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_index_on_marker_n_pos ON public.event_markers_index USING btree (marker_id, global_position) INCLUDE (event_type_partition_id);
+
+
+--
+-- Name: idx_event_markers_index_on_marker_n_stream_n_partition_n_rev; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_index_on_marker_n_stream_n_partition_n_rev ON public.event_markers_index USING btree (marker_id, streams_global_index_id, event_type_partition_id, stream_revision) INCLUDE (global_position);
+
+
+--
+-- Name: idx_event_markers_index_on_marker_n_stream_n_rev; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_event_markers_index_on_marker_n_stream_n_rev ON public.event_markers_index USING btree (marker_id, streams_global_index_id, stream_revision) INCLUDE (global_position, event_type_partition_id);
+
+
+--
+-- Name: idx_event_markers_on_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_on_id ON public.event_markers USING btree (id) INCLUDE (name);
+
+
+--
+-- Name: idx_event_markers_on_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_event_markers_on_name ON public.event_markers USING btree (name) INCLUDE (id);
+
+
+--
 -- Name: idx_event_subscription_positions_gposition_n_sposition; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -545,7 +650,7 @@ CREATE INDEX idx_events_idx_on_stream_name_part_id_n_position ON public.events_g
 -- Name: idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_position ON public.events_global_index USING btree (streams_global_index_id, event_type_partition_id, global_position);
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_position ON public.events_global_index USING btree (streams_global_index_id, event_type_partition_id, global_position) INCLUDE (stream_revision);
 
 
 --
@@ -559,7 +664,7 @@ CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_revision ON pub
 -- Name: idx_events_idx_on_streams_idx_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_idx_on_streams_idx_id_n_position ON public.events_global_index USING btree (streams_global_index_id, global_position) INCLUDE (event_type_partition_id);
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_position ON public.events_global_index USING btree (streams_global_index_id, global_position) INCLUDE (event_type_partition_id, stream_revision);
 
 
 --
@@ -616,6 +721,48 @@ CREATE INDEX idx_partitions_by_event_type_and_id ON public.partitions USING btre
 --
 
 CREATE UNIQUE INDEX idx_partitions_by_partition_table_name ON public.partitions USING btree (table_name);
+
+
+--
+-- Name: idx_partitions_context_and_stream_name_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_context_and_stream_name_search ON public.partitions USING gin (((((context)::text || '▒'::text) || (stream_name)::text)) public.gin_trgm_ops) WHERE ((stream_name IS NOT NULL) AND (event_type IS NULL));
+
+
+--
+-- Name: INDEX idx_partitions_context_and_stream_name_search; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.idx_partitions_context_and_stream_name_search IS 'Admin web UI search support.';
+
+
+--
+-- Name: idx_partitions_context_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_context_search ON public.partitions USING gin (context public.gin_trgm_ops) WHERE ((stream_name IS NULL) AND (event_type IS NULL));
+
+
+--
+-- Name: INDEX idx_partitions_context_search; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.idx_partitions_context_search IS 'Admin web UI search support.';
+
+
+--
+-- Name: idx_partitions_event_type_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_event_type_search ON public.partitions USING gin (event_type public.gin_trgm_ops) WHERE (event_type IS NOT NULL);
+
+
+--
+-- Name: INDEX idx_partitions_event_type_search; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.idx_partitions_event_type_search IS 'Admin web UI search support.';
 
 
 --
@@ -705,5 +852,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Yx87BaCdS555L8srC9EmyrLhakkVAMDF7JLhFhRSOJvgwC6zm5L0ze5HefjKgGw
+\unrestrict 9GJQmtbPB5Q3AACIvJkljwsuhtRC8qarm9VkspCOjCecZxaEU5rIEKSAJ8LNiH6
 

@@ -27,7 +27,7 @@ RSpec/IndexedLet:
   Enabled: false
 
 RSpec/NestedGroups:
-  Max: 6
+  Enabled: false
 
 RSpec/LetSetup:
   Enabled: false

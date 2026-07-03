@@ -1,0 +1,19 @@
+module PgEventstore
+  module QueryBuilders
+    module Filters
+      class MarkerFilterRow
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
+        attr_accessor stream_filter: QueryBuilders::Filters::StreamFilter?
+        attr_accessor marker_filter: QueryBuilders::Filters::MarkerFilter
+
+        def ambiguous_event_type?: -> bool
+
+        def flatten: -> Array[QueryBuilders::Filters::MarkerFilterRow]
+
+        def to_filter_row: -> FilterRow
+      end
+    end
+  end
+end

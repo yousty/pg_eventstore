@@ -11,13 +11,13 @@ module PgEventstore
         class << self
           # @return [PgEventstore::QueryBuilders::Filters::EventTypeFilter]
           def null_filter
-            new(value: nil, prefix: false)
+            new(event_type: nil, prefix: false)
           end
         end
 
         # @!attribute value
         #   @return [String, nil]
-        attribute(:value)
+        attribute(:event_type)
         # @!attribute prefix
         #   @return [Boolean]
         attribute(:prefix)
@@ -29,7 +29,7 @@ module PgEventstore
 
         # @return [String, nil]
         def to_sql_value
-          prefix? ? "#{value}%" : value
+          prefix? ? "#{event_type}%" : event_type
         end
       end
     end

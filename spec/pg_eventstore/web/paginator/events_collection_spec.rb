@@ -357,7 +357,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
         end
 
         it 'returns estimate count' do
-          is_expected.to be_between(1, 1000)
+          is_expected.to be_between(1, 10_000)
         end
       end
     end

@@ -16,6 +16,31 @@ module PgEventstore
         directions.default = 'ASC'
       end.freeze
 
+      module ClassMethods
+        # @param order [String, Symbol, nil]
+        # @return [Symbol]
+        def reverse_order(order)
+          SQL_DIRECTIONS[order] == 'ASC' ? :desc : :asc
+        end
+
+        # @param order [String, Symbol, nil]
+        # @return [Boolean]
+        def ascending?(order)
+          SQL_DIRECTIONS[order] == 'ASC'
+        end
+
+        # @param order [String, Symbol, nil]
+        # @return [Boolean]
+        def descending?(order)
+          SQL_DIRECTIONS[order] == 'DESC'
+        end
+      end
+
+      def self.included(base)
+        super
+        base.extend(ClassMethods)
+      end
+
       # @return [String]
       def to_table_name
         raise NotImplementedError

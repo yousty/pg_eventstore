@@ -4,6 +4,9 @@ module PgEventstore
   module Web
     module Paginator
       class BaseCollection
+        # This is the minimum amount of symbols requeried to perform search using trigrams gin index
+        MIN_QUERY_SIZE_FOR_ADVANCE_SEARCH = 3
+
         # @!attribute config_name
         #   @return [Symbol]
         attr_reader :config_name

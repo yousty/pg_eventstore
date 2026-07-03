@@ -18,6 +18,8 @@ module PgEventstore
       @middlewares.each do |middleware|
         middleware.serialize(event)
       end
+      event.markers.uniq!
+      event.metadata[Event::MARKERS_METADATA_KEY] = event.markers if event.markers.any?
       event
     end
 

@@ -40,8 +40,9 @@ module EventHelpers
 
     PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection).assign_subscription_position
     index_filtering = PgEventstore::QueryBuilders::EventsGlobalIndexFiltering.new
-    index_filtering.for_subscription
     builder = index_filtering.to_sql_builder
+    builder.join('join event_subscription_positions using(global_position)')
+    builder.select('subscription_position')
     builder.where('events_global_index.global_position = any(?)', events.map(&:global_position))
     PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params).map do |attrs|
