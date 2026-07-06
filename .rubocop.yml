@@ -130,3 +130,6 @@ Style/StructInheritance:
 
 Lint/NonLocalExitFromIterator:
   Enabled: false
+
+Style/RegexpLiteral:
+  Enabled: false
