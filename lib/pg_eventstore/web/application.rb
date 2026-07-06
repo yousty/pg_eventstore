@@ -41,11 +41,32 @@ module PgEventstore
         end
         # rubocop:enable Style/HashConversion
 
-        # @return [Array<String>, nil]
+        # @return [Array<String, Hash>]
         def events_filter
           event_filters = { filter: { event_types: params.dig(:filter, :events) } }
-          events = extract_event_types_filter(event_filters)
-          events.reject { _1 == '' }
+          event_types = extract_event_types_filter(event_filters)
+          event_types.map do |filter|
+            case filter
+            when String
+              next if filter == ''
+            when Hash
+              next if filter[:type] == ''
+
+              filter[:markers] = normalize_markers(filter)
+            else
+              next
+            end
+
+            filter
+          end.compact
+        end
+
+        # @return [Array<String>]
+        def markers_filter
+          params in { filter: Hash => filter }
+          return [] unless filter
+
+          normalize_markers(filter)
         end
 
         # @return [Symbol]
@@ -133,10 +154,12 @@ module PgEventstore
         end
 
         # @param options [Hash]
-        # @return [Array<String>]
+        # @return [Array<String, Hash>]
         def extract_event_types_filter(options)
           options in { filter: { event_types: Array => event_types } }
-          event_types = event_types&.grep(String)
+          event_types = event_types&.select do |event_type|
+            event_type.is_a?(String) || (event_type in { type: String })
+          end
           event_types || []
         end
 
@@ -152,13 +175,32 @@ module PgEventstore
           end
           streams || []
         end
+
+        private
+
+        # @param hash [Hash]
+        # @return [Array<String>]
+        def normalize_markers(hash)
+          hash in { markers: Array => markers }
+          markers ||= []
+          markers.grep(String).reject { _1 == '' }
+        end
       end
 
       get '/' do
         streams_filter = self.streams_filter&.map do |attrs|
           attrs.transform_values { unescape_empty_string(_1) }
         end
-        events_filter = self.events_filter&.map(&method(:unescape_empty_string))
+        events_filter = self.events_filter.map do |event_type|
+          next unescape_empty_string(event_type) if event_type.is_a?(String)
+
+          event_type[:type] = unescape_empty_string(event_type[:type])
+          event_type[:markers] = event_type[:markers]&.grep(String) || []
+          event_type
+        end
+        markers_filter = self.markers_filter.map(&method(:unescape_empty_string))
+        events_filter.push({ markers: markers_filter }) if markers_filter.any?
+
         @collection = Paginator::EventsCollection.new(
           current_config,
           starting_id: params[:starting_id]&.to_i,
@@ -272,6 +314,17 @@ module PgEventstore
           current_config,
           starting_id: unescape_empty_string(params[:starting_id]),
           per_page: Paginator::EventTypesCollection::PER_PAGE,
+          order: :asc,
+          options: { query: params[:term] }
+        )
+        paginated_json_response(collection)
+      end
+
+      get '/markers_filtering', provides: :json do
+        collection = Paginator::MarkersCollection.new(
+          current_config,
+          starting_id: unescape_empty_string(params[:starting_id]),
+          per_page: Paginator::MarkersCollection::PER_PAGE,
           order: :asc,
           options: { query: params[:term] }
         )

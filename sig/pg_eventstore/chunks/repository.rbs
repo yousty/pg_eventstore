@@ -3,9 +3,9 @@ module PgEventstore
     class Repository
       include MonitorMixin
 
-      @chunks: SynchronizedArray[Chunk]
+      @chunks: SynchronizedArray[Chunk[untyped, untyped]]
 
-      def add_chunk: (Chunk chunk, ?condition: MonitorMixin::ConditionVariable?) -> void
+      def add_chunk: (Chunk[untyped, untyped] chunk, ?condition: MonitorMixin::ConditionVariable?) -> void
 
       def clear: -> void
 

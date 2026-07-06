@@ -44,6 +44,20 @@
       <pre><%= h JSON.pretty_generate(event.data) %></pre>
       <strong>Metadata:</strong>
       <pre><%= h JSON.pretty_generate(event.metadata) %></pre>
+      <strong>Markers:</strong>
+      <% if event.markers.any? %>
+        <br>
+        <i>Total markers: <%= event.markers.size %>. List is scrollable</i>
+        <div style="max-height: 200px; overflow: scroll">
+          <ul>
+            <% event.markers.each do |marker| %>
+              <li> <a href="<%= event_marker_path(marker) %>"><%= empty_characters_fallback(h marker) %></a> </li>
+            <% end %>
+          </ul>
+        </div>
+      <% else %>
+        <i>No markers assigned</i>
+      <% end %>
     </td>
   </tr>
 <% end %>

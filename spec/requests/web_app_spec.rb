@@ -70,7 +70,10 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     describe 'events filtering' do
       let!(:events1) do
-        events = [PgEventstore::Event.new(type: 'Foo')] * 2
+        events = [
+          PgEventstore::Event.new(type: 'Foo', markers: ['foo']),
+          PgEventstore::Event.new(type: 'Foo', markers: ['bar']),
+        ]
         PgEventstore.client.append_to_stream(stream1, events)
       end
       let!(:events2) do
@@ -78,7 +81,7 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         PgEventstore.client.append_to_stream(stream1, events)
       end
       let!(:events3) do
-        events = [PgEventstore::Event.new(type: 'Bar')] * 6
+        events = [PgEventstore::Event.new(type: 'Bar', markers: ['bar'])] * 6
         PgEventstore.client.append_to_stream(stream2, events)
       end
       let(:events) { events1 + events2 + events3 }
@@ -130,6 +133,24 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         it 'displays only filtered events' do
           subject
           expect(rendered_event_ids).to eq(events3.map(&:id).reverse)
+        end
+      end
+
+      context 'when event with markers filter is provided' do
+        let(:params) { { filter: { events: [{ type: 'Foo', markers: ['foo'] }] } } }
+
+        it 'displays only filtered events' do
+          subject
+          expect(rendered_event_ids).to eq([events1[0].id])
+        end
+      end
+
+      context 'when markers filter is provided' do
+        let(:params) { { filter: { markers: ['bar'] } } }
+
+        it 'displays only filtered events' do
+          subject
+          expect(rendered_event_ids).to eq([events1[1].id, *events3.map(&:id)].reverse)
         end
       end
 

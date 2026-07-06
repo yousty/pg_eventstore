@@ -99,6 +99,12 @@ module PgEventstore
           )
         end
 
+        # @param marker [String]
+        # @return [String]
+        def event_marker_path(marker)
+          build_path({ filter: { markers: [escape_empty_string(marker)] } }, base_url: '/')
+        end
+
         # @param str [String]
         # @return [String]
         def empty_characters_fallback(str)

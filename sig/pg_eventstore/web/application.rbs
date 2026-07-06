@@ -11,7 +11,7 @@ module PgEventstore
 
       def asset_url: (String path) -> String
 
-      def connection: -> PgEventstore::Connection
+      def connection: -> Connection
 
       def current_config: -> Symbol
 
@@ -19,13 +19,15 @@ module PgEventstore
 
       def escape_empty_string: (String? string) -> String?
 
-      def events_filter: -> Array[String]?
+      def events_filter: -> Array[String | Hash[untyped, untyped]]
 
       def flash_message=: (({ message: String, kind: String }) val)-> String
 
       def h: (String text) -> String
 
-      def paginated_json_response: (PgEventstore::Web::Paginator::BaseCollection collection) -> void
+      def markers_filter: -> Array[String]
+
+      def paginated_json_response: (Paginator::BaseCollection collection) -> void
 
       def redirect_back_url: (fallback_url: String) -> String
 
@@ -39,10 +41,13 @@ module PgEventstore
 
       def unescape_empty_string: (String? string) -> String?
 
-      def extract_event_types_filter: (Hash[untyped, untyped] options) -> Array[String]
+      def extract_event_types_filter: (Hash[untyped, untyped] options) -> Array[String | Hash[untyped, untyped]]
 
       def extract_streams_filter: (Hash[untyped, untyped] options) -> Array[Hash[untyped, untyped]]
 
+      private
+
+      def normalize_markers: (Hash[untyped, untyped] hash) -> Array[String]
     end
   end
 end

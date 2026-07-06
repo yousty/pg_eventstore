@@ -4,6 +4,9 @@
 <script type="text/html" id="event-type-filter-tmpl">
   <%= erb :'home/partials/event_filter', { layout: false }, { event_type: '' } %>
 </script>
+<script type="text/html" id="markers-filter-tmpl">
+  <%= erb :'home/partials/markers_filter', { layout: false }, { markers: [] } %>
+</script>
 
 <div class="right_col" role="main">
   <div class="">
@@ -37,6 +40,11 @@
                   <%= erb :'home/partials/event_filter', { layout: false }, { event_type: event_type } %>
                 <% end %>
               </div>
+              <div class="markers-filter">
+                <% if markers_filter.any? %>
+                  <%= erb :'home/partials/markers_filter', { layout: false }, { markers: markers_filter } %>
+                <% end %>
+              </div>
               <div class="ln_solid"></div>
               <div class="item form-group">
                 <div class="col-md-6 col-sm-6 offset-md-5">
@@ -50,6 +58,7 @@
                         <a class="dropdown-item add-stream-filter" href="javascript: void(0)">Add stream filter</a>
                         <a class="dropdown-item add-system-stream-filter" href="javascript: void(0)">Add system stream filter</a>
                         <a class="dropdown-item add-event-filter" href="javascript: void(0)">Add event filter</a>
+                        <a class="dropdown-item add-markers-filter" href="javascript: void(0)">Add markers filter</a>
                       </div>
                     </div>
                   </div>
