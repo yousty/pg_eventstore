@@ -62,7 +62,7 @@ module PgEventstore
 
       def direction_operator_to: (String? | Symbol? direction) -> String
 
-      def event_type_comparison: -> Array[String]
+      def event_type_comparison: (Filters::FilterRow filter_row) -> Array[String]
     end
   end
 end

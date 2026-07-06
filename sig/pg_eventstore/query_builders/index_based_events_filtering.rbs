@@ -34,8 +34,7 @@ module PgEventstore
         ) -> SQLBuilder
 
       def self.sql_builder_for_subscriptions: (
-          Array[Filters::FilterRow | Filters::MarkerFilterRow] filter_rows,
-          ReadCursor::StreamCursor cursor
+          Array[Filters::FilterRow | Filters::MarkerFilterRow] filter_rows
         ) -> SQLBuilder
 
       def add_global_position_direction: ((String | Symbol)? direction) -> void
