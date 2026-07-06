@@ -387,7 +387,7 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       position = proc do
         PgEventstore.connection.with do |c|
           c.exec('select global_position, subscription_position from event_subscription_positions')
-        end.first
+        end.first || {}
       end
       expect { subject }.to change {
         dv(position).deferred_wait(timeout: 2) { !_1.call['subscription_position'].nil? }.call
