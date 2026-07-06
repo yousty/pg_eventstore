@@ -13,10 +13,12 @@ module EventHelpers
   end
 
   # @param events [PgEventstore::Event]
+  # @param order [String, Symbol]
   # @return [Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
-  def read_api_indexes(*events)
+  def read_api_indexes(*events, order: :asc)
     builder = PgEventstore::QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
     builder.where('global_position = any(?)', events.map(&:global_position))
+    builder.order("global_position #{order}")
     result = PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params)
     end
