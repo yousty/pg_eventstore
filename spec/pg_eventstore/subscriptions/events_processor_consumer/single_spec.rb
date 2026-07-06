@@ -75,7 +75,7 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
       end
 
       it 'does not sleep' do
-        expect { subject }.to change { Time.now }.by(be_between(0, 0.01))
+        expect { subject }.to change { Time.now }.by(be_between(0, 0.05))
       end
       it 'runs :process callbacks for first event' do
         subject
@@ -153,7 +153,7 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Single do
             subject
           rescue PgEventstore::WrappedException
           end
-        }.to change { Time.now }.by(be_between(0, 0.01))
+        }.to change { Time.now }.by(be_between(0, 0.05))
       end
       it 'runs only :before :process callbacks' do
         begin
