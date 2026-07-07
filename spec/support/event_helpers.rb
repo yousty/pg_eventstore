@@ -13,18 +13,21 @@ module EventHelpers
   end
 
   # @param events [PgEventstore::Event]
-  # @param order [String, Symbol]
   # @return [Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
-  def read_api_indexes(*events, order: :asc)
+  def read_api_indexes(*events)
     builder = PgEventstore::QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
     builder.where('global_position = any(?)', events.map(&:global_position))
-    builder.order("global_position #{order}")
     result = PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params)
     end
-    result.map do |attrs|
+    result = result.map do |attrs|
       attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)
       PgEventstore::EventGlobalIndex::ReadApiRepr.new(**attrs)
+    end
+    # Preserve the order at which we received events array
+    result.sort_by do |read_api_idx|
+      event = events.find { _1.global_position == read_api_idx.global_position }
+      events.index(event)
     end
   end
 
@@ -46,11 +49,17 @@ module EventHelpers
     builder.join('join event_subscription_positions using(global_position)')
     builder.select('subscription_position')
     builder.where('events_global_index.global_position = any(?)', events.map(&:global_position))
-    PgEventstore.connection.with do |conn|
+
+    result = PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params).map do |attrs|
         attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)
         PgEventstore::EventGlobalIndex::SubscriptionRepr.new(**attrs)
       end
+    end
+    # Preserve the order at which we received events array
+    result.sort_by do |subscription_idx|
+      event = events.find { _1.global_position == subscription_idx.global_position }
+      events.index(event)
     end
   end
 

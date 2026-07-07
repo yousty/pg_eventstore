@@ -74,7 +74,9 @@ module PgEventstore
 
       # @return [void]
       def resolve_indexes
-        indexes_to_resolve = @indexes.slice!(range_to_slice)
+        indexes_to_resolve = @indexes.slice!(
+          range_to_slice(@indexes.map(&:event_type_partition_id), MAX_PARTITIONS_TO_RESOLVE_PER_CALL)
+        )
         global_to_sub_position_map = indexes_to_resolve.to_h { [_1.global_position, _1.subscription_position] }
         raw_events = events_global_index_queries.resolve_indexes(
           indexes_to_resolve,
@@ -98,29 +100,13 @@ module PgEventstore
         )
       end
 
-      # @return [Range]
-      def range_to_slice
-        return (0..) if @indexes.size <= MAX_PARTITIONS_TO_RESOLVE_PER_CALL
-
-        partitions_map = {}
-        latest_index = nil
-        @indexes.each_with_index do |events_index, index|
-          partitions_map[events_index.event_type_partition_id] = true
-          if partitions_map.size > MAX_PARTITIONS_TO_RESOLVE_PER_CALL
-            latest_index = index - 1
-            break
-          end
-        end
-        0..latest_index
-      end
-
       # @param raw_events [Array<RawEventWithCommitPosition>]
       # @return [Array<RawEventWithCommitPosition>]
       def sort(raw_events)
         if @idx_direction == :asc
           raw_events.sort_by(&:subscription_position)
         else
-          raw_events.sort_by { |e1, e2| e2.subscription_position <=> e1.subscription_position }
+          raw_events.sort { |e1, e2| e2.subscription_position <=> e1.subscription_position }
         end
       end
 

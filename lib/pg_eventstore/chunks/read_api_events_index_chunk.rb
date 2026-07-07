@@ -62,7 +62,9 @@ module PgEventstore
 
       # @return [void]
       def resolve_indexes
-        indexes_to_resolve = @indexes.slice!(range_to_slice)
+        indexes_to_resolve = @indexes.slice!(
+          range_to_slice(@indexes.map(&:event_type_partition_id), MAX_PARTITIONS_TO_RESOLVE_PER_CALL)
+        )
         raw_events = events_global_index_queries.resolve_indexes(
           indexes_to_resolve,
           direction: @idx_direction,
@@ -70,22 +72,6 @@ module PgEventstore
         )
         @raw_events.push(*raw_events)
         @resolved = @indexes.empty?
-      end
-
-      # @return [Range]
-      def range_to_slice
-        return (0..) if @indexes.size <= MAX_PARTITIONS_TO_RESOLVE_PER_CALL
-
-        partitions_map = {}
-        latest_index = nil
-        @indexes.each_with_index do |events_index, index|
-          partitions_map[events_index.event_type_partition_id] = true
-          if partitions_map.size > MAX_PARTITIONS_TO_RESOLVE_PER_CALL
-            latest_index = index - 1
-            break
-          end
-        end
-        0..latest_index
       end
 
       # @return [PgEventstore::EventsGlobalIndexQueries]

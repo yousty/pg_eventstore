@@ -1098,8 +1098,19 @@ RSpec.describe PgEventstore::SubscriptionQueries do
 
     let(:subscription) { SubscriptionsHelper.create }
 
+    before do
+      instance.create_or_replace_table_function(subscription.id, {}, nil)
+    end
+
     it 'deletes the given subscriptions' do
       expect { subject }.to change { instance.find_by(id: subscription.id) }.to(nil)
+    end
+    it 'deletes related table function' do
+      expect { subject }.to change {
+        query_strategy.exec_params(<<~SQL, ["subscription_#{subscription.id}"]).to_a
+          select proname from pg_proc where proname = $1
+        SQL
+      }.to([])
     end
   end
 

@@ -194,11 +194,11 @@ module PgEventstore
     # @param id [Integer]
     # @return [void]
     def delete(id)
-      view_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
+      function_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
       transaction_queries.transaction(:read_committed) do
         connection.with do |conn|
           conn.exec_params('delete from subscriptions where id = $1', [id])
-          conn.exec("drop view if exists #{view_name}")
+          conn.exec("drop function if exists #{function_name}")
         end
       end
     end

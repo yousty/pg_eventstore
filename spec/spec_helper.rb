@@ -87,6 +87,12 @@ RSpec.configure do |config|
     example.run
   end
 
+  config.around(rbs_skip: true) do |example|
+    next if ENV['RBS_TEST_TARGET']
+
+    example.run
+  end
+
   config.include EventHelpers
   config.include PartitionsHelper
   config.include Rack::Test::Methods, type: :request

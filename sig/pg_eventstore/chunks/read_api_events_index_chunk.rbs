@@ -22,8 +22,6 @@ module PgEventstore
 
       def events_global_index_queries: -> EventsGlobalIndexQueries
 
-      def range_to_slice: -> Range[Integer | nil]
-
       def resolve_indexes: -> void
 
       def resolved?: -> bool

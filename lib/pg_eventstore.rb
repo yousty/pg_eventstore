@@ -30,6 +30,7 @@ require_relative 'pg_eventstore/subscriptions/subscriptions_manager'
 require_relative 'pg_eventstore/extensions/acts_as_configurable'
 require_relative 'pg_eventstore/async_query_runner'
 require_relative 'pg_eventstore/query_strategy'
+require_relative 'pg_eventstore_ext'
 
 module PgEventstore
   extend Extensions::ActsAsConfigurable
