@@ -46,7 +46,7 @@ namespace :pg_eventstore do
   end
 
   task :migrate do
-    migration_files_root = "#{Gem::Specification.find_by_name('pg_eventstore').gem_dir}/db/migrations"
+    migration_files_root = File.join(Gem.loaded_specs.fetch('pg_eventstore').gem_dir, 'db/migrations')
 
     PgEventstore.connection(:_eventstore_db_connection).with do |conn|
       conn.exec('CREATE TABLE IF NOT EXISTS migrations (number int NOT NULL)')
