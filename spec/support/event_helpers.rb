@@ -12,22 +12,20 @@ module EventHelpers
     end
   end
 
+  # Loads event indexes from db. For read api order must be by global position
   # @param events [PgEventstore::Event]
+  # @param order [String, Symbol]
   # @return [Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
-  def read_api_indexes(*events)
+  def read_api_indexes(*events, order: :asc)
     builder = PgEventstore::QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
     builder.where('global_position = any(?)', events.map(&:global_position))
+    builder.order("global_position #{order}")
     result = PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params)
     end
-    result = result.map do |attrs|
+    result.map do |attrs|
       attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)
       PgEventstore::EventGlobalIndex::ReadApiRepr.new(**attrs)
-    end
-    # Preserve the order at which we received events array
-    result.sort_by do |read_api_idx|
-      event = events.find { _1.global_position == read_api_idx.global_position }
-      events.index(event)
     end
   end
 
@@ -38,9 +36,11 @@ module EventHelpers
     end
   end
 
+  # Loads event indexes from db. For subscriptions api order must be by subscription position
   # @param events [Array<PgEventstore::Event>]
+  # @param order [String, Symbol]
   # @return [Array<PgEventstore::EventGlobalIndex::SubscriptionRepr>]
-  def prepare_subscription_indexes(events)
+  def prepare_subscription_indexes(events, order: :asc)
     return [] if events.empty?
 
     PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection).assign_subscription_position
@@ -49,17 +49,13 @@ module EventHelpers
     builder.join('join event_subscription_positions using(global_position)')
     builder.select('subscription_position')
     builder.where('events_global_index.global_position = any(?)', events.map(&:global_position))
+    builder.order("subscription_position #{order}")
 
-    result = PgEventstore.connection.with do |conn|
+    PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params).map do |attrs|
         attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)
         PgEventstore::EventGlobalIndex::SubscriptionRepr.new(**attrs)
       end
-    end
-    # Preserve the order at which we received events array
-    result.sort_by do |subscription_idx|
-      event = events.find { _1.global_position == subscription_idx.global_position }
-      events.index(event)
     end
   end
 
