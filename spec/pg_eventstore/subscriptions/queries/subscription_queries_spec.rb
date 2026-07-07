@@ -1096,10 +1096,11 @@ RSpec.describe PgEventstore::SubscriptionQueries do
   describe '#delete' do
     subject { instance.delete(subscription.id) }
 
-    let(:subscription) { SubscriptionsHelper.create }
+    let(:subscription) { SubscriptionsHelper.create(set: subscriptions_set.name, locked_by: subscriptions_set.id) }
+    let(:subscriptions_set) { SubscriptionsSetHelper.create }
 
     before do
-      instance.create_or_replace_table_function(subscription.id, {}, nil)
+      instance.create_or_replace_table_function(subscription.id, {}, subscriptions_set.id)
     end
 
     it 'deletes the given subscriptions' do
