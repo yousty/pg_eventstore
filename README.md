@@ -111,9 +111,9 @@ end
 After checking out the repo, run:
 - `bundle` to install dependencies
 - `docker compose up` to start dev/test services
+- `bundle exec rake compile` to compile native extension 
 - `bin/setup_db` to create/re-create development and test databases, tables and related objects
 - `bundle exec rbs collection install` to install external rbs definitions
-- `bundle exec rake compile` to compile native extension(optional)
 
 Then, run `bin/rspec` to run the tests(or just `rspec` if you want to temporary skip rbs checks). Optional env variables for testing:
 - `DEBUG=1 bin/rspec`. Enable nicely formatted and highlighted SQL output into stdout.

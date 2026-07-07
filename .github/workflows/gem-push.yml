@@ -31,6 +31,7 @@ jobs:
       if: ${{ !steps.skip-workflow.outputs.skip }}
       run: |
         sleep 10
+        bundle exec rake compile
         ./bin/setup_db
         ./bin/rspec
   push:
