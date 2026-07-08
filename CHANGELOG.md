@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- **Breaking change**: `Event#id` uniqueness is no longer guaranteed. It was dropped because there is not much usage of
+  it internally. The attribute and the default value(which is `gen_random_uuid()`) is still there.
 - **Breaking change**: event types, stream attributes, event metadata keys, markers that start from `▒`(`"\u2592"` 
 Unicode character) character are now reserved by pg_eventstore. It is less likely you have any, but if you do - you have
 to adjust your implementation to no longer rely on it.

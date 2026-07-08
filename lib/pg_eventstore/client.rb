@@ -22,8 +22,12 @@ module PgEventstore
     # @param options [Hash]
     # @option options [Integer] :expected_revision expected stream revision
     # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
-    # @option options [Hash] :expected_revision <even type>-to-<expected stream revision> map. Allows to define expected
-    #   stream revision at the given event type. Useful when implementing Dynamic Consistency Boundaries
+    # @option options [Hash<String, Integer>, Hash<String, Symbol>] :expected_revision
+    #   <even type>-to-<expected stream revision> map. Allows to define expected stream revision at the given event
+    #   type. Useful when implementing Dynamic Consistency Boundaries
+    # @option options [Hash<String, Hash>] :expected_revision <even type>-to-<markers> map. Allows to define expected
+    #   stream revision at the given event type, scoped to the specific marker(s). Useful when implementing
+    #   Dynamic Consistency Boundaries
     # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
@@ -80,10 +84,12 @@ module PgEventstore
     # @option options [Boolean] :resolve_link_tos When using projections to create new events you
     #   can set whether the generated events are pointers to existing events. Setting this option to true tells
     #   PgEventstore to return the original event instead a link event.
-    # @option options [Hash] :filter provide it to filter events. You can filter by: stream and by event type. Filtering
-    #   by stream is only available when reading from "all" stream.
-    #   Examples:
-    #     # Filtering by stream's context. This will return all events which #context is 'User
+    # @option options [Hash] :filter provide it to filter events. You can filter by: stream, event type and event
+    #   markers. Filtering by stream is only available when reading from "all" stream.
+    #   Basically, you can mix almost all combinations of stream attributes, event types and markers. That are some
+    #   limitations, though. Please refer to docs/reading_events.md for details.
+    #   Here are some examples:
+    #     # Filtering by stream's context. This will return all events which #context is 'User'
     #     PgEventstore.client.read(
     #       PgEventstore::Stream.all_stream,
     #       options: { filter: { streams: [{ context: 'User' }] } }
@@ -118,6 +124,19 @@ module PgEventstore
     #
     #     # Filtering by specific event when reading from the specific stream
     #     PgEventstore.client.read(stream, options: { filter: { event_types: ['MyAwesomeEvent'] } })
+    #
+    #     # Filtering a specific stream by event markers
+    #     PgEventstore.client.read(stream, options: { filter: { event_types: [{ markers: ['foo'] }] } })
+    #
+    #     # Filtering a specific stream by event type with markers and event types
+    #     PgEventstore.client.read(
+    #       stream, options: { filter: { event_types: [{ type: 'Foo', markers: ['foo'] }, 'Bar'] } }
+    #     )
+    #
+    #     # Filtering all events by markers
+    #     PgEventstore.client.read(
+    #       PgEventstore::Stream.all_stream, options: { filter: { event_types: [{ markers: ['foo'] }] } }
+    #     )
     # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
     # @return [Array<PgEventstore::Event>]
     # @raise [PgEventstore::StreamNotFoundError]

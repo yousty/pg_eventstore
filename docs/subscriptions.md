@@ -52,20 +52,6 @@ First argument is the subscription's name. **It must be unique within the subscr
 subscription's handler where you will be processing your events as they arrive. The example shows the minimum set of
 arguments required to create the subscription.
 
-In the given state it will be listening to all events from all streams. You can define various filters by providing the
-`:filter` key of `options` argument:
-
-```ruby
-subscriptions_manager.subscribe(
-  'MyAwesomeSubscription',
-  handler: proc { |event| puts event },
-  options: { filter: { streams: [{ context: 'MyAwesomeContext' }], event_types: ['Foo', 'Bar'] } }
-)
-```
-
-`:filter` supports the same options as the `#read` method supports when reading from the `"all"` stream. See [*"all"
-stream filtering*](reading_events.md#all-stream-filtering) section of **Reading events** chapter.
-
 After you added all necessary subscriptions, it is time to start them:
 
 ```ruby
@@ -136,6 +122,46 @@ PgEventstore.client.append_to_stream(bar_stream, PgEventstore::Event.new(type: '
 
 You will then see the output of your subscription handlers. To gracefully stop the subscriptions process, use
 `kill -TERM <pid>` command.
+
+### Filtering events
+
+To listen to the specific events you have to supply `:filter` option. Example:
+
+```ruby
+subscriptions_manager.subscribe(
+  'MyAwesomeSubscription',
+  handler: proc { |event| puts event },
+  options: { filter: { streams: [{ context: 'FooCtx' }], event_types: %w[Foo Bar] } }
+)
+```
+
+Filtering events of a subscription is the same as filtering events when [reading from "all" stream](reading_events.md#all-stream-filtering),
+but with some additions:
+- there is no limitations on markers filter. The next is all allowed:
+```ruby
+# Listen to all events from 'FooCtx' context, marked with 'foo' marker
+subscriptions_manager.subscribe(
+  'Sub1',
+  handler: proc { |event| puts event },
+  options: { filter: { streams: [{ context: 'FooCtx' }], event_types: [{ markers: ['foo'] }] } }
+)
+# Listen to all events from 'FooCtx' context & 'Foo' stream name, marked with 'foo' marker
+subscriptions_manager.subscribe(
+  'Sub2',
+  handler: proc { |event| puts event },
+  options: { filter: { streams: [{ context: 'FooCtx', stream_name: 'Foo' }], event_types: [{ markers: ['foo'] }] } }
+)
+```
+- you can filter event types by prefixes. In the next example the subscription will catch all events with event types
+starting from `'Foo'`(e.g. `'FooBar'`, `'Foo1'`, `'Foosomethingelse'`, etc):
+```ruby
+# Listen to all events from 'FooCtx' context, marked with 'foo' marker
+subscriptions_manager.subscribe(
+  'Sub1',
+  handler: proc { |event| puts event },
+  options: { filter: { streams: [{ context: 'FooCtx' }], event_types: [{ prefix: 'Foo' }] } }
+)
+```
 
 ### Subscription position
 

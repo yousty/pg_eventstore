@@ -2,17 +2,24 @@
 
 ## Database architecture
 
-The database is designed specifically for Eventsourcing alongside Domain-Driven Design. Internally, it is architected
-using Snowflake schema with `events_global_index` as fact table and `events`, `streams_global_index` and `partitions`
-tables as dimensions tables. `events` table is additionally partitioned in next way:
+The database is designed specifically for Event Sourcing alongside Domain-Driven Design. Internally, it uses a
+Snowflake-based schema which consists of multiple tables:
+- `events_global_index` is the primary event index fact table
+- `event_markers_index` is a marker-specific factless bridge/index table, and is used as the primary access path for
+  marker-based event queries
+- `streams_global_index` is normalized stream-level dimension/reference table for `events_global_index`
+- `partitions` is a dictionary table for physical event partitions
+- `events` is a table that holds all information about an event - its payload, metadata, markers, etc
+
+`events` table is additionally partitioned in next way:
 
 - For each `Stream#context` there is a subpartition of `events` table. Those tables have `contexts_` prefix.
 - For each `Stream#stream_name` there is a subpartition of `contexts_` table. Those tables have `stream_names_` prefix.
 - For each `Event#type` there is a subpartition of `stream_names_` table. Those tables have `event_types_` prefix.
 
-To implement partitions - Declarative Partitioning is used. While the implementation scales well with the number of
-partitions - it is recommended your application pre-defines all combinations of contexts, stream names and event types.
-More about PostgreSQL partitions is [here](https://www.postgresql.org/docs/current/ddl-partitioning.html).
+To implement partitions - Declarative Partitioning feature is used. While the implementation scales well with the number
+of partitions - it is recommended your application pre-defines all combinations of contexts, stream names and event
+types. More about PostgreSQL partitions is [here](https://www.postgresql.org/docs/current/ddl-partitioning.html).
 
 So, let's say you want to publish next event:
 
@@ -46,7 +53,7 @@ end.to_a
 
 ### PostgreSQL settings
 
-The more partitions you have, the more locks are required for operations that affect multiple partitions. Especially it
+The more partitions you have, the more locks are required for operations that affect multiple partitions. It mainly
 concerns the case when you involve many different event types when using `Client#multiple`. It may lead to the next
 error:
 
@@ -67,24 +74,20 @@ HINT:  You might need to increase "max_locks_per_transaction".
 ```
 
 The reason of it to appear is the same - too many objects(partition tables, indexes, etc) are involved in a single
-transaction. You may face it when running migrations on large pg_eventstore database using `rake pg_eventstore:migrate`
-as some migrations may involve high number of db objects.
-
-Conclusion: adjust values of `max_locks_per_transaction` and `max_pred_locks_per_transaction` settings as long as the
-number of partitions(number of distinct values of (context, stream_name, event type) tuple) grow.
+transaction.
 
 ## Appending events and multiple commands
 
 You may want to get familiar with [Appending events](appending_events.md) and [multiple commands](multiple_commands.md)
 first.
 
-`pg_eventstore` internally uses `Serializable` transaction isolation level(more about different transaction isolation
-levels in PostgreSQL is [here](https://www.postgresql.org/docs/current/transaction-iso.html)). On practice this means
-that any transaction may fail with serialization error, and the common approach is to restart this transaction. For ruby
-this means re-execution of the block of code. Which is why there is a warning regarding potential block re-execution
-when using `#multiple`. However current implementation allows to limit 99% of retries to the manipulations with one
-stream. For example, when two parallel processes changing the same stream. If different streams are being changed at the
-same time - it is less likely it would perform retry.
+`pg_eventstore` internally uses `Serializable` and `Repeatable read` transaction isolation levels depending on the API
+method(more about different transaction isolation levels in PostgreSQL is [here](https://www.postgresql.org/docs/current/transaction-iso.html)). On practice this means that any
+transaction may fail with serialization error, and the common approach is to restart this transaction. For ruby this
+means re-execution of the block of code. Which is why there is a warning regarding potential code re-execution when
+using `#multiple`. However, current implementation allows to limit 99% of retries to the manipulations with one stream.
+For example, when two parallel processes changing the same stream. If different streams are being changed at the same
+time - it is less likely it would perform retry.
 
 Examples:
 
@@ -123,9 +126,9 @@ PgEventstore.client.append_to_stream(stream2, event)
 ```
 
 Retries also concern your potential implementation of [middlewares](writing_middleware.md). For example,
-`YourAwesomeMiddleware#serialize` can be executed several times when append the event. This is especially important when
-you involve your microservices here - they can receive the same payload several times.
+`YourAwesomeMiddleware#serialize` can be executed several times when appending an event. This is especially important
+when you involve your microservices here - they can receive the same payload several times.
 
 Conclusion. When developing using `pg_eventstore` - always keep in mind that some parts of your implementation can be
 executed several times before successfully publishing an event, or event when reading events(`#deserializa` middleware
-method) if you perform reading withing `#multiple` block. 
+method) if you perform reading withing `#multiple` block. Thus, make sure your middlewares are idempotent.
