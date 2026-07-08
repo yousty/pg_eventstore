@@ -1,7 +1,7 @@
 module PgEventstore
   module Chunks
     class SubscriptionEventsIndexChunk
-      class RawEventWithCommitPosition
+      class RawEventWithSubscriptionPosition
         include Extensions::OptionsExtension
         include Extensions::OptionsDefaults
 
@@ -9,13 +9,12 @@ module PgEventstore
         attr_accessor subscription_position: Integer
       end
 
-      include Chunk[EventGlobalIndex::SubscriptionRepr, RawEventWithCommitPosition]
+      include Chunk[EventGlobalIndex::SubscriptionRepr, RawEventWithSubscriptionPosition]
 
       MAX_PARTITIONS_TO_RESOLVE_PER_CALL: Integer
 
       @connection: Connection
-      @raw_events: Array[RawEventWithCommitPosition]
-      @idx_direction: Symbol
+      @raw_events: Array[RawEventWithSubscriptionPosition]
       @indexes: Array[EventGlobalIndex::SubscriptionRepr]
       @query_strategy: QueryStrategy
       @resolve_link_tos: bool
@@ -26,16 +25,13 @@ module PgEventstore
 
       private
 
-      def detect_direction: (EventGlobalIndex::SubscriptionRepr? idx1,
-          EventGlobalIndex::SubscriptionRepr? idx2) -> Symbol
-
       def events_global_index_queries: -> EventsGlobalIndexQueries
 
       def resolve_indexes: -> void
 
       def resolved?: -> bool
 
-      def sort: (Array[RawEventWithCommitPosition] raw_events) -> Array[RawEventWithCommitPosition]
+      def sort: (Array[RawEventWithSubscriptionPosition] raw_events) -> Array[RawEventWithSubscriptionPosition]
     end
   end
 end

@@ -6,7 +6,7 @@ module PgEventstore
     class SubscriptionEventsIndexChunk
       include Chunk
 
-      class RawEventWithCommitPosition
+      class RawEventWithSubscriptionPosition
         include Extensions::OptionsExtension
         include Extensions::OptionsDefaults
 
@@ -30,12 +30,11 @@ module PgEventstore
         @connection = connection
         @query_strategy = query_strategy
         @resolve_link_tos = resolve_link_tos
-        @idx_direction = detect_direction(indexes[0], indexes[1])
         @raw_events = []
         @resolved = indexes.empty?
       end
 
-      # @return [Array<RawEventWithCommitPosition>] raw events array
+      # @return [Array<RawEventWithSubscriptionPosition>] raw events array
       def take(size)
         resolve_indexes unless resolved?
         @raw_events.slice!(0...size)
@@ -58,15 +57,6 @@ module PgEventstore
 
       private
 
-      # @param idx1 [PgEventstore::EventGlobalIndex::SubscriptionRepr, nil]
-      # @param idx2 [PgEventstore::EventGlobalIndex::SubscriptionRepr, nil]
-      # @return [Symbol]
-      def detect_direction(idx1, idx2)
-        return :asc if idx1.nil? || idx2.nil?
-
-        idx1.subscription_position > idx2.subscription_position ? :desc : :asc
-      end
-
       # @return [Boolean]
       def resolved?
         @resolved
@@ -84,12 +74,12 @@ module PgEventstore
         )
         raw_events = raw_events.map do |attrs|
           global_position = attrs['link'] ? attrs['link']['global_position'] : attrs['global_position']
-          RawEventWithCommitPosition.new(
+          RawEventWithSubscriptionPosition.new(
             attributes: attrs,
             subscription_position: global_to_sub_position_map[global_position]
           )
         end
-        raw_events = sort(raw_events)
+        raw_events = raw_events.sort_by(&:subscription_position)
         @raw_events.push(*raw_events)
         @resolved = @indexes.empty?
       rescue => exception
@@ -98,16 +88,6 @@ module PgEventstore
         raise Utils.wrap_exception(
           exception, global_positions: indexes_to_resolve.map(&:global_position)
         )
-      end
-
-      # @param raw_events [Array<RawEventWithCommitPosition>]
-      # @return [Array<RawEventWithCommitPosition>]
-      def sort(raw_events)
-        if @idx_direction == :asc
-          raw_events.sort_by(&:subscription_position)
-        else
-          raw_events.sort { |e1, e2| e2.subscription_position <=> e1.subscription_position }
-        end
       end
 
       # @return [PgEventstore::EventsGlobalIndexQueries]

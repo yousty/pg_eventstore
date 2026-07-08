@@ -107,7 +107,7 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Multiple do
         expect { subject }.to change { chunk.size }.to(0)
       end
       it 'clears @last_unprocessed_events' do
-        unprocessed_event = PgEventstore::Chunks::SubscriptionEventsIndexChunk::RawEventWithCommitPosition.new(
+        unprocessed_event = PgEventstore::Chunks::SubscriptionEventsIndexChunk::RawEventWithSubscriptionPosition.new(
           attributes: {}, subscription_position: 1
         )
         instance.instance_variable_set(:@last_unprocessed_events, [unprocessed_event])
