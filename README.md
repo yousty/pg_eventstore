@@ -12,7 +12,13 @@ Implements database and API to store and read events in event sourced systems.
 
 ### Migrating to v3
 
-If you are running v1 - please migrate to v2 and only then - to v3.
+If you are migrating from v2 - please don't forget to delete cron jobs and `pg_cron` extension after migration to v3.
+You can remove cron jobs as follows:
+
+```sql
+SELECT cron.unschedule('prune_eventstore_events_horizon');
+SELECT cron.unschedule('delete-job-run-details');
+```
 
 ## Installation
 
