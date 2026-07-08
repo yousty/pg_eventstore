@@ -165,56 +165,93 @@ We end up having three events in our event store. By looking at those events it 
 what was the cause of each of them? The answer to this question is critical in understanding actions and their
 consequences in Event Sourced applications.
 
-How markers can be helpful here? For example, we can use `Event#id` as a marker to build a chain of related events
-across application layers:
+How markers can be helpful here? We can define correlation id and causation id. Correlation id will be shared among all
+connected events and causation id will be pointing to the parent event. This way we connect events between each other
+and describe dependencies between them. Example:
 
 ```ruby
 require 'securerandom'
 
-OBSERVABILITY_PREFIX = 'O:'
-OBSERVABILITY_PARENT_PREFIX = 'Op:'
+class BasicEvent < PgEventstore::Event
+  CORRELATION_PREFIX = 'Co:'
+  CAUSATION_PREFIX = 'Ca:'
+
+  attribute(:parent_event)
+
+  def initialize(...)
+    super
+    @id ||= SecureRandom.uuid_v7
+  end
+  
+  def correlation_id
+    @correlation_id ||= markers.find { _1.start_with?(CORRELATION_PREFIX) }&.sub(CORRELATION_PREFIX, '')
+  end
+
+  def causation_id
+    @causation_id ||= markers.find { _1.start_with?(CAUSATION_PREFIX) }&.sub(CAUSATION_PREFIX, '')
+  end
+
+  def correlation_id=(val)
+    markers.delete("#{CORRELATION_PREFIX}#{correlation_id}") if correlation_id
+    markers.push("#{CORRELATION_PREFIX}#{val}")
+  end
+
+  def causation_id=(val)
+    markers.delete("#{CAUSATION_PREFIX}#{causation_id}") if causation_id
+    markers.push("#{CAUSATION_PREFIX}#{val}")
+  end
+end
+
+class EventCorrelation
+  include PgEventstore::Middleware
+  
+  def serialize(event)
+    event.correlation_id = event.parent_event&.correlation_id || SecureRandom.uuid_v7
+    event.causation_id = event.parent_event.id if event.parent_event
+  end
+end
+
+class EventResolver
+  def call(event_type)
+    Object.const_get(event_type)
+  rescue NameError, TypeError
+    BasicEvent
+  end
+end
+
+PgEventstore.configure do |config|
+  config.middlewares = { event_correlation: EventCorrelation.new } 
+  config.event_class_resolver = EventResolver.new
+end
 
 # Layer 1
-stream = PgEventstore::Stream.new(context: 'User', stream_name: 'RegistrationRequest', stream_id: '1')
-id = SecureRandom.uuid_v7
-registration_request = PgEventstore::Event.new(
-  type: 'UserRegistrationRequested', id:, markers: ["#{OBSERVABILITY_PREFIX}#{id}"]
-)
+stream = PgEventstore::Stream.new(context: 'User', stream_name: 'RegistrationRequest', stream_id: '13')
+registration_request = BasicEvent.new(type: 'UserRegistrationRequested')
 PgEventstore.client.append_to_stream(stream, registration_request)
 
 # Layer 2
-registration_request_id = PgEventstore.client.read(
-  PgEventstore::Stream.new(context: 'User', stream_name: 'RegistrationRequest', stream_id: '1'),
+registration_request = PgEventstore.client.read(
+  PgEventstore::Stream.new(context: 'User', stream_name: 'RegistrationRequest', stream_id: '12'),
   options: { filter: { event_types: ['UserRegistrationRequested'] }, direction: :desc, max_count: 1 }
-).first.id
+).first
 
-id = SecureRandom.uuid_v7
-stream = PgEventstore::Stream.new(context: 'User', stream_name: 'RegistrationApproval', stream_id: '1')
-creation_approved = PgEventstore::Event.new(
-  id:,
-  type: 'UserCreationApproved',
-  markers: ["#{OBSERVABILITY_PREFIX}#{id}", "#{OBSERVABILITY_PARENT_PREFIX}#{registration_request_id}"]
-)
+stream = PgEventstore::Stream.new(context: 'User', stream_name: 'RegistrationApproval', stream_id: '13')
+creation_approved = BasicEvent.new(type: 'UserCreationApproved', parent_event: registration_request)
 PgEventstore.client.append_to_stream(stream, creation_approved)
 
 # Layer 3
-creation_approved_id = PgEventstore.client.read(
-  PgEventstore::Stream.new(context: 'User', stream_name: 'RegistrationApproval', stream_id: '1'),
+creation_approved = PgEventstore.client.read(
+  PgEventstore::Stream.new(context: 'User', stream_name: 'RegistrationApproval', stream_id: '13'),
   options: { filter: { event_types: ['UserCreationApproved'] }, direction: :desc, max_count: 1 }
-).first.id
-id = SecureRandom.uuid_v7
+).first
 stream = PgEventstore::Stream.new(context: 'User', stream_name: 'User', stream_id: '1')
-user_created = PgEventstore::Event.new(
-  id:,
-  type: 'UserCreated',
-  markers: ["#{OBSERVABILITY_PREFIX}#{id}", "#{OBSERVABILITY_PARENT_PREFIX}#{creation_approved_id}"]
-)
+user_created = BasicEvent.new(type: 'UserCreated', parent_event: creation_approved)
 PgEventstore.client.append_to_stream(stream, user_created)
 ```
 
-Now you can go to admin web UI and navigate through markers of each event to inspect dependencies. You can also build a
-dependency graph and visualize it somehow, but the implementation of such functional is out of scope of this
-documentation.
+Now you can go to admin web UI and navigate through correlation id marker to read all connected events and see the
+cause of each event based on its causation id. You can also build a dependency graph and visualize it somehow, but the
+implementation of such functional is out of scope of this documentation.
 
 ## What to do when a WrongExpectedRevisionError or WrongExpectedTypesRevisionError error is risen?
 

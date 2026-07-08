@@ -7,46 +7,7 @@ Unicode character) character are now reserved by pg_eventstore. It is less likel
 to adjust your implementation to no longer rely on it.
 - New feature: event markers. You can now mark an event and later use those markers to read events, build a projection
 using subscriptions or validate stream revision scoped to an event type and specific markers when publishing events as 
-a part of Dynamic Consistency Boundaries. Examples of usage:
-
-```ruby
-stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
-event = PgEventstore::Event.new(type: 'Foo', markers: ['baz', 'bar'])
-# Next command succeeds if there is no 'Foo' event yet with 'baz' marker and no event with 'foo' marker
-PgEventstore.client.append_to_stream(
-  stream,
-  event,
-  options: {
-    expected_revision: {
-      'Foo' => { expected_revision: :no_event, markers: ['baz'] },
-      any: { expected_revision: :no_event, markers: ['foo'] }
-    }
-  },
-)
-# Read 'Foo' events from the given stream that are marked as either 'bar' or 'baz'
-PgEventstore.client.read(stream, options: { filter: { event_types: [{ type: 'Foo', markers: ['bar', 'baz'] }] } })
-
-# One of the use cases of markers can be observability. You can connect multiple events between each other that describe 
-# a single action and lookup them by the single marker
-causation_id = 'caused_by:create-user-1'
-user_stream = PgEventstore::Stream.new(context: 'User', stream_name: 'User', stream_id: '1')
-identity_stream = PgEventstore::Stream.new(context: 'Identity', stream_name: 'User', stream_id: '1')
-# We put causation_id into a metadata to be able to explicitly grab it from there if needed, but this is not necessary -
-# you can retrieve it from a deterministic function for example instead metadata
-change_email = PgEventstore::Event.new(
-  type: 'ChangeEmail', data: { email: 'foo@example.local' }, metadata: { causation_id: }, markers: [causation_id]
-)
-change_name = PgEventstore::Event.new(
-  type: 'ChangeName', data: { name: 'Foo Bar' }, metadata: { causation_id: }, markers: [causation_id]
-)
-PgEventstore.client.append_to_stream(user_stream, change_email)
-PgEventstore.client.append_to_stream(identity_stream, change_name)
-
-# causation_id can be retrieved from any of those events and used to lookup connected events.
-PgEventstore.client.read(
-  PgEventstore::Stream.all_stream, options: { filter: { event_types: [{ markers: [causation_id] }] } }
-)
-```
+a part of Dynamic Consistency Boundaries. Find more in [docs](docs/appending_events.md#event-markers)
 - New config option `config.events_subscription_position_update_interval`. See more
   in [Configuration](docs/configuration.md) docs
 - **Breaking change**: `:from_position` option of `SubscriptionManager#subscribe`, "Current position" column in admin
