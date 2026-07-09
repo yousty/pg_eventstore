@@ -21,40 +21,31 @@ module PgEventstore
 
         # @return [Array<PgEventstore::Event>]
         def collection
-          @collection ||= PgEventstore.client(config_name).read(
-            PgEventstore::Stream.all_stream,
-            options: options.merge(from_position: starting_id, max_count: per_page, direction: order)
-          )
+          _collection[0...per_page]
         end
 
         # @return [Integer, nil]
         def next_page_starting_id
           return unless collection.size == per_page
 
-          from_position = event_global_position(collection.first)
-          filters_collection = QueryBuilders::Filters::Collection.from_options(options)
-          cursor = QueryBuilders::ReadCursor::StreamCursor.from_options(from_position:, max_count: 1, direction: order)
-          sql_builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_read_common(
-            filters_collection.collection,
-            cursor
-          ).unselect.select('global_position').offset(per_page)
-          global_position(sql_builder)
+          _collection[per_page]&.global_position
         end
 
         # @return [Integer, nil]
         def prev_page_starting_id
-          from_position = event_global_position(collection.first) || starting_id
-          filters_collection = QueryBuilders::Filters::Collection.from_options(options)
-          cursor = QueryBuilders::ReadCursor::StreamCursor.from_options(
-            from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc
-          )
-          sql_builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_read_common(
-            filters_collection.collection,
-            cursor
-          ).unselect.select('global_position').offset(1)
-          sql_builder =
-            SQLBuilder.new.select('global_position').from(sql_builder).order("global_position #{order}").limit(1)
-          global_position(sql_builder)
+          starting_position = _collection.first&.global_position || starting_id
+          return unless starting_position
+
+          order = self.order == :asc ? :desc : :asc
+          starting_position = self.order == :asc ? starting_position - 1 : starting_position + 1
+
+          # Not ideal from the perspective of the amount of records we load here, but this is the only way to read from
+          # the db in the correct way. Direct usage of query builders may result in heavy, unoptimized queries.
+          PgEventstore.client(config_name).read(
+            PgEventstore::Stream.all_stream,
+            options: options.merge(from_position: starting_position, max_count: per_page, direction: order),
+            middlewares: []
+          ).last&.global_position
         end
 
         # @return [Integer]
@@ -76,6 +67,13 @@ module PgEventstore
         end
 
         private
+
+        def _collection
+          @_collection ||= PgEventstore.client(config_name).read(
+            PgEventstore::Stream.all_stream,
+            options: options.merge(from_position: starting_id, max_count: per_page + 1, direction: order)
+          )
+        end
 
         # @param event [PgEventstore::Event, nil]
         # @return [Integer, nil]

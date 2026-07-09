@@ -123,23 +123,23 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
     subject { instance.next_page_starting_id }
 
     let!(:event1) do
-      event = PgEventstore::Event.new(type: 'Foo')
+      event = PgEventstore::Event.new(type: 'Foo', markers: ['bar', 'baz'])
       PgEventstore.client.append_to_stream(stream1, event)
     end
     let!(:event2) do
-      event = PgEventstore::Event.new(type: 'Bar')
+      event = PgEventstore::Event.new(type: 'Bar', markers: ['foo'])
       PgEventstore.client.append_to_stream(stream1, event)
     end
     let!(:event3) do
-      event = PgEventstore::Event.new(type: 'Foo')
+      event = PgEventstore::Event.new(type: 'Foo', markers: ['foo', 'bar'])
       PgEventstore.client.append_to_stream(stream2, event)
     end
     let!(:event4) do
-      event = PgEventstore::Event.new(type: 'Bar')
+      event = PgEventstore::Event.new(type: 'Bar', markers: ['foo', 'baz'])
       PgEventstore.client.append_to_stream(stream3, event)
     end
     let!(:event5) do
-      event = PgEventstore::Event.new(type: 'Baz')
+      event = PgEventstore::Event.new(type: 'Baz', markers: ['bar', 'baz'])
       PgEventstore.client.append_to_stream(stream3, event)
     end
 
@@ -218,6 +218,14 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
       let(:starting_id) { event4.global_position }
 
       it { is_expected.to eq(nil) }
+    end
+
+    context 'when filtering by markers' do
+      let(:options) { { filter: { event_types: [{ markers: ['bar', 'baz'] }] } } }
+
+      it 'returns next page id based on the markers filter' do
+        is_expected.to eq(event4.global_position)
+      end
     end
   end
 

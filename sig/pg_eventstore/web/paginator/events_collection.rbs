@@ -6,6 +6,8 @@ module PgEventstore
         PER_PAGE: ::Hash[String, Integer]
         MAX_NUMBER_TO_COUNT: Integer
 
+        @_collection: Array[Event]
+
         def collection: () -> ::Array[Event]
 
         def next_page_starting_id: () -> Integer?
@@ -21,6 +23,10 @@ module PgEventstore
         def regular_count: (SQLBuilder sql_builder) -> Integer
 
         def global_position: (SQLBuilder sql_builder) -> Integer?
+
+        private
+
+        def _collection: -> Array[Event]
       end
     end
   end
