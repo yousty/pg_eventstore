@@ -58,6 +58,7 @@ module PgEventstore
                            and global_position in (#{positions});
               delete from event_subscription_positions where global_position in (#{positions});
               delete from event_subscription_positions_unprocessed where global_position in (#{positions});
+              delete from event_markers_index where global_position in (#{positions});
             SQL
           end
           connection.with do |conn|
@@ -101,7 +102,8 @@ module PgEventstore
           conn.exec_params(<<~SQL, delete_args)
             with _1 as (delete from events where context = $1 and stream_name = $2 and type = $3 and global_position = $4),
              _2 as (delete from event_subscription_positions where global_position = $4),
-             _3 as (delete from event_subscription_positions_unprocessed where global_position = $4)
+             _3 as (delete from event_subscription_positions_unprocessed where global_position = $4),
+             _4 as (delete from event_markers_index where global_position = $4)
              select 1;
           SQL
         end
@@ -109,6 +111,15 @@ module PgEventstore
         stream_revision = deleted_event['stream_revision']
         loop do
           updated_events = connection.with do |conn|
+            conn.exec_params(<<~SQL, [stream_global_idx.id, stream_revision, EVENT_INDEXES_TO_UPDATE_PER_QUERY]).to_a
+              update event_markers_index set stream_revision = stream_revision - 1
+                     where global_position in (
+                         select global_position from events_global_index
+                                  where streams_global_index_id = $1 and stream_revision > $2
+                                  order by stream_revision asc
+                                  limit $3
+                     )
+            SQL
             conn.exec_params(<<~SQL, [stream_global_idx.id, stream_revision, EVENT_INDEXES_TO_UPDATE_PER_QUERY]).to_a
               update events_global_index set stream_revision = stream_revision - 1
                      where global_position in (

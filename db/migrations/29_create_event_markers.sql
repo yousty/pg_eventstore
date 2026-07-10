@@ -30,3 +30,8 @@ CREATE INDEX idx_event_markers_index_on_marker_N_pos ON public.event_markers_ind
 
 CREATE INDEX idx_event_markers_index_on_marker_N_partition_N_pos ON public.event_markers_index
     USING btree (marker_id, event_type_partition_id, global_position);
+
+CREATE INDEX idx_event_markers_index_on_pos ON public.event_markers_index
+    USING btree (global_position);
+
+COMMENT ON INDEX idx_event_markers_index_on_pos IS 'Maintenance index';

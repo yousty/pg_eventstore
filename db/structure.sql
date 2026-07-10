@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 4yImth9ibXC4nSFSwPK62G3s0HrY5rlmiqE4lGVCsLlLPgo492SAOZWZ7RhEzWZ
+\restrict vUB5fl54d2AK7LMIuu4aLNrmUoW7oJagB6lcT6eqnAda42OfEwONuSkosPf5FVN
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -575,6 +575,20 @@ CREATE UNIQUE INDEX idx_event_markers_index_on_marker_n_stream_n_rev ON public.e
 
 
 --
+-- Name: idx_event_markers_index_on_pos; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_index_on_pos ON public.event_markers_index USING btree (global_position);
+
+
+--
+-- Name: INDEX idx_event_markers_index_on_pos; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.idx_event_markers_index_on_pos IS 'Maintenance index';
+
+
+--
 -- Name: idx_event_markers_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -852,5 +866,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 4yImth9ibXC4nSFSwPK62G3s0HrY5rlmiqE4lGVCsLlLPgo492SAOZWZ7RhEzWZ
+\unrestrict vUB5fl54d2AK7LMIuu4aLNrmUoW7oJagB6lcT6eqnAda42OfEwONuSkosPf5FVN
 

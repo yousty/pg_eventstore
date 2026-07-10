@@ -35,10 +35,11 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
 
     context 'when event exists' do
       let(:event) do
-        event = PgEventstore::Event.new(data: { foo: :bar })
+        event = PgEventstore::Event.new(data: { foo: :bar }, markers: ['foo'], feature_markers: [feature_marker])
         PgEventstore.client.append_to_stream(stream, event)
       end
       let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+      let(:feature_marker) { PgEventstore::FeatureMarker.new(marker: 'bar') }
 
       context 'when there is only one event in the stream' do
         let(:another_event) do
@@ -52,33 +53,11 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
           another_event
         end
 
-        it 'deletes StreamsGlobalIndex' do
+        it 'deletes the whole stream' do
           expect { subject }.to change { streams_global_idx_queries.find_by(stream) }.to(nil)
         end
-        it 'deletes events global index of the given stream' do
-          expect { subject }.to change {
-            query_strategy.exec_params(
-              'select global_position from events_global_index where global_position = $1',
-              [event.global_position]
-            ).to_a.first&.[]('global_position')
-          }.to(nil)
-        end
-        it 'does not delete events of another stream' do
-          expect { subject }.not_to change { safe_read(another_stream) }
-        end
-        it 'does not delete events global index of another stream' do
-          expect { subject }.not_to change {
-            query_strategy.exec_params(
-              'select global_position from events_global_index where global_position = $1',
-              [another_event.global_position]
-            ).map { _1['global_position'] }
-          }.from([another_event.global_position])
-        end
-        it 'does not delete StreamGlobalIndex of another stream' do
+        it 'does not delete another stream' do
           expect { subject }.not_to change { streams_global_idx_queries.find_by(another_stream) }
-        end
-        it 'deletes the given event' do
-          expect { subject }.to change { safe_read(stream) }.to([])
         end
         it { is_expected.to eq(true) }
       end
@@ -86,7 +65,7 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
       context 'when there are multiple events in the stream' do
         shared_examples 'event gets deleted' do
           let!(:another_event) do
-            event = PgEventstore::Event.new(data: { foo: :bar })
+            event = PgEventstore::Event.new(data: { foo: :bar }, markers: ['foo'], feature_markers: [feature_marker])
             PgEventstore.client.append_to_stream(another_stream, event)
           end
           let(:another_stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '2') }
@@ -102,27 +81,23 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
           end
           it 'deletes the record from "events" table' do
             expect { subject }.to change {
-              query_strategy.exec_params(
-                'select global_position from events where global_position = $1',
-                [event.global_position]
-              ).to_a.first&.[]('global_position')
-            }.to(nil)
+              query_strategy.exec('select global_position from events').to_a
+            }.to(array_excluding(event.global_position))
           end
           it 'deletes the record from "event_subscription_positions_unprocessed" table' do
             expect { subject }.to change {
-              query_strategy.exec_params(
-                'select global_position from event_subscription_positions_unprocessed where global_position = $1',
-                [event.global_position]
-              ).to_a.first&.[]('global_position')
-            }.to(nil)
+              query_strategy.exec('select global_position from event_subscription_positions_unprocessed').to_a
+            }.to(array_excluding(event.global_position))
           end
           it 'deletes the record from "event_subscription_positions" table' do
             expect { subject }.to change {
-              query_strategy.exec_params(
-                'select global_position from event_subscription_positions where global_position = $1',
-                [event.global_position]
-              ).to_a.first&.[]('global_position')
-            }.to(nil)
+              query_strategy.exec('select global_position from event_subscription_positions').to_a
+            }.to(array_excluding(event.global_position))
+          end
+          it 'deletes the record from "event_markers_index" table' do
+            expect { subject }.to change {
+              query_strategy.exec('select global_position from event_markers_index').to_a
+            }.to(array_excluding(event.global_position))
           end
           it 'adjusts stream revisions of the rest of events' do
             expect { subject }.to change { safe_read(stream).map(&:stream_revision) }.to((0...rest_events.size).to_a)
@@ -135,6 +110,18 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
                 [stream_idx.id]
               ).sort_by { _1['stream_revision'] }.map { _1['stream_revision'] }
             }.to((0...rest_events.size).to_a)
+          end
+          it 'adjusts stream revisions of events markers index' do
+            stream_idx = streams_global_idx_queries.find_by!(stream)
+            # We have two markers for per each event in this test. Thus, we have to duplicate revisions as we have two
+            # marker index records per event
+            revisions = (0...rest_events.size).map { [_1, _1] }.flatten
+            expect { subject }.to change {
+              query_strategy.exec_params(
+                'select stream_revision from event_markers_index where streams_global_index_id = $1',
+                [stream_idx.id]
+              ).sort_by { _1['stream_revision'] }.map { _1['stream_revision'] }
+            }.to(revisions)
           end
           it 'adjusts stream revision of StreamGlobalIndex' do
             expect { subject }.to change {
@@ -157,10 +144,22 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
               ).sort_by { _1['stream_revision'] }.map { _1['stream_revision'] }
             }
           end
+          it 'does not update stream revisions of event markers index of another stream' do
+            stream_idx = streams_global_idx_queries.find_by!(another_stream)
+            expect { subject }.not_to change {
+              query_strategy.exec_params(
+                'select stream_revision from event_markers_index where streams_global_index_id = $1',
+                [stream_idx.id]
+              ).sort_by { _1['stream_revision'] }.map { _1['stream_revision'] }
+            }
+          end
         end
 
         context 'when deleting 0-revision event' do
-          let(:another_events) { PgEventstore.client.append_to_stream(stream, 3.times.map { PgEventstore::Event.new }) }
+          let(:another_events) do
+            events = Array.new(3) { PgEventstore::Event.new(markers: ['foo'], feature_markers: [feature_marker]) }
+            PgEventstore.client.append_to_stream(stream, events)
+          end
 
           before do
             event
@@ -175,7 +174,10 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
         end
 
         context 'when there are less than MAX_RECORDS_TO_LOCK events after the given event in the stream' do
-          let(:another_events) { PgEventstore.client.append_to_stream(stream, 3.times.map { PgEventstore::Event.new }) }
+          let(:another_events) do
+            events = Array.new(3) { PgEventstore::Event.new(markers: ['foo'], feature_markers: [feature_marker]) }
+            PgEventstore.client.append_to_stream(stream, events)
+          end
 
           before do
             event
@@ -188,7 +190,10 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
         end
 
         context 'when there are more than MAX_RECORDS_TO_LOCK events after the given event in the stream' do
-          let(:another_events) { PgEventstore.client.append_to_stream(stream, 2.times.map { PgEventstore::Event.new }) }
+          let(:another_events) do
+            events = Array.new(2) { PgEventstore::Event.new(markers: ['foo'], feature_markers: [feature_marker]) }
+            PgEventstore.client.append_to_stream(stream, events)
+          end
 
           before do
             stub_const("#{described_class}::MAX_RECORDS_TO_LOCK", 0)
@@ -226,8 +231,14 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
         end
 
         context 'when the given event is in the middle of the stream' do
-          let(:another_events1) { PgEventstore.client.append_to_stream(stream, 2.times.map { PgEventstore::Event.new }) }
-          let(:another_events2) { PgEventstore.client.append_to_stream(stream, 3.times.map { PgEventstore::Event.new }) }
+          let(:another_events1) do
+            events = Array.new(2) { PgEventstore::Event.new(markers: ['foo'], feature_markers: [feature_marker]) }
+            PgEventstore.client.append_to_stream(stream, events)
+          end
+          let(:another_events2) do
+            events = Array.new(3) { PgEventstore::Event.new(markers: ['foo'], feature_markers: [feature_marker]) }
+            PgEventstore.client.append_to_stream(stream, events)
+          end
 
           before do
             another_events1
@@ -241,7 +252,10 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
         end
 
         context 'when the given event is in the end of the stream' do
-          let(:another_events) { PgEventstore.client.append_to_stream(stream, 3.times.map { PgEventstore::Event.new }) }
+          let(:another_events) do
+            events = Array.new(3) { PgEventstore::Event.new(markers: ['foo'], feature_markers: [feature_marker]) }
+            PgEventstore.client.append_to_stream(stream, events)
+          end
 
           before do
             another_events
