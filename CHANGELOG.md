@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- **Breaking change**: drop support of Ruby v3.2. The gem now requires Ruby v3.3+
 - New feature: event tracing. You can now configure pg_eventstore to trace causation dependencies of events.
   Read more [here](docs/event_tracing.md)
 - **Breaking change**: when event is persisted using `#append_to_stream` - it now gets deserialized via each registered

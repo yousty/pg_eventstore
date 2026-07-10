@@ -8,7 +8,7 @@ Implements database and API to store and read events in event sourced systems.
 - `pg_evenstore` requires a separate database. However, it is recommended that you spin it up on a separate PostgreSQL instance in a production environment.
 - `pg_eventstore` requires `default_transaction_isolation` server config option to be set to `'read committed'` (default behavior). Having this value set to move strict isolation level may result in unexpected behavior.
 - It is recommended to use a connection pooler (for example [PgBouncer](https://www.pgbouncer.org/)) in `transaction` pool mode to lower the load on a database.
-- `pg_eventstore` requires ruby v3.2+. The development of this gem is targeted at [current](https://endoflife.date/ruby) ruby versions.
+- `pg_eventstore` requires ruby v3.3+. The development of this gem is targeted at [current](https://endoflife.date/ruby) ruby versions.
 
 ### Migrating to v3
 
