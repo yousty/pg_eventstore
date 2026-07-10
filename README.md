@@ -58,6 +58,7 @@ Documentation chapters:
 - [Linking events](docs/linking_events.md)
 - [Reading events](docs/reading_events.md)
 - [Reading streams](docs/reading_streams.md)
+- [Tracing events](docs/event_tracing.md)
 - [Subscriptions](docs/subscriptions.md)
 - [Maintenance functions](docs/maintenance.md)
 - [Writing middlewares](docs/writing_middleware.md)

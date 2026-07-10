@@ -62,7 +62,7 @@ RSpec.describe PgEventstore::EventQueries do
 
       it 'creates link event' do
         aggregate_failures do
-          expect(subject['id']).to match(EventHelpers::UUID_REGEXP)
+          expect(subject['id']).to be_a(String)
           expect(subject['type']).to eq(PgEventstore::Event::LINK_TYPE)
           expect(subject['stream_revision']).to eq(123)
           expect(subject['link_global_position']).to eq(existing_event.global_position)

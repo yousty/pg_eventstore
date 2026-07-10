@@ -7,7 +7,7 @@ module PgEventstore
         Stream stream,
         (Event | ::Array[Event]) events_or_event,
         ?options: ::Hash[untyped, untyped],
-        ?middlewares: ::Array[untyped]?
+        ?middlewares: ::Array[Symbol]?
       ) -> (Event | ::Array[Event])
 
     def multiple: (?read_only: bool) { () -> untyped } -> untyped

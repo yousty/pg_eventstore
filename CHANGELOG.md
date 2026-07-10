@@ -1,7 +1,73 @@
 ## [Unreleased]
 
+- New feature: event tracing. You can now configure pg_eventstore to trace causation dependencies of events.
+  Read more [here](docs/event_tracing.md)
+- **Breaking change**: when event is persisted using `#append_to_stream` - it now gets deserialized via each registered
+  middleware by default. Previously this wasn't the case - the deserialization phase was skipped. Such behavior was
+  creating ambiguity about assumptions when deserialization happens. If you need old behavior - you have to create
+  another middleware class which skips deserialization when publishing events and use it instead. Example:
+Let's say you have this middleware configured
+```ruby
+class MyMiddleware
+  include PgEventstore::Middleware
+
+  def serialize(event)
+    # do something with event before persisting it
+  end
+
+  def deserialize(event)
+    # do something with event after reading it from db
+  end
+end
+
+PgEventstore.configure do |config|
+  config.middleware = { my_middleware: MyMiddleware.new }
+end
+```
+
+Now define another middleware that has empty `#deserialize` method
+
+```ruby
+class MyMiddlewareWithoutDeserialize < MyMiddleware
+  def deserialize(event)
+  end
+end
+
+PgEventstore.configure do |config|
+  config.middleware = {
+    my_middleware: MyMiddleware.new,
+    my_middleware_wo_deserialize: MyMiddlewareWithoutDeserialize.new
+  }
+end
+```
+and use only it when publishing events:
+
+```ruby
+PgEventstore.client.append_to_stream(stream, event, middlewares: [:my_middleware_wo_deserialize])
+```
+
+Alternatively, if you don't rely on `#multiple`, you can create another config specially for write operations:
+
+```ruby
+# this is your default
+PgEventstore.configure do |config|
+  config.middleware = { my_middleware: MyMiddleware.new }
+end
+
+PgEventstore.configure(name: :write) do |config|
+  config.middleware = { my_middleware: MyMiddlewareWithoutDeserialize.new }
+end
+```
+
+and use it for write operations:
+
+```ruby
+PgEventstore.client(:write).append_to_stream(stream, event)
+```
+
 - **Breaking change**: `Event#id` uniqueness is no longer guaranteed. It was dropped because there is not much usage of
-  it internally. The attribute and the default value(which is `gen_random_uuid()`) is still there.
+  it internally. The default value was moved from the database(it was `gen_random_uuid()`) to the application level and
+  is `SecureRandom.uuid_v7` now.
 - **Breaking change**: event types, stream attributes, event metadata keys, markers that start from `▒`(`"\u2592"` 
 Unicode character) character are now reserved by pg_eventstore. It is less likely you have any, but if you do - you have
 to adjust your implementation to no longer rely on it.

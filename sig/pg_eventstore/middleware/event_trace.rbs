@@ -1,0 +1,14 @@
+module PgEventstore
+  module Middleware
+    class EventTracing
+      include Middleware
+
+      CAUSATION_ID_KEY: String
+      CORRELATION_ID_KEY: String
+
+      def self.causation_marker: (String marker) -> FeatureMarker
+
+      def self.correlation_marker: (String marker) -> FeatureMarker
+    end
+  end
+end

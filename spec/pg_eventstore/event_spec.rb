@@ -78,8 +78,9 @@ RSpec.describe PgEventstore::Event do
 
   describe '#hash' do
     let(:hash) { {} }
-    let(:event1) { described_class.new(type: 'Foo') }
-    let(:event2) { described_class.new(type: 'Foo') }
+    let(:event1) { described_class.new(type: 'Foo', id:) }
+    let(:event2) { described_class.new(type: 'Foo', id:) }
+    let(:id) { SecureRandom.uuid_v7 }
 
     before do
       hash[event1] = :foo

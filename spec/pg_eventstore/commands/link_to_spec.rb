@@ -77,7 +77,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
 
           it 'has correct attributes' do
             aggregate_failures do
-              expect(subject.id).to be_a(String).and match(EventHelpers::UUID_REGEXP)
+              expect(subject.id).to be_a(String)
               expect(subject.global_position).to be_a(Integer)
               expect(subject.stream_revision).to eq(stream_revision)
               expect(subject.stream).to eq(projection_stream)
@@ -103,6 +103,7 @@ RSpec.describe PgEventstore::Commands::LinkTo do
 
               def serialize(event)
                 event.markers = %w[foo bar]
+                event.feature_markers = [PgEventstore::FeatureMarker.new(marker: 'baz')]
               end
             end
           end
@@ -112,7 +113,14 @@ RSpec.describe PgEventstore::Commands::LinkTo do
           end
 
           it 'persists markers' do
-            expect(created_link.markers).to eq(%w[foo bar])
+            filtered_by_feature_marker = PgEventstore.client.read(
+              PgEventstore::Stream.all_stream, options: { filter: { event_types: [{ markers: ['baz'] }] } }
+            ).last
+            aggregate_failures do
+              expect(created_link.markers).to eq(%w[foo bar])
+              expect(created_link.feature_markers.map(&:marker)).to eq([])
+              expect(filtered_by_feature_marker).to eq(created_link)
+            end
           end
         end
       end
@@ -247,8 +255,14 @@ RSpec.describe PgEventstore::Commands::LinkTo do
       context 'when middleware is present' do
         let(:middlewares) { [DummyMiddleware.new] }
 
-        it 'modifies the link using it' do
-          expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::ENCR_SECRET)
+        it 'deserializes event after it was persisted' do
+          expect(subject.first.metadata).to eq('dummy_secret' => DummyMiddleware::DECR_SECRET)
+        end
+        it 'serializes event correctly' do
+          from_db_without_middleware = PgEventstore.client.read(
+            PgEventstore::Stream.all_stream, options: { from_position: subject.first.global_position }
+          ).first
+          expect(from_db_without_middleware.metadata).to eq('dummy_secret' => DummyMiddleware::ENCR_SECRET)
         end
       end
 

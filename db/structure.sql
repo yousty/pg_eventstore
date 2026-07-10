@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 9GJQmtbPB5Q3AACIvJkljwsuhtRC8qarm9VkspCOjCecZxaEU5rIEKSAJ8LNiH6
+\restrict 4yImth9ibXC4nSFSwPK62G3s0HrY5rlmiqE4lGVCsLlLPgo492SAOZWZ7RhEzWZ
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -150,7 +150,7 @@ CREATE TABLE public.event_subscription_positions_unprocessed (
 --
 
 CREATE TABLE public.events (
-    id uuid DEFAULT public.gen_random_uuid() NOT NULL,
+    id uuid NOT NULL,
     context character varying NOT NULL COLLATE pg_catalog."POSIX",
     stream_name character varying NOT NULL COLLATE pg_catalog."POSIX",
     stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
@@ -852,5 +852,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 9GJQmtbPB5Q3AACIvJkljwsuhtRC8qarm9VkspCOjCecZxaEU5rIEKSAJ8LNiH6
+\unrestrict 4yImth9ibXC4nSFSwPK62G3s0HrY5rlmiqE4lGVCsLlLPgo492SAOZWZ7RhEzWZ
 

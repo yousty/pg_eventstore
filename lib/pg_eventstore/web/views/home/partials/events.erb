@@ -45,15 +45,31 @@
       <strong>Metadata:</strong>
       <pre><%= h JSON.pretty_generate(event.metadata) %></pre>
       <strong>Markers:</strong>
-      <% if event.markers.any? %>
+      <% if event.markers.any? || event.feature_markers.any? %>
         <br>
-        <i>Total markers: <%= event.markers.size %>. List is scrollable</i>
+        <i>Total markers: <%= event.markers.size + event.feature_markers.size %>. List is scrollable</i>
         <div style="max-height: 200px; overflow: scroll">
-          <ul>
-            <% event.markers.each do |marker| %>
-              <li> <a href="<%= event_marker_path(marker) %>"><%= empty_characters_fallback(h marker) %></a> </li>
-            <% end %>
-          </ul>
+          <% if event.feature_markers.any? %>
+            Feature markers
+            <ul>
+              <% event.feature_markers.each do |feature_marker| %>
+                <li>
+                  <%= "#{feature_marker.description}:" if feature_marker.description %>
+                  <a href="<%= event_marker_path(feature_marker.marker) %>">
+                    <%= empty_characters_fallback(h feature_marker.marker) %>
+                  </a>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+          <% if event.markers.any? %>
+            Event markers
+            <ul>
+              <% event.markers.each do |marker| %>
+                <li> <a href="<%= event_marker_path(marker) %>"><%= empty_characters_fallback(h marker) %></a> </li>
+              <% end %>
+            </ul>
+          <% end %>
         </div>
       <% else %>
         <i>No markers assigned</i>

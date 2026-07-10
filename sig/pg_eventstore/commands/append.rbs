@@ -11,6 +11,8 @@ module PgEventstore
 
       private
 
+      def feature_markers: (Event event) -> Array[String]
+
       def prepare_partitions: (Stream stream, ::Array[Event] events) -> Array[Partition]
     end
   end

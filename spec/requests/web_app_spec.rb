@@ -77,11 +77,11 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         PgEventstore.client.append_to_stream(stream1, events)
       end
       let!(:events2) do
-        events = [PgEventstore::Event.new(type: 'Baz')] * 3
+        events = Array.new(3) { PgEventstore::Event.new(type: 'Baz') }
         PgEventstore.client.append_to_stream(stream1, events)
       end
       let!(:events3) do
-        events = [PgEventstore::Event.new(type: 'Bar', markers: ['bar'])] * 6
+        events = Array.new(6) { PgEventstore::Event.new(type: 'Bar', markers: ['bar']) }
         PgEventstore.client.append_to_stream(stream2, events)
       end
       let(:events) { events1 + events2 + events3 }

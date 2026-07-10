@@ -74,14 +74,14 @@ RSpec.describe PgEventstore::Client do
           end
         end
         it 'applies all middlewares' do
-          expect(subject.metadata).to eq('foo' => 'secret-foo', 'bar' => 'secret-bar', 'baz' => 'secret-baz')
+          expect(subject.metadata).to eq('foo' => 'foo', 'bar' => 'bar', 'baz' => 'baz')
         end
 
         context 'when :middlewares argument is given' do
           subject { instance.append_to_stream(stream, events_or_event, middlewares: %i[bar]) }
 
           it 'applies only provided middlewares' do
-            expect(subject.metadata).to eq('bar' => 'secret-bar')
+            expect(subject.metadata).to eq('bar' => 'bar')
           end
         end
       end
@@ -448,7 +448,7 @@ RSpec.describe PgEventstore::Client do
         subject { instance.link_to(projection_stream, events_or_event, middlewares: %i[bar]) }
 
         it 'applies provided middlewares' do
-          expect(subject.metadata).to eq('bar' => 'secret-bar')
+          expect(subject.metadata).to eq('bar' => 'bar')
         end
       end
     end

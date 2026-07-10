@@ -16,8 +16,8 @@ module PgEventstore
     NON_EXISTING_EVENT_REVISION = -1
 
     # @!attribute id
-    #   @return [String] UUIDv4 string
-    attribute(:id)
+    #   @return [String] UUIDv7
+    attribute(:id) { SecureRandom.uuid_v7 }
     # @!attribute type
     #   @return [String] event type
     attribute(:type) { self.class.name }
@@ -34,8 +34,11 @@ module PgEventstore
     #   @return [Hash] event's data
     attribute(:data) { {} }
     # @!attribute markers
-    #   @return [Array<String>] a revision of an event inside event's stream
+    #   @return [Array<String>] event markers
     attribute(:markers) { [] }
+    # @!attribute feature_markers
+    #   @return [Array<FeatureMarker>] feature-specific markers that can't be put under #markers
+    attribute(:feature_markers) { [] }
     # @!attribute metadata
     #   @return [Hash] event's metadata
     attribute(:metadata) { {} }
@@ -54,6 +57,15 @@ module PgEventstore
     # @!attribute created_at
     #   @return [Time, nil] a timestamp an event was created at
     attribute(:created_at)
+    # @!attribute caused_by
+    #   @return [PgEventstore::Event, nil]
+    attribute(:caused_by)
+    # @!attribute correlation_id
+    #   @return [String, nil] UUIDv7
+    attribute(:correlation_id)
+    # @!attribute causation_id
+    #   @return [String, nil] UUIDv7
+    attribute(:causation_id)
 
     # Implements comparison of `PgEventstore::Event`-s. Two events matches if all of their attributes matches
     # @param other [Object, PgEventstore::Event]

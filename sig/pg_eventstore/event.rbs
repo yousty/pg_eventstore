@@ -41,6 +41,8 @@ module PgEventstore
 
     attr_accessor markers: ::Array[String]
 
+    attr_accessor feature_markers: ::Array[FeatureMarker]
+
     attr_accessor metadata: ::Hash[untyped, untyped]
 
     attr_accessor link_global_position: Integer?
@@ -50,5 +52,11 @@ module PgEventstore
     attr_accessor link: Event?
 
     attr_accessor created_at: Time?
+
+    attr_accessor caused_by: Event?
+
+    attr_accessor correlation_id: String?
+
+    attr_accessor causation_id: String?
   end
 end

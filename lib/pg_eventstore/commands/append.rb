@@ -20,7 +20,7 @@ module PgEventstore
         raise ArgumentError, 'No events to append.' if events.empty?
 
         events = events.map(&event_modifier.method(:call))
-        markers = events.flat_map(&:markers).uniq
+        markers = events.flat_map { _1.markers + feature_markers(_1) }.uniq
         revision_to_marker_ids_map = {}
         raw_events = queries.transactions.transaction(:repeatable_read) do
           partitions = prepare_partitions(stream, events)
@@ -37,6 +37,10 @@ module PgEventstore
             event.markers.each do |event_marker|
               revision_to_marker_ids_map[revision + index] ||= []
               revision_to_marker_ids_map[revision + index].push(markers_map[event_marker])
+            end
+            event.feature_markers.each do |feature_marker|
+              revision_to_marker_ids_map[revision + index] ||= []
+              revision_to_marker_ids_map[revision + index].push(markers_map[feature_marker.marker])
             end
           end
           revision += events.size
@@ -57,10 +61,16 @@ module PgEventstore
         end
         # It is important to return events in the form they were persisted into the database instead passing them
         # through the configured middlewares
-        deserializer.without_middlewares.deserialize_many(raw_events)
+        deserializer.deserialize_many(raw_events)
       end
 
       private
+
+      # @param event [PgEventstore::Event]
+      # @return [Array<String>]
+      def feature_markers(event)
+        event.feature_markers.map(&:marker)
+      end
 
       # @param stream [PgEventstore::Stream]
       # @param events [Array<PgEventstore::Event>]

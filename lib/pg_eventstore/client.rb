@@ -28,7 +28,7 @@ module PgEventstore
     # @option options [Hash<String, Hash>] :expected_revision <even type>-to-<markers> map. Allows to define expected
     #   stream revision at the given event type, scoped to the specific marker(s). Useful when implementing
     #   Dynamic Consistency Boundaries
-    # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
+    # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def append_to_stream(stream, events_or_event, options: {}, middlewares: nil)
@@ -137,7 +137,7 @@ module PgEventstore
     #     PgEventstore.client.read(
     #       PgEventstore::Stream.all_stream, options: { filter: { event_types: [{ markers: ['foo'] }] } }
     #     )
-    # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
+    # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
     # @return [Array<PgEventstore::Event>]
     # @raise [PgEventstore::StreamNotFoundError]
     def read(stream, options: {}, middlewares: nil)
@@ -155,7 +155,7 @@ module PgEventstore
     # @see {#read} for the detailed docs
     # @param stream [PgEventstore::Stream]
     # @param options [Hash] request options
-    # @param middlewares [Array, nil]
+    # @param middlewares [Array<Symbol>, nil]
     # @return [Enumerator] enumerator will yield Array<PgEventstore::Event>
     def read_paginated(stream, options: {}, middlewares: nil)
       cmd_class = stream.system? ? Commands::SystemStreamReadPaginated : Commands::RegularStreamReadPaginated
@@ -178,7 +178,7 @@ module PgEventstore
     # @see {#read} for the detailed docs
     # @param stream [PgEventstore::Stream]
     # @param options [Hash] request options
-    # @param middlewares [Array, nil]
+    # @param middlewares [Array<Symbol>, nil]
     # @return [Array<PgEventstore::Event>]
     def read_grouped(stream, options: {}, middlewares: nil)
       queries = Queries.new(
@@ -219,7 +219,7 @@ module PgEventstore
     # @param options [Hash]
     # @option options [Integer] :expected_revision provide your own revision number
     # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
-    # @param middlewares [Array] provide a list of middleware names to use. Defaults to empty array, meaning no
+    # @param middlewares [Array<Symbol>] provide a list of middleware names to use. Defaults to empty array, meaning no
     #   middlewares will be applied to the "link" event
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
@@ -253,7 +253,7 @@ module PgEventstore
 
     private
 
-    # @param middlewares [Array, nil]
+    # @param middlewares [Array<Symbol>, nil]
     # @return [Array<PgEventstore::Middleware>]
     def middlewares(middlewares = nil)
       return config.middlewares.values unless middlewares
