@@ -1356,9 +1356,9 @@ RSpec.describe PgEventstore::Commands::Append do
   end
 
   describe 'append command consistency' do
-    let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'some-event') }
-    let(:event2) { PgEventstore::Event.new(data: { foo: :baz }, type: 'some-event2') }
-    let(:event3) { PgEventstore::Event.new(data: { baz: :bar }, type: 'some-event3') }
+    let(:event1) { PgEventstore::Event.new(data: { foo: :bar }, type: 'some-event', markers: %w[foo bar]) }
+    let(:event2) { PgEventstore::Event.new(data: { foo: :baz }, type: 'some-event2', markers: %w[foo bar]) }
+    let(:event3) { PgEventstore::Event.new(data: { baz: :bar }, type: 'some-event3', markers: %w[foo bar]) }
     let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-stream', stream_id: '123') }
     let(:events_count_mapping) { { 'some-event' => 5, 'some-event2' => 3, 'some-event3' => 2 } }
     let(:iterations_number) { 5 }

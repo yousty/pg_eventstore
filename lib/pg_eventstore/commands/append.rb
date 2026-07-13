@@ -21,8 +21,8 @@ module PgEventstore
 
         events = events.map(&event_modifier.method(:call))
         markers = events.flat_map { _1.markers + feature_markers(_1) }.uniq
-        revision_to_marker_ids_map = {}
         raw_events = queries.transactions.transaction(:repeatable_read) do
+          revision_to_marker_ids_map = {}
           partitions = prepare_partitions(stream, events)
           stream_index = queries.streams_global_index.find_or_create_by(stream)
           markers_map = queries.event_markers.find_or_create_by(markers).to_h { [_1.name, _1.id] } if markers.any?
