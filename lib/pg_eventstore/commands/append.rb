@@ -24,8 +24,8 @@ module PgEventstore
         raw_events = queries.transactions.transaction(:repeatable_read) do
           revision_to_marker_ids_map = {}
           partitions = prepare_partitions(stream, events)
-          stream_index = queries.streams_global_index.find_or_create_by(stream)
           markers_map = queries.event_markers.find_or_create_by(markers).to_h { [_1.name, _1.id] } if markers.any?
+          stream_index = queries.streams_global_index.find_or_create_by(stream)
           revision = stream_index.stream_revision
           expected_revision = RevisionCheck::ExpectedRevision.build(options[:expected_revision])
           current_revision = RevisionCheck::CurrentRevision.build(

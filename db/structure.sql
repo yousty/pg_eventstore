@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict vUB5fl54d2AK7LMIuu4aLNrmUoW7oJagB6lcT6eqnAda42OfEwONuSkosPf5FVN
+\restrict csMH62Wm56I6pbBOHXsqvQQTyBLQm2GULAUFsApqtWH4HGxVBF1oWqxTOH98qYh
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -59,6 +59,102 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 --
 
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
+
+
+--
+-- Name: create_context_partition_table(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_context_partition_table() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    EXECUTE format(
+        'CREATE TABLE public.%I PARTITION OF public.events FOR VALUES IN (%L) PARTITION BY LIST (stream_name)',
+        NEW.table_name,
+        NEW.context
+    );
+
+    EXECUTE format(
+        'COMMENT ON TABLE public.%I IS %L',
+        NEW.table_name,
+        format('''%s'' context partition', NEW.context)
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: create_event_type_partition_table(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_event_type_partition_table() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    stream_name_partition_name public.partitions.table_name%TYPE;
+BEGIN
+    SELECT table_name
+    INTO STRICT stream_name_partition_name
+    FROM public.partitions
+    WHERE id = NEW.parent_stream_name_partition_id;
+
+    EXECUTE format(
+        'CREATE TABLE public.%I PARTITION OF public.%I FOR VALUES IN (%L)',
+        NEW.table_name,
+        stream_name_partition_name,
+        NEW.event_type
+    );
+
+    EXECUTE format(
+        'COMMENT ON TABLE public.%I IS %L',
+        NEW.table_name,
+        format(
+            '''%s'' context and ''%s'' stream name and ''%s'' event type partition',
+            NEW.context,
+            NEW.stream_name,
+            NEW.event_type
+        )
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: create_stream_name_partition_table(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_stream_name_partition_table() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    context_partition_name public.partitions.table_name%TYPE;
+BEGIN
+    SELECT table_name
+    INTO STRICT context_partition_name
+    FROM public.partitions
+    WHERE id = NEW.parent_context_partition_id;
+
+    EXECUTE format(
+        'CREATE TABLE public.%I PARTITION OF public.%I FOR VALUES IN (%L) PARTITION BY LIST (type)',
+        NEW.table_name,
+        context_partition_name,
+        NEW.stream_name
+    );
+
+    EXECUTE format(
+        'COMMENT ON TABLE public.%I IS %L',
+        NEW.table_name,
+        format('''%s'' context and ''%s'' stream name partition', NEW.context, NEW.stream_name)
+    );
+
+    RETURN NEW;
+END;
+$$;
 
 
 SET default_tablespace = '';
@@ -571,7 +667,7 @@ CREATE INDEX idx_event_markers_index_on_marker_n_stream_n_partition_n_rev ON pub
 -- Name: idx_event_markers_index_on_marker_n_stream_n_rev; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_event_markers_index_on_marker_n_stream_n_rev ON public.event_markers_index USING btree (marker_id, streams_global_index_id, stream_revision) INCLUDE (global_position, event_type_partition_id);
+CREATE INDEX idx_event_markers_index_on_marker_n_stream_n_rev ON public.event_markers_index USING btree (marker_id, streams_global_index_id, stream_revision) INCLUDE (global_position, event_type_partition_id);
 
 
 --
@@ -579,13 +675,6 @@ CREATE UNIQUE INDEX idx_event_markers_index_on_marker_n_stream_n_rev ON public.e
 --
 
 CREATE INDEX idx_event_markers_index_on_pos ON public.event_markers_index USING btree (global_position);
-
-
---
--- Name: INDEX idx_event_markers_index_on_pos; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON INDEX public.idx_event_markers_index_on_pos IS 'Maintenance index';
 
 
 --
@@ -831,6 +920,27 @@ CREATE STATISTICS public.partition_parts_dep (dependencies) ON context, stream_n
 
 
 --
+-- Name: partitions create_context_partition_table; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER create_context_partition_table AFTER INSERT ON public.partitions FOR EACH ROW WHEN (((new.stream_name IS NULL) AND (new.event_type IS NULL))) EXECUTE FUNCTION public.create_context_partition_table();
+
+
+--
+-- Name: partitions create_event_type_partition_table; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER create_event_type_partition_table AFTER INSERT ON public.partitions FOR EACH ROW WHEN ((new.event_type IS NOT NULL)) EXECUTE FUNCTION public.create_event_type_partition_table();
+
+
+--
+-- Name: partitions create_stream_name_partition_table; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER create_stream_name_partition_table AFTER INSERT ON public.partitions FOR EACH ROW WHEN (((new.stream_name IS NOT NULL) AND (new.event_type IS NULL))) EXECUTE FUNCTION public.create_stream_name_partition_table();
+
+
+--
 -- Name: subscription_commands subscription_commands_subscription_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -866,5 +976,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict vUB5fl54d2AK7LMIuu4aLNrmUoW7oJagB6lcT6eqnAda42OfEwONuSkosPf5FVN
+\unrestrict csMH62Wm56I6pbBOHXsqvQQTyBLQm2GULAUFsApqtWH4HGxVBF1oWqxTOH98qYh
 

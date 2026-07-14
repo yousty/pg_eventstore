@@ -1,17 +1,18 @@
 module PgEventstore
   class PartitionQueries
+    @query_strategy: QueryStrategy
+
     attr_accessor connection: Connection
 
-    def initialize: (Connection connection) -> void
+    def initialize: (Connection connection, ?QueryStrategy query_strategy) -> void
 
     def attach_event_type_partition: (Partition partition) -> void
 
     def create_context_partition: (Stream stream) -> ::Hash[untyped, untyped]
 
-    def create_stream_name_partition: (Stream stream, String context_partition_name,
-        Integer context_partition_id) -> ::Hash[untyped, untyped]
+    def create_stream_name_partition: (Stream stream, Integer context_partition_id) -> ::Hash[untyped, untyped]
 
-    def create_event_type_partition: (Stream stream, String event_type, String stream_name_partition_name,
+    def create_event_type_partition: (Stream stream, String event_type,
         Integer context_partition_id, Integer stream_name_partition_id) -> ::Hash[untyped, untyped]
 
     def detach_event_type_partition: (Partition partition) -> void

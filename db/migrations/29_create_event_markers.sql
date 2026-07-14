@@ -19,7 +19,7 @@ CREATE TABLE public.event_markers_index
     stream_revision         bigint NOT NULL
 );
 
-CREATE UNIQUE INDEX idx_event_markers_index_on_marker_N_stream_N_rev ON public.event_markers_index
+CREATE INDEX idx_event_markers_index_on_marker_N_stream_N_rev ON public.event_markers_index
     USING btree (marker_id, streams_global_index_id, stream_revision) INCLUDE (global_position, event_type_partition_id);
 
 CREATE INDEX idx_event_markers_index_on_marker_N_stream_N_partition_N_rev ON public.event_markers_index
@@ -33,5 +33,3 @@ CREATE INDEX idx_event_markers_index_on_marker_N_partition_N_pos ON public.event
 
 CREATE INDEX idx_event_markers_index_on_pos ON public.event_markers_index
     USING btree (global_position);
-
-COMMENT ON INDEX idx_event_markers_index_on_pos IS 'Maintenance index';

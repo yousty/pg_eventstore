@@ -62,14 +62,14 @@ RSpec.describe PgEventstore::PartitionQueries do
   end
 
   describe '#create_stream_name_partition' do
-    subject { instance.create_stream_name_partition(stream, context_partition['table_name'], context_partition['id']) }
+    subject { instance.create_stream_name_partition(stream, context_partition['id']) }
 
     let(:stream) { PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
     let(:context_partition) { instance.create_context_partition(stream) }
 
     context 'when partition already exists' do
       before do
-        instance.create_stream_name_partition(stream, context_partition['table_name'], context_partition['id'])
+        instance.create_stream_name_partition(stream, context_partition['id'])
       end
 
       it 'raises error' do
@@ -101,7 +101,7 @@ RSpec.describe PgEventstore::PartitionQueries do
 
       before do
         allow(Digest::MD5).to receive(:hexdigest).and_return(digests)
-        instance.create_stream_name_partition(another_stream, context_partition['table_name'], context_partition['id'])
+        instance.create_stream_name_partition(another_stream, context_partition['id'])
       end
 
       it 'creates partition record' do
@@ -127,7 +127,6 @@ RSpec.describe PgEventstore::PartitionQueries do
       instance.create_event_type_partition(
         stream,
         event_type,
-        stream_name_partition['table_name'],
         context_partition['id'],
         stream_name_partition['id']
       )
@@ -137,7 +136,7 @@ RSpec.describe PgEventstore::PartitionQueries do
     let(:event_type) { 'SomethingChanged' }
     let(:context_partition) { instance.create_context_partition(stream) }
     let(:stream_name_partition) do
-      instance.create_stream_name_partition(stream, context_partition['table_name'], context_partition['id'])
+      instance.create_stream_name_partition(stream, context_partition['id'])
     end
 
     context 'when partition already exists' do
@@ -145,7 +144,6 @@ RSpec.describe PgEventstore::PartitionQueries do
         instance.create_event_type_partition(
           stream,
           event_type,
-          stream_name_partition['table_name'],
           context_partition['id'],
           stream_name_partition['id']
         )
@@ -184,7 +182,6 @@ RSpec.describe PgEventstore::PartitionQueries do
         instance.create_event_type_partition(
           another_stream,
           another_event_type,
-          stream_name_partition['table_name'],
           context_partition['id'],
           stream_name_partition['id']
         )
@@ -215,7 +212,7 @@ RSpec.describe PgEventstore::PartitionQueries do
     let(:event_type) { 'SomethingChanged' }
     let(:context_partition) { instance.create_context_partition(stream) }
     let(:stream_name_partition) do
-      instance.create_stream_name_partition(stream, context_partition['table_name'], context_partition['id'])
+      instance.create_stream_name_partition(stream, context_partition['id'])
     end
 
     context 'when related event type partition exists' do
@@ -223,7 +220,6 @@ RSpec.describe PgEventstore::PartitionQueries do
         instance.create_event_type_partition(
           stream,
           event_type,
-          stream_name_partition['table_name'],
           context_partition['id'],
           stream_name_partition['id']
         )
@@ -371,7 +367,7 @@ RSpec.describe PgEventstore::PartitionQueries do
     context 'when stream name partition exists' do
       before do
         context_partition = instance.create_context_partition(stream)
-        instance.create_stream_name_partition(stream, context_partition['table_name'], context_partition['id'])
+        instance.create_stream_name_partition(stream, context_partition['id'])
       end
 
       it_behaves_like 'skips context partition'
@@ -383,11 +379,10 @@ RSpec.describe PgEventstore::PartitionQueries do
       before do
         context_partition = instance.create_context_partition(stream)
         stream_name_partition =
-          instance.create_stream_name_partition(stream, context_partition['table_name'], context_partition['id'])
+          instance.create_stream_name_partition(stream, context_partition['id'])
         instance.create_event_type_partition(
           stream,
           event_type,
-          stream_name_partition['table_name'],
           context_partition['id'],
           stream_name_partition['id']
         )
@@ -431,7 +426,7 @@ RSpec.describe PgEventstore::PartitionQueries do
     context 'when stream name partition exists' do
       let(:context_partition) { instance.create_context_partition(stream) }
       let!(:stream_name_partition) do
-        instance.create_stream_name_partition(stream, context_partition['table_name'], context_partition['id'])
+        instance.create_stream_name_partition(stream, context_partition['id'])
       end
 
       it 'returns it' do
@@ -460,13 +455,12 @@ RSpec.describe PgEventstore::PartitionQueries do
     context 'when event type partition exists' do
       let(:context_partition) { instance.create_context_partition(stream) }
       let(:stream_name_partition) do
-        instance.create_stream_name_partition(stream, context_partition['table_name'], context_partition['id'])
+        instance.create_stream_name_partition(stream, context_partition['id'])
       end
       let!(:event_type_partition) do
         instance.create_event_type_partition(
           stream,
           event_type,
-          stream_name_partition['table_name'],
           context_partition['id'],
           stream_name_partition['id']
         )
@@ -513,7 +507,7 @@ RSpec.describe PgEventstore::PartitionQueries do
     subject { instance.find_by_ids([partition1['id'], partition2['id']]) }
 
     let(:partition1) { instance.create_context_partition(stream) }
-    let(:partition2) { instance.create_stream_name_partition(stream, partition1['table_name'], partition1['id']) }
+    let(:partition2) { instance.create_stream_name_partition(stream, partition1['id']) }
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
 
     it 'returns partitions by ids' do
