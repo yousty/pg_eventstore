@@ -86,7 +86,7 @@ threads = CONCURRENCY.times.map do |t|
                     SQL
                   end
                   q_parts = q_parts.map { "(#{_1})" }.join(' union all ')
-                  q = "select max(stream_revision) as stream_revision from (#{q_parts})"
+                  q = "select coalesce(max(stream_revision), -1) as stream_revision from (#{q_parts})"
                   max_revisions.push(
                     query_strategy.exec_params(q, [context, stream_name, stream_id]).first['stream_revision']
                   )

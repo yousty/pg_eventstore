@@ -81,15 +81,22 @@ module PgEventstore
             'select stream_revision from streams_global_index where id = $1 for update', [stream_global_idx.id]
           )
         end.to_a.first['stream_revision']
+        exists =
+          connection.with do |conn|
+            conn.exec_params(<<~SQL, [event.global_position]).first&.[]('one') == 1
+              select 1 as one from events_global_index where global_position = $1
+            SQL
+          end
+        raise RecordNotFound.new('events_global_index', event.global_position) unless exists
+        # We are deleting the only event. Thus, we should delete the whole stream
+        return delete_stream(stream) if current_stream_revision == 0
+
         deleted_event = connection.with do |conn|
           conn.exec_params(<<~SQL, [stream_global_idx.id, event.global_position]).to_a.first
             delete from events_global_index where streams_global_index_id = $1 and global_position = $2
                    returning global_position, event_type_partition_id, stream_revision
           SQL
         end
-        raise RecordNotFound.new('events_global_index', event.global_position) unless deleted_event
-
-        return delete_stream(stream) if current_stream_revision == 0 && deleted_event['stream_revision'] == 0
 
         affected_partition = partition_queries.find_by_ids([deleted_event['event_type_partition_id']]).first
         connection.with do |conn|

@@ -43,7 +43,7 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
 
       context 'when there is only one event in the stream' do
         let(:another_event) do
-          event = PgEventstore::Event.new(data: { foo: :bar })
+          event = PgEventstore::Event.new(data: { foo: :bar }, markers: ['foo'])
           PgEventstore.client.append_to_stream(another_stream, event)
         end
         let(:another_stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '2') }
@@ -51,9 +51,44 @@ RSpec.describe PgEventstore::Commands::DeleteEvent do
         before do
           event
           another_event
+          query_strategy.exec_params(
+            'insert into event_subscription_positions ("global_position") values ($1), ($2)',
+            [event.global_position, another_event.global_position]
+          )
         end
 
-        it 'deletes the whole stream' do
+        it 'deletes related events global index' do
+          expect { subject }.to change {
+            query_strategy.exec('select global_position from events_global_index').map { _1['global_position'] }
+          }.to([another_event.global_position])
+        end
+        it 'deletes the record from "events" table' do
+          expect { subject }.to change {
+            query_strategy.exec('select global_position from events').map { _1['global_position'] }
+          }.to([another_event.global_position])
+        end
+        it 'deletes the record from "event_subscription_positions_unprocessed" table' do
+          expect { subject }.to change {
+            query_strategy.exec(
+              'select global_position from event_subscription_positions_unprocessed'
+            ).map { _1['global_position'] }
+          }.to([another_event.global_position])
+        end
+        it 'deletes the record from "event_subscription_positions" table' do
+          expect { subject }.to change {
+            query_strategy.exec(
+              'select global_position from event_subscription_positions'
+            ).map { _1['global_position'] }
+          }.to([another_event.global_position])
+        end
+        it 'deletes the record from "event_markers_index" table' do
+          expect { subject }.to change {
+            query_strategy.exec(
+              'select global_position from event_markers_index'
+            ).map { _1['global_position'] }
+          }.to([another_event.global_position])
+        end
+        it 'deletes StreamsGlobalIndex' do
           expect { subject }.to change { streams_global_idx_queries.find_by(stream) }.to(nil)
         end
         it 'does not delete another stream' do
