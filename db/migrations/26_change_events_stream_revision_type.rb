@@ -14,7 +14,7 @@ PgEventstore.connection(:_eventstore_db_connection).with do |conn|
   event_type_partitions.each do |partition|
     begin
       partition_queries.detach_event_type_partition(partition)
-    rescue PG::UndefinedTable
+    rescue PG::Error
       # the partition was already detached in previous runs. Just proceed to the next step
     end
 
