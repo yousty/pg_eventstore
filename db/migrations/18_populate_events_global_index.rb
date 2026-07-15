@@ -30,6 +30,7 @@ end.first['QUERY PLAN'][/rows=\d+/].sub('rows=', '').to_i
 
 PgEventstore.connection(:_eventstore_db_connection).with do |conn|
   conn.exec('delete from events_global_index')
+  conn.exec('delete from event_subscription_positions_unprocessed')
 end
 
 puts "Indexing events. Events to process: #{total_events} (approximately). Concurrency is #{CONCURRENCY} concurrent writers."
