@@ -8,6 +8,8 @@ module PgEventstore
 
     def initialize: (uri: String, ?pool_size: Integer, ?pool_timeout: Integer) -> void
 
+    def discard_current_connection: -> void
+
     def establish_connection: -> void
 
     def shutdown: -> void

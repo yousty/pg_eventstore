@@ -162,7 +162,7 @@ RSpec.describe PgEventstore::QueryStrategy::Async do
         config.connection_pool_size = 2
       end
       strategy = instance
-      query = "select pg_sleep(5) /* 123 */"
+      query = 'select pg_sleep(5) /* 123 */'
 
       fiber = Fiber.new { strategy.exec(query) }
       fiber.resume

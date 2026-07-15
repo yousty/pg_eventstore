@@ -37,7 +37,7 @@ Gem::Specification.new do |spec|
   spec.extensions = ['ext/pg_eventstore_ext/extconf.rb']
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'connection_pool', '>= 2', '< 4'
+  spec.add_dependency 'connection_pool', '>= 2.5.4', '< 4'
   spec.add_dependency 'pg', '~> 1'
   spec.add_dependency 'sinatra', '>= 3', '< 5'
 end

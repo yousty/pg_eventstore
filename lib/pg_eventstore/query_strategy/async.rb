@@ -54,9 +54,10 @@ module PgEventstore
         while (result = conn.get_result)
           result.clear
         end
-      rescue PG::ConnectionBad, PG::UnableToSend
-        # Couldn't properly drain the result because of connection error. This case will be handled by the next access
-        # to this connection instance
+      rescue PG::Error
+        # We have unexpected error during the cancellation process. No need to try to restore the connection at this
+        # point and simply throw it out
+        @connection.discard_current_connection
       end
     end
   end
