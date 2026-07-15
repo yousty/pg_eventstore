@@ -23,7 +23,7 @@ module PgEventstore
     # @return [Integer] number of deleted events of the given stream
     def delete_stream(stream)
       total_removed = 0
-      transaction_queries.transaction(:read_commited) do
+      transaction_queries.transaction(:read_committed) do
         stream_global_idx = streams_global_index_queries.find_by!(stream)
         streams_global_index_queries.delete(stream_global_idx.id)
         global_position = 1
