@@ -623,7 +623,7 @@ RSpec.describe 'Subscriptions integration' do
     before do
       PgEventstore.configure do |c|
         c.subscription_pull_interval = 0.2
-        c.connection_pool_size = 10
+        c.connection_pool_size = 15
       end
       manager.subscribe(
         'Subscription 1', handler: handler1, options: { filter: { event_types: %w[Foo Bar Baz] } }
@@ -681,7 +681,9 @@ RSpec.describe 'Subscriptions integration' do
             eq(expected_events.size),
             <<~TEXT
               "Subscription #{i}" haven't picked up some events. Processed: #{events.size}, events in \
-              db: #{expected_events.size}
+              db: #{expected_events.size}.
+              Positions from db: #{expected_events.map(&:global_position).join(', ')}.
+              Processed positions: #{events.map(&:global_position).join(', ')}.
             TEXT
           )
           expect(subscription_positions).to eq(expected_subscription_positions)

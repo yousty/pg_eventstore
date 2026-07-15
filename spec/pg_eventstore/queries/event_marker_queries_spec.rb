@@ -96,7 +96,7 @@ RSpec.describe PgEventstore::EventMarkerQueries do
     end
     let(:write_api_events_index) { [write_api_idx1, write_api_idx2] }
     let(:revision_to_marker_ids_map) do
-      { write_api_idx1.stream_revision => [10], write_api_idx2.stream_revision => [10, 20] }
+      { write_api_idx1.stream_revision => [10].to_set, write_api_idx2.stream_revision => [10, 20].to_set }
     end
 
     it 'creates marker indexes' do

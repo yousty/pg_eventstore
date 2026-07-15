@@ -9,7 +9,7 @@ module MaintenanceHelpers
         conn.exec_params(<<~SQL, [index_name]).first
           select 1 as one
           from pg_stat_progress_create_index s
-              join pg_class on pg_class.oid = s.relid
+              join pg_class on pg_class.oid = s.index_relid
           where pg_class.relname = $1
         SQL
       end
