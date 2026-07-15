@@ -9,7 +9,7 @@ module PgEventstore
     def create_indexes: (
         Integer stream_idx_id,
         Array[EventGlobalIndex::WriteApiRepr] write_api_events_index,
-        Hash[Integer, Array[Integer]] revision_to_marker_ids_map
+        Hash[Integer, Set[Integer]] revision_to_marker_ids_map
       ) -> void
 
     def find_or_create_by: (Array[String] names) -> Array[EventMarker]

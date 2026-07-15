@@ -35,12 +35,12 @@ module PgEventstore
           events.each.with_index(1) do |event, index|
             event.stream_revision = revision + index
             event.markers.each do |event_marker|
-              revision_to_marker_ids_map[revision + index] ||= []
-              revision_to_marker_ids_map[revision + index].push(markers_map[event_marker])
+              revision_to_marker_ids_map[revision + index] ||= Set.new
+              revision_to_marker_ids_map[revision + index].add(markers_map[event_marker])
             end
             event.feature_markers.each do |feature_marker|
-              revision_to_marker_ids_map[revision + index] ||= []
-              revision_to_marker_ids_map[revision + index].push(markers_map[feature_marker.marker])
+              revision_to_marker_ids_map[revision + index] ||= Set.new
+              revision_to_marker_ids_map[revision + index].add(markers_map[feature_marker.marker])
             end
           end
           revision += events.size

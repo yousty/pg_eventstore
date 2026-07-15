@@ -36,7 +36,7 @@ module PgEventstore
 
     # @param stream_idx_id [Integer]
     # @param write_api_events_index [Array<PgEventstore::EventGlobalIndex::WriteApiRepr>]
-    # @param revision_to_marker_ids_map [Hash<Integer, Array<Integer>>]
+    # @param revision_to_marker_ids_map [Hash<Integer, Set<Integer>>]
     # @return [void]
     def create_indexes(stream_idx_id, write_api_events_index, revision_to_marker_ids_map)
       offset = write_api_events_index.first.stream_revision

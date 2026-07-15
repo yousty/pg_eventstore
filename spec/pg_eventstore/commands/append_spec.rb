@@ -112,11 +112,13 @@ RSpec.describe PgEventstore::Commands::Append do
 
           before do
             event.markers = %w[foo bar]
-            event.feature_markers = [PgEventstore::FeatureMarker.new(marker: 'baz')]
-            subject
+            event.feature_markers = [
+              PgEventstore::FeatureMarker.new(marker: 'baz'), PgEventstore::FeatureMarker.new(marker: 'foo')
+            ]
           end
 
           it 'persists markers' do
+            subject
             filtered_by_feature_marker = PgEventstore.client.read(
               PgEventstore::Stream.all_stream, options: { filter: { event_types: [{ markers: ['baz'] }] } }
             ).last
@@ -125,6 +127,11 @@ RSpec.describe PgEventstore::Commands::Append do
               expect(created_event.feature_markers.map(&:marker)).to eq([])
               expect(filtered_by_feature_marker).to eq(created_event)
             end
+          end
+          it 'does not duplicate marker indexes' do
+            expect { subject }.to change {
+              query_strategy.exec('select count(*) as c_all from event_markers_index').first['c_all']
+            }.by(3)
           end
         end
       end
