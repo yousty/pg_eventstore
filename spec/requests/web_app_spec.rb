@@ -136,6 +136,24 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         end
       end
 
+      context 'when events filter with empty markers is provided' do
+        let(:params) { { filter: { events: [{ type: 'Bar', markers: [] }] } } }
+
+        it 'displays only filtered events' do
+          subject
+          expect(rendered_event_ids).to eq(events3.map(&:id).reverse)
+        end
+      end
+
+      context 'when multiple event types are provided' do
+        let(:params) { { filter: { events: [{ type: 'Bar' }, { type: 'Baz' }] } } }
+
+        it 'displays only filtered events' do
+          subject
+          expect(rendered_event_ids).to eq((events2 + events3).map(&:id).reverse)
+        end
+      end
+
       context 'when event with markers filter is provided' do
         let(:params) { { filter: { events: [{ type: 'Foo', markers: ['foo'] }] } } }
 
@@ -201,6 +219,24 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         it 'resolves link events' do
           subject
           expect(rendered_event_ids).to eq(events1.map(&:id) * 2)
+        end
+
+        it 'displays the subscription position of the resolved event' do
+          queries = PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection)
+          queries.assign_subscription_position
+          positions = queries.subscription_positions_from_db(events)
+
+          subject
+          rendered_positions = nokogiri_body.css('#events-table tbody > tr:not(.event-payload)').map do |row|
+            row.css('td.subscription-position').first.text.strip.to_i
+          end
+          resolved_event_position = positions.fetch(events1.first.global_position)
+          link_position = positions.fetch(events2.first.global_position)
+
+          aggregate_failures do
+            expect(resolved_event_position).not_to eq(link_position)
+            expect(rendered_positions).to eq([resolved_event_position, resolved_event_position])
+          end
         end
       end
 

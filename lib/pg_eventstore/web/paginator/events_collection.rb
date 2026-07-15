@@ -33,7 +33,7 @@ module PgEventstore
 
         # @return [Integer, nil]
         def prev_page_starting_id
-          starting_position = _collection.first&.global_position || starting_id
+          starting_position = event_global_position(_collection.first) || starting_id
           return unless starting_position
 
           order = self.order == :asc ? :desc : :asc

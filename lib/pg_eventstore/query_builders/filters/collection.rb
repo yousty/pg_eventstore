@@ -53,6 +53,8 @@ module PgEventstore
                 instance.add_event_type(EventTypeFilter.new(event_type: event_type, prefix: false))
               in { prefix: String => prefix }
                 instance.add_event_type(EventTypeFilter.new(event_type: prefix, prefix: true))
+              in { markers: [], type: String => type } # Consider empty markers array as regular event type filter
+                instance.add_event_type(EventTypeFilter.new(event_type: type, prefix: false))
               in { markers: Array => markers, **opts }
                 str_markers = markers.grep(String)
                 if str_markers.empty?

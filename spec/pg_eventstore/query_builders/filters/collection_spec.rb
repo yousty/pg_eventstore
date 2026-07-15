@@ -163,14 +163,30 @@ RSpec.describe PgEventstore::QueryBuilders::Filters::Collection do
     end
 
     context 'when event type with marker filter is provided' do
-      let(:options) { { filter: { event_types: [{ type: 'Foo', markers: %w[foo bar] }] } } }
+      context 'when markers array is not empty' do
+        let(:options) { { filter: { event_types: [{ type: 'Foo', markers: %w[foo bar] }] } } }
 
-      it 'recognizes it' do
-        marker_filter = PgEventstore::QueryBuilders::Filters::MarkerFilter.new(
-          event_type: 'Foo', markers: %w[foo bar]
-        )
-        marker_filter_row = PgEventstore::QueryBuilders::Filters::MarkerFilterRow.new(marker_filter:)
-        expect(subject.collection).to eq([marker_filter_row])
+        it 'recognizes it' do
+          marker_filter = PgEventstore::QueryBuilders::Filters::MarkerFilter.new(
+            event_type: 'Foo', markers: %w[foo bar]
+          )
+          marker_filter_row = PgEventstore::QueryBuilders::Filters::MarkerFilterRow.new(marker_filter:)
+          expect(subject.collection).to eq([marker_filter_row])
+        end
+      end
+
+      context 'when markers array is empty' do
+        let(:options) { { filter: { event_types: [{ type: 'Foo', markers: [] }] } } }
+
+        it 'recognizes it as a regular event type filter' do
+          event_type_filter = PgEventstore::QueryBuilders::Filters::EventTypeFilter.new(
+            event_type: 'Foo', prefix: false
+          )
+          filter_row = PgEventstore::QueryBuilders::Filters::FilterRow.new(
+            event_type_filters: [event_type_filter]
+          )
+          expect(subject.collection).to eq([filter_row])
+        end
       end
     end
 
@@ -185,10 +201,16 @@ RSpec.describe PgEventstore::QueryBuilders::Filters::Collection do
     end
 
     context 'when incorrect event type with markers filter is provided' do
-      context 'when :markers is empty' do
-        let(:options) { { filter: { event_types: [{ type: 'Foo', markers: [] }] } } }
+      context 'when :markers partially consists from strings' do
+        let(:options) { { filter: { event_types: [{ type: 'Foo', markers: ['foo', :bar] }] } } }
 
-        it_behaves_like 'empty collection'
+        it 'recognizes string values only' do
+          marker_filter = PgEventstore::QueryBuilders::Filters::MarkerFilter.new(
+            event_type: 'Foo', markers: %w[foo]
+          )
+          marker_filter_row = PgEventstore::QueryBuilders::Filters::MarkerFilterRow.new(marker_filter:)
+          expect(subject.collection).to eq([marker_filter_row])
+        end
       end
 
       context 'when :markers consists of non-string objects' do

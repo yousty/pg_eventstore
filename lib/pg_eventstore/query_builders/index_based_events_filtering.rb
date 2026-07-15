@@ -160,7 +160,9 @@ module PgEventstore
             end
           end
           builders.each { _1.remove_limit.remove_order }
-          SQLBuilder.union_builders(builders, mode: has_markers ? :union_distinct : :union_all)
+          top_builder = SQLBuilder.new.select('*')
+          top_builder.from(SQLBuilder.union_builders(builders, mode: has_markers ? :union_distinct : :union_all))
+          top_builder
         end
 
         # @param filter_rows [Array<PgEventstore::QueryBuilders::Filters::FilterRow,

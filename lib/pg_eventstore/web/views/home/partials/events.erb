@@ -1,7 +1,7 @@
 <% events.each do |event| %>
   <tr>
     <td><%= event.global_position %></td>
-    <td>
+    <td class="subscription-position">
       <% if gp_to_sp_map[event.global_position] %>
         <%= gp_to_sp_map[event.global_position] %>
       <% else %>
@@ -54,7 +54,7 @@
             <ul>
               <% event.feature_markers.each do |feature_marker| %>
                 <li>
-                  <%= "#{feature_marker.description}:" if feature_marker.description %>
+                  <%= "#{h feature_marker.description}:" if feature_marker.description %>
                   <a href="<%= event_marker_path(feature_marker.marker) %>">
                     <%= empty_characters_fallback(h feature_marker.marker) %>
                   </a>
