@@ -8,6 +8,10 @@ module PgEventstore
 
       @sql_builder: SQLBuilder
 
+      def self.sql_builder_for_estimate_count: (
+          Array[Filters::FilterRow | Filters::MarkerFilterRow] filter_rows
+        ) -> SQLBuilder
+
       def self.sql_builder_for_event_type_revision_validation: (
           Stream stream,
           Commands::RevisionCheck::ExpectedRevision::EventTypeRevision expected_revision

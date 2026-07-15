@@ -28,7 +28,7 @@ module PgEventstore
         def next_page_starting_id
           return unless collection.size == per_page
 
-          _collection[per_page]&.global_position
+          event_global_position(_collection[per_page])
         end
 
         # @return [Integer, nil]
@@ -53,12 +53,9 @@ module PgEventstore
           @total_count ||=
             begin
               filters_collection = QueryBuilders::Filters::Collection.from_options(options)
-              cursor = QueryBuilders::ReadCursor::StreamCursor.from_options({})
-              sql_builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_read_common(
-                filters_collection.collection,
-                cursor
+              sql_builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_estimate_count(
+                filters_collection.collection
               )
-              sql_builder.remove_limit.remove_group.remove_order
               count = estimate_count(sql_builder)
               return count if count > MAX_NUMBER_TO_COUNT
 
@@ -93,7 +90,7 @@ module PgEventstore
         # @param sql_builder [PgEventstore::SQLBuilder]
         # @return [Integer]
         def regular_count(sql_builder)
-          sql_builder.unselect.select('count(global_position) as count_all')
+          sql_builder.unselect.select('count(*) as count_all')
 
           connection.with do |conn|
             conn.exec_params(*sql_builder.to_exec_params)

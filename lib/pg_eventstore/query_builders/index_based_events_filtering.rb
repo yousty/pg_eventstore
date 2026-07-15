@@ -137,6 +137,35 @@ module PgEventstore
         # @param filter_rows [Array<PgEventstore::QueryBuilders::Filters::FilterRow,
         #   PgEventstore::QueryBuilders::Filters::MarkerFilterRow>]
         # @return [PgEventstore::SQLBuilder]
+        def sql_builder_for_estimate_count(filter_rows)
+          cursor = ReadCursor::StreamCursor.from_options({})
+          if filter_rows.empty?
+            return EventsGlobalIndexFiltering.default_filtering(cursor).to_sql_builder.remove_limit.remove_order
+          end
+
+          has_markers = false
+          builders = filter_rows.flat_map do |filter_row|
+            case filter_row
+            when Filters::FilterRow
+              filter_row.flatten.map do |flattened|
+                EventsGlobalIndexFiltering.for_read_common(flattened, cursor)
+              end
+            when Filters::MarkerFilterRow
+              has_markers ||= true
+              filter_row.flatten.map do |flattened|
+                EventMarkersIndexFiltering.for_read_common(flattened, cursor)
+              end
+            else
+              Utils.missing_implementation!(filter_row)
+            end
+          end
+          builders.each { _1.remove_limit.remove_order }
+          SQLBuilder.union_builders(builders, mode: has_markers ? :union_distinct : :union_all)
+        end
+
+        # @param filter_rows [Array<PgEventstore::QueryBuilders::Filters::FilterRow,
+        #   PgEventstore::QueryBuilders::Filters::MarkerFilterRow>]
+        # @return [PgEventstore::SQLBuilder]
         def sql_builder_for_subscriptions(filter_rows)
           if filter_rows.empty?
             sql_builder = EventsGlobalIndexFiltering.new.tap(&:for_subscription).to_sql_builder
