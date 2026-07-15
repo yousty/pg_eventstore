@@ -60,14 +60,14 @@ module PgEventstore
         raise if retries_count >= MAX_NUMBER_OF_UNIQUE_CONSTRAINTS_ERROR_RETRIES
 
         retry
-      rescue MissingPartitions => error
-        error.event_types.each do |event_type|
-          transaction do
-            partition_queries.create_partitions(error.stream, event_type)
-          end
-        end
-        retry
       end
+    rescue MissingPartitions => error
+      error.event_types.each do |event_type|
+        transaction do
+          partition_queries.create_partitions(error.stream, event_type)
+        end
+      end
+      retry
     end
 
     # TODO: next pg gem release (presumably v1.6.4) should already include the fix of PG::Connection#transaction.
