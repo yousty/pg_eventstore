@@ -41,9 +41,12 @@ module PgEventstore
 
           # Not ideal from the perspective of the amount of records we load here, but this is the only way to read from
           # the db in the correct way. Direct usage of query builders may result in heavy, unoptimized queries.
+          options = self.options.merge(
+            from_position: starting_position, max_count: per_page, direction: order, resolve_link_tos: false
+          )
           PgEventstore.client(config_name).read(
             PgEventstore::Stream.all_stream,
-            options: options.merge(from_position: starting_position, max_count: per_page, direction: order),
+            options:,
             middlewares: []
           ).last&.global_position
         end

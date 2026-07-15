@@ -313,6 +313,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
       let!(:link) { PgEventstore.client.link_to(stream3, event1) }
       let(:starting_id) { event4.global_position }
       let(:order) { :desc }
+      let(:options) { { resolve_link_tos: true } }
 
       it 'picks #global_position of a link event' do
         aggregate_failures do
