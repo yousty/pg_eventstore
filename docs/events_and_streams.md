@@ -68,7 +68,6 @@ To be able to manipulate a stream, you have to compute a stream's object first. 
 `PgEventstore::Stream` class. Here is a description of its attributes:
 
 - `context` - String(required). A Bounded Context, read more [here](https://martinfowler.com/bliki/BoundedContext.html).
-  Values which start from `$` sign are reserved by `pg_eventstore`. Such contexts can't be used to append events.
 - `stream_name` - String(required). A stream name.
 - `stream_id` - String(required). A stream id.
 - `stream_revision` - Integer(optional, read only). Current stream revision

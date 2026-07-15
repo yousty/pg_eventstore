@@ -1,7 +1,6 @@
 module PgEventstore
   class Stream
     KNOWN_SYSTEM_STREAMS: Array[String]
-    SYSTEM_STREAM_PREFIX: String
     NON_EXISTING_STREAM_REVISION: Integer
 
     def self.all_stream: () -> Stream

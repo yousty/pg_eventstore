@@ -4,8 +4,6 @@ require 'digest/md5'
 
 module PgEventstore
   class Stream
-    # @return [String] a stream prefix of the system stream
-    SYSTEM_STREAM_PREFIX = '$'
     # @return [Integer]
     NON_EXISTING_STREAM_REVISION = -1
     # @return [Array<String>]
