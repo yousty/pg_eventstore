@@ -74,7 +74,7 @@ module PgEventstore
     # @param subscription_name [String] subscription's name
     # @param handler [#call] subscription's handler
     # @param options [Hash] request options
-    # @option options [Integer, Symbol] :from_position a starting subscription position
+    # @option options [Integer] :from_position a starting subscription position
     # @option options [Boolean] :resolve_link_tos When using projections to create new events you
     #   can set whether the generated events are pointers to existing events. Setting this option to true tells
     #   PgEventstore to return the original event instead a link event.

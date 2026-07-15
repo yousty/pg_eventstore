@@ -186,13 +186,16 @@ You can set the initial position of new subscription to start with:
 subscriptions_manager.subscribe(
   'MyAwesomeSubscription',
   handler: proc { |event| puts event },
-  options: { from_position: 123 }
+  options: { from_position: 100 }
 )
 ```
 
 This allows to jump to the certain position to start with and skip unwanted events. Please note that **this is not** an
 `Event#global_position` value, but rather subscription position of the event. You can find corresponding subscription
 position of an event in admin web UI.
+
+Unlike `:from_position` of Read API - `:from_position` in Subscriptions API is **exclusive**. For example, if you have
+events with positions 100, 101 and 102, setting `:from_position` to 100 will result in processing event at position 101.
 
 ## Overriding Subscription config values
 
