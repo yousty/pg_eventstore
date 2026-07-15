@@ -61,7 +61,7 @@ threads = CONCURRENCY.times.map do |t|
 
         # retrieve stream revision
         events.each_slice(10) do |sliced_events|
-          query_runner = PgEventstore::AsyncQueryRunner.new
+          query_runner = PgEventstore::AsyncRunner.new
           sliced_events.each do |event|
             query_runner.async do
               query_strategy = PgEventstore::QueryStrategy::Async.new(PgEventstore.connection(:_eventstore_db_connection))

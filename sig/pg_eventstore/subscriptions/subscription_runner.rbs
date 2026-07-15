@@ -26,5 +26,9 @@ module PgEventstore
     def estimate_events_number: () -> Integer
 
     def attach_callbacks: () -> void
+
+    private
+
+    def subscription_from_position: -> Integer
   end
 end

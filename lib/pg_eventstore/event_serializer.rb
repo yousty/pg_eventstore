@@ -19,7 +19,11 @@ module PgEventstore
         middleware.serialize(event)
       end
       event.markers.uniq!
-      event.metadata[Event::MARKERS_METADATA_KEY] = event.markers if event.markers.any?
+      if event.markers.any?
+        event.metadata[Event::MARKERS_METADATA_KEY] = event.markers
+      else
+        event.metadata.delete(Event::MARKERS_METADATA_KEY)
+      end
       event
     end
 

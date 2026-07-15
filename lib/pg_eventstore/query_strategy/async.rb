@@ -39,7 +39,24 @@ module PgEventstore
             last_result = result
           end
           last_result
+        rescue AsyncRunner::Cancellation
+          cancel_and_drain(conn)
+          Fiber.current.kill
         end
+      end
+
+      # @param conn [PG::Connection]
+      # @return [void]
+      def cancel_and_drain(conn)
+        cancellation_error = conn.cancel
+        conn.sync_reset if cancellation_error
+
+        while (result = conn.get_result)
+          result.clear
+        end
+      rescue PG::ConnectionBad, PG::UnableToSend
+        # Couldn't properly drain the result because of connection error. This case will be handled by the next access
+        # to this connection instance
       end
     end
   end

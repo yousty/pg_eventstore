@@ -24,7 +24,7 @@ RSpec.describe PgEventstore::QueryStrategy::Async do
         result
       end
 
-      let(:runner) { PgEventstore::AsyncQueryRunner.new }
+      let(:runner) { PgEventstore::AsyncRunner.new }
 
       context 'when query succeeds' do
         it 'returns result' do
@@ -76,7 +76,7 @@ RSpec.describe PgEventstore::QueryStrategy::Async do
         result
       end
 
-      let(:runner) { PgEventstore::AsyncQueryRunner.new }
+      let(:runner) { PgEventstore::AsyncRunner.new }
 
       context 'when query succeeds' do
         it 'returns result' do
@@ -131,6 +131,58 @@ RSpec.describe PgEventstore::QueryStrategy::Async do
           )
         end
       end
+    end
+  end
+
+  describe 'common cases' do
+    it 'does not execute code after a canceled query' do
+      continued = false
+      strategy = instance
+      query_runner = PgEventstore::AsyncRunner.new
+
+      query_runner.async do
+        begin
+          strategy.exec('select pg_sleep(5)')
+        rescue Exception
+          # Even this must not intercept Fiber#kill.
+        end
+
+        continued = true
+      end
+
+      query_runner.async { strategy.exec('invalid sql') }
+      aggregate_failures do
+        expect { query_runner.run }.to raise_error(PG::SyntaxError)
+        expect(continued).to be(false)
+      end
+    end
+
+    it 'does not re-executes the original query when cancellation encounters a connection error' do
+      PgEventstore.configure do |config|
+        config.connection_pool_size = 2
+      end
+      strategy = instance
+      query = "select pg_sleep(5) /* 123 */"
+
+      fiber = Fiber.new { strategy.exec(query) }
+      fiber.resume
+
+      terminated = Thread.new do
+        PgEventstore.connection.with do |terminator|
+          terminator.exec_params(<<~SQL, [query]).first['term']
+            select pg_terminate_backend(pid) as term
+            from pg_stat_activity
+            where query = $1 and pid <> pg_backend_pid()
+          SQL
+        end
+      end.value
+      raise 'Failed to terminate the query backend' unless terminated
+
+      fiber.raise(PgEventstore::AsyncRunner::Cancellation)
+
+      expect(fiber).not_to be_alive
+    ensure
+      fiber.kill if fiber&.alive?
     end
   end
 end

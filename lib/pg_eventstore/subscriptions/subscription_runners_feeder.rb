@@ -20,7 +20,7 @@ module PgEventstore
         connection,
         QueryStrategy::Async.new(connection)
       )
-      query_runner = AsyncQueryRunner.new
+      query_runner = AsyncRunner.new
       feed_strategies_collection.each do |strategy|
         query_runner.async { strategy.feed }
       end

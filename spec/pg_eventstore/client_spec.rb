@@ -119,6 +119,35 @@ RSpec.describe PgEventstore::Client do
         end
       end
     end
+
+    describe 're-appending persisted event' do
+      subject { instance.append_to_stream(stream, persisted_event) }
+
+      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:persisted_event) { instance.append_to_stream(stream, PgEventstore::Event.new(markers: ['bar'])) }
+
+      context 'when markers get removed from persisted event' do
+        before do
+          persisted_event.markers = []
+        end
+
+        it 'does not assign any markers to the re-appended event' do
+          aggregate_failures do
+            expect(subject.markers).to eq([])
+            expect(subject.metadata).not_to include(PgEventstore::Event::MARKERS_METADATA_KEY)
+          end
+        end
+      end
+
+      context 'when markers stays from persisted event' do
+        it 'assigns markers to the re-appended event' do
+          aggregate_failures do
+            expect(subject.markers).to eq(['bar'])
+            expect(subject.metadata).to include(PgEventstore::Event::MARKERS_METADATA_KEY => ['bar'])
+          end
+        end
+      end
+    end
   end
 
   describe '#read' do

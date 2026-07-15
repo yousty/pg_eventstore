@@ -9,6 +9,8 @@ module PgEventstore
 
       private
 
+      def cancel_and_drain: (PG::Connection connection) -> void
+
       def run: (Symbol method, *untyped exec_args) -> untyped
     end
   end
