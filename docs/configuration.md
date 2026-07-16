@@ -8,7 +8,7 @@ Configuration options:
 | max_count                                    | Integer        | `1000`                                                       | Number of events to return in one response when reading from a stream.                                                                                                                                                                                                                                    |
 | middlewares                                  | Hash           | `{}`                                                         | A hash where a key is a name of your middleware and value is an object that respond to `#serialize` and `#deserialize` methods. See [**Writing middleware**](writing_middleware.md) chapter.                                                                                                              |
 | event_class_resolver                         | `#call`        | `PgEventstore::EventClassResolver.new`                       | A `#call`-able object that accepts a string and returns an event's class. See **Resolving events classes** chapter bellow for more info.                                                                                                                                                                  |
-| connection_pool_size                         | Integer        | `5`                                                          | Max number of connections per ruby process. It must equal the number of threads of your application. When using subscriptions it is required to set it to the number of subscriptions or greater. See [**Picking max connections number**](#picking-max-connections-number) chapter of this section.      |
+| connection_pool_size                         | Integer        | `5`                                                          | Max number of connections per ruby process. See [**Picking max connections number**](#picking-max-connections-number) chapter of this section for more details.                                                                                                                                           |
 | connection_pool_timeout                      | Integer        | `5`                                                          | Time in seconds to wait for a connection in the pool to be released. If no connections are available during this time - `ConnectionPool::TimeoutError` will be raised. See `connection_pool` gem [docs](https://github.com/mperham/connection_pool#usage) for more info.                                  |
 | subscription_pull_interval                   | Float          | `1.0`                                                        | How often to pull new subscription events in seconds. The minimum meaningful value is `0.2`. Values less than `0.2` will act as it is `0.2`.                                                                                                                                                              |
 | subscription_max_retries                     | Integer        | `5`                                                          | Max number of retries of failed subscription.                                                                                                                                                                                                                                                             |
@@ -94,33 +94,35 @@ end
 
 ## Picking max connections number
 
-A connection is hold from the connection pool to perform the request and it is released back to the connection pool once
-the request is finished. If you run into the (theoretical) edge case, when all your application's threads (or
+A connection is hold from the connection pool to perform the request, and it is released back to the connection pool
+once the request is finished. If you run into the (theoretical) edge case, when all your application's threads (or
 subscriptions) are performing `pg_eventstore` queries at the same time and all those queries take more
 than `connection_pool_timeout` seconds to complete, you have to have `connection_pool_size` set to the exact amount of
-your application's threads (or to the number of subscriptions when using subscriptions) to prevent timeout errors.
-Practically this is not the case, as all `pg_eventstore` queries are pretty fast. So, a good value for
-the `connection_pool_size` option is the number of your application's threads. When running subscriptions - the
-`connection_pool_size` must be greater than or equal to the number of subscriptions. Also, in both cases some wise
-positive margin would be a good strategy. To be able to always have redundant amount of connections - it is recommended
-to use some connection pooler, such as [pgbouncer](https://www.pgbouncer.org/) in transaction mode.
+your application's threads to prevent timeout errors. Practically this is not the case, as all `pg_eventstore` queries
+are pretty fast. So, a good value for the `connection_pool_size` option is the number of your application's threads.
 
-### Exception scenario
+### Connections number for subscriptions
 
-If you are using the [`#multiple`](multiple_commands.md) method - you have to take into account the execution time of
-the whole block you pass in it. This is because the connection will be released only after the block's execution is
-finished. So, for example, if you perform several commands within the block, as well as some API request, the connection
-will be release only after all those steps:
+Subscriptions implementation is more demanding on connections number. This is because it internally implements
+different services that support various aspects of the feature. Here is a breakdown of connections distribution:
+
+- 1 connection per subscription to manage each subscription itself(e.g. update its stats, positions, etc)
+- 1 connection per 10 subscriptions to pull new events
+- 1 connection to process remote commands, such as starting/stopping/restart subscriptions from admin web UI
+- 1 connection to assign subscription positions of newly created events
+- 1 connection to manage [SubscriptionsSet](subscriptions.md#pgeventstoresubscriptionsset)
+
+So, the formula to calculate the number of connection your subscriptions process should have is next:
 
 ```ruby
-PgEventstore.client.multiple do
-  # Connection is hold from the connection pool
-  PgEventstore.client.read(some_stream)
-  Stripe::Payment.create(some_attrs)
-  PgEventstore.client.append_to_stream(some_stream, some_event)
-  # Connection is released
-end
+number_of_subscriptions + (number_of_subscriptions / 10.0).ceil + 3
 ```
 
-Taking this into account you may want to increase `connection_pool_size` up to the number of your application's threads(
-or subscriptions).
+So, for example, for 10 subscriptions - the implementation may consume up to 14 connections at a time. On practice this
+number will be lower than the threshold most amount of time, because queries behind the implementation are near instant.
+Nevertheless, it is wise to always have the required number ready to be utilized.
+
+### Tips
+
+To be able to always have enough amount of available connections - it is recommended to use some connection pooler,
+such as [pgbouncer](https://www.pgbouncer.org/) in transaction mode.
