@@ -11,11 +11,11 @@ module PgEventstore
     extend Forwardable
 
     # @return [Integer]
-    MAX_EVENTS_PER_CHUNK = 1_000
+    DEFAULT_MAX_EVENTS_PER_CHUNK = 1_000
     # @return [Integer]
     MIN_EVENTS_PER_CHUNK = 10
     # @return [Integer]
-    INITIAL_EVENTS_PER_CHUNK = 10
+    DEFAULT_INITIAL_EVENTS_PER_CHUNK = 10
 
     # @!attribute subscription
     #   @return [PgEventstore::Subscription]
@@ -28,10 +28,15 @@ module PgEventstore
     # @param stats [PgEventstore::SubscriptionHandlerPerformance]
     # @param events_processor [PgEventstore::EventsProcessor]
     # @param subscription [PgEventstore::Subscription]
-    def initialize(stats:, events_processor:, subscription:)
+    # @param max_events_per_chunk [Integer]
+    def initialize(stats:, events_processor:, subscription:,
+                   initial_events_per_chunk: DEFAULT_INITIAL_EVENTS_PER_CHUNK,
+                   max_events_per_chunk: DEFAULT_MAX_EVENTS_PER_CHUNK)
       @stats = stats
       @events_processor = events_processor
       @subscription = subscription
+      @max_events_per_chunk = max_events_per_chunk
+      @initial_events_per_chunk = initial_events_per_chunk
 
       attach_callbacks
     end
@@ -62,10 +67,10 @@ module PgEventstore
 
     # @return [Integer]
     def estimate_events_number
-      return INITIAL_EVENTS_PER_CHUNK if @stats.average_event_processing_time == 0
+      return @initial_events_per_chunk if @stats.average_event_processing_time == 0
 
       events_per_chunk = (@subscription.chunk_query_interval / @stats.average_event_processing_time).round
-      events_to_fetch = [events_per_chunk, MAX_EVENTS_PER_CHUNK].min - @events_processor.events_left_in_repo
+      events_to_fetch = [events_per_chunk, @max_events_per_chunk].min - @events_processor.events_left_in_repo
       return 0 if events_to_fetch < 0 # We still have a lot of events in the chunk - no need to fetch more
 
       [events_to_fetch, MIN_EVENTS_PER_CHUNK].max

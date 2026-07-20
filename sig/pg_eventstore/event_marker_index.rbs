@@ -1,0 +1,12 @@
+module PgEventstore
+  class EventMarkerIndex
+    include Extensions::OptionsExtension
+    include Extensions::OptionsDefaults
+
+    attr_accessor marker_id: Integer
+    attr_accessor streams_global_index_id: Integer
+    attr_accessor event_type_partition_id: Integer
+    attr_accessor global_position: Integer
+    attr_accessor stream_revision: Integer
+  end
+end

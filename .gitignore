@@ -15,3 +15,5 @@ db/postgresql/
 *.dump
 *.so
 *.tar.gz
+.codex/
+.agents/

@@ -41,3 +41,4 @@ end
 
 require_relative 'events_processor_consumer/single'
 require_relative 'events_processor_consumer/multiple'
+require_relative 'events_processor_consumer/replica'

@@ -1,6 +1,6 @@
 module PgEventstore
-  module SubscriptionFeedStrategy
-    def add: (*SubscriptionRunner runners) -> Array[SubscriptionRunner]
+  module SubscriptionFeedStrategy[unchecked Runner]
+    def add: (*Runner runners) -> Array[Runner]
 
     def any?: -> bool
 

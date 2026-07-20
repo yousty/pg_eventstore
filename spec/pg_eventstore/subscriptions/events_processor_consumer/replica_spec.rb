@@ -1,0 +1,225 @@
+# frozen_string_literal: true
+
+RSpec.describe PgEventstore::EventsProcessorConsumer::Replica do
+  let(:instance) { described_class.new(handler) }
+  let(:handler) { proc { |events_idx| events_handler.call(events_idx) } }
+  let(:events_handler) { double('EventsIdxHandler') }
+
+  before do
+    allow(events_handler).to receive(:call)
+  end
+
+  it 'implements EventsProcessorConsumer' do
+    expect(instance).to be_a(PgEventstore::EventsProcessorConsumer)
+  end
+
+  describe '#clear_unprocessed_events' do
+    subject { instance.clear_unprocessed_events }
+
+    before do
+      instance.instance_variable_set(
+        :@last_unprocessed_events,
+        [
+          PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+            global_position: 1, subscription_position: 1, event_type_partition_id: 1
+          ),
+        ]
+      )
+    end
+
+    it { expect { subject }.to change { instance.instance_variable_get(:@last_unprocessed_events) }.to(nil) }
+  end
+
+  describe '#call' do
+    subject { instance.call(callbacks, repository, repository_cond) }
+
+    let(:callbacks) { PgEventstore::Callbacks.new }
+    let(:repository) { PgEventstore::Chunks::Repository.new }
+    let(:repository_cond) { repository.new_cond }
+    let(:on_process_cbx) do
+      proc do |action, global_position, events_number|
+        before_process_action.call(global_position, events_number)
+        action.call
+        after_process_action.call(global_position, events_number)
+      end
+    end
+    let(:before_process_action) { double('BeforeProcessAction') }
+    let(:after_process_action) { double('AfterProcessAction') }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+
+    before do
+      callbacks.define_callback(:process, :around, on_process_cbx)
+      allow(before_process_action).to receive(:call)
+      allow(after_process_action).to receive(:call)
+    end
+
+    context 'when no events are given' do
+      it 'sleeps for .5 seconds' do
+        expect { subject }.to change { Time.now }.by(be_between(0.5, 0.51))
+      end
+      it 'does not run :process callbacks' do
+        subject
+        aggregate_failures do
+          expect(before_process_action).not_to have_received(:call)
+          expect(after_process_action).not_to have_received(:call)
+        end
+      end
+      it 'does not process any event' do
+        subject
+        expect(events_handler).not_to have_received(:call)
+      end
+    end
+
+    context 'when there are some events' do
+      let(:event1) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:event2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:indexes) { prepare_subscription_indexes([event1, event2]) }
+      let(:chunk) { PgEventstore::Chunks::ReplicaEventsIndexChunk.new(indexes.dup) }
+
+      before do
+        repository.add_chunk(chunk)
+      end
+
+      it 'does not sleep' do
+        expect { subject }.to change { Time.now }.by(be_between(0, 0.05))
+      end
+      it 'runs :process callbacks for the last event' do
+        subject
+        aggregate_failures do
+          expect(before_process_action).to have_received(:call).with(indexes.last.subscription_position, 2)
+          expect(after_process_action).to have_received(:call).with(indexes.last.subscription_position, 2)
+        end
+      end
+      it 'does not run :process callbacks for first event' do
+        subject
+        aggregate_failures do
+          expect(before_process_action).not_to have_received(:call).with(indexes.first.subscription_position)
+          expect(after_process_action).not_to have_received(:call).with(indexes.first.subscription_position)
+        end
+      end
+      it 'processes events' do
+        subject
+        expect(events_handler).to have_received(:call).with(indexes)
+      end
+      it 'drains chunk' do
+        expect { subject }.to change { chunk.size }.to(0)
+      end
+      it 'clears @last_unprocessed_events' do
+        unprocessed_event = PgEventstore::EventGlobalIndex::SubscriptionRepr.new(
+          global_position: 10, subscription_position: 20, event_type_partition_id: 30
+        )
+        instance.instance_variable_set(:@last_unprocessed_events, [unprocessed_event])
+        expect { subject }.to change { instance.instance_variable_get(:@last_unprocessed_events) }.to(nil)
+      end
+    end
+
+    context 'when checkpoint event is consumed' do
+      let(:chunk) { PgEventstore::Chunks::SubscriptionCheckpointChunk.new(position) }
+      let(:position) { 123 }
+      let(:checkpoint_handler) { double('Checkpoint Handler') }
+
+      before do
+        repository.add_chunk(chunk)
+        allow(checkpoint_handler).to receive(:call)
+        callbacks.define_callback(:checkpoint, :before, proc { |pos| checkpoint_handler.call(pos) })
+      end
+
+      it 'does not call handler' do
+        subject
+        expect(events_handler).not_to have_received(:call)
+      end
+      it 'runs :checkpoint callback' do
+        subject
+        expect(checkpoint_handler).to have_received(:call).with(position)
+      end
+    end
+
+    context 'when handler raises an error' do
+      let(:event1) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:event2) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:indexes) { prepare_subscription_indexes([event1, event2]) }
+      let(:chunk) { PgEventstore::Chunks::ReplicaEventsIndexChunk.new(indexes.dup) }
+
+      let(:handler) { proc { raise error_class, 'Oops!' } }
+      let(:error_class) { Class.new(StandardError) }
+
+      before do
+        repository.add_chunk(chunk)
+      end
+
+      it 'does not sleep' do
+        expect {
+          begin
+            subject
+          rescue PgEventstore::WrappedException
+          end
+        }.to change { Time.now }.by(be_between(0, 0.05))
+      end
+      it 'runs only :before :process callbacks' do
+        begin
+          subject
+        rescue PgEventstore::WrappedException
+        end
+        aggregate_failures do
+          expect(before_process_action).to have_received(:call).with(indexes.last.subscription_position, 2)
+          expect(after_process_action).not_to have_received(:call)
+        end
+      end
+      it 'drains chunk' do
+        expect {
+          begin
+            subject
+          rescue PgEventstore::WrappedException
+          end
+        }.to change { chunk.size }.to(0)
+      end
+      it 'persists unprocessed events into @last_unprocessed_events' do
+        expect {
+          begin
+            subject
+          rescue PgEventstore::WrappedException
+          end
+        }.to change {
+          instance.instance_variable_get(:@last_unprocessed_events)
+        }.to(indexes)
+      end
+      # rubocop:disable RSpec/MultipleExpectations
+      it 'raises the error' do
+        expect { subject }.to raise_error(PgEventstore::WrappedException) do |error|
+          aggregate_failures do
+            expect(error.original_exception).to be_a(error_class)
+            expect(error.original_exception.message).to eq('Oops!')
+            expect(error.extra).to(
+              eq(subscription_position_range: [indexes.first.subscription_position, indexes.last.subscription_position])
+            )
+          end
+        end
+      end
+      # rubocop:enable RSpec/MultipleExpectations
+
+      context 'when event which caused an exception is a link event' do
+        let(:event1) { PgEventstore.client.link_to(stream, event2) }
+        let(:chunk) { create_subscription_index_chunk(indexes, resolve_link_tos: true) }
+
+        # rubocop:disable RSpec/MultipleExpectations
+        it 'raises the error with correct global positions' do
+          expect { subject }.to raise_error(PgEventstore::WrappedException) do |error|
+            aggregate_failures do
+              expect(error.original_exception).to be_a(error_class)
+              expect(error.original_exception.message).to eq('Oops!')
+              expect(error.extra).to(
+                eq(
+                  subscription_position_range: [
+                    indexes.first.subscription_position, indexes.last.subscription_position
+                  ]
+                )
+              )
+            end
+          end
+        end
+        # rubocop:enable RSpec/MultipleExpectations
+      end
+    end
+  end
+end

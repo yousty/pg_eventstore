@@ -8,6 +8,8 @@ module PgEventstore
 
     def compile: (String sql, Array[untyped] params) -> String
 
+    def prepared_value: (untyped value) -> String
+
     private
 
     def log: (untyped sql, untyped params) -> untyped

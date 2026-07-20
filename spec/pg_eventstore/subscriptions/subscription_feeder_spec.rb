@@ -381,18 +381,6 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         dv(subscription_runner2).deferred_wait(timeout: 2) { _1.state == 'stopped' }.state
       }.to('stopped')
     end
-    it 'starts EventsSubscriptionPositionWorker' do
-      stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
-      event = PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
-      position = proc do
-        PgEventstore.connection.with do |c|
-          c.exec('select global_position, subscription_position from event_subscription_positions')
-        end.first || {}
-      end
-      expect { subject }.to change {
-        dv(position).deferred_wait(timeout: 2) { !_1.call['subscription_position'].nil? }.call
-      }.to('global_position' => event.global_position, 'subscription_position' => kind_of(Integer))
-    end
 
     context 'when second Subscription is already locked' do
       let(:subscriptions_set_id) { queries.create(name: set_name)[:id] }
@@ -411,6 +399,67 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
           rescue PgEventstore::SubscriptionAlreadyLockedError
           end
         }.not_to change { queries.find_all(name: set_name).size }
+      end
+    end
+
+    describe 'EventsSubscriptionPositionWorker start up' do
+      let(:positions) do
+        proc do
+          PgEventstore.connection.with do |c|
+            c.exec('select global_position, subscription_position from event_subscription_positions')
+          end.to_a
+        end
+      end
+      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:event) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+
+      before do
+        event
+        PgEventstore.configure do |config|
+          config.events_subscription_position_update_interval = 0
+        end
+      end
+
+      context 'when running on standalone node' do
+        before do
+          PgEventstore.configure do |config|
+            config.eventstore_role = PgEventstore::Config::NodeRole::STANDALONE
+          end
+        end
+
+        it 'starts EventsSubscriptionPositionWorker' do
+          expect { subject }.to change {
+            dv(positions).deferred_wait(timeout: 0.5) { !_1.call.empty? }.call
+          }.to([{ 'global_position' => event.global_position, 'subscription_position' => kind_of(Integer) }])
+        end
+      end
+
+      context 'when running on primary node' do
+        before do
+          PgEventstore.configure do |config|
+            config.eventstore_role = PgEventstore::Config::NodeRole::PRIMARY
+          end
+        end
+
+        it 'starts EventsSubscriptionPositionWorker' do
+          expect { subject }.to change {
+            dv(positions).deferred_wait(timeout: 0.5) { !_1.call.empty? }.call
+          }.to([{ 'global_position' => event.global_position, 'subscription_position' => kind_of(Integer) }])
+        end
+      end
+
+      context 'when running on replica node' do
+        before do
+          PgEventstore.configure do |config|
+            config.eventstore_role = PgEventstore::Config::NodeRole::REPLICA
+          end
+        end
+
+        it 'does not start EventsSubscriptionPositionWorker' do
+          expect { subject }.not_to change {
+            dv(positions).deferred_wait(timeout: 0.5) { !_1.call.empty? }.call
+          }
+        end
       end
     end
   end

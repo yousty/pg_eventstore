@@ -63,18 +63,10 @@ void
 Init_pg_eventstore_ext(void)
 {
     VALUE pg_eventstore = rb_define_module("PgEventstore");
-    VALUE chunks = rb_define_module_under(pg_eventstore, "Chunks");
-    VALUE read_api_events_index_chunk = rb_define_class_under(chunks, "ReadApiEventsIndexChunk", rb_cObject);
-    VALUE subscription_events_index_chunk = rb_define_class_under(chunks, "SubscriptionEventsIndexChunk", rb_cObject);
+    VALUE utils = rb_define_class_under(pg_eventstore, "Utils", rb_cObject);
 
-    rb_define_private_method(
-        read_api_events_index_chunk,
-        "range_to_slice",
-        range_to_slice,
-        2
-    );
-    rb_define_private_method(
-        subscription_events_index_chunk,
+    rb_define_singleton_method(
+        utils,
         "range_to_slice",
         range_to_slice,
         2

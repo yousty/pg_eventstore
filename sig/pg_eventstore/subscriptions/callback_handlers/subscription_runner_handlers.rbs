@@ -2,10 +2,18 @@ module PgEventstore
   class SubscriptionRunnerHandlers
     def self.checkpoint: (Subscription subscription, Integer global_position) -> void
 
-    def self.track_exec_time: (SubscriptionHandlerPerformance stats, ^() -> void, Integer _current_position) -> void
+    def self.track_exec_time: (
+        SubscriptionHandlerPerformance stats, ^() -> void,
+        Integer _current_position,
+        Integer events_number
+      ) -> void
 
-    def self.update_subscription_stats: (Subscription subscription, SubscriptionHandlerPerformance stats,
-        Integer current_position) -> void
+    def self.update_subscription_stats: (
+        Subscription subscription,
+        SubscriptionHandlerPerformance stats,
+        Integer current_position,
+        Integer events_number
+      ) -> void
 
     def self.update_subscription_error: (Subscription subscription, WrappedException error) -> void
 

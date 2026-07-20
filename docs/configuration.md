@@ -19,6 +19,8 @@ Configuration options:
 | failed_subscription_notifier                 | `#call`        | `nil`                                                        | A callable object which is invoked with `PgEventstore::Subscription` instance and error instance after the related subscription died due to error and no longer can be automatically restarted due to max retries number reached. You can use this hook to send a notification about failed subscription. |
 | subscription_graceful_shutdown_timeout       | Integer, Float | `15`                                                         | The number of seconds to wait until force-shutdown the subscription during the stop process. If your subscription handler does not finish current event processing during this time(for example because of heavy-lifting task) - it will be force-shutdown.                                               |
 | events_subscription_position_update_interval | Integer, Float | `0.2`                                                        | Events subscription position update interval. See related docs [**Subscription position**](subscriptions.md#subscription-position)                                                                                                                                                                        |
+| eventstore_role                              | Symbol         | `:standalone`                                                | Sets the role of the current configuration. Read more about this config option [bellow](#eventstore-role)                                                                                                                                                                                                 |
+| max_events_to_replicate                      | Integer        | `10_000`                                                     | Max number of events to replicate at a time. Read more about this config option [bellow](#max-events-to-replicate)                                                                                                                                                                                        |
 
 ## Multiple configurations
 
@@ -126,3 +128,29 @@ Nevertheless, it is wise to always have the required number ready to be utilized
 
 To be able to always have enough amount of available connections - it is recommended to use some connection pooler,
 such as [pgbouncer](https://www.pgbouncer.org/) in transaction mode.
+
+## Eventstore role
+
+Defines the role of your event store. Available values are:
+
+- `:standalone` Means you are running the only copy of your database. This is the default. No functional restrictions
+  are applied
+- `:primary` Means this is your primary node where events are get published
+- `:replica` Means this is a replica of your primary node. No events can be published
+
+Functional restrictions that apply to `:primary` and `:replica` roles:
+
+- `:primary` and `:replica` roles are not allowed to perform any maintenance operations, such as delete events or
+  delete streams
+- `:replica` role is not allowed to publish any events
+
+## Max events to replicate
+
+This option determines how many events you want to copy from your primary node into your replica node at a time. The
+larger this value - the more resources are needed. It is both - memory and CPU intensive as a replica subscription first
+loads events into memory, prepares them and then persists into the destination replica node. Thus, it may be wise to
+split your replica subscriptions from your application subscriptions and adjust the environment to handle higher loads.
+
+Please note, that this is an **upper limit** of events to replicate at a time. Subscriptions have their own measurement
+of how many events a subscription handler processes per second. Thus, the number of events actually processed by a
+subscription at a time may differ.

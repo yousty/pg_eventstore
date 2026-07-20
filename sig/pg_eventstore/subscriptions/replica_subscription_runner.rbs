@@ -1,0 +1,4 @@
+module PgEventstore
+  class ReplicaSubscriptionRunner < SubscriptionRunner
+  end
+end

@@ -8,7 +8,7 @@ module PgEventstore
     extend Forwardable
 
     # @return [Integer] the number of measurements to keep
-    TIMINGS_TO_KEEP = 100
+    TIMINGS_TO_KEEP = 10
 
     def_delegators :@lock, :synchronize
 
@@ -18,10 +18,12 @@ module PgEventstore
     end
 
     # Yields the given block to measure its execution time
+    # @param events_number [Integer] number of events processed by the given block
     # @return [Object] the result of yielded block
-    def track_exec_time
+    def track_exec_time(events_number)
       result = nil
       time = Utils.benchmark { result = yield }
+      time /= events_number
       synchronize do
         @timings.shift if @timings.size == TIMINGS_TO_KEEP
         @timings.push(time)

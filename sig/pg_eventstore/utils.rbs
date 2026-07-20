@@ -2,6 +2,8 @@ module PgEventstore
   class Utils
     def self.assert!: (boolish truthy, String? message) -> void
 
+    def self.assert_node_role!: (Config config, Array[Symbol] expected_roles) -> void
+
     def self.benchmark: { -> untyped } -> Float
 
     def self.deep_transform_keys: (untyped object) { (untyped key) -> untyped } -> untyped

@@ -30,21 +30,21 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Multiple do
     let(:repository) { PgEventstore::Chunks::Repository.new }
     let(:repository_cond) { repository.new_cond }
     let(:on_process_cbx) do
-      proc do |action, global_position|
-        position_handler_before.call(global_position)
+      proc do |action, global_position, events_number|
+        before_process_action.call(global_position, events_number)
         action.call
-        position_handler_after.call(global_position)
+        after_process_action.call(global_position, events_number)
       end
     end
-    let(:position_handler_before) { double('PositionHandlerBefore') }
-    let(:position_handler_after) { double('PositionHandlerAfter') }
+    let(:before_process_action) { double('BeforeProcessAction') }
+    let(:after_process_action) { double('AfterProcessAction') }
 
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
 
     before do
       callbacks.define_callback(:process, :around, on_process_cbx)
-      allow(position_handler_before).to receive(:call)
-      allow(position_handler_after).to receive(:call)
+      allow(before_process_action).to receive(:call)
+      allow(after_process_action).to receive(:call)
     end
 
     context 'when no events are given' do
@@ -54,8 +54,8 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Multiple do
       it 'does not run :process callbacks' do
         subject
         aggregate_failures do
-          expect(position_handler_before).not_to have_received(:call)
-          expect(position_handler_after).not_to have_received(:call)
+          expect(before_process_action).not_to have_received(:call)
+          expect(after_process_action).not_to have_received(:call)
         end
       end
       it 'does not process any event' do
@@ -80,15 +80,15 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Multiple do
       it 'runs :process callbacks for the last event' do
         subject
         aggregate_failures do
-          expect(position_handler_before).to have_received(:call).with(indexes.last.subscription_position)
-          expect(position_handler_after).to have_received(:call).with(indexes.last.subscription_position)
+          expect(before_process_action).to have_received(:call).with(indexes.last.subscription_position, 2)
+          expect(after_process_action).to have_received(:call).with(indexes.last.subscription_position, 2)
         end
       end
       it 'does not run :process callbacks for first event' do
         subject
         aggregate_failures do
-          expect(position_handler_before).not_to have_received(:call).with(indexes.first.subscription_position)
-          expect(position_handler_after).not_to have_received(:call).with(indexes.first.subscription_position)
+          expect(before_process_action).not_to have_received(:call).with(indexes.first.subscription_position)
+          expect(after_process_action).not_to have_received(:call).with(indexes.first.subscription_position)
         end
       end
       it 'processes events' do
@@ -163,8 +163,8 @@ RSpec.describe PgEventstore::EventsProcessorConsumer::Multiple do
         rescue PgEventstore::WrappedException
         end
         aggregate_failures do
-          expect(position_handler_before).to have_received(:call).with(indexes.last.subscription_position)
-          expect(position_handler_after).not_to have_received(:call)
+          expect(before_process_action).to have_received(:call).with(indexes.last.subscription_position, 2)
+          expect(after_process_action).not_to have_received(:call)
         end
       end
       it 'drains chunk' do

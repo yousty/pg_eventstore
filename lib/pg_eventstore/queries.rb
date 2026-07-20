@@ -22,6 +22,7 @@ require_relative 'queries/events_global_index_queries'
 require_relative 'queries/streams_global_index_queries'
 require_relative 'queries/event_marker_queries'
 require_relative 'queries/index_filtering_queries'
+require_relative 'queries/replica_queries'
 
 module PgEventstore
   # @!visibility private

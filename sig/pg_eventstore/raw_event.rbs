@@ -1,0 +1,20 @@
+module PgEventstore
+  # @!visibility private
+  class RawEvent
+    include Extensions::OptionsExtension
+    include Extensions::OptionsDefaults
+
+    attr_accessor id: String
+    attr_accessor context: String
+    attr_accessor stream_name: String
+    attr_accessor stream_id: String
+    attr_accessor global_position: Integer
+    attr_accessor stream_revision: Integer
+    attr_accessor data: Hash[untyped, untyped]
+    attr_accessor metadata: Hash[untyped, untyped]
+    attr_accessor link_partition_id: Integer?
+    attr_accessor created_at: Time
+    attr_accessor type: String
+    attr_accessor link_global_position: Integer?
+  end
+end

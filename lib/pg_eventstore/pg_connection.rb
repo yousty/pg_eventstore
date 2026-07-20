@@ -64,24 +64,19 @@ module PgEventstore
         # Do not replace non-positional args string and pass it as is
         next matched unless placeholder
 
-        value = params[placeholder[1..].to_i - 1]
-        value = encode_value(value)
-        normalize_value(value)
+        prepared_value(params[placeholder[1..].to_i - 1])
       end
+    end
+
+    # Converts the given object into its PostgreSQL representation
+    def prepared_value(value)
+      value = encode_value(value)
+      normalize_value(value)
     end
 
     private
 
     def encode_value(value)
-      unless type_map_for_queries.is_a?(PG::TypeMapByClass)
-        raise <<~TEXT.strip
-          Unsupported type map. Please use the one which is inherited from PG::TypeMapByClass, for example \
-          PG::BasicTypeMapForQueries:
-          conn = PG::Connection.new
-          conn.type_map_for_queries = PG::BasicTypeMapForQueries.new(conn)
-        TEXT
-      end
-
       encoder = type_map_for_queries[value.class]
       return type_map_for_queries.send(encoder, value).encode(value) if encoder.is_a?(Symbol)
       # format == 1 stands for binary format

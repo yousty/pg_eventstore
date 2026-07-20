@@ -48,7 +48,7 @@ module PgEventstore
           return
         end
 
-        callbacks.run_callbacks(:process, raw_event.subscription_position) do
+        callbacks.run_callbacks(:process, raw_event.subscription_position, 1) do
           @handler.call(raw_event.attributes)
         rescue => exception
           @last_unprocessed_event = raw_event

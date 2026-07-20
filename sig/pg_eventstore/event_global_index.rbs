@@ -28,6 +28,8 @@ module PgEventstore
       attr_accessor global_position: Integer
       attr_accessor subscription_position: Integer
       attr_accessor event_type_partition_id: Integer
+
+      def to_subscription_position_attrs: -> { global_position: Integer, subscription_position: Integer }
     end
 
     class ReadApiRepr

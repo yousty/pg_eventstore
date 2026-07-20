@@ -85,7 +85,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
     describe ':max_count' do
       context 'when stats does not have any measurements yet' do
         it 'returns default value of :max_count' do
-          is_expected.to include(max_count: described_class::INITIAL_EVENTS_PER_CHUNK)
+          is_expected.to include(max_count: described_class::DEFAULT_INITIAL_EVENTS_PER_CHUNK)
         end
       end
 
@@ -95,7 +95,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
         end
 
         it 'ignores it' do
-          is_expected.to include(max_count: described_class::INITIAL_EVENTS_PER_CHUNK)
+          is_expected.to include(max_count: described_class::DEFAULT_INITIAL_EVENTS_PER_CHUNK)
         end
       end
 
@@ -108,8 +108,8 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
         context 'when average exec time is normal' do
           before do
-            stats.track_exec_time { sleep 0.2 }
-            stats.track_exec_time { sleep 0.1 }
+            stats.track_exec_time(1) { sleep 0.2 }
+            stats.track_exec_time(1) { sleep 0.1 }
           end
 
           it 'calculates approximate events number of :max_count' do
@@ -147,7 +147,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           before do
             instance.start
             dv(instance).wait_until(timeout: 0.1) { _1.state == 'running' }
-            stats.track_exec_time { sleep 0.2 }
+            stats.track_exec_time(1) { sleep 0.2 }
             instance.feed(chunk)
           end
 
@@ -162,11 +162,11 @@ RSpec.describe PgEventstore::SubscriptionRunner do
 
         context 'when average exec time is too fast' do
           before do
-            stats.track_exec_time { sleep 0.001 }
+            stats.track_exec_time(1) { sleep 0.001 }
           end
 
           it 'returns the maximum acceptable value of :max_count' do
-            is_expected.to include(max_count: described_class::MAX_EVENTS_PER_CHUNK)
+            is_expected.to include(max_count: described_class::DEFAULT_MAX_EVENTS_PER_CHUNK)
           end
 
           context 'when there are events left in the queue' do
@@ -186,7 +186,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
             end
 
             it 'subtracts queue size from the final value' do
-              is_expected.to include(max_count: described_class::MAX_EVENTS_PER_CHUNK - 2)
+              is_expected.to include(max_count: described_class::DEFAULT_MAX_EVENTS_PER_CHUNK - 2)
             end
           end
         end
@@ -195,7 +195,7 @@ RSpec.describe PgEventstore::SubscriptionRunner do
           let(:chunk_query_interval) { 0.5 }
 
           before do
-            stats.track_exec_time { sleep 2 }
+            stats.track_exec_time(1) { sleep 2 }
           end
 
           it 'falls back to the minimum acceptable limit' do
@@ -521,6 +521,59 @@ RSpec.describe PgEventstore::SubscriptionRunner do
       end
       it 'does not update Subscription#last_chunk_greatest_position' do
         expect { subject }.not_to change { subscription.reload.last_chunk_greatest_position }
+      end
+    end
+  end
+
+  describe '#estimate_events_number' do
+    subject { instance.send(:estimate_events_number) }
+
+    let(:instance) do
+      described_class.new(stats:, events_processor:, subscription:, initial_events_per_chunk:, max_events_per_chunk:)
+    end
+    let(:initial_events_per_chunk) { 12 }
+    let(:max_events_per_chunk) { 14 }
+
+    context 'when stats#average_event_processing_time is zero' do
+      it { is_expected.to eq(initial_events_per_chunk) }
+    end
+
+    context 'when stats#average_event_processing_time is greater than 0' do
+      let(:avg_processing_time) { 0.5 }
+
+      before do
+        subscription.chunk_query_interval = 2
+        allow(stats).to receive(:average_event_processing_time).and_return(avg_processing_time)
+      end
+
+      context 'when there are still enough events in the repo' do
+        before do
+          allow(events_processor).to receive(:events_left_in_repo).and_return(10)
+        end
+
+        it { is_expected.to eq(0) }
+      end
+
+      context 'when there is not enough events in the repo' do
+        before do
+          allow(events_processor).to receive(:events_left_in_repo).and_return(1)
+        end
+
+        context 'when the number of events to fetch is greater than MIN_EVENTS_PER_CHUNK' do
+          before do
+            stub_const("#{described_class}::MIN_EVENTS_PER_CHUNK", 2)
+          end
+
+          it 'returns the calculated events number' do
+            is_expected.to eq(3)
+          end
+        end
+
+        context 'when the number of events to fetch is less than MIN_EVENTS_PER_CHUNK' do
+          it 'returns the minimum events number per chunk' do
+            is_expected.to eq(10)
+          end
+        end
       end
     end
   end

@@ -806,4 +806,82 @@ RSpec.describe 'Subscriptions integration' do
       }.to([PgEventstore.client.read(stream)])
     end
   end
+
+  # rubocop:disable RSpec/BeforeAfterAll
+  describe 'replication' do
+    subject { manager.start }
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: 'My replications') }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
+    let(:event1) do
+      event = PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo')
+      PgEventstore.client.append_to_stream(stream, event)
+    end
+    let(:event2) do
+      event = PgEventstore::Event.new(data: { bar: :baz }, type: 'Bar', markers: ['foo'])
+      PgEventstore.client.append_to_stream(stream, event)
+    end
+
+    let(:replica1_events) { proc { PgEventstore.client(:replica1).read(PgEventstore::Stream.all_stream) } }
+    let(:replica2_events) { proc { PgEventstore.client(:replica2).read(PgEventstore::Stream.all_stream) } }
+
+    before(:context) do
+      `
+        PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_replica1" \
+        bundle exec rake pg_eventstore:drop pg_eventstore:create pg_eventstore:migrate
+        PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_replica2" \
+        bundle exec rake pg_eventstore:drop pg_eventstore:create pg_eventstore:migrate
+      `
+    end
+
+    after(:context) do
+      `
+        PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_replica1" \
+        bundle exec rake pg_eventstore:drop
+        PG_EVENTSTORE_URI="postgresql://postgres:postgres@localhost:5532/eventstore_replica2" \
+        bundle exec rake pg_eventstore:drop
+      `
+    end
+
+    before do
+      PgEventstore.configure(name: :replica1) do |config|
+        config.pg_uri = 'postgresql://postgres:postgres@localhost:5532/eventstore_replica1'
+        config.eventstore_role = PgEventstore::Config::NodeRole::REPLICA
+      end
+      PgEventstore.configure(name: :replica2) do |config|
+        config.pg_uri = 'postgresql://postgres:postgres@localhost:5532/eventstore_replica2'
+        config.eventstore_role = PgEventstore::Config::NodeRole::REPLICA
+      end
+      PgEventstore.configure do |config|
+        config.eventstore_role = PgEventstore::Config::NodeRole::PRIMARY
+        config.subscription_pull_interval = 0.2
+      end
+      PgEventstore::TestHelpers.clean_up_db(:replica1)
+      PgEventstore::TestHelpers.clean_up_db(:replica2)
+      event1
+      event2
+      manager.create_replication('Replica 1', :replica1)
+      manager.create_replication('Replica 2', :replica2, options: { filter: { event_types: ['Foo'] } })
+      manager.start
+    end
+
+    after do
+      manager.stop
+      PgEventstore.connection(:replica1).shutdown
+      PgEventstore.connection(:replica2).shutdown
+    end
+
+    it 'replicates events into "Replica 1"' do
+      expect { subject }.to change {
+        dv(replica1_events).deferred_wait(timeout: 1) { _1.call.size == 2 }.call
+      }.to([event1, event2])
+    end
+    it 'replicates events into "Replica 2"' do
+      expect { subject }.to change {
+        dv(replica2_events).deferred_wait(timeout: 1) { _1.call.size == 1 }.call
+      }.to([event1])
+    end
+  end
+  # rubocop:enable RSpec/BeforeAfterAll
 end

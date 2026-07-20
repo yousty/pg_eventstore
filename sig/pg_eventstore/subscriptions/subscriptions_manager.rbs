@@ -17,6 +17,20 @@ module PgEventstore
         ?force_lock: bool
       ) -> void
 
+    def create_replication: (
+        String subscription_name,
+        Symbol primary_config_name,
+        ?options: ::Hash[untyped, untyped],
+        ?max_events_to_replicate: Integer,
+        ?pull_interval: Integer | Float,
+        ?max_retries: Integer,
+        ?retries_interval: Integer | Float,
+        ?restart_terminator: _RestartTerminator?,
+        ?failed_subscription_notifier: _FailedSubscriptionNotifier?,
+        ?graceful_shutdown_timeout: Integer | Float,
+        ?in_batches: bool,
+      ) -> void
+
     def config_name: () -> Symbol
 
     def subscribe: (

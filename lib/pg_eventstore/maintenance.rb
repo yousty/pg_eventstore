@@ -15,6 +15,7 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @return [Boolean] whether a stream was deleted successfully
     def delete_stream(stream)
+      Utils.assert_node_role!(config, Config::NodeRole.maintainable)
       queries = Queries.new(maintenance: maintenance_queries)
       Commands::DeleteStream.new(queries).call(stream)
     end
@@ -22,6 +23,7 @@ module PgEventstore
     # @param event [PgEventstore::Event] persisted event
     # @return [Boolean] whether an event was deleted successfully
     def delete_event(event, force: false)
+      Utils.assert_node_role!(config, Config::NodeRole.maintainable)
       queries = Queries.new(maintenance: maintenance_queries, events_global_index: events_global_index_queries)
       Commands::DeleteEvent.new(queries).call(event, force:)
     end

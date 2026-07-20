@@ -32,6 +32,7 @@ module PgEventstore
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def append_to_stream(stream, events_or_event, options: {}, middlewares: nil)
+      Utils.assert_node_role!(config, Config::NodeRole.writable)
       middlewares = self.middlewares(middlewares)
       event_modifier = Commands::EventModifiers::PrepareRegularEvent.new(EventSerializer.new(middlewares))
       queries = Queries.new(
@@ -224,6 +225,7 @@ module PgEventstore
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def link_to(stream, events_or_event, options: {}, middlewares: [])
+      Utils.assert_node_role!(config, Config::NodeRole.writable)
       middlewares = self.middlewares(middlewares)
       event_modifier = Commands::EventModifiers::PrepareLinkEvent.new(
         partition_queries, EventSerializer.new(middlewares)

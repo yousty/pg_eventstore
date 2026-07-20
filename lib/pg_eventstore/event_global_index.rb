@@ -24,9 +24,6 @@ module PgEventstore
     # @!attribute streams_global_index_id
     #   @return [Integer]
     attribute(:streams_global_index_id)
-    # @!attribute subscription_position
-    #   @return [Integer]
-    attribute(:subscription_position)
 
     # EventGlobalIndex representation that is used in subscriptions
     class SubscriptionRepr
@@ -42,6 +39,11 @@ module PgEventstore
       # @!attribute event_type_partition_id
       #   @return [Integer]
       attribute(:event_type_partition_id)
+
+      # @return [Hash]
+      def to_subscription_position_attrs
+        { global_position:, subscription_position: }
+      end
     end
 
     # EventGlobalIndex representation that is used in Read API

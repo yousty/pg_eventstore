@@ -63,7 +63,7 @@ module PgEventstore
       # @return [void]
       def resolve_indexes
         indexes_to_resolve = @indexes.slice!(
-          range_to_slice(@indexes.map(&:event_type_partition_id), MAX_PARTITIONS_TO_RESOLVE_PER_CALL)
+          Utils.range_to_slice(@indexes.map(&:event_type_partition_id), MAX_PARTITIONS_TO_RESOLVE_PER_CALL)
         )
         raw_events = events_global_index_queries.resolve_indexes(
           indexes_to_resolve,

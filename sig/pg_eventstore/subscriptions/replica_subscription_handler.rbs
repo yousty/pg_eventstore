@@ -1,0 +1,33 @@
+module PgEventstore
+  class ReplicaSubscriptionHandler
+    @replica_config_name: Symbol
+    @config_name: Symbol
+
+    def call: (Array[EventGlobalIndex::SubscriptionRepr] indexes) -> void
+
+    def initialize: (Symbol, Symbol) -> void
+
+    private
+
+    def connection: -> Connection
+
+    def destination_replica_queries: -> ReplicaQueries
+
+    def records_to_sql: (
+        String table_name, 
+        Array[Symbol] attribute_names, 
+        Array[Hash[Symbol, untyped]] attributes_collection, 
+        ?on_conflict: String?
+      ) -> String
+
+    def reject_already_processed: (
+        Array[EventGlobalIndex::SubscriptionRepr] indexes
+      ) -> Array[EventGlobalIndex::SubscriptionRepr]
+
+    def replica_connection: -> Connection
+
+    def replica_transaction_queries: -> TransactionQueries
+
+    def source_replica_queries: -> ReplicaQueries
+  end
+end

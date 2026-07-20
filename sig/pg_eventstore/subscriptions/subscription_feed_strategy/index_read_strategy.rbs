@@ -1,7 +1,7 @@
 module PgEventstore
-  module SubscriptionFeedStrategy
+  module SubscriptionFeedStrategy[unchecked Runner]
     class IndexReadStrategy
-      include SubscriptionFeedStrategy
+      include SubscriptionFeedStrategy[SubscriptionRunner]
 
       INDEX_LOOK_UP_DISTANCE: Integer
 

@@ -28,3 +28,4 @@ end
 
 require_relative 'subscription_feed_strategies/collection'
 require_relative 'subscription_feed_strategies/index_read_strategy'
+require_relative 'subscription_feed_strategies/replication_strategy'

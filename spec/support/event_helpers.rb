@@ -11,21 +11,73 @@ module EventHelpers
     end
   end
 
-  # Loads event indexes from db. For read api order must be by global position
+  # Loads read API representation of event indexes from db. For read api order must be by global position
   # @param events [PgEventstore::Event]
   # @param order [String, Symbol]
   # @return [Array<PgEventstore::EventGlobalIndex::ReadApiRepr>]
-  def read_api_indexes(*events, order: :asc)
+  def read_api_indexes(*events, order: :asc, strict: true)
     builder = PgEventstore::QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
     builder.where('global_position = any(?)', events.map(&:global_position))
     builder.order("global_position #{order}")
     result = PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params)
     end
-    result.map do |attrs|
+    result = result.map do |attrs|
       attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)
       PgEventstore::EventGlobalIndex::ReadApiRepr.new(**attrs)
     end
+    if strict && result.size != events.size
+      raise "Indexes size #{result.size} does not match events size #{events.size}"
+    end
+
+    result
+  end
+
+  # Loads full event indexes from db
+  # @param events [Array<PgEventstore::Event>]
+  # @param order [String, Symbol]
+  # @return [Array<PgEventstore::EventGlobalIndex>]
+  def read_event_indexes(events, order: :asc, strict: true)
+    builder = PgEventstore::QueryBuilders::EventsGlobalIndexFiltering.new.to_sql_builder
+    builder.unselect.select('*')
+    builder.where('global_position = any(?)', events.map(&:global_position))
+    builder.order("global_position #{order}")
+    result = PgEventstore.connection.with do |conn|
+      conn.exec_params(*builder.to_exec_params)
+    end
+    result = result.map do |attrs|
+      attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)
+      PgEventstore::EventGlobalIndex.new(**attrs)
+    end
+    if strict && result.size != events.size
+      raise "Indexes size #{result.size} does not match events size #{events.size}"
+    end
+
+    result
+  end
+
+  # Loads event marker indexes from db
+  # @param events [Array<PgEventstore::Event>]
+  # @param order [String, Symbol]
+  # @return [Array<PgEventstore::EventMarkerIndex>]
+  def read_event_marker_indexes(events, order: :asc, strict: true)
+    builder = PgEventstore::QueryBuilders::EventMarkersIndexFiltering.new.to_sql_builder
+    builder.unselect.select('*')
+    builder.where('global_position = any(?)', events.map(&:global_position))
+    builder.order("marker_id asc, global_position #{order}")
+    result = PgEventstore.connection.with do |conn|
+      conn.exec_params(*builder.to_exec_params)
+    end
+    result = result.map do |attrs|
+      attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)
+      PgEventstore::EventMarkerIndex.new(**attrs)
+    end
+    markers_size = events.sum { _1.markers.size + _1.feature_markers.size }
+    if strict && result.size != markers_size
+      raise "Indexes size #{result.size} does not match event markers size #{markers_size.size}"
+    end
+
+    result
   end
 
   # @param value [Integer] position to reset to. The sequence starts with the given value
@@ -35,11 +87,12 @@ module EventHelpers
     end
   end
 
-  # Loads event indexes from db. For subscriptions api order must be by subscription position
+  # Loads subscription representation of event indexes from db. For subscriptions api order must be by subscription
+  # position
   # @param events [Array<PgEventstore::Event>]
   # @param order [String, Symbol]
   # @return [Array<PgEventstore::EventGlobalIndex::SubscriptionRepr>]
-  def prepare_subscription_indexes(events, order: :asc)
+  def prepare_subscription_indexes(events, order: :asc, strict: true)
     return [] if events.empty?
 
     PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection).assign_subscription_position
@@ -50,12 +103,17 @@ module EventHelpers
     builder.where('events_global_index.global_position = any(?)', events.map(&:global_position))
     builder.order("subscription_position #{order}")
 
-    PgEventstore.connection.with do |conn|
+    result = PgEventstore.connection.with do |conn|
       conn.exec_params(*builder.to_exec_params).map do |attrs|
         attrs = PgEventstore::Utils.deep_transform_keys(attrs, &:to_sym)
         PgEventstore::EventGlobalIndex::SubscriptionRepr.new(**attrs)
       end
     end
+    if strict && result.size != events.size
+      raise "Indexes size #{result.size} does not match events size #{events.size}"
+    end
+
+    result
   end
 
   # @param indexes [Array<PgEventstore::EventGlobalIndex::SubscriptionRepr>]
