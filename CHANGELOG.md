@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- New feature: pg_eventstore replication
 - **Breaking change**: drop support of Ruby v3.2. The gem now requires Ruby v3.3+
 - New feature: event tracing. You can now configure pg_eventstore to trace causation dependencies of events.
   Read more [here](docs/event_tracing.md)

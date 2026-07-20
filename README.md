@@ -64,6 +64,7 @@ Documentation chapters:
 - [Writing middlewares](docs/writing_middleware.md)
 - [How to make multiple commands atomic](docs/multiple_commands.md)
 - [Admin UI](docs/admin_ui.md)
+- [Replication](docs/replication.md)
 
 ## CLI
 

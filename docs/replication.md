@@ -75,17 +75,17 @@ From the example above:
 # config.rb
 PgEventstore.configure do |config|
   config.pg_uri = 'postgresql://postgres:postgres@localhost:6432/eventstore_us'
-  config.eventstore_role = PgEventstore::Config::NodeRole::PRIMARY
+  config.eventstore_role = :primary
 end
 
 PgEventstore.configure(name: :eu_replica) do |config|
   config.pg_uri = 'postgresql://postgres:postgres@localhost:6432/eventstore_us'
-  config.eventstore_role = PgEventstore::Config::NodeRole::REPLICA
+  config.eventstore_role = :replica
 end
 
 PgEventstore.configure(name: :asia_replica) do |config|
   config.pg_uri = 'postgresql://postgres:postgres@localhost:6432/eventstore_us'
-  config.eventstore_role = PgEventstore::Config::NodeRole::REPLICA
+  config.eventstore_role = :replica
 end
 
 # subscriptions
