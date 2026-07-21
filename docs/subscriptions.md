@@ -269,3 +269,17 @@ See the [Writing middleware](writing_middleware.md) chapter for info about what 
 It depends on the nature of your subscription handlers. If they spend more time on ruby code execution than on IO
 operations, you should limit the number of subscriptions per single process. This can be especially noticed when you
 rebuild the read models of your microservice, processing all events from the start.
+
+## Few words about a subscription handler
+
+It is recommended your subscription handler be idempotent. The subscription implementation tries hard not to process the
+same event multiple times. The internal implementation is next:
+
+- fetch an event from the database
+- pass it into subscription's handler
+- advance the subscription's position
+
+These steps are not atomic, and anything can happen in between the second and the third steps. In this case the same
+event may be processed multiple times until the whole process succeeds. In this case the implementation guarantees the
+processed event will never be processed again after the subscription's position was persisted (unless you reset the
+subscription position of course).

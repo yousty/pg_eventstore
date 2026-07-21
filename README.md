@@ -66,6 +66,9 @@ Documentation chapters:
 - [Admin UI](docs/admin_ui.md)
 - [Replication](docs/replication.md)
 
+To help your AI assistant to better recognize the capabilities of this gem - there is a crafted [instructions](docs/AGENTS.fragment.md)
+you can include into your `AGENTS.md`.
+
 ## CLI
 
 The gem is shipped with its own CLI. Use `pg-eventstore --help` to find out its capabilities.
