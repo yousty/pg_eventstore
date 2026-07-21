@@ -5,6 +5,9 @@ require 'securerandom'
 require_relative 'stats'
 
 class Benchmarks
+  APPENDS_PER_PROCESS = 10_000
+  SINGLE_STREAM_APPENDS_PER_PROCESS = 1_000
+
   # This config results in 11520 event partitions and 11673 partitions in total. This allows to see how well current
   # implementation scales with the number of partitions
   EVENT_TYPES = %w[Foo Bar Baz Lorem Ipsum Dolor Sit Amet].flat_map do |e|
@@ -65,7 +68,7 @@ class Benchmarks
 
   attr_reader :stats
 
-  # @param parallel_num [Integer] number of parallel threads/processes
+  # @param parallel_num [Integer] number of parallel processes
   def initialize(parallel_num)
     @parallel_num = parallel_num
     @stats = Stats.new
@@ -78,7 +81,7 @@ class Benchmarks
     PgEventstore.connection.shutdown
     pids = @parallel_num.times.map do
       fork do
-        public_send(method_name, :processes)
+        public_send(method_name)
         @stats.persist_stats
       end
     end
@@ -86,53 +89,63 @@ class Benchmarks
     pids.each { |pid| Process.waitpid(pid) }
   end
 
-  # @param method_name [String, Symbol]
-  # @return [void]
-  def in_threads(method_name)
-    puts "Running #{@parallel_num} threads to benchmark #{method_name.inspect} performance"
-    threads = @parallel_num.times.map do
-      Thread.new do
-        public_send(method_name, :threads)
-      end
-    end
-    threads.each(&:join)
-    @stats.persist_stats
+  def append_events_to_different_streams
+    append_events(__method__, stream_id: "#{__method__}-#{Process.pid}")
   end
 
-  def frequent_streams_writes(concurrent_method = nil)
-    1_000.times do |i|
-      stream = PgEventstore::Stream.new(
-        context: CONTEXTS[i % CONTEXTS.size],
-        stream_name: STREAM_NAMES[i % STREAM_NAMES.size],
-        stream_id: "#{Process.pid}-#{Thread.current.__id__}-#{i}"
-      )
-      10.times.each do |j|
-        event = PgEventstore::Event.new(data: { foo: :bar, id: "#{i}-#{j}" }, type: EVENT_TYPES[j % EVENT_TYPES.size])
-        benchmark(__method__, concurrent_method) { PgEventstore.client.append_to_stream(stream, event) }
-      end
-    end
+  def append_events_to_single_stream
+    append_events(
+      __method__,
+      stream_id: __method__.to_s,
+      appends: SINGLE_STREAM_APPENDS_PER_PROCESS,
+    )
   end
 
-  def frequent_events_writes(concurrent_method = nil)
-    10.times do |i|
-      stream = PgEventstore::Stream.new(
-        context: CONTEXTS[i % CONTEXTS.size],
-        stream_name: STREAM_NAMES[i % STREAM_NAMES.size],
-        stream_id: "#{Process.pid}-#{Thread.current.__id__}-#{i}"
-      )
-      1_000.times.each do |j|
-        event = PgEventstore::Event.new(data: { foo: :bar, id: "#{i}-#{j}" }, type: EVENT_TYPES[j % EVENT_TYPES.size])
-        benchmark(__method__, concurrent_method) { PgEventstore.client.append_to_stream(stream, event) }
-      end
-    end
+  def append_events_with_markers_to_different_streams
+    append_events(
+      __method__,
+      stream_id: "#{__method__}-#{Process.pid}",
+      generate_random_marker: true,
+    )
+  end
+
+  def append_events_with_markers_to_single_stream
+    append_events(
+      __method__,
+      stream_id: __method__.to_s,
+      appends: SINGLE_STREAM_APPENDS_PER_PROCESS,
+      generate_random_marker: true,
+    )
   end
 
   private
 
   # @param method_name [String, Symbol]
+  # @param stream_id [String]
+  # @param appends [Integer]
+  # @param generate_random_marker [Boolean]
   # @return [void]
-  def benchmark(method_name, concurrent_method, &blk)
-    time = PgEventstore::Utils.benchmark(&blk)
-    @stats.update("#{method_name}_#{concurrent_method}", time)
+  def append_events(method_name, stream_id:, appends: APPENDS_PER_PROCESS, generate_random_marker: false)
+    stream = PgEventstore::Stream.new(
+      context: CONTEXTS.first,
+      stream_name: STREAM_NAMES.first,
+      stream_id:
+    )
+    appends.times do |event_num|
+      markers = generate_random_marker ? [SecureRandom.uuid_v7] : []
+      event = PgEventstore::Event.new(
+        data: { foo: :bar, id: event_num },
+        type: EVENT_TYPES[event_num % EVENT_TYPES.size],
+        markers:
+      )
+      benchmark(method_name) { PgEventstore.client.append_to_stream(stream, event) }
+    end
+  end
+
+  # @param method_name [String, Symbol]
+  # @return [void]
+  def benchmark(method_name, &)
+    time = PgEventstore::Utils.benchmark(&)
+    @stats.update(method_name, time)
   end
 end

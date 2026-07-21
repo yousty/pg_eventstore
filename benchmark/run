@@ -12,8 +12,17 @@ require_relative 'benchmarks'
 require_relative 'live_monitor'
 require 'rainbow'
 
-# Number of processes/threads for the benchmark
+# Number of processes for the benchmark
 CONCURRENCY = ENV['CONCURRENCY']&.to_i || 10
+
+WRITE_BENCHMARKS = {
+  append_events_to_different_streams: "#{CONCURRENCY} processes, events appended to a separate stream per process",
+  append_events_to_single_stream: "#{CONCURRENCY} processes, events appended to one shared stream",
+  append_events_with_markers_to_different_streams: "#{CONCURRENCY} processes, events with random markers appended " \
+                                                    'to a separate stream per process',
+  append_events_with_markers_to_single_stream: "#{CONCURRENCY} processes, events with random markers appended " \
+                                                'to one shared stream',
+}.freeze
 
 def colorize_write_result(result, result_key, type)
   current = result[result_key][type]
@@ -49,33 +58,25 @@ Stats.repo.reset
 
 monitor = LiveMonitor.new(PgEventstore.connection(:service))
 
-%i[frequent_streams_writes frequent_events_writes].each do |method|
+WRITE_BENCHMARKS.each_key.with_index do |method, index|
+  if index > 0
+    puts 'Taking a break for 5 seconds between runs...'
+    sleep 5
+  end
   monitor.start
-  puts "Taking a break for 5 second between runs..."
-  bms = Benchmarks.new(CONCURRENCY)
-  bms.in_processes(method)
-  puts "Taking a break for 5 second between runs..."
-  sleep 5
-  bms.in_threads(method)
+  Benchmarks.new(CONCURRENCY).in_processes(method)
   monitor.stop
 end
 
 result = Stats.stats
 
-EXPLANATION = {
-  frequent_streams_writes_processes: "#{CONCURRENCY} processes, streams are created frequently",
-  frequent_streams_writes_threads: "#{CONCURRENCY} threads, streams are created frequently",
-  frequent_events_writes_processes: "#{CONCURRENCY} processes, events are created frequently",
-  frequent_events_writes_threads: "#{CONCURRENCY} threads, events are created frequently",
-}.freeze
-
-%i[frequent_streams_writes_processes frequent_streams_writes_threads frequent_events_writes_processes frequent_events_writes_threads].each do |bench_type|
-  puts "#{EXPLANATION[bench_type]} best: #{colorize_write_result(result, bench_type, :min)}"
-  puts "#{EXPLANATION[bench_type]} worst: #{colorize_write_result(result, bench_type, :max)}"
-  puts "#{EXPLANATION[bench_type]} p95: #{colorize_write_result(result, bench_type, :p95)}"
-  puts "#{EXPLANATION[bench_type]} p99: #{colorize_write_result(result, bench_type, :p99)}"
-  puts "#{EXPLANATION[bench_type]} p95 avg: #{colorize_write_result(result, bench_type, :p95_avg)}"
-  puts "#{EXPLANATION[bench_type]} p99 avg: #{colorize_write_result(result, bench_type, :p99_avg)}"
+WRITE_BENCHMARKS.each do |bench_type, explanation|
+  puts "#{explanation} best: #{colorize_write_result(result, bench_type, :min)}"
+  puts "#{explanation} worst: #{colorize_write_result(result, bench_type, :max)}"
+  puts "#{explanation} p95: #{colorize_write_result(result, bench_type, :p95)}"
+  puts "#{explanation} p99: #{colorize_write_result(result, bench_type, :p99)}"
+  puts "#{explanation} p95 avg: #{colorize_write_result(result, bench_type, :p95_avg)}"
+  puts "#{explanation} p99 avg: #{colorize_write_result(result, bench_type, :p99_avg)}"
   puts
 end
 
