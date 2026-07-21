@@ -1,32 +1,25 @@
 module PgEventstore
   class Connection
-    module Ruby30Patch
-    end
+    @pool: ConnectionPool[PgConnection]?
 
-    include PgEventstore::Connection::Ruby30Patch
+    attr_accessor uri: String
+    attr_accessor pool_size: Integer
+    attr_accessor pool_timeout: Integer
 
-    # _@param_ `uri` — PostgreSQL connection URI. Example: "postgresql://postgres:postgres@localhost:5432/eventstore"
-    #
-    # _@param_ `pool_size` — Connection pool size
-    #
-    # _@param_ `pool_timeout` — Connection pool timeout in seconds
     def initialize: (uri: String, ?pool_size: Integer, ?pool_timeout: Integer) -> void
 
-    def shutdown: -> untyped
+    def discard_current_connection: -> void
 
-    def with: () { (PG::Connection connection) -> untyped } -> untyped
+    def establish_connection: -> void
 
-    def init_pool: () -> ConnectionPool[untyped]
+    def shutdown: -> void
+
+    def with: () { (PgConnection connection) -> untyped } -> untyped
+
+    private
+
+    def init_pool: () -> ConnectionPool[PgConnection]
 
     def pg_type_registry: () -> PG::BasicTypeRegistry
-
-    # Returns the value of attribute uri.
-    attr_accessor uri: String
-
-    # Returns the value of attribute pool_size.
-    attr_accessor pool_size: Integer
-
-    # Returns the value of attribute pool_timeout.
-    attr_accessor pool_timeout: Integer
   end
 end

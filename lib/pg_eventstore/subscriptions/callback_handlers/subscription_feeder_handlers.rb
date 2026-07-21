@@ -85,6 +85,18 @@ module PgEventstore
           last_restarted_at: Time.now.utc, restart_count: subscriptions_set.restart_count + 1
         )
       end
+
+      # @param worker [PgEventstore::EventsSubscriptionPositionWorker]
+      # @return [void]
+      def start_events_subscription_position_worker(worker)
+        worker.start
+      end
+
+      # @param worker [PgEventstore::EventsSubscriptionPositionWorker]
+      # @return [void]
+      def stop_events_subscription_position_worker(worker)
+        worker.stop_async.wait_for_finish
+      end
     end
   end
 end

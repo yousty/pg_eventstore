@@ -27,7 +27,7 @@ RSpec/IndexedLet:
   Enabled: false
 
 RSpec/NestedGroups:
-  Max: 6
+  Enabled: false
 
 RSpec/LetSetup:
   Enabled: false
@@ -123,4 +123,13 @@ Gemspec/RequiredRubyVersion:
   Enabled: false
 
 Gemspec/RequireMFA:
+  Enabled: false
+
+Style/StructInheritance:
+  Enabled: false
+
+Lint/NonLocalExitFromIterator:
+  Enabled: false
+
+Style/RegexpLiteral:
   Enabled: false

@@ -1,0 +1,14 @@
+module PgEventstore
+  class StreamGlobalIndex
+    include Extensions::OptionsExtension
+    include Extensions::OptionsDefaults
+
+    INITIAL_STARTING_POSITION: Integer
+
+    attr_accessor id: Integer
+    attr_accessor partition_id: Integer
+    attr_accessor stream_id: String
+    attr_accessor stream_revision: Integer
+    attr_accessor starting_position: Integer
+  end
+end

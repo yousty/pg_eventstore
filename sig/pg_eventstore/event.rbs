@@ -1,9 +1,13 @@
 module PgEventstore
   class Event
-    include Extensions::OptionsExtension
-
+    MARKERS_METADATA_KEY: String
+    NON_EXISTING_EVENT_REVISION: Integer
     LINK_TYPE: String
     PRIMARY_TABLE_NAME: String
+    SYSTEM_KEY_PREFIX: String
+    SYSTEM_SYMBOL: String
+
+    include Extensions::OptionsExtension
 
     def ==: ((Object | Event) other) -> bool
 
@@ -35,6 +39,10 @@ module PgEventstore
 
     attr_accessor data: ::Hash[untyped, untyped]
 
+    attr_accessor markers: ::Array[String]
+
+    attr_accessor feature_markers: ::Array[FeatureMarker]
+
     attr_accessor metadata: ::Hash[untyped, untyped]
 
     attr_accessor link_global_position: Integer?
@@ -44,5 +52,11 @@ module PgEventstore
     attr_accessor link: Event?
 
     attr_accessor created_at: Time?
+
+    attr_accessor caused_by: Event?
+
+    attr_accessor correlation_id: String?
+
+    attr_accessor causation_id: String?
   end
 end

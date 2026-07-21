@@ -9,20 +9,22 @@ module PgEventstore
       # @param stats [PgEventstore::SubscriptionHandlerPerformance]
       # @param action [Proc]
       # @param _current_position [Integer]
+      # @param events_number [Integer]
       # @return [void]
-      def track_exec_time(stats, action, _current_position)
-        stats.track_exec_time { action.call }
+      def track_exec_time(stats, action, _current_position, events_number)
+        stats.track_exec_time(events_number) { action.call }
       end
 
       # @param subscription [PgEventstore::Subscription]
       # @param stats [PgEventstore::SubscriptionHandlerPerformance]
       # @param current_position [Integer]
+      # @param events_number [Integer]
       # @return [void]
-      def update_subscription_stats(subscription, stats, current_position)
+      def update_subscription_stats(subscription, stats, current_position, events_number)
         subscription.update(
           average_event_processing_time: stats.average_event_processing_time,
           current_position:,
-          total_processed_events: subscription.total_processed_events + 1
+          total_processed_events: subscription.total_processed_events + events_number
         )
       end
 
@@ -34,10 +36,12 @@ module PgEventstore
       end
 
       # @param subscription [PgEventstore::Subscription]
-      # @param global_position [Integer]
+      # @param subscription_position [Integer]
       # @return [void]
-      def update_subscription_chunk_stats(subscription, global_position)
-        subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: global_position)
+      def update_subscription_chunk_stats(subscription, subscription_position)
+        return if subscription.last_chunk_greatest_position == subscription_position
+
+        subscription.update(last_chunk_fed_at: Time.now.utc, last_chunk_greatest_position: subscription_position)
       end
 
       # @param subscription [PgEventstore::Subscription]
@@ -51,6 +55,16 @@ module PgEventstore
       # @return [void]
       def update_subscription_state(subscription, state)
         subscription.update(state:)
+      end
+
+      # @param subscription [PgEventstore::Subscription]
+      # @param global_position [Integer]
+      # @return [void]
+      def checkpoint(subscription, global_position)
+        return if subscription.current_position == subscription.last_chunk_greatest_position &&
+                  subscription.current_position == global_position
+
+        subscription.update(current_position: global_position, last_chunk_greatest_position: global_position)
       end
     end
   end

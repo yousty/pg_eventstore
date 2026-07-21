@@ -13,15 +13,14 @@ module PgEventstore
       # @param force [Boolean]
       # @return [Boolean]
       def call(event, force:)
-        queries.transactions.transaction do
-          event = queries.maintenance.reload_event(event)
-          next false unless event
+        raise ArgumentError, "Event#stream is nil: #{event.inspect}" unless event.stream
+        return false if queries.events_global_index.global_positions_from_db([event]).empty?
 
-          check_records_number_to_lock(event) unless force
-          queries.maintenance.delete_event(event)
-          queries.maintenance.adjust_stream_revisions(event.stream, event.stream_revision)
-          true
-        end
+        check_records_number_to_lock(event) unless force
+        queries.maintenance.delete_event(event)
+        true
+      rescue RecordNotFound
+        false
       end
 
       private

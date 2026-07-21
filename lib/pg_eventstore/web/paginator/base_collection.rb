@@ -4,6 +4,9 @@ module PgEventstore
   module Web
     module Paginator
       class BaseCollection
+        # This is the minimum amount of symbols requeried to perform search using trigrams gin index
+        MIN_QUERY_SIZE_FOR_ADVANCE_SEARCH = 3
+
         # @!attribute config_name
         #   @return [Symbol]
         attr_reader :config_name
@@ -30,7 +33,8 @@ module PgEventstore
           @starting_id = starting_id
           @per_page = per_page
           @order = order
-          @options = options
+          @options =
+            options.is_a?(Sinatra::IndifferentHash) ? Utils.deep_transform_keys(Hash[options], &:to_sym) : options
         end
 
         # @return [Array]

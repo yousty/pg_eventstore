@@ -7,6 +7,8 @@ gemspec
 
 gem 'rake', '~> 13.0', require: false
 
+gem 'rake-compiler', '~> 1.2', require: false
+
 gem 'rspec', '~> 3.0', require: false
 
 gem 'yard', '~> 0.9.34', require: false
@@ -40,3 +42,7 @@ gem 'rubocop-rspec', '~> 3.6', require: false
 gem 'debug', '>= 1.0.0', require: false
 
 gem 'cgi', require: false
+
+gem 'benchmark', '>= 0.5.0', require: false
+
+gem 'benchmark-ips', '~> 2.15', '>= 2.15.1', require: false

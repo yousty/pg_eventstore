@@ -1,0 +1,7 @@
+module PgEventstore
+  module Commands
+    class ReadGrouped < AbstractCommand
+      def call: (Stream stream, deserializer: EventDeserializer, ?options: ::Hash[untyped, untyped]) -> Array[Event]
+    end
+  end
+end

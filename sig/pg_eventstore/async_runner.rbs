@@ -1,0 +1,13 @@
+module PgEventstore
+  class AsyncRunner
+    @jobs: Hash[Fiber, bool]
+
+    def async: () { -> void } -> void
+
+    def jobs_size: -> Integer
+
+    def run: -> void
+
+    def run_once: -> void
+  end
+end

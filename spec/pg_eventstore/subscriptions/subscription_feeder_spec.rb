@@ -303,7 +303,12 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
     subject { instance.start }
 
     let(:queries) { PgEventstore::SubscriptionsSetQueries.new(PgEventstore.connection) }
-    let(:subscription_queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+    let(:subscription_queries) do
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
+    end
 
     let(:subscription1) { SubscriptionsHelper.init_with_connection(name: 'Foo', set: set_name) }
     let(:subscription2) { SubscriptionsHelper.init_with_connection(name: 'Bar', set: set_name) }
@@ -366,7 +371,6 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
         expect(subscription2.reload.locked_by).to eq(queries.find_by(name: set_name)[:id])
       end
     end
-
     it 'starts CommandsHandler' do
       id = subscription_queries.create(set: set_name, name: subscription2.name)[:id]
       subscriptions_set_id = subscriptions_set_lifecycle.persisted_subscriptions_set.id
@@ -395,6 +399,67 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
           rescue PgEventstore::SubscriptionAlreadyLockedError
           end
         }.not_to change { queries.find_all(name: set_name).size }
+      end
+    end
+
+    describe 'EventsSubscriptionPositionWorker start up' do
+      let(:positions) do
+        proc do
+          PgEventstore.connection.with do |c|
+            c.exec('select global_position, subscription_position from event_subscription_positions')
+          end.to_a
+        end
+      end
+      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+      let(:event) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+
+      before do
+        event
+        PgEventstore.configure do |config|
+          config.events_subscription_position_update_interval = 0
+        end
+      end
+
+      context 'when running on standalone node' do
+        before do
+          PgEventstore.configure do |config|
+            config.eventstore_role = PgEventstore::Config::NodeRole::STANDALONE
+          end
+        end
+
+        it 'starts EventsSubscriptionPositionWorker' do
+          expect { subject }.to change {
+            dv(positions).deferred_wait(timeout: 0.5) { !_1.call.empty? }.call
+          }.to([{ 'global_position' => event.global_position, 'subscription_position' => kind_of(Integer) }])
+        end
+      end
+
+      context 'when running on primary node' do
+        before do
+          PgEventstore.configure do |config|
+            config.eventstore_role = PgEventstore::Config::NodeRole::PRIMARY
+          end
+        end
+
+        it 'starts EventsSubscriptionPositionWorker' do
+          expect { subject }.to change {
+            dv(positions).deferred_wait(timeout: 0.5) { !_1.call.empty? }.call
+          }.to([{ 'global_position' => event.global_position, 'subscription_position' => kind_of(Integer) }])
+        end
+      end
+
+      context 'when running on replica node' do
+        before do
+          PgEventstore.configure do |config|
+            config.eventstore_role = PgEventstore::Config::NodeRole::REPLICA
+          end
+        end
+
+        it 'does not start EventsSubscriptionPositionWorker' do
+          expect { subject }.not_to change {
+            dv(positions).deferred_wait(timeout: 0.5) { !_1.call.empty? }.call
+          }
+        end
       end
     end
   end
@@ -582,8 +647,10 @@ RSpec.describe PgEventstore::SubscriptionFeeder do
       subject
       expect { sleep 2 }.to change { subscription_runner1.subscription.updated_at }
     end
-    it 'does not Subscription#updated_at of running Subscription too often' do
+    it 'does not update Subscription#updated_at of running Subscription too often' do
       subject
+      # wait for another turn to update the checkpoint. After that - no more unnecessary updates should appear
+      dv(subscription_runner1.subscription).wait_until(timeout: 0.5) { _1.current_position == 1 }
       expect { sleep 0.5 }.not_to change { subscription_runner1.subscription.updated_at }
     end
     it 'does not update Subscription#updated_at of stopped Subscription' do

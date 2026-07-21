@@ -1,0 +1,14 @@
+module PgEventstore
+  module SubscriptionFeedStrategy[unchecked Runner]
+    class Collection < Array[SubscriptionFeedStrategy[SubscriptionRunner] | SubscriptionFeedStrategy[ReplicaSubscriptionRunner]]
+      DEFAULT_SUBSCRIPTIONS_NUM_PER_QUERY: Integer
+
+      def self.create: (
+          Array[SubscriptionRunner | ReplicaSubscriptionRunner] runners,
+          Connection connection,
+          QueryStrategy query_strategy,
+          ?subscriptions_per_query: Integer
+        ) -> Collection
+    end
+  end
+end

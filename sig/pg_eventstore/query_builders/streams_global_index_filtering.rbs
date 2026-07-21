@@ -1,0 +1,27 @@
+module PgEventstore
+  module QueryBuilders
+    class StreamsGlobalIndexFiltering
+      DEFAULT_LIMIT: Integer
+
+      PRIMARY_TABLE_NAME: String
+
+      include BasicFiltering
+
+      @sql_builder: SQLBuilder
+
+      def self.sql_builder_for_basic_pagination: (Hash[untyped, untyped] options) -> SQLBuilder
+
+      def add_filter_row: (Filters::FilterRow filter_row) -> void
+
+      def add_starting_position_direction: (Symbol? | String? direction) -> void
+
+      def from_position: (Integer? position, Symbol? | String? direction) -> void
+
+      def limit: (Integer? limit) -> void
+
+      private
+
+      def direction_operator_from: (Symbol? | String? direction) -> String
+    end
+  end
+end

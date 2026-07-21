@@ -2,6 +2,27 @@
 
 module PgEventstore
   class Config < BasicConfig
+    module NodeRole
+      # @return [Symbol]
+      STANDALONE = :standalone
+      # @return [Symbol]
+      PRIMARY = :primary
+      # @return [Symbol]
+      REPLICA = :replica
+
+      class << self
+        # @return [Array<Symbol>]
+        def writable
+          [STANDALONE, PRIMARY]
+        end
+
+        # @return [Array<Symbol>]
+        def maintainable
+          [STANDALONE]
+        end
+      end
+    end
+
     # @!attribute pg_uri
     #   @return [String] PostgreSQL connection URI docs
     #     https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
@@ -51,6 +72,15 @@ module PgEventstore
     # @!attribute subscription_graceful_shutdown_timeout
     #   @return [Integer] the number of seconds to wait until force-shutdown the subscription during the stop process
     option(:subscription_graceful_shutdown_timeout) { 15 }
+    # @!attribute events_subscription_position_update_interval
+    #   @return [Float, Integer] events subscription position update interval
+    option(:events_subscription_position_update_interval) { 0.2 }
+    # @!attribute eventstore_role
+    #   @return [Symbol] the role of this node
+    option(:eventstore_role) { NodeRole::STANDALONE }
+    # @!attribute max_events_to_replicate
+    #   @return [Integer] max number of events to replicate at a time
+    option(:max_events_to_replicate) { 10_000 }
 
     # Computes a value for usage in PgEventstore::Connection
     # @return [Hash]

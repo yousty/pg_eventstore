@@ -1,9 +1,14 @@
 module PgEventstore
   class SubscriptionRunner
     extend Forwardable
-    MAX_EVENTS_PER_CHUNK: Integer
+    DEFAULT_MAX_EVENTS_PER_CHUNK: Integer
     MIN_EVENTS_PER_CHUNK: Integer
-    INITIAL_EVENTS_PER_CHUNK: Integer
+    DEFAULT_INITIAL_EVENTS_PER_CHUNK: Integer
+
+    @events_processor: EventsProcessor
+    @initial_events_per_chunk: Integer
+    @max_events_per_chunk: Integer
+    @stats: SubscriptionHandlerPerformance
 
     # Returns the value of attribute subscription.
     attr_reader subscription: Subscription
@@ -12,6 +17,8 @@ module PgEventstore
         stats: SubscriptionHandlerPerformance,
         events_processor: EventsProcessor,
         subscription: Subscription,
+        ?initial_events_per_chunk: Integer,
+        ?max_events_per_chunk: Integer,
       ) -> void
 
     def next_chunk_query_opts: () -> ::Hash[untyped, untyped]
@@ -23,5 +30,9 @@ module PgEventstore
     def estimate_events_number: () -> Integer
 
     def attach_callbacks: () -> void
+
+    private
+
+    def subscription_from_position: -> Integer
   end
 end

@@ -1,0 +1,13 @@
+module PgEventstore
+  module Web
+    module Paginator
+      class MarkersCollection < BaseCollection
+        PER_PAGE: Maintenance
+
+        private
+
+        def direction_operator: -> String
+      end
+    end
+  end
+end

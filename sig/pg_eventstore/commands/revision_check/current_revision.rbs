@@ -1,0 +1,25 @@
+module PgEventstore
+  module Commands
+    module RevisionCheck
+      class CurrentRevision
+        class StreamRevision
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
+          attr_accessor revision: Integer
+        end
+
+        class EventTypeRevisions
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
+          attr_accessor revisions: Array[EventGlobalIndex::RevisionCheckRepr]
+        end
+
+        def self.build: (Stream stream, Integer stream_revision,
+            ExpectedRevision::StreamRevision? | ExpectedRevision::EventTypeRevisions? expected_revision,
+            IndexFilteringQueries index_filtering_queries) -> (StreamRevision | EventTypeRevisions)?
+      end
+    end
+  end
+end

@@ -1,0 +1,18 @@
+module PgEventstore
+  module Chunks
+    class SubscriptionCheckpointChunk
+      class Checkpoint
+        include Extensions::OptionsExtension
+        include Extensions::OptionsDefaults
+
+        attr_reader subscription_position: Integer
+      end
+
+      include Chunk[Checkpoint, Checkpoint]
+
+      @checkpoint_event: Checkpoint?
+
+      def initialize: (Integer position) -> void
+    end
+  end
+end

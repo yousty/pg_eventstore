@@ -1,0 +1,31 @@
+module PgEventstore
+  class ReplicaQueries
+    MAX_PARTITIONS_TO_RESOLVE_PER_CALL: Integer
+
+    @query_strategy: QueryStrategy
+
+    attr_reader connection: Connection
+
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
+    def load_event_markers_index: (Array[EventGlobalIndex::SubscriptionRepr] indexes) -> Array[EventMarkerIndex]
+
+    def load_events: (Array[EventGlobalIndex::SubscriptionRepr] indexes) -> Array[RawEvent]
+
+    def load_events_global_index: (Array[EventGlobalIndex::SubscriptionRepr] indexes) -> Array[EventGlobalIndex]
+
+    def load_markers: (Array[EventMarkerIndex] indexes) -> Array[EventMarker]
+
+    def load_partitions: (Array[EventGlobalIndex] indexes) -> Array[Partition]
+
+    def load_streams_global_index: (Array[EventGlobalIndex] indexes) -> Array[StreamGlobalIndex]
+
+    def load_subscription_positions: (Array[EventGlobalIndex::SubscriptionRepr] indexes) -> Array[Integer]
+
+    private
+
+    def events_global_index_queries: -> EventsGlobalIndexQueries
+
+    def partition_queries: -> PartitionQueries
+  end
+end

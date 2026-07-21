@@ -4,15 +4,15 @@ module PgEventstore
 
     @config_name: Symbol
 
-    @subscriptions_set_lifecycle: PgEventstore::SubscriptionsSetLifecycle
+    @subscriptions_set_lifecycle: SubscriptionsSetLifecycle
 
     @subscriptions_pinged_at: Time
 
     @force_lock: bool
 
-    attr_reader runners: Array[PgEventstore::SubscriptionRunner]
+    attr_reader runners: Array[SubscriptionRunner]
 
-    def initialize: (Symbol config_name, PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle, ?force_lock: bool)-> void
+    def initialize: (Symbol config_name, SubscriptionsSetLifecycle subscriptions_set_lifecycle, ?force_lock: bool)-> void
 
     def force_locked?: -> bool
 
@@ -20,8 +20,6 @@ module PgEventstore
 
     def ping_subscriptions: -> void
 
-    def subscriptions: -> Array[PgEventstore::Subscription]
-
-    def force_lock!: -> void
+    def subscriptions: -> Array[Subscription]
   end
 end

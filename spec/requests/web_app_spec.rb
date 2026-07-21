@@ -70,15 +70,18 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     describe 'events filtering' do
       let!(:events1) do
-        events = [PgEventstore::Event.new(type: 'Foo')] * 2
+        events = [
+          PgEventstore::Event.new(type: 'Foo', markers: ['foo']),
+          PgEventstore::Event.new(type: 'Foo', markers: ['bar']),
+        ]
         PgEventstore.client.append_to_stream(stream1, events)
       end
       let!(:events2) do
-        events = [PgEventstore::Event.new(type: 'Baz')] * 3
+        events = Array.new(3) { PgEventstore::Event.new(type: 'Baz') }
         PgEventstore.client.append_to_stream(stream1, events)
       end
       let!(:events3) do
-        events = [PgEventstore::Event.new(type: 'Bar')] * 6
+        events = Array.new(6) { PgEventstore::Event.new(type: 'Bar', markers: ['bar']) }
         PgEventstore.client.append_to_stream(stream2, events)
       end
       let(:events) { events1 + events2 + events3 }
@@ -133,6 +136,42 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         end
       end
 
+      context 'when events filter with empty markers is provided' do
+        let(:params) { { filter: { events: [{ type: 'Bar', markers: [] }] } } }
+
+        it 'displays only filtered events' do
+          subject
+          expect(rendered_event_ids).to eq(events3.map(&:id).reverse)
+        end
+      end
+
+      context 'when multiple event types are provided' do
+        let(:params) { { filter: { events: [{ type: 'Bar' }, { type: 'Baz' }] } } }
+
+        it 'displays only filtered events' do
+          subject
+          expect(rendered_event_ids).to eq((events2 + events3).map(&:id).reverse)
+        end
+      end
+
+      context 'when event with markers filter is provided' do
+        let(:params) { { filter: { events: [{ type: 'Foo', markers: ['foo'] }] } } }
+
+        it 'displays only filtered events' do
+          subject
+          expect(rendered_event_ids).to eq([events1[0].id])
+        end
+      end
+
+      context 'when markers filter is provided' do
+        let(:params) { { filter: { markers: ['bar'] } } }
+
+        it 'displays only filtered events' do
+          subject
+          expect(rendered_event_ids).to eq([events1[1].id, *events3.map(&:id)].reverse)
+        end
+      end
+
       context 'when partial stream filter is provided' do
         let(:params) do
           { filter: { streams: [{ context: 'FooCtx', stream_name: 'Foo', stream_id: '' }], events: ['Baz'] } }
@@ -160,15 +199,6 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
           expect(last_response.body).to include('Delete stream')
         end
       end
-
-      context 'when filtering by "$streams" system stream' do
-        let(:params) { { filter: { system_stream: '$streams' } } }
-
-        it 'displays 0-stream revision events' do
-          subject
-          expect(rendered_event_ids).to eq([events3.first.id, events1.first.id])
-        end
-      end
     end
 
     describe 'resolving links' do
@@ -189,6 +219,24 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         it 'resolves link events' do
           subject
           expect(rendered_event_ids).to eq(events1.map(&:id) * 2)
+        end
+
+        it 'displays the subscription position of the resolved event' do
+          queries = PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection)
+          queries.assign_subscription_position
+          positions = queries.subscription_positions_from_db(events)
+
+          subject
+          rendered_positions = nokogiri_body.css('#events-table tbody > tr:not(.event-payload)').map do |row|
+            row.css('td.subscription-position').first.text.strip.to_i
+          end
+          resolved_event_position = positions.fetch(events1.first.global_position)
+          link_position = positions.fetch(events2.first.global_position)
+
+          aggregate_failures do
+            expect(resolved_event_position).not_to eq(link_position)
+            expect(rendered_positions).to eq([resolved_event_position, resolved_event_position])
+          end
         end
       end
 
@@ -332,6 +380,81 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       it 'displays events with empty-string event type value' do
         subject
         expect(rendered_event_ids).to eq([event.id])
+      end
+    end
+  end
+
+  describe 'GET /streams' do
+    subject { get '/streams', params }
+
+    let(:params) { {} }
+
+    describe 'streams' do
+      let!(:streams) do
+        20.times.map do |t|
+          stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: "stream-#{t}")
+          PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new)
+          stream
+        end
+      end
+      let(:visible_stream_ids) { nokogiri_body.css('tbody td:nth-child(4)').map(&:inner_text).map(&:strip) }
+
+      it 'displays last 10 streams' do
+        subject
+        expect(visible_stream_ids).to eq(streams.reverse.first(10).map(&:stream_id))
+      end
+      it_behaves_like 'admin web ui config'
+
+      context 'when the limit is set to 20' do
+        let(:params) { { per_page: 20 } }
+
+        it 'displays up to 100 events' do
+          subject
+          expect(visible_stream_ids).to eq(streams.reverse.map(&:stream_id))
+        end
+      end
+
+      context 'when starting_id is provided' do
+        let(:params) do
+          starting_position = PgEventstore.client.read(PgEventstore::Stream.all_stream)[18].global_position
+          { starting_id: starting_position }
+        end
+
+        it 'displays streams from the given starting position' do
+          subject
+          expect(visible_stream_ids).to eq(streams.reverse[1..10].map(&:stream_id))
+        end
+      end
+
+      context 'when order is provided' do
+        let(:params) { { order: :asc } }
+
+        it 'displays first 10 streams' do
+          subject
+          expect(visible_stream_ids).to eq(streams.first(10).map(&:stream_id))
+        end
+      end
+    end
+
+    describe 'XSS protection in an stream parts' do
+      let(:stream) do
+        PgEventstore::Stream.new(context: '<script xss>', stream_name: '<script xss>', stream_id: '<script xss>')
+      end
+      let!(:event) do
+        PgEventstore.client.append_to_stream(
+          stream,
+          PgEventstore::Event.new(
+            type: '<script xss>', data: { foo: '<script xss>' }, metadata: { foo: '<script xss>' }
+          )
+        )
+      end
+      let!(:link) do
+        PgEventstore.client.link_to(stream, event)
+      end
+
+      it 'does not include unescaped content' do
+        subject
+        expect(last_response.body).not_to include('<script xss>')
       end
     end
   end
@@ -1148,7 +1271,12 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
 
     let!(:subscription) { SubscriptionsHelper.create }
 
-    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+    let(:queries) do
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
+    end
 
     it_behaves_like 'admin web ui config'
 
@@ -1177,7 +1305,12 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
     let!(:subscription2) { SubscriptionsHelper.create(name: 'Sub2') }
     let!(:subscription3) { SubscriptionsHelper.create(name: 'Sub3') }
 
-    let(:queries) { PgEventstore::SubscriptionQueries.new(PgEventstore.connection) }
+    let(:queries) do
+      PgEventstore::SubscriptionQueries.new(
+        PgEventstore.connection,
+        PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+      )
+    end
 
     it 'deletes first subscription' do
       expect { subject }.to change { queries.find_by(id: subscription1.id) }.to(nil)
@@ -1325,12 +1458,12 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       end
 
       context 'when unaccepted stream attributes are passed' do
-        let(:params) { PgEventstore::Stream.system_stream('$some-stream').to_hash }
+        let(:params) { { stream_id: '1' } }
 
         it 'flashes error message' do
           subject
           expect(flash_message).to(
-            eq(message: "Could not delete #{params}. It is not valid stream for deletion.", kind: 'error')
+            eq(message: "Could not delete #{{ context: nil, stream_name: nil, stream_id: '1' }.inspect}. It is not valid stream for deletion.", kind: 'error')
           )
         end
         it 'does not delete anything' do

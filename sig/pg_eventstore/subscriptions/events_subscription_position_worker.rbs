@@ -1,0 +1,28 @@
+module PgEventstore
+  class EventsSubscriptionPositionWorker
+    class ReindexTime
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
+
+      attr_accessor time: Time?
+    end
+
+    @basic_runner: BasicRunner
+
+    @next_reindex_at: ReindexTime
+
+    attr_reader config_name: Symbol
+
+    def initialize: (Symbol config_name) -> void
+
+    private
+
+    def attach_runner_callbacks: -> void
+
+    def config: -> Config
+
+    def connection: -> Connection
+
+    def event_subscription_position_queries: -> EventSubscriptionPositionQueries
+  end
+end

@@ -1,0 +1,50 @@
+module PgEventstore
+  class IndexFilteringQueries
+    @query_strategy: QueryStrategy
+
+    attr_reader connection: Connection
+
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
+    def compute_read_api_chunks_repo: (
+        Array[EventGlobalIndex::ReadApiRepr] indexes,
+        bool resolve_link_tos
+      ) -> Chunks::Repository
+
+    def fetch_grouped_indexes_for_read_api: (
+        QueryBuilders::Filters::Collection filters_collection,
+        QueryBuilders::ReadCursor::StreamCursor cursor
+      ) -> Array[EventGlobalIndex::ReadApiRepr]
+
+    def fetch_indexes_for_read_api: (
+        QueryBuilders::Filters::Collection filters_collection,
+        QueryBuilders::ReadCursor::StreamCursor cursor
+      ) -> Array[EventGlobalIndex::ReadApiRepr]
+
+    def fetch_indexes_for_revision_validation: (
+        Stream stream,
+        Array[
+          Commands::RevisionCheck::ExpectedRevision::EventTypeRevision |
+          Commands::RevisionCheck::ExpectedRevision::EventTypeRevisionWithMarkers |
+          Commands::RevisionCheck::ExpectedRevision::MarkersRevision
+        ] expected_revisions
+      ) -> Array[EventGlobalIndex::RevisionCheckRepr]
+
+    private
+
+    def deserialize: (PG::Result pg_result, ?repr: Symbol?) ->
+      (
+        Array[EventGlobalIndex] |
+        Array[EventGlobalIndex::ReadApiRepr] |
+        Array[EventGlobalIndex::SubscriptionRepr] |
+        Array[EventGlobalIndex::WriteApiRepr] |
+        Array[EventGlobalIndex::RevisionCheckRepr]
+      )
+
+    def expand_event_types: (
+        QueryBuilders::Filters::Collection filters_collection
+      ) -> Array[QueryBuilders::Filters::FilterRow | QueryBuilders::Filters::MarkerFilterRow]
+
+    def partition_queries: -> PartitionQueries
+  end
+end

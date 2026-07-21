@@ -12,9 +12,9 @@ module PgEventstore
           @collection ||=
             begin
               sql_builder = SQLBuilder.new.select('event_type').from('partitions')
-              sql_builder.where('context is not null and stream_name is not null')
+              sql_builder.where('event_type is not null')
               sql_builder.where("event_type #{direction_operator} ?", starting_id) if starting_id
-              sql_builder.where('event_type ilike ?', "%#{options[:query]}%")
+              compute_event_type_filter(sql_builder)
               sql_builder.group('event_type').order("event_type #{order}").limit(per_page)
               connection.with do |conn|
                 conn.exec_params(*sql_builder.to_exec_params)
@@ -28,9 +28,8 @@ module PgEventstore
 
           starting_id = collection.first['event_type']
           sql_builder = SQLBuilder.new.select('event_type').from('partitions')
-          sql_builder.where('context is not null and stream_name is not null')
           sql_builder.where("event_type #{direction_operator} ?", starting_id)
-          sql_builder.where('event_type ilike ?', "%#{options[:query]}%")
+          compute_event_type_filter(sql_builder)
           sql_builder.group('event_type').order("event_type #{order}").limit(1).offset(per_page)
 
           connection.with do |conn|
@@ -43,6 +42,17 @@ module PgEventstore
         # @return [String]
         def direction_operator
           order == :asc ? '>=' : '<='
+        end
+
+        # @param builder [PgEventstore::SQLBuilder]
+        # @return [void]
+        def compute_event_type_filter(builder)
+          query = options[:query].to_s
+          if query.size < MIN_QUERY_SIZE_FOR_ADVANCE_SEARCH
+            builder.where('event_type like ?', "#{query}%")
+          else
+            builder.where('event_type ilike ?', "%#{query}%")
+          end
         end
       end
     end

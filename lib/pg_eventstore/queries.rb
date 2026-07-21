@@ -1,14 +1,28 @@
 # frozen_string_literal: true
 
 require_relative 'sql_builder'
+require_relative 'query_builders/filters/collection'
+require_relative 'query_builders/read_cursor/stream_cursor'
 require_relative 'query_builders/basic_filtering'
+require_relative 'query_builders/subscription_events_filtering'
 require_relative 'query_builders/events_filtering'
 require_relative 'query_builders/partitions_filtering'
+require_relative 'query_builders/events_global_index_filtering'
+require_relative 'query_builders/streams_global_index_filtering'
+require_relative 'query_builders/event_subscription_positions_filtering'
+require_relative 'query_builders/event_markers_filtering'
+require_relative 'query_builders/event_markers_index_filtering'
+require_relative 'query_builders/index_based_events_filtering'
 require_relative 'queries/transaction_queries'
 require_relative 'queries/event_queries'
 require_relative 'queries/partition_queries'
 require_relative 'queries/links_resolver'
 require_relative 'queries/maintenance_queries'
+require_relative 'queries/events_global_index_queries'
+require_relative 'queries/streams_global_index_queries'
+require_relative 'queries/event_marker_queries'
+require_relative 'queries/index_filtering_queries'
+require_relative 'queries/replica_queries'
 
 module PgEventstore
   # @!visibility private
@@ -24,9 +38,23 @@ module PgEventstore
     # @!attribute transactions
     #   @return [PgEventstore::TransactionQueries, nil]
     attribute(:transactions)
-
     # @!attribute maintenance
     #   @return [PgEventstore::MaintenanceQueries, nil]
     attribute(:maintenance)
+    # @!attribute maintenance
+    #   @return [PgEventstore::EventsGlobalIndexQueries, nil]
+    attribute(:events_global_index)
+    # @!attribute maintenance
+    #   @return [PgEventstore::StreamsGlobalIndexQueries, nil]
+    attribute(:streams_global_index)
+    # @!attribute event_subscription_positions
+    #   @return [PgEventstore::EventSubscriptionPositionQueries, nil]
+    attribute(:event_subscription_positions)
+    # @!attribute event_subscription_positions
+    #   @return [PgEventstore::EventMarkerQueries, nil]
+    attribute(:event_markers)
+    # @!attribute event_subscription_positions
+    #   @return [PgEventstore::IndexFilteringQueries, nil]
+    attribute(:index_filtering)
   end
 end

@@ -17,7 +17,7 @@ module PgEventstore
       @event_class_resolver = event_class_resolver
     end
 
-    # @param raw_events [Array<Hash>]
+    # @param raw_events [Array<Hash>, Enumerator<Hash>]
     # @return [Array<PgEventstore::Event>]
     def deserialize_many(raw_events)
       raw_events.map(&method(:deserialize))
@@ -33,7 +33,8 @@ module PgEventstore
       event.stream = PgEventstore::Stream.new(
         **attrs.slice('context', 'stream_name', 'stream_id').transform_keys(&:to_sym)
       )
-      event.link = without_middlewares.deserialize(attrs['link']) if attrs.key?('link')
+      event.link = deserialize(attrs['link']) if attrs.key?('link')
+      event.markers = event.metadata[Event::MARKERS_METADATA_KEY] || []
       event
     end
 

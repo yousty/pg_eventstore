@@ -1,0 +1,18 @@
+<div class="form-row align-items-center">
+  <div class="col-11">
+    <select name="filter[markers][]" class="form-control mb-2 markers-filter" data-placeholder="Event markers" data-url="<%= url('/markers_filtering') %>" autocomplete="off" multiple>
+      <% markers.each do |marker| %>
+        <% if marker == PgEventstore::Web::Application::EMPTY_STRING_SIGN %>
+          <option class="zero-byte-val" selected></option>
+        <% else %>
+          <option value="<%= h marker %>" selected><%= h marker %></option>
+        <% end %>
+      <% end %>
+    </select>
+  </div>
+  <div class="col-1">
+    <a class="btn btn-default remove-filter" href="javascript: void(0);">
+      <i class="fa fa-minus-circle"></i>
+    </a>
+  </div>
+</div>

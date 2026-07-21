@@ -1,0 +1,30 @@
+module PgEventstore
+  module Chunks
+    class ReadApiEventsIndexChunk
+      include Chunk[EventGlobalIndex::ReadApiRepr, Hash[String, untyped]]
+
+      MAX_PARTITIONS_TO_RESOLVE_PER_CALL: Integer
+
+      @connection: Connection
+      @raw_events: Array[Hash[String, untyped]]
+      @idx_direction: Symbol
+      @indexes: Array[EventGlobalIndex::ReadApiRepr]
+      @query_strategy: QueryStrategy
+      @resolve_link_tos: bool
+      @resolved: bool
+
+      def initialize: (Array[EventGlobalIndex::ReadApiRepr] indexes, Connection connection,
+          QueryStrategy query_strategy, bool resolve_link_tos) -> void
+
+      private
+
+      def detect_direction: (EventGlobalIndex::ReadApiRepr? idx1, EventGlobalIndex::ReadApiRepr? idx2) -> Symbol
+
+      def events_global_index_queries: -> EventsGlobalIndexQueries
+
+      def resolve_indexes: -> void
+
+      def resolved?: -> bool
+    end
+  end
+end

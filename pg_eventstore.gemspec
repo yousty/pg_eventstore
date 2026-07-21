@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = 'EventStore implementation using PostgreSQL'
   spec.homepage = 'https://github.com/yousty/pg_eventstore'
   spec.license = 'MIT'
-  spec.required_ruby_version = '>= 3.2'
+  spec.required_ruby_version = '>= 3.3'
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
 
@@ -27,15 +27,17 @@ Gem::Specification.new do |spec|
       bin/ test/ spec/ features/ .git .circleci appveyor Gemfile .ruby-version .ruby-gemset .rspec docker-compose.yml
       Rakefile benchmark/ .yardopts db/structure.sql config.ru docs/images/
     ]
-    `git ls-files -z`.split("\x0").reject do |f|
+    files = `git ls-files -z`.split("\x0") + Dir['ext/**/*.{c,rb}']
+    files.uniq.reject do |f|
       (File.expand_path(f) == __FILE__) || f.start_with?(*paths_to_exclude) || File.extname(f) == '.map'
     end
   end
   spec.bindir = 'exe'
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
+  spec.extensions = ['ext/pg_eventstore_ext/extconf.rb']
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'connection_pool', '~> 2.4'
-  spec.add_dependency 'pg', '~> 1.5'
+  spec.add_dependency 'connection_pool', '>= 2.5.4', '< 4'
+  spec.add_dependency 'pg', '~> 1'
   spec.add_dependency 'sinatra', '>= 3', '< 5'
 end

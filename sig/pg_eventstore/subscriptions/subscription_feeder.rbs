@@ -4,26 +4,27 @@ module PgEventstore
 
     extend Forwardable
 
-    @basic_runner: PgEventstore::BasicRunner
-    @commands_handler: PgEventstore::CommandsHandler
-    @subscriptions_lifecycle: PgEventstore::SubscriptionsLifecycle
-    @subscriptions_set_lifecycle: PgEventstore::SubscriptionsSetLifecycle
+    @basic_runner: BasicRunner
+    @commands_handler: CommandsHandler
+    @events_subscription_position_worker: EventsSubscriptionPositionWorker?
+    @subscriptions_lifecycle: SubscriptionsLifecycle
+    @subscriptions_set_lifecycle: SubscriptionsSetLifecycle
 
     attr_reader config_name: Symbol
 
     def initialize: (
         config_name: Symbol,
-        subscriptions_set_lifecycle: PgEventstore::SubscriptionsSetLifecycle,
-        subscriptions_lifecycle: PgEventstore::SubscriptionsLifecycle
+        subscriptions_set_lifecycle: SubscriptionsSetLifecycle,
+        subscriptions_lifecycle: SubscriptionsLifecycle
       ) -> void
 
-    def id: () -> Integer?
+    def id: -> Integer?
 
-    def start_all: () -> void
+    def start_all: -> void
 
-    def stop_all: () -> void
+    def stop_all: -> void
 
-    def attach_runner_callbacks: () -> void
+    def attach_runner_callbacks: -> void
 
     private
 
@@ -31,5 +32,7 @@ module PgEventstore
         Symbol config_name,
         SubscriptionsSetLifecycle subscriptions_set_lifecycle
       ) -> Array[RunnerRecoveryStrategy]
+
+    def requires_subscription_position_assignment?: -> bool
   end
 end

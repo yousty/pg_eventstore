@@ -102,7 +102,7 @@ module PgEventstore
 
       # @return [PgEventstore::SubscriptionQueries]
       def subscription_queries
-        SubscriptionQueries.new(connection)
+        SubscriptionQueries.new(connection, QueryStrategy::Foreground.new(connection))
       end
     end
 
@@ -185,6 +185,7 @@ module PgEventstore
         time_between_restarts:,
         state: RunnerState::STATES[:initial]
       )
+      subscription_queries.create_or_replace_table_function(id, options, locked_by)
       reload
     end
 

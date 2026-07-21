@@ -9,9 +9,9 @@ module PgEventstore
       def call(stream)
         raise SystemStreamError, stream if stream.system?
 
-        queries.transactions.transaction do
-          queries.maintenance.delete_stream(stream) > 0
-        end
+        queries.maintenance.delete_stream(stream) > 0
+      rescue RecordNotFound
+        false
       end
     end
   end

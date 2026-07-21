@@ -45,7 +45,7 @@ RSpec.describe PgEventstore::Extensions::OptionsExtension do
     end
 
     context 'when option has the same name as an existing method' do
-      let(:option) { :__id__ }
+      let(:option) { :to_s }
 
       it 'outputs warning' do
         expect { subject }.to(

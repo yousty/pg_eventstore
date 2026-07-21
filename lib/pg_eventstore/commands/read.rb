@@ -5,19 +5,37 @@ module PgEventstore
     # @!visibility private
     class Read < AbstractCommand
       # @param stream [PgEventstore::Stream]
+      # @param deserializer [PgEventstore::EventDeserializer]
       # @param options [Hash] request options
       # @option options [String] :direction read direction - 'Forwards' or 'Backwards'
-      # @option options [Integer, Symbol] :from_revision. **Use this option when stream name is a normal stream name**
-      # @option options [Integer, Symbol] :from_position. **Use this option when reading from "all" stream**
+      # @option options [Integer] :from_revision. **Use this option when stream is a regular stream**
+      # @option options [Integer] :from_position. **Use this option when reading from "all" stream**
+      # @option options [Integer] :to_revision. **Use this option when stream is a regular stream**
+      # @option options [Integer] :to_position. **Use this option when reading from "all" stream**
       # @option options [Integer] :max_count
       # @option options [Boolean] :resolve_link_tos
       # @option options [Hash] :filter provide it to filter events
       # @return [Array<PgEventstore::Event>]
       # @raise [PgEventstore::StreamNotFoundError]
-      def call(stream, options: {})
-        queries.events.stream_revision(stream) || raise(StreamNotFoundError, stream) unless stream.system?
+      def call(stream, deserializer:, options: {})
+        queries.streams_global_index.stream_exists?(stream) || raise(StreamNotFoundError, stream) unless stream.system?
 
-        queries.events.stream_events(stream, options)
+        filter_collection = QueryBuilders::Filters::Collection.from_stream_and_options(stream, options)
+        cursor = QueryBuilders::ReadCursor::StreamCursor.from_stream_and_options(stream, options)
+        raise NotSupportedError, '#read does not support look up by prefix.' if filter_collection.has_prefix_filter?
+
+        if filter_collection.has_incomplete_markers_filter? && filter_collection.has_incomplete_stream_filter?
+          error_message = <<~TEXT.strip
+            #read does not support look up by context/context & stream name and markers filter without specifying \
+            event type explicitly. Please add specific event type to your markers filter. \
+            Example: { filter: { event_types: [{ type: 'Foo', markers: ['foo', 'bar'] }] } }
+          TEXT
+          raise NotSupportedError, error_message
+        end
+
+        indexes = queries.index_filtering.fetch_indexes_for_read_api(filter_collection, cursor)
+        repo = queries.index_filtering.compute_read_api_chunks_repo(indexes, options[:resolve_link_tos] || false)
+        deserializer.deserialize_many(repo.consume_all)
       end
     end
   end

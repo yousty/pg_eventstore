@@ -1,33 +1,19 @@
 module PgEventstore
   module Commands
-    class Append < PgEventstore::AbstractCommand
-      # _@param_ `stream`
-      #
-      # _@param_ `events`
-      #
-      # _@param_ `options`
-      #
-      # _@param_ `event_modifier`
-      #
-      # _@return_ — persisted events
+    class Append < AbstractCommand
       def call: (
-          PgEventstore::Stream stream,
-          *PgEventstore::Event events,
-          ?options: ::Hash[untyped, untyped],
-          ?event_modifier: _EventModifier
-        ) -> ::Array[PgEventstore::Event]
+          Stream stream,
+          *Event events,
+          event_modifier: _EventModifier,
+          deserializer: EventDeserializer,
+          ?options: ::Hash[untyped, untyped]
+        ) -> ::Array[Event]
 
-      # _@param_ `stream`
-      #
-      # _@param_ `events`
-      def create_partitions: (PgEventstore::Stream stream, ::Array[PgEventstore::Event] events) -> void
+      private
 
-      # _@param_ `revision`
-      #
-      # _@param_ `expected_revision`
-      #
-      # _@param_ `stream`
-      def assert_expected_revision!: (Integer revision, (Symbol | Integer) expected_revision, PgEventstore::Stream stream) -> void
+      def feature_markers: (Event event) -> Array[String]
+
+      def prepare_partitions: (Stream stream, ::Array[Event] events) -> Array[Partition]
     end
   end
 end

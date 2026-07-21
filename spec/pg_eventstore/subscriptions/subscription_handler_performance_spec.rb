@@ -4,10 +4,12 @@ RSpec.describe PgEventstore::SubscriptionHandlerPerformance do
   let(:instance) { described_class.new }
 
   describe '#track_exec_time' do
-    subject { instance.track_exec_time { :foo } }
+    subject { instance.track_exec_time(events_number) { :foo } }
+
+    let(:events_number) { 2 }
 
     it 'yields the given block' do
-      expect { |b| instance.track_exec_time(&b) }.to yield_with_no_args
+      expect { |b| instance.track_exec_time(events_number, &b) }.to yield_with_no_args
     end
     it 'returns the result of the block' do
       is_expected.to eq(:foo)
@@ -22,15 +24,22 @@ RSpec.describe PgEventstore::SubscriptionHandlerPerformance do
     end
 
     context 'when there are some measurement already' do
+      let(:events_number) { 2 }
+
+      let(:sleep1) { 0.1 }
+      let(:sleep2) { 0.2 }
+      let(:sleep3) { 0.3 }
+
       before do
         stub_const("#{described_class}::TIMINGS_TO_KEEP", 2)
-        instance.track_exec_time { sleep 0.1 }
-        instance.track_exec_time { sleep 0.2 }
-        instance.track_exec_time { sleep 0.3 }
+        instance.track_exec_time(events_number) { sleep sleep1 }
+        instance.track_exec_time(events_number) { sleep sleep2 }
+        instance.track_exec_time(events_number) { sleep sleep3 }
       end
 
       it 'returns average value of last TIMINGS_TO_KEEP measurements' do
-        expect(subject.round(2)).to eq(0.25)
+        expected_time = (sleep2 + sleep3) / events_number / described_class::TIMINGS_TO_KEEP
+        expect(subject.round(2)).to eq(expected_time.round(2))
       end
     end
   end

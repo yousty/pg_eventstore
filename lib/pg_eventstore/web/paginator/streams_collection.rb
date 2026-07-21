@@ -1,0 +1,95 @@
+# frozen_string_literal: true
+
+module PgEventstore
+  module Web
+    module Paginator
+      class StreamsCollection < BaseCollection
+        # @return [Hash<String => Symbol>] SQL directions, string-to-symbol mapping
+        SQL_DIRECTIONS = {
+          'asc' => :asc,
+          'desc' => :desc,
+        }.tap do |directions|
+          directions.default = :desc
+        end.freeze
+        # @return [Hash<String => Integer>] per page limits, string to Integer mapping
+        PER_PAGE = %w[10 20 50 100 1000].to_h { [_1, _1.to_i] }.tap do |per_page|
+          per_page.default = 10
+        end.freeze
+        # @return [Integer] max number of events after which we don't perform the exact count and keep the estimate
+        #   count instead because of the potential performance degradation.
+        MAX_NUMBER_TO_COUNT = 10_000
+
+        # @return [Array<PgEventstore::Stream>]
+        def collection
+          @collection ||= PgEventstore.client(config_name).read_streams(
+            options: { from_position: starting_id, max_count: per_page, direction: order }
+          )
+        end
+
+        # @return [Integer, nil]
+        def next_page_starting_id
+          return unless collection.size == per_page
+
+          from_position = collection.first&.starting_position
+          sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination(
+            from_position:, max_count: 1, direction: order
+          ).unselect.select('starting_position').offset(per_page)
+          starting_position(sql_builder)
+        end
+
+        # @return [Integer, nil]
+        def prev_page_starting_id
+          from_position = collection.first&.starting_position || starting_id
+          sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination(
+            from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc
+          ).unselect.select('starting_position').offset(1)
+          sql_builder = SQLBuilder.new.select('starting_position').from(sql_builder)
+          sql_builder.order("starting_position #{order}").limit(1)
+          starting_position(sql_builder)
+        end
+
+        # @return [Integer]
+        def total_count
+          @total_count ||=
+            begin
+              sql_builder = QueryBuilders::StreamsGlobalIndexFiltering.sql_builder_for_basic_pagination({})
+              sql_builder.remove_limit.remove_group.remove_order
+              count = estimate_count(sql_builder)
+              return count if count > MAX_NUMBER_TO_COUNT
+
+              regular_count(sql_builder)
+            end
+        end
+
+        private
+
+        # @param sql_builder [PgEventstore::SQLBuilder]
+        # @return [Integer]
+        def estimate_count(sql_builder)
+          sql, params = sql_builder.to_exec_params
+          connection.with do |conn|
+            conn.exec_params("EXPLAIN #{sql}", params)
+          end.to_a.first['QUERY PLAN'].match(/rows=(\d+)/)[1].to_i
+        end
+
+        # @param sql_builder [PgEventstore::SQLBuilder]
+        # @return [Integer]
+        def regular_count(sql_builder)
+          sql_builder.unselect.select('count(*) as count_all')
+
+          connection.with do |conn|
+            conn.exec_params(*sql_builder.to_exec_params)
+          end.to_a.first['count_all']
+        end
+
+        # @param sql_builder [PgEventstore::SQLBuilder]
+        # @return [Integer, nil]
+        def starting_position(sql_builder)
+          connection.with do |conn|
+            conn.exec_params(*sql_builder.to_exec_params)
+          end.to_a.dig(0, 'starting_position')
+        end
+      end
+    end
+  end
+end

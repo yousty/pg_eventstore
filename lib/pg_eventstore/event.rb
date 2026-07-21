@@ -7,11 +7,17 @@ module PgEventstore
     # @return [String] a type of link event
     LINK_TYPE = '$>'
     # @return [String]
+    SYSTEM_SYMBOL = "\u2592"
+    # @return [String]
+    MARKERS_METADATA_KEY = "#{SYSTEM_SYMBOL}m".freeze
+    # @return [String]
     PRIMARY_TABLE_NAME = 'events'
+    # @return [Integer]
+    NON_EXISTING_EVENT_REVISION = -1
 
     # @!attribute id
-    #   @return [String] UUIDv4 string
-    attribute(:id)
+    #   @return [String] UUIDv7
+    attribute(:id) { SecureRandom.uuid_v7 }
     # @!attribute type
     #   @return [String] event type
     attribute(:type) { self.class.name }
@@ -27,6 +33,12 @@ module PgEventstore
     # @!attribute data
     #   @return [Hash] event's data
     attribute(:data) { {} }
+    # @!attribute markers
+    #   @return [Array<String>] event markers
+    attribute(:markers) { [] }
+    # @!attribute feature_markers
+    #   @return [Array<FeatureMarker>] feature-specific markers that can't be put under #markers
+    attribute(:feature_markers) { [] }
     # @!attribute metadata
     #   @return [Hash] event's metadata
     attribute(:metadata) { {} }
@@ -45,6 +57,15 @@ module PgEventstore
     # @!attribute created_at
     #   @return [Time, nil] a timestamp an event was created at
     attribute(:created_at)
+    # @!attribute caused_by
+    #   @return [PgEventstore::Event, nil]
+    attribute(:caused_by)
+    # @!attribute correlation_id
+    #   @return [String, nil] UUIDv7
+    attribute(:correlation_id)
+    # @!attribute causation_id
+    #   @return [String, nil] UUIDv7
+    attribute(:causation_id)
 
     # Implements comparison of `PgEventstore::Event`-s. Two events matches if all of their attributes matches
     # @param other [Object, PgEventstore::Event]
@@ -54,6 +75,7 @@ module PgEventstore
 
       attributes_hash.except(:link) == other.attributes_hash.except(:link)
     end
+    alias eql? ==
 
     # Detect whether an event is a link event
     # @return [Boolean]
@@ -61,10 +83,20 @@ module PgEventstore
       !link_global_position.nil?
     end
 
+    # @return [Integer]
+    def hash
+      attributes_hash.except(:link).hash
+    end
+
     # Detect whether an event is a system event
     # @return [Boolean]
     def system?
       type.start_with?('$')
+    end
+
+    # @return [self]
+    def dup
+      self.class.new(**Utils.deep_dup(options_hash))
     end
   end
 end

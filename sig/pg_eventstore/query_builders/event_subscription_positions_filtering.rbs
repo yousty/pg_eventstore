@@ -1,0 +1,15 @@
+module PgEventstore
+  module QueryBuilders
+    class EventSubscriptionPositionsFiltering
+      include BasicFiltering
+
+      PRIMARY_TABLE_NAME: String
+
+      @sql_builder: SQLBuilder
+
+      def by_global_positions: (Array[Integer] positions)-> void
+
+      def max_subscription_position: -> void
+    end
+  end
+end

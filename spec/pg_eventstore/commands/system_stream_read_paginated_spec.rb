@@ -3,21 +3,27 @@
 RSpec.describe PgEventstore::Commands::SystemStreamReadPaginated do
   let(:instance) { described_class.new(queries) }
   let(:queries) do
-    PgEventstore::Queries.new(events: event_queries, partitions: partition_queries)
+    PgEventstore::Queries.new(
+      index_filtering: index_filtering_queries,
+      streams_global_index: streams_global_index_queries
+    )
   end
-  let(:partition_queries) { PgEventstore::PartitionQueries.new(PgEventstore.connection) }
-  let(:event_queries) do
-    PgEventstore::EventQueries.new(
-      PgEventstore.connection,
-      PgEventstore::EventSerializer.new(middlewares),
-      PgEventstore::EventDeserializer.new(middlewares, event_class_resolver)
+  let(:index_filtering_queries) do
+    PgEventstore::IndexFilteringQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
+    )
+  end
+  let(:streams_global_index_queries) do
+    PgEventstore::StreamsGlobalIndexQueries.new(
+      PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection)
     )
   end
   let(:middlewares) { [] }
   let(:event_class_resolver) { PgEventstore::EventClassResolver.new }
+  let(:deserializer) { PgEventstore::EventDeserializer.new(middlewares, event_class_resolver) }
 
   describe '#call' do
-    subject { instance.call(PgEventstore::Stream.all_stream, options:) }
+    subject { instance.call(PgEventstore::Stream.all_stream, deserializer:, options:) }
 
     let(:options) { { max_count: 2, filter: { streams: [{ context: 'FooCtx' }] } } }
 
@@ -38,19 +44,18 @@ RSpec.describe PgEventstore::Commands::SystemStreamReadPaginated do
     end
 
     shared_examples 'fast execution' do
-      context 'when not filtering by event type', :skip_ci do
+      context 'when not filtering by event type', :rbs_skip, :skip_ci do
         before do
           PgEventstore.client.append_to_stream(stream2, Array.new(1_000) { PgEventstore::Event.new })
         end
 
         it 'does not take much time to complete reading all events' do
           time = PgEventstore::Utils.benchmark { subject.to_a } * 1000
-          # milliseconds. Keep in mind that this assertion includes performance degradation due to RBS testing
-          expect(time).to be < 30
+          expect(time).to be < 5
         end
       end
 
-      context 'when using event types filter', :skip_ci do
+      context 'when using event types filter', :rbs_skip, :skip_ci do
         let(:options) do
           super().tap do |opts|
             opts[:filter][:event_types] = ['PgEventstore::Event']
@@ -63,8 +68,7 @@ RSpec.describe PgEventstore::Commands::SystemStreamReadPaginated do
 
         it 'does not take much time to complete reading all events' do
           time = PgEventstore::Utils.benchmark { subject.to_a } * 1000
-          # milliseconds. Keep in mind that this assertion includes performance degradation due to RBS testing
-          expect(time).to be < 30
+          expect(time).to be < 5
         end
       end
     end

@@ -1,0 +1,9 @@
+module PgEventstore
+  class EventsSubscriptionPositionWorkerHandlers
+    def self.assign_subscription_position: (EventSubscriptionPositionQueries event_subscription_position_queries,
+          Integer | Float update_interval) -> void
+
+    def self.reindex: (EventSubscriptionPositionQueries event_subscription_position_queries,
+        EventsSubscriptionPositionWorker::ReindexTime next_reindex_at) -> void
+  end
+end

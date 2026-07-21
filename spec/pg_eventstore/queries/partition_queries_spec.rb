@@ -62,14 +62,14 @@ RSpec.describe PgEventstore::PartitionQueries do
   end
 
   describe '#create_stream_name_partition' do
-    subject { instance.create_stream_name_partition(stream, context_partition_name) }
+    subject { instance.create_stream_name_partition(stream, context_partition['id']) }
 
     let(:stream) { PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
-    let(:context_partition_name) { instance.create_context_partition(stream)['table_name'] }
+    let(:context_partition) { instance.create_context_partition(stream) }
 
     context 'when partition already exists' do
       before do
-        instance.create_stream_name_partition(stream, context_partition_name)
+        instance.create_stream_name_partition(stream, context_partition['id'])
       end
 
       it 'raises error' do
@@ -101,7 +101,7 @@ RSpec.describe PgEventstore::PartitionQueries do
 
       before do
         allow(Digest::MD5).to receive(:hexdigest).and_return(digests)
-        instance.create_stream_name_partition(another_stream, context_partition_name)
+        instance.create_stream_name_partition(another_stream, context_partition['id'])
       end
 
       it 'creates partition record' do
@@ -123,18 +123,30 @@ RSpec.describe PgEventstore::PartitionQueries do
   end
 
   describe '#create_event_type_partition' do
-    subject { instance.create_event_type_partition(stream, event_type, stream_name_partition_name) }
+    subject do
+      instance.create_event_type_partition(
+        stream,
+        event_type,
+        context_partition['id'],
+        stream_name_partition['id']
+      )
+    end
 
     let(:stream) { PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
     let(:event_type) { 'SomethingChanged' }
-    let(:stream_name_partition_name) do
-      context_partition = instance.create_context_partition(stream)
-      instance.create_stream_name_partition(stream, context_partition['table_name'])['table_name']
+    let(:context_partition) { instance.create_context_partition(stream) }
+    let(:stream_name_partition) do
+      instance.create_stream_name_partition(stream, context_partition['id'])
     end
 
     context 'when partition already exists' do
       before do
-        instance.create_event_type_partition(stream, event_type, stream_name_partition_name)
+        instance.create_event_type_partition(
+          stream,
+          event_type,
+          context_partition['id'],
+          stream_name_partition['id']
+        )
       end
 
       it 'raises error' do
@@ -167,7 +179,12 @@ RSpec.describe PgEventstore::PartitionQueries do
 
       before do
         allow(Digest::MD5).to receive(:hexdigest).and_return(digests)
-        instance.create_event_type_partition(another_stream, another_event_type, stream_name_partition_name)
+        instance.create_event_type_partition(
+          another_stream,
+          another_event_type,
+          context_partition['id'],
+          stream_name_partition['id']
+        )
       end
 
       it 'creates partition record' do
@@ -193,14 +210,19 @@ RSpec.describe PgEventstore::PartitionQueries do
 
     let(:stream) { PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
     let(:event_type) { 'SomethingChanged' }
-    let(:stream_name_partition_name) do
-      context_partition = instance.create_context_partition(stream)
-      instance.create_stream_name_partition(stream, context_partition['table_name'])['table_name']
+    let(:context_partition) { instance.create_context_partition(stream) }
+    let(:stream_name_partition) do
+      instance.create_stream_name_partition(stream, context_partition['id'])
     end
 
     context 'when related event type partition exists' do
       before do
-        instance.create_event_type_partition(stream, event_type, stream_name_partition_name)
+        instance.create_event_type_partition(
+          stream,
+          event_type,
+          context_partition['id'],
+          stream_name_partition['id']
+        )
       end
 
       it { is_expected.to eq(false) }
@@ -345,7 +367,7 @@ RSpec.describe PgEventstore::PartitionQueries do
     context 'when stream name partition exists' do
       before do
         context_partition = instance.create_context_partition(stream)
-        instance.create_stream_name_partition(stream, context_partition['table_name'])['table_name']
+        instance.create_stream_name_partition(stream, context_partition['id'])
       end
 
       it_behaves_like 'skips context partition'
@@ -356,9 +378,14 @@ RSpec.describe PgEventstore::PartitionQueries do
     context 'when related event type partition exists' do
       before do
         context_partition = instance.create_context_partition(stream)
-        stream_name_partition_name =
-          instance.create_stream_name_partition(stream, context_partition['table_name'])['table_name']
-        instance.create_event_type_partition(stream, event_type, stream_name_partition_name)
+        stream_name_partition =
+          instance.create_stream_name_partition(stream, context_partition['id'])
+        instance.create_event_type_partition(
+          stream,
+          event_type,
+          context_partition['id'],
+          stream_name_partition['id']
+        )
       end
 
       it_behaves_like 'skips context partition'
@@ -379,7 +406,8 @@ RSpec.describe PgEventstore::PartitionQueries do
         is_expected.to(
           eq(
             'id' => context_partition['id'], 'context' => 'SomeCtx', 'stream_name' => nil, 'event_type' => nil,
-            'table_name' => 'contexts_81820a'
+            'table_name' => 'contexts_81820a', 'parent_context_partition_id' => nil,
+            'parent_stream_name_partition_id' => nil
           )
         )
       end
@@ -396,16 +424,18 @@ RSpec.describe PgEventstore::PartitionQueries do
     let(:stream) { PgEventstore::Stream.new(context: 'SomeCtx', stream_name: 'SomeStream', stream_id: '1') }
 
     context 'when stream name partition exists' do
+      let(:context_partition) { instance.create_context_partition(stream) }
       let!(:stream_name_partition) do
-        context_partition = instance.create_context_partition(stream)
-        instance.create_stream_name_partition(stream, context_partition['table_name'])
+        instance.create_stream_name_partition(stream, context_partition['id'])
       end
 
       it 'returns it' do
         is_expected.to(
           eq(
             'id' => stream_name_partition['id'], 'context' => 'SomeCtx', 'stream_name' => 'SomeStream',
-            'event_type' => nil, 'table_name' => 'stream_names_ecb803'
+            'event_type' => nil, 'table_name' => 'stream_names_ecb803',
+            'parent_context_partition_id' => context_partition['id'],
+            'parent_stream_name_partition_id' => nil
           )
         )
       end
@@ -423,17 +453,26 @@ RSpec.describe PgEventstore::PartitionQueries do
     let(:event_type) { 'SomethingChanged' }
 
     context 'when event type partition exists' do
+      let(:context_partition) { instance.create_context_partition(stream) }
+      let(:stream_name_partition) do
+        instance.create_stream_name_partition(stream, context_partition['id'])
+      end
       let!(:event_type_partition) do
-        context_partition = instance.create_context_partition(stream)
-        stream_name_partition = instance.create_stream_name_partition(stream, context_partition['table_name'])
-        instance.create_event_type_partition(stream, event_type, stream_name_partition['table_name'])
+        instance.create_event_type_partition(
+          stream,
+          event_type,
+          context_partition['id'],
+          stream_name_partition['id']
+        )
       end
 
       it 'returns it' do
         is_expected.to(
           eq(
             'id' => event_type_partition['id'], 'context' => 'SomeCtx', 'stream_name' => 'SomeStream',
-            'event_type' => 'SomethingChanged', 'table_name' => 'event_types_aeadd5'
+            'event_type' => 'SomethingChanged', 'table_name' => 'event_types_aeadd5',
+            'parent_context_partition_id' => context_partition['id'],
+            'parent_stream_name_partition_id' => stream_name_partition['id']
           )
         )
       end
@@ -468,7 +507,7 @@ RSpec.describe PgEventstore::PartitionQueries do
     subject { instance.find_by_ids([partition1['id'], partition2['id']]) }
 
     let(:partition1) { instance.create_context_partition(stream) }
-    let(:partition2) { instance.create_stream_name_partition(stream, partition1['table_name']) }
+    let(:partition2) { instance.create_stream_name_partition(stream, partition1['id']) }
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
 
     it 'returns partitions by ids' do
@@ -492,10 +531,16 @@ RSpec.describe PgEventstore::PartitionQueries do
     end
 
     describe 'default scope (:event_type)' do
-      subject { instance.partitions(stream_filters, event_filters) }
+      subject { instance.partitions(filters_collection) }
 
       let(:stream_filters) { [] }
       let(:event_filters) { [] }
+
+      let(:filters_collection) do
+        PgEventstore::QueryBuilders::Filters::Collection.from_options(
+          filter: { streams: stream_filters, event_types: event_filters }
+        )
+      end
 
       it_behaves_like 'no partitions by the given filter'
 
@@ -730,10 +775,16 @@ RSpec.describe PgEventstore::PartitionQueries do
     end
 
     describe ':context scope' do
-      subject { instance.partitions(stream_filters, event_filters, scope: :context) }
+      subject { instance.partitions(filters_collection, scope: :context) }
 
       let(:stream_filters) { [] }
       let(:event_filters) { [] }
+
+      let(:filters_collection) do
+        PgEventstore::QueryBuilders::Filters::Collection.from_options(
+          filter: { streams: stream_filters, event_types: event_filters }
+        )
+      end
 
       it_behaves_like 'no partitions by the given filter'
 
@@ -1030,10 +1081,16 @@ RSpec.describe PgEventstore::PartitionQueries do
     end
 
     describe ':stream_name scope' do
-      subject { instance.partitions(stream_filters, event_filters, scope: :stream_name) }
+      subject { instance.partitions(filters_collection, scope: :stream_name) }
 
       let(:stream_filters) { [] }
       let(:event_filters) { [] }
+
+      let(:filters_collection) do
+        PgEventstore::QueryBuilders::Filters::Collection.from_options(
+          filter: { streams: stream_filters, event_types: event_filters }
+        )
+      end
 
       it_behaves_like 'no partitions by the given filter'
 
@@ -1352,10 +1409,16 @@ RSpec.describe PgEventstore::PartitionQueries do
     end
 
     describe ':auto scope' do
-      subject { instance.partitions(stream_filters, event_filters, scope: :auto) }
+      subject { instance.partitions(filters_collection, scope: :auto) }
 
       let(:stream_filters) { [] }
       let(:event_filters) { [] }
+
+      let(:filters_collection) do
+        PgEventstore::QueryBuilders::Filters::Collection.from_options(
+          filter: { streams: stream_filters, event_types: event_filters }
+        )
+      end
 
       it_behaves_like 'no partitions by the given filter'
 

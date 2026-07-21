@@ -32,7 +32,7 @@ module PgEventstore
         # @return [Array<Hash>, nil]
         # rubocop:disable Style/HashConversion
         def streams_filter
-          streams = QueryBuilders::EventsFiltering.extract_streams_filter(params)
+          streams = extract_streams_filter(params)
           streams = streams.select { _1 in { context: String, stream_name: String, stream_id: String } }
           streams = streams.map do |stream_attrs|
             Hash[stream_attrs.reject { |_, value| value == '' }].transform_keys(&:to_sym)
@@ -41,17 +41,32 @@ module PgEventstore
         end
         # rubocop:enable Style/HashConversion
 
-        # @return [String, nil]
-        def system_stream
-          params in { filter: { system_stream: String => system_stream } }
-          system_stream if Stream::KNOWN_SYSTEM_STREAMS.include?(system_stream)
-        end
-
-        # @return [Array<String>, nil]
+        # @return [Array<String, Hash>]
         def events_filter
           event_filters = { filter: { event_types: params.dig(:filter, :events) } }
-          events = QueryBuilders::EventsFiltering.extract_event_types_filter(event_filters)
-          events.reject { _1 == '' }
+          event_types = extract_event_types_filter(event_filters)
+          event_types.map do |filter|
+            case filter
+            when String
+              next if filter == ''
+            when Hash
+              next if filter[:type] == ''
+
+              filter[:markers] = normalize_markers(filter)
+            else
+              next
+            end
+
+            filter
+          end.compact
+        end
+
+        # @return [Array<String>]
+        def markers_filter
+          params in { filter: Hash => filter }
+          return [] unless filter
+
+          normalize_markers(filter)
         end
 
         # @return [Symbol]
@@ -137,13 +152,55 @@ module PgEventstore
         def unescape_empty_string(string)
           string == EMPTY_STRING_SIGN ? '' : string
         end
+
+        # @param options [Hash]
+        # @return [Array<String, Hash>]
+        def extract_event_types_filter(options)
+          options in { filter: { event_types: Array => event_types } }
+          event_types = event_types&.select do |event_type|
+            event_type.is_a?(String) || (event_type in { type: String })
+          end
+          event_types || []
+        end
+
+        # @param options [Hash]
+        # @return [Array<Hash[Symbol, String]>]
+        def extract_streams_filter(options)
+          options in { filter: { streams: Array => streams } }
+          streams = streams&.map do |stream_attrs|
+            stream_attrs in { context: String | NilClass => context }
+            stream_attrs in { stream_name: String | NilClass => stream_name }
+            stream_attrs in { stream_id: String | NilClass => stream_id }
+            { context:, stream_name:, stream_id: }
+          end
+          streams || []
+        end
+
+        private
+
+        # @param hash [Hash]
+        # @return [Array<String>]
+        def normalize_markers(hash)
+          hash in { markers: Array => markers }
+          markers ||= []
+          markers.grep(String).reject { _1 == '' }
+        end
       end
 
       get '/' do
         streams_filter = self.streams_filter&.map do |attrs|
           attrs.transform_values { unescape_empty_string(_1) }
         end
-        events_filter = self.events_filter&.map(&method(:unescape_empty_string))
+        events_filter = self.events_filter.map do |event_type|
+          next unescape_empty_string(event_type) if event_type.is_a?(String)
+
+          event_type[:type] = unescape_empty_string(event_type[:type])
+          event_type[:markers] = event_type[:markers]&.grep(String) || []
+          event_type
+        end
+        markers_filter = self.markers_filter.map(&method(:unescape_empty_string))
+        events_filter.push({ markers: markers_filter }) if markers_filter.any?
+
         @collection = Paginator::EventsCollection.new(
           current_config,
           starting_id: params[:starting_id]&.to_i,
@@ -152,20 +209,36 @@ module PgEventstore
           options: {
             filter: { event_types: events_filter, streams: streams_filter },
             resolve_link_tos: resolve_link_tos?,
-          },
-          system_stream:
+          }
         )
+        @gp_to_sp_map = EventSubscriptionPositionQueries.new(
+          PgEventstore.connection(current_config)
+        ).subscription_positions_from_db(@collection.collection)
 
         if request.xhr?
           content_type 'application/json'
           halt 200, {
-            events: erb(:'home/partials/events', { layout: false }, { events: @collection.collection }),
+            events: erb(
+              :'home/partials/events',
+              { layout: false },
+              { events: @collection.collection, gp_to_sp_map: @gp_to_sp_map }
+            ),
             total_count: total_count(@collection.total_count),
             pagination: erb(:'home/partials/pagination_links', { layout: false }, { collection: @collection }),
           }.to_json
         else
           erb :'home/dashboard'
         end
+      end
+
+      get '/streams' do
+        @collection = Paginator::StreamsCollection.new(
+          current_config,
+          starting_id: params[:starting_id]&.to_i,
+          per_page: Paginator::StreamsCollection::PER_PAGE[params[:per_page]],
+          order: Paginator::StreamsCollection::SQL_DIRECTIONS[params[:order]]
+        )
+        erb :'streams/index'
       end
 
       get '/subscriptions' do
@@ -247,6 +320,17 @@ module PgEventstore
         paginated_json_response(collection)
       end
 
+      get '/markers_filtering', provides: :json do
+        collection = Paginator::MarkersCollection.new(
+          current_config,
+          starting_id: unescape_empty_string(params[:starting_id]),
+          per_page: Paginator::MarkersCollection::PER_PAGE,
+          order: :asc,
+          options: { query: params[:term] }
+        )
+        paginated_json_response(collection)
+      end
+
       post '/subscription_cmd/:set_id/:id/:cmd' do
         validate_subscription_cmd(params[:cmd])
         cmd_class = SubscriptionRunnerCommands.command_class(params[:cmd])
@@ -279,14 +363,14 @@ module PgEventstore
       end
 
       post '/delete_subscription/:id' do
-        SubscriptionQueries.new(connection).delete(Integer(params[:id]))
+        SubscriptionQueries.new(connection, QueryStrategy::Foreground.new(connection)).delete(Integer(params[:id]))
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))
       end
 
       post '/delete_all_subscriptions' do
         params[:ids].each do |id|
-          SubscriptionQueries.new(connection).delete(Integer(id))
+          SubscriptionQueries.new(connection, QueryStrategy::Foreground.new(connection)).delete(Integer(id))
         end
 
         redirect redirect_back_url(fallback_url: url('/subscriptions'))

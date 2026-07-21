@@ -55,14 +55,19 @@ module PgEventstore
     # @!attribute expected_revision
     #   @return [Integer, Symbol]
     attr_reader :expected_revision
+    # @!attribute verdict
+    #   @return [Symbol]
+    attr_reader :verdict
 
     # @param revision [Integer]
     # @param expected_revision [Integer, Symbol]
     # @param stream [PgEventstore::Stream]
-    def initialize(revision:, expected_revision:, stream:)
+    # @param verdict [Symbol]
+    def initialize(revision:, expected_revision:, stream:, verdict:)
       @revision = revision
       @expected_revision = expected_revision
       @stream = stream
+      @verdict = verdict
       super(user_friendly_message)
     end
 
@@ -70,13 +75,18 @@ module PgEventstore
 
     # @return [String]
     def user_friendly_message
-      if revision == Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :stream_exists
-        return expected_stream_exists
+      case verdict
+      when :expected_to_have_stream_with_given_revision
+        current_no_stream
+      when :unmatched_stream_revision
+        unmatched_stream_revision
+      when :expected_to_have_stream
+        expected_stream_exists
+      when :expected_not_to_have_stream
+        expected_no_stream
+      else
+        Utils.missing_implementation!(verdict)
       end
-      return expected_no_stream if revision > Stream::NON_EXISTING_STREAM_REVISION && expected_revision == :no_stream
-      return current_no_stream if revision == Stream::NON_EXISTING_STREAM_REVISION && expected_revision.is_a?(Integer)
-
-      unmatched_stream_revision
     end
 
     # @return [String]
@@ -108,16 +118,129 @@ module PgEventstore
     end
   end
 
+  class WrongExpectedTypesRevisionError < Error
+    class Verdict
+      include Extensions::OptionsExtension
+      include Extensions::OptionsDefaults
+
+      # @!attribute verdict
+      #   @return [Symbol]
+      attribute(:verdict)
+      # @!attribute event_type
+      #   @return [String, Symbol]
+      attribute(:event_type)
+      # @!attribute current_revision
+      #   @return [Integer]
+      attribute(:current_revision)
+      # @!attribute expected_revision
+      #   @return [Integer, Symbol]
+      attribute(:expected_revision)
+      # @!attribute expected_markers
+      #   @return [Array<String>, nil]
+      attribute(:expected_markers)
+    end
+
+    # @!attribute stream
+    #   @return [PgEventstore::Stream]
+    attr_reader :stream
+    # @!attribute verdicts
+    #   @return [Array<PgEventstore::WrongExpectedTypesRevisionError::Verdict>]
+    attr_reader :verdicts
+
+    # @param stream [PgEventstore::Stream]
+    # @param verdicts [Array<PgEventstore::WrongExpectedTypesRevisionError::Verdict>]
+    def initialize(stream:, verdicts:)
+      @stream = stream
+      @verdicts = verdicts
+      super(user_friendly_message)
+    end
+
+    private
+
+    # @return [String]
+    def user_friendly_message
+      messages =
+        verdicts.map do |verdict|
+          case verdict.verdict
+          when :event_is_absent
+            event_is_absent(verdict)
+          when :event_revision_does_not_match
+            event_revision_does_not_match(verdict)
+          when :event_is_present
+            event_is_present(verdict)
+          else
+            Utils.missing_implementation!(verdict.verdict)
+          end
+        end
+      messages.join('; ')
+    end
+
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
+    # @return [String]
+    def event_is_absent(verdict)
+      <<~TEXT.strip
+        Expected #{stream_descr} stream to contain #{event_descr(verdict)} with #{revision_descr(verdict)}, \
+        but this event does not exist.
+      TEXT
+    end
+
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
+    # @return [String]
+    def event_is_present(verdict)
+      "Expected #{stream_descr} stream not to contain #{event_descr(verdict)}, but it actually exists."
+    end
+
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
+    # @return [String]
+    def event_revision_does_not_match(verdict)
+      <<~TEXT.strip
+        Expected #{stream_descr} stream to contain #{event_descr(verdict)} with #{revision_descr(verdict)}, \
+        but it actually has #{verdict.current_revision} revision.
+      TEXT
+    end
+
+    # @return [String]
+    def stream_descr
+      stream.to_hash.inspect
+    end
+
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
+    # @return [String]
+    def event_descr(verdict)
+      if verdict.event_type == :any
+        markers = verdict.expected_markers.map(&:inspect).join(', ')
+        "any event with some of #{markers} marker(s)"
+      elsif verdict.expected_markers
+        markers = verdict.expected_markers.map(&:inspect).join(', ')
+        "#{verdict.event_type.inspect} event with some of #{markers} marker(s)"
+      else
+        "#{verdict.event_type.inspect} event"
+      end
+    end
+
+    # @param verdict [PgEventstore::WrongExpectedTypesRevisionError::Verdict]
+    # @return [String]
+    def revision_descr(verdict)
+      if verdict.expected_revision.is_a?(Integer)
+        "#{verdict.expected_revision} revision"
+      elsif verdict.expected_revision == :event_exists
+        'some revision'
+      else
+        "#{verdict.expected_revision.inspect} revision"
+      end
+    end
+  end
+
   class RecordNotFound < Error
     # @!attribute table_name
     #   @return [String]
     attr_reader :table_name
     # @!attribute id
-    #   @return [Integer, String]
+    #   @return [Object]
     attr_reader :id
 
     # @param table_name [String]
-    # @param id [Integer, String]
+    # @param id [Object]
     def initialize(table_name, id)
       @table_name = table_name
       @id = id
@@ -126,7 +249,7 @@ module PgEventstore
 
     # @return [String]
     def user_friendly_message
-      "Could not find/update #{table_name.inspect} record with #{id.inspect} id."
+      "Could not find/update/delete #{table_name.inspect} record by #{@id.inspect}."
     end
   end
 
@@ -254,5 +377,8 @@ module PgEventstore
       @extra = extra
       super()
     end
+  end
+
+  class NotSupportedError < Error
   end
 end

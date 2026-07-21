@@ -1,0 +1,11 @@
+module PgEventstore
+  module QueryStrategy
+    class Foreground
+      include QueryStrategy
+
+      @connection: Connection
+
+      def initialize: (Connection connection) -> void
+    end
+  end
+end

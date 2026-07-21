@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict HTATkuOeQTrqxvWFri23ZYY08JRFdcsYctHKgEIA2KcF5oyv87EMb2hvjvQn7hd
+\restrict csMH62Wm56I6pbBOHXsqvQQTyBLQm2GULAUFsApqtWH4HGxVBF1oWqxTOH98qYh
 
 -- Dumped from database version 18.0 (Debian 18.0-1.pgdg13+3)
 -- Dumped by pg_dump version 18.0 (Debian 18.0-1.pgdg13+3)
@@ -18,6 +18,20 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
 
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
@@ -48,15 +62,96 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
--- Name: log_events_horizon(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_context_partition_table(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.log_events_horizon() RETURNS trigger
+CREATE FUNCTION public.create_context_partition_table() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    INSERT INTO events_horizon(global_position)
-    VALUES (NEW.global_position);
+    EXECUTE format(
+        'CREATE TABLE public.%I PARTITION OF public.events FOR VALUES IN (%L) PARTITION BY LIST (stream_name)',
+        NEW.table_name,
+        NEW.context
+    );
+
+    EXECUTE format(
+        'COMMENT ON TABLE public.%I IS %L',
+        NEW.table_name,
+        format('''%s'' context partition', NEW.context)
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: create_event_type_partition_table(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_event_type_partition_table() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    stream_name_partition_name public.partitions.table_name%TYPE;
+BEGIN
+    SELECT table_name
+    INTO STRICT stream_name_partition_name
+    FROM public.partitions
+    WHERE id = NEW.parent_stream_name_partition_id;
+
+    EXECUTE format(
+        'CREATE TABLE public.%I PARTITION OF public.%I FOR VALUES IN (%L)',
+        NEW.table_name,
+        stream_name_partition_name,
+        NEW.event_type
+    );
+
+    EXECUTE format(
+        'COMMENT ON TABLE public.%I IS %L',
+        NEW.table_name,
+        format(
+            '''%s'' context and ''%s'' stream name and ''%s'' event type partition',
+            NEW.context,
+            NEW.stream_name,
+            NEW.event_type
+        )
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: create_stream_name_partition_table(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_stream_name_partition_table() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    context_partition_name public.partitions.table_name%TYPE;
+BEGIN
+    SELECT table_name
+    INTO STRICT context_partition_name
+    FROM public.partitions
+    WHERE id = NEW.parent_context_partition_id;
+
+    EXECUTE format(
+        'CREATE TABLE public.%I PARTITION OF public.%I FOR VALUES IN (%L) PARTITION BY LIST (type)',
+        NEW.table_name,
+        context_partition_name,
+        NEW.stream_name
+    );
+
+    EXECUTE format(
+        'COMMENT ON TABLE public.%I IS %L',
+        NEW.table_name,
+        format('''%s'' context and ''%s'' stream name partition', NEW.context, NEW.stream_name)
+    );
+
     RETURN NEW;
 END;
 $$;
@@ -64,17 +159,99 @@ $$;
 
 SET default_tablespace = '';
 
+SET default_table_access_method = heap;
+
+--
+-- Name: event_markers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_markers (
+    id bigint NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: event_markers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.event_markers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: event_markers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.event_markers_id_seq OWNED BY public.event_markers.id;
+
+
+--
+-- Name: event_markers_index; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_markers_index (
+    marker_id bigint NOT NULL,
+    streams_global_index_id bigint NOT NULL,
+    event_type_partition_id bigint NOT NULL,
+    global_position bigint NOT NULL,
+    stream_revision bigint NOT NULL
+);
+
+
+--
+-- Name: event_subscription_positions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_subscription_positions (
+    global_position bigint NOT NULL,
+    subscription_position bigint NOT NULL
+);
+
+
+--
+-- Name: event_subscription_positions_subscription_position_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.event_subscription_positions_subscription_position_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: event_subscription_positions_subscription_position_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.event_subscription_positions_subscription_position_seq OWNED BY public.event_subscription_positions.subscription_position;
+
+
+--
+-- Name: event_subscription_positions_unprocessed; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_subscription_positions_unprocessed (
+    global_position bigint CONSTRAINT event_subscription_positions_unprocess_global_position_not_null NOT NULL
+);
+
+
 --
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.events (
-    id uuid DEFAULT public.gen_random_uuid() NOT NULL,
+    id uuid NOT NULL,
     context character varying NOT NULL COLLATE pg_catalog."POSIX",
     stream_name character varying NOT NULL COLLATE pg_catalog."POSIX",
     stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
     global_position bigint NOT NULL,
-    stream_revision integer NOT NULL,
+    stream_revision bigint NOT NULL,
     data jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     link_partition_id bigint,
@@ -86,24 +263,17 @@ PARTITION BY LIST (context);
 
 
 --
--- Name: $streams; Type: VIEW; Schema: public; Owner: -
+-- Name: events_global_index; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE VIEW public."$streams" AS
- SELECT id,
-    context,
-    stream_name,
-    stream_id,
-    global_position,
-    stream_revision,
-    data,
-    metadata,
-    link_partition_id,
-    created_at,
-    type,
-    link_global_position
-   FROM public.events
-  WHERE (stream_revision = 0);
+CREATE TABLE public.events_global_index (
+    global_position bigint NOT NULL,
+    stream_revision bigint NOT NULL,
+    context_partition_id bigint NOT NULL,
+    stream_name_partition_id bigint NOT NULL,
+    event_type_partition_id bigint NOT NULL,
+    streams_global_index_id bigint NOT NULL
+);
 
 
 --
@@ -125,23 +295,15 @@ CREATE SEQUENCE public.events_global_position_seq
 ALTER SEQUENCE public.events_global_position_seq OWNED BY public.events.global_position;
 
 
-SET default_table_access_method = heap;
-
 --
--- Name: events_horizon; Type: TABLE; Schema: public; Owner: -
+-- Name: maintenance_tasks; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE UNLOGGED TABLE public.events_horizon (
-    global_position bigint NOT NULL,
-    xact_id xid8 DEFAULT pg_current_xact_id() NOT NULL
+CREATE TABLE public.maintenance_tasks (
+    task_name character varying NOT NULL COLLATE pg_catalog."POSIX",
+    locked_at timestamp without time zone,
+    performed_at timestamp without time zone
 );
-
-
---
--- Name: TABLE events_horizon; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.events_horizon IS 'Internal use only. Data is limited to the PostgreSQL cluster in which it was created. DO NOT INCLUDE ITS DATA INTO YOUR DUMP.';
 
 
 --
@@ -162,7 +324,9 @@ CREATE TABLE public.partitions (
     context character varying NOT NULL COLLATE pg_catalog."POSIX",
     stream_name character varying COLLATE pg_catalog."POSIX",
     event_type character varying COLLATE pg_catalog."POSIX",
-    table_name character varying NOT NULL COLLATE pg_catalog."POSIX"
+    table_name character varying NOT NULL COLLATE pg_catalog."POSIX",
+    parent_stream_name_partition_id bigint,
+    parent_context_partition_id bigint
 );
 
 
@@ -183,6 +347,38 @@ CREATE SEQUENCE public.partitions_id_seq
 --
 
 ALTER SEQUENCE public.partitions_id_seq OWNED BY public.partitions.id;
+
+
+--
+-- Name: streams_global_index; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.streams_global_index (
+    id bigint NOT NULL,
+    partition_id bigint NOT NULL,
+    stream_id character varying NOT NULL COLLATE pg_catalog."POSIX",
+    stream_revision bigint NOT NULL,
+    starting_position bigint NOT NULL
+);
+
+
+--
+-- Name: streams_global_index_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.streams_global_index_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: streams_global_index_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.streams_global_index_id_seq OWNED BY public.streams_global_index.id;
 
 
 --
@@ -336,6 +532,20 @@ ALTER SEQUENCE public.subscriptions_set_id_seq OWNED BY public.subscriptions_set
 
 
 --
+-- Name: event_markers id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_markers ALTER COLUMN id SET DEFAULT nextval('public.event_markers_id_seq'::regclass);
+
+
+--
+-- Name: event_subscription_positions subscription_position; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_subscription_positions ALTER COLUMN subscription_position SET DEFAULT nextval('public.event_subscription_positions_subscription_position_seq'::regclass);
+
+
+--
 -- Name: events global_position; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -347,6 +557,13 @@ ALTER TABLE ONLY public.events ALTER COLUMN global_position SET DEFAULT nextval(
 --
 
 ALTER TABLE ONLY public.partitions ALTER COLUMN id SET DEFAULT nextval('public.partitions_id_seq'::regclass);
+
+
+--
+-- Name: streams_global_index id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.streams_global_index ALTER COLUMN id SET DEFAULT nextval('public.streams_global_index_id_seq'::regclass);
 
 
 --
@@ -378,19 +595,19 @@ ALTER TABLE ONLY public.subscriptions_set_commands ALTER COLUMN id SET DEFAULT n
 
 
 --
--- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_pkey PRIMARY KEY (context, stream_name, type, global_position);
-
-
---
 -- Name: partitions partitions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.partitions
     ADD CONSTRAINT partitions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: streams_global_index streams_global_index_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.streams_global_index
+    ADD CONSTRAINT streams_global_index_pkey PRIMARY KEY (id);
 
 
 --
@@ -426,10 +643,73 @@ ALTER TABLE ONLY public.subscriptions_set
 
 
 --
--- Name: idx_events_0_stream_revision_global_position; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_event_markers_index_on_marker_n_partition_n_pos; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_0_stream_revision_global_position ON ONLY public.events USING btree (global_position) WHERE (stream_revision = 0);
+CREATE INDEX idx_event_markers_index_on_marker_n_partition_n_pos ON public.event_markers_index USING btree (marker_id, event_type_partition_id, global_position);
+
+
+--
+-- Name: idx_event_markers_index_on_marker_n_pos; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_index_on_marker_n_pos ON public.event_markers_index USING btree (marker_id, global_position) INCLUDE (event_type_partition_id);
+
+
+--
+-- Name: idx_event_markers_index_on_marker_n_stream_n_partition_n_rev; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_index_on_marker_n_stream_n_partition_n_rev ON public.event_markers_index USING btree (marker_id, streams_global_index_id, event_type_partition_id, stream_revision) INCLUDE (global_position);
+
+
+--
+-- Name: idx_event_markers_index_on_marker_n_stream_n_rev; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_index_on_marker_n_stream_n_rev ON public.event_markers_index USING btree (marker_id, streams_global_index_id, stream_revision) INCLUDE (global_position, event_type_partition_id);
+
+
+--
+-- Name: idx_event_markers_index_on_pos; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_index_on_pos ON public.event_markers_index USING btree (global_position);
+
+
+--
+-- Name: idx_event_markers_on_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_markers_on_id ON public.event_markers USING btree (id) INCLUDE (name);
+
+
+--
+-- Name: idx_event_markers_on_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_event_markers_on_name ON public.event_markers USING btree (name) INCLUDE (id);
+
+
+--
+-- Name: idx_event_subscription_positions_gposition_n_sposition; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_subscription_positions_gposition_n_sposition ON public.event_subscription_positions USING btree (global_position, subscription_position);
+
+
+--
+-- Name: idx_event_subscription_positions_sposition_n_gposition; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_subscription_positions_sposition_n_gposition ON public.event_subscription_positions USING btree (subscription_position, global_position);
+
+
+--
+-- Name: idx_event_subscription_positions_unprocessed_gposition; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_subscription_positions_unprocessed_gposition ON public.event_subscription_positions_unprocessed USING btree (global_position);
 
 
 --
@@ -440,17 +720,68 @@ CREATE INDEX idx_events_global_position ON ONLY public.events USING btree (globa
 
 
 --
--- Name: idx_events_stream_id_and_global_position; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_events_idx_on_ctx_part_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_stream_id_and_global_position ON ONLY public.events USING btree (stream_id, global_position);
+CREATE INDEX idx_events_idx_on_ctx_part_id_n_position ON public.events_global_index USING btree (context_partition_id, global_position) INCLUDE (event_type_partition_id);
 
 
 --
--- Name: idx_events_stream_id_and_stream_revision; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_events_idx_on_e_type_part_id_n_position; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_events_stream_id_and_stream_revision ON ONLY public.events USING btree (stream_id, stream_revision);
+CREATE INDEX idx_events_idx_on_e_type_part_id_n_position ON public.events_global_index USING btree (event_type_partition_id, global_position);
+
+
+--
+-- Name: idx_events_idx_on_global_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_global_position ON public.events_global_index USING btree (global_position) INCLUDE (event_type_partition_id);
+
+ALTER TABLE public.events_global_index CLUSTER ON idx_events_idx_on_global_position;
+
+
+--
+-- Name: idx_events_idx_on_stream_name_part_id_n_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_stream_name_part_id_n_position ON public.events_global_index USING btree (stream_name_partition_id, global_position) INCLUDE (event_type_partition_id);
+
+
+--
+-- Name: idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_position ON public.events_global_index USING btree (streams_global_index_id, event_type_partition_id, global_position) INCLUDE (stream_revision);
+
+
+--
+-- Name: idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_revision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_e_type_part_id_n_revision ON public.events_global_index USING btree (streams_global_index_id, event_type_partition_id, stream_revision) INCLUDE (global_position);
+
+
+--
+-- Name: idx_events_idx_on_streams_idx_id_n_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_position ON public.events_global_index USING btree (streams_global_index_id, global_position) INCLUDE (event_type_partition_id, stream_revision);
+
+
+--
+-- Name: idx_events_idx_on_streams_idx_id_n_revision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_idx_on_streams_idx_id_n_revision ON public.events_global_index USING btree (streams_global_index_id, stream_revision) INCLUDE (event_type_partition_id, global_position);
+
+
+--
+-- Name: idx_maintenance_tasks_task_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_maintenance_tasks_task_name ON public.maintenance_tasks USING btree (task_name);
 
 
 --
@@ -475,10 +806,17 @@ CREATE UNIQUE INDEX idx_partitions_by_context_and_stream_name_and_event_type ON 
 
 
 --
--- Name: idx_partitions_by_event_type; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_partitions_by_context_and_stream_name_and_event_type_and_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_partitions_by_event_type ON public.partitions USING btree (event_type);
+CREATE INDEX idx_partitions_by_context_and_stream_name_and_event_type_and_id ON public.partitions USING btree (context, stream_name, event_type, id);
+
+
+--
+-- Name: idx_partitions_by_event_type_and_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_by_event_type_and_id ON public.partitions USING btree (event_type, id);
 
 
 --
@@ -486,6 +824,64 @@ CREATE INDEX idx_partitions_by_event_type ON public.partitions USING btree (even
 --
 
 CREATE UNIQUE INDEX idx_partitions_by_partition_table_name ON public.partitions USING btree (table_name);
+
+
+--
+-- Name: idx_partitions_context_and_stream_name_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_context_and_stream_name_search ON public.partitions USING gin (((((context)::text || '▒'::text) || (stream_name)::text)) public.gin_trgm_ops) WHERE ((stream_name IS NOT NULL) AND (event_type IS NULL));
+
+
+--
+-- Name: INDEX idx_partitions_context_and_stream_name_search; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.idx_partitions_context_and_stream_name_search IS 'Admin web UI search support.';
+
+
+--
+-- Name: idx_partitions_context_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_context_search ON public.partitions USING gin (context public.gin_trgm_ops) WHERE ((stream_name IS NULL) AND (event_type IS NULL));
+
+
+--
+-- Name: INDEX idx_partitions_context_search; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.idx_partitions_context_search IS 'Admin web UI search support.';
+
+
+--
+-- Name: idx_partitions_event_type_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_partitions_event_type_search ON public.partitions USING gin (event_type public.gin_trgm_ops) WHERE (event_type IS NOT NULL);
+
+
+--
+-- Name: INDEX idx_partitions_event_type_search; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.idx_partitions_event_type_search IS 'Admin web UI search support.';
+
+
+--
+-- Name: idx_streams_global_index_on_starting_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_streams_global_index_on_starting_position ON public.streams_global_index USING btree (starting_position);
+
+ALTER TABLE public.streams_global_index CLUSTER ON idx_streams_global_index_on_starting_position;
+
+
+--
+-- Name: idx_streams_global_index_on_stream_id_and_partition_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_streams_global_index_on_stream_id_and_partition_id ON public.streams_global_index USING btree (stream_id, partition_id) INCLUDE (id);
 
 
 --
@@ -517,17 +913,31 @@ CREATE UNIQUE INDEX idx_subscriptions_set_and_name ON public.subscriptions USING
 
 
 --
--- Name: idx_xact_id_and_created_at_and_global_position; Type: INDEX; Schema: public; Owner: -
+-- Name: partition_parts_dep; Type: STATISTICS; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_xact_id_and_created_at_and_global_position ON public.events_horizon USING btree (xact_id, global_position);
+CREATE STATISTICS public.partition_parts_dep (dependencies) ON context, stream_name, event_type FROM public.partitions;
 
 
 --
--- Name: events log_events_horizon; Type: TRIGGER; Schema: public; Owner: -
+-- Name: partitions create_context_partition_table; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER log_events_horizon AFTER INSERT ON public.events FOR EACH ROW EXECUTE FUNCTION public.log_events_horizon();
+CREATE TRIGGER create_context_partition_table AFTER INSERT ON public.partitions FOR EACH ROW WHEN (((new.stream_name IS NULL) AND (new.event_type IS NULL))) EXECUTE FUNCTION public.create_context_partition_table();
+
+
+--
+-- Name: partitions create_event_type_partition_table; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER create_event_type_partition_table AFTER INSERT ON public.partitions FOR EACH ROW WHEN ((new.event_type IS NOT NULL)) EXECUTE FUNCTION public.create_event_type_partition_table();
+
+
+--
+-- Name: partitions create_stream_name_partition_table; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER create_stream_name_partition_table AFTER INSERT ON public.partitions FOR EACH ROW WHEN (((new.stream_name IS NOT NULL) AND (new.event_type IS NULL))) EXECUTE FUNCTION public.create_stream_name_partition_table();
 
 
 --
@@ -566,5 +976,5 @@ ALTER TABLE ONLY public.subscriptions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict HTATkuOeQTrqxvWFri23ZYY08JRFdcsYctHKgEIA2KcF5oyv87EMb2hvjvQn7hd
+\unrestrict csMH62Wm56I6pbBOHXsqvQQTyBLQm2GULAUFsApqtWH4HGxVBF1oWqxTOH98qYh
 

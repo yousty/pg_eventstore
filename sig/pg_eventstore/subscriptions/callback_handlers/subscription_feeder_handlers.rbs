@@ -2,28 +2,33 @@ module PgEventstore
   class SubscriptionFeederHandlers
     include Extensions::CallbackHandlersExtension
 
-    def self.update_subscriptions_set_state: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle, String state) -> void
+    def self.start_events_subscription_position_worker: (EventsSubscriptionPositionWorker worker) -> void
 
-    def self.lock_subscriptions: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle) -> void
+    def self.stop_events_subscription_position_worker: (EventsSubscriptionPositionWorker worker) -> void
 
-    def self.start_runners: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle) -> void
+    def self.update_subscriptions_set_state: (SubscriptionsSetLifecycle subscriptions_set_lifecycle,
+        String state) -> void
 
-    def self.start_cmds_handler: (PgEventstore::CommandsHandler cmds_handler) -> void
+    def self.lock_subscriptions: (SubscriptionsLifecycle subscriptions_lifecycle) -> void
 
-    def self.persist_error_info: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle, StandardError error) -> void
+    def self.start_runners: (SubscriptionsLifecycle subscriptions_lifecycle) -> void
 
-    def self.ping_subscriptions_set: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
+    def self.start_cmds_handler: (CommandsHandler cmds_handler) -> void
 
-    def self.feed_runners: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle, Symbol config_name) -> void
+    def self.persist_error_info: (SubscriptionsSetLifecycle subscriptions_set_lifecycle, StandardError error) -> void
 
-    def self.ping_subscriptions: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle) -> void
+    def self.ping_subscriptions_set: (SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
 
-    def self.stop_runners: (PgEventstore::SubscriptionsLifecycle subscriptions_lifecycle) -> void
+    def self.feed_runners: (SubscriptionsLifecycle subscriptions_lifecycle, Symbol config_name) -> void
 
-    def self.reset_subscriptions_set: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
+    def self.ping_subscriptions: (SubscriptionsLifecycle subscriptions_lifecycle) -> void
 
-    def self.stop_commands_handler: (PgEventstore::CommandsHandler cmds_handler) -> void
+    def self.stop_runners: (SubscriptionsLifecycle subscriptions_lifecycle) -> void
 
-    def self.update_subscriptions_set_restarts: (PgEventstore::SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
+    def self.reset_subscriptions_set: (SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
+
+    def self.stop_commands_handler: (CommandsHandler cmds_handler) -> void
+
+    def self.update_subscriptions_set_restarts: (SubscriptionsSetLifecycle subscriptions_set_lifecycle) -> void
   end
 end

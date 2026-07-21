@@ -1,0 +1,11 @@
+module PgEventstore
+  module SubscriptionFeedStrategy[unchecked Runner]
+    def add: (*Runner runners) -> Array[Runner]
+
+    def any?: -> bool
+
+    def feed: -> void
+
+    def size: -> Integer
+  end
+end

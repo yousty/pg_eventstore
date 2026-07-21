@@ -14,7 +14,7 @@ module PgEventstore
               sql_builder = SQLBuilder.new.select('context').from('partitions')
               sql_builder.where('stream_name is null and event_type is null')
               sql_builder.where("context #{direction_operator} ?", starting_id) if starting_id
-              sql_builder.where('context ilike ?', "%#{options[:query]}%")
+              compute_context_filter(sql_builder)
               sql_builder.limit(per_page).order("context #{order}")
               connection.with do |conn|
                 conn.exec_params(*sql_builder.to_exec_params)
@@ -30,7 +30,7 @@ module PgEventstore
           sql_builder = SQLBuilder.new.select('context').from('partitions')
           sql_builder.where('stream_name is null and event_type is null')
           sql_builder.where("context #{direction_operator} ?", starting_id)
-          sql_builder.where('context ilike ?', "%#{options[:query]}%")
+          compute_context_filter(sql_builder)
           sql_builder.limit(1).offset(per_page).order("context #{order}")
 
           connection.with do |conn|
@@ -43,6 +43,17 @@ module PgEventstore
         # @return [String]
         def direction_operator
           order == :asc ? '>=' : '<='
+        end
+
+        # @param builder [PgEventstore::SQLBuilder]
+        # @return [void]
+        def compute_context_filter(builder)
+          query = options[:query].to_s
+          if query.size < MIN_QUERY_SIZE_FOR_ADVANCE_SEARCH
+            builder.where('context like ?', "#{query}%")
+          else
+            builder.where('context ilike ?', "%#{query}%")
+          end
         end
       end
     end

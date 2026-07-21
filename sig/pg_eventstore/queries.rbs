@@ -1,25 +1,15 @@
 module PgEventstore
   class Queries
-    include PgEventstore::Extensions::OptionsExtension
+    include Extensions::OptionsExtension
 
-    attr_accessor events: PgEventstore::EventQueries?
-
-    attr_accessor partitions: PgEventstore::PartitionQueries?
-
-    attr_accessor transactions: PgEventstore::TransactionQueries?
-
-    attr_accessor maintenance: PgEventstore::MaintenanceQueries?
-
-    def initialize: (**untyped options) -> void
-
-    def options_hash: () -> ::Hash[untyped, untyped]
-
-    def readonly!: (Symbol opt_name) -> bool
-
-    def readonly?: (Symbol opt_name) -> bool
-
-    def readonly_error: (Symbol opt_name) -> void
-
-    def init_default_values: (::Hash[untyped, untyped] options) -> void
+    attr_accessor events: EventQueries?
+    attr_accessor partitions: PartitionQueries?
+    attr_accessor transactions: TransactionQueries?
+    attr_accessor maintenance: MaintenanceQueries?
+    attr_accessor events_global_index: EventsGlobalIndexQueries?
+    attr_accessor streams_global_index: StreamsGlobalIndexQueries?
+    attr_accessor event_subscription_positions: EventSubscriptionPositionQueries?
+    attr_accessor event_markers: EventMarkerQueries?
+    attr_accessor index_filtering: IndexFilteringQueries?
   end
 end

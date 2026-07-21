@@ -1,67 +1,51 @@
 # Appending Events
 
-## Append your first event
+## Append event
 
-The easiest way to append an event is to create an event object and a stream object and call the client's `#append_to_stream` method.
+The easiest way to append an event is to create an event object and a stream object and call the client's
+`#append_to_stream` method.
 
 ```ruby
-require 'securerandom'
-
 class SomethingHappened < PgEventstore::Event
 end
 
-event = SomethingHappened.new(data: { user_id: SecureRandom.uuid, title: "Something happened" })
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
+event = SomethingHappened.new(data: { user_id: '1', title: "Something happened" })
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
 PgEventstore.client.append_to_stream(stream, event)
-# => #<SomethingHappened:0x0 @context="MyAwesomeContext", @created_at=2023-11-30 14:47:31.296229 UTC, @data={"title"=>"Something happened", "user_id"=>"be52a81c-ad5b-4cfd-a039-0b7276974e6b"}, @global_position=7, @id="0b01137b-bdd8-4f0d-8ccf-f8c959e3a324", @link_global_position=nil, @metadata={}, @stream_id="f37b82f2-4152-424d-ab6b-0cc6f0a53aae", @stream_name="SomeStream", @stream_revision=0, @type="SomethingHappened">
+# => #<SomethingHappened:0x000077c654b8f8c0 @readonly=Set[], @id="ecab1317-f2ae-4fc0-ad16-b820cd6fe053", @type="SomethingHappened", @global_position=133486960, @stream=#<PgEventstore::Stream:0x000077c6549e3990 @context="FooCtx", @stream_name="Foo", @stream_id="1", @stream_revision=nil, @starting_position=nil>, @stream_revision=16024, @data={"title" => "Something happened", "user_id" => "1"}, @markers=[], @metadata={}, @link_global_position=nil, @link_partition_id=nil, @link=nil, @created_at=2026-07-08 10:25:12.721906 UTC>
 ```
 
 ## Appending multiple events
 
-You can pass an array of events to the `#append_to_stream` method. This way events will be appended one-by-one. **This operation is atomic and it guarantees that events are added to the stream in the given order.**
+You can pass an array of events to the `#append_to_stream` method. This way events will be appended one-by-one. **This
+operation is atomic and it guarantees that events are added to the stream in the given order.**
 
 ```ruby
-require 'securerandom'
-
 class SomethingHappened < PgEventstore::Event
 end
 
-event1 = SomethingHappened.new(data: { user_id: SecureRandom.uuid, title: "Something happened 1" })
-event2 = SomethingHappened.new(data: { user_id: SecureRandom.uuid, title: "Something happened 2" })
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
+event1 = SomethingHappened.new(data: { user_id: '1', title: "Something happened 1" })
+event2 = SomethingHappened.new(data: { user_id: '1', title: "Something happened 2" })
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
 PgEventstore.client.append_to_stream(stream, [event1, event2])
-```
-
-### Duplicated event id
-
-If two events with the same id are appended to any stream - `pg_eventstore` will only append one event, and the second command will raise an error.
-
-```ruby
-class SomethingHappened < PgEventstore::Event
-end
-
-event = SomethingHappened.new(id: SecureRandom.uuid)
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
-PgEventstore.client.append_to_stream(stream, event)
-# Raises PG::UniqueViolation error
-PgEventstore.client.append_to_stream(stream, event)
 ```
 
 ## Handling concurrency
 
-When appending events to a stream you can supply a stream state or stream revision. You can use this to tell `pg_eventstore` what state or version you expect the stream to be in when you append. If the stream isn't in that state then an exception will be thrown.
+When appending events to a stream you can supply a stream state or stream revision. You can use this to tell
+`pg_eventstore` what state or version you expect the stream to be in when you append. If the stream isn't in that state
+then an exception will be thrown.
 
-For example if we try to append two records expecting both times that the stream doesn't exist we will get an exception on the second:
+For example if we try to append two records expecting both times that the stream doesn't exist we will get an exception
+on the second:
 
 ```ruby
-require 'securerandom'
-
 class SomethingHappened < PgEventstore::Event
 end
 
 event1 = SomethingHappened.new(data: { foo: :bar })
 event2 = SomethingHappened.new(data: { bar: :baz })
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: SecureRandom.uuid)
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: '1')
 
 # Successfully appends an event
 PgEventstore.client.append_to_stream(stream, event1, options: { expected_revision: :no_stream })
@@ -76,15 +60,14 @@ Here are possible values of `:expected_revision` option:
 - `:stream_exists`. Expects a stream to be present when appending an event
 - a revision number(Integer). Expects a stream to be in the given revision.
 
-This check can be used to implement optimistic concurrency. When you retrieve a stream, you take note of the current version number, then when you save it back you can determine if somebody else has modified the record in the meantime.
+This check can be used to implement optimistic concurrency. When you retrieve a stream, you take note of the current
+version number, then when you save it back you can determine if somebody else has modified the record in the meantime.
 
 ```ruby
-require 'securerandom'
-
 class SomethingHappened < PgEventstore::Event
 end
 
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: SecureRandom.uuid)
+stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: '1')
 event1 = SomethingHappened.new(data: { foo: :bar })
 event2 = SomethingHappened.new(data: { bar: :baz })
 
@@ -99,20 +82,95 @@ PgEventstore.client.append_to_stream(stream, event2, options: { expected_revisio
 PgEventstore.client.append_to_stream(stream, event2, options: { expected_revision: revision })
 ```
 
-### What to do when a PgEventstore::WrongExpectedRevisionError error is risen?
+### Dynamic Consistency Boundaries support
+
+You can validate a revision of separate event type(s) when publishing an event. This allows you to enforce consistency
+of a specific event type(s) instead the consistency of the whole stream. To do so, you have to supply a
+<event type>-to-<event revision> map as a value of `:expected_revion` option. Available per-type expected revisions:
+
+- `:any`. Doesn't perform any checks. This is the default.
+- `:no_event`. Expects an event to be absent when appending an event
+- `:event_exists`. Expects an event to be present when appending an event
+- a revision number(Integer). Expects an event to be in the given revision.
+
+For example, next append command succeeds only if there is no `Foo` event, `Bar` event has revision `1` and `Baz` event
+exists with any revision:
+
+```ruby
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+event = PgEventstore::Event.new(data: { foo: :bar })
+PgEventstore.client.append_to_stream(
+  stream, event, options: { expected_revision: { 'Foo' => :no_event, 'Bar' => 1, 'Baz' => :event_exists } }
+)
+```
+
+If event type(s) revision validation fails - `PgEventstore::WrongExpectedTypesRevisionError` exception is risen. Please
+note, that this is different exception class comparing to the one which is present when stream revision validation
+fails(`PgEventstore::WrongExpectedRevisionError`).
+
+## Event markers
+
+You can assign multiple markers(strings) to an event. This is multipurpose feature which may have application-specific
+meaning, like observability or can be used as an additional constraint to validate event type revision as a part of
+Dynamic Consistency Boundaries support.
+
+### Publishing event with markers
+
+```ruby
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+event = PgEventstore::Event.new(markers: %w[foo bar])
+PgEventstore.client.append_to_stream(stream, event)
+```
+
+Refer to [Read API docs](reading_events.md#filtering-events-by-markers) to find out how to filter events using markers.
+
+### Dynamic Consistency Boundaries and markers
+
+In addition to [per-event type validation](appending_events.md#dynamic-consistency-boundaries-support) - you can specify
+a set of markers the specific event type may contain in order to pass revision validation. The available per-type
+revisions are the same(`:any`, `:no_event`, `:event_exists` or number), but the syntax is a bit different. The example
+bellow succeeds if there is no `Foo` event yet with either `'foo'` **or** `'bar'` marker:
+
+```ruby
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+event = PgEventstore::Event.new(type: 'Foo', markers: ['bar'])
+PgEventstore.client.append_to_stream(
+  stream, event, options: { expected_revision: { 'Foo' => { expected_revision: :no_event, markers: %w[foo bar] } } }
+)
+```
+
+Please note, there is no possibility to ensure the event has both - `'foo'` and `'bar'` markers. If you want to build
+the logic that requires to differentiate between events with `'foo'`, `'bar'` and both markers - you have to
+additionally mark such events with third marker. For example, you can have `'foobar'` marker which is used for events
+with both `'foo'` and `'bar'` markers:
+
+```ruby
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+event = PgEventstore::Event.new(type: 'Foo', markers: %w[foo bar foobar])
+PgEventstore.client.append_to_stream(
+  stream, event, options: { expected_revision: { 'Foo' => { expected_revision: :no_event, markers: %w[foobar] } } }
+)
+```
+
+## What to do when a WrongExpectedRevisionError or WrongExpectedTypesRevisionError error is risen?
 
 Imagine the following scenario:
+
 1. You load events of a stream to build the state of your business object represented by the stream.
 2. You check your business rules to see if you can change that object's state the way you want to change it.
 3. If no business rules have been violated, you have the go to publish the event representing the state change.
-4. To make sure the new event will follow the last event you used to build your object state, you retrieve that last event's revision and increase it by one. You now have the expected revision for the event to be published.
-5. You publish the event but retrieve a `WrongExpectedRevisionError`. This means another process has appended an event to the same stream, after you were loading your business object, while you were checking your business rules.
-6. Now you need to repeat the process: load your business objects from the updated events stream, apply your business rules and if there is still no violation, try to append the event with the updated stream revision. You can do this procedure until the event is published or a maximum number of retries has been reached.
+4. To make sure the new event will follow the last event you used to build your object state, you retrieve that last
+   event's revision and increase it by one. You now have the expected revision for the event to be published.
+5. You publish the event but retrieve a `WrongExpectedRevisionError`. This means another process has appended an event
+   to the same stream, after you were loading your business object, while you were checking your business rules.
+6. Now you need to repeat the process: load your business objects from the updated events stream, apply your business
+   rules and if there is still no violation, try to append the event with the updated stream revision. You can do this
+   procedure until the event is published or a maximum number of retries has been reached.
 
-The following example shows the described retry procedure, with a simple business rule that does not allow adding an event after a `UserRemoved` event:
+The following example shows the described retry procedure, with a simple business rule that does not allow adding an
+event after a `UserRemoved` event:
 
 ```ruby
-require 'securerandom'
 class UserAboutMeChanged < PgEventstore::Event
 end
 
@@ -121,7 +179,7 @@ end
 
 def latest_event(stream)
   PgEventstore.client.read(stream, options: { max_count: 1, direction: 'Backwards' }).first
-rescue PgEventstore::StreamNotFoundError  
+rescue PgEventstore::StreamNotFoundError
 end
 
 def publish_event(stream, event)
@@ -138,10 +196,10 @@ def publish_event(stream, event)
     retries_count += 1
     raise if retries_count > 3
     retry
-  end  
+  end
 end
 
-stream = PgEventstore::Stream.new(context: 'UserProfile', stream_name: 'User', stream_id: SecureRandom.uuid)
+stream = PgEventstore::Stream.new(context: 'UserProfile', stream_name: 'User', stream_id: '1')
 event = UserAboutMeChanged.new(data: { user_id: '123', about_me: 'hi there!' })
 
 publish_event(stream, event)
@@ -149,7 +207,9 @@ publish_event(stream, event)
 
 ## Middlewares
 
-If you would like to skip some of your registered middlewares from processing events before they get appended to a stream - you should use the `:middlewares` argument which allows you to override the list of middlewares you would like to use.
+If you would like to skip some of your registered middlewares from processing events before they get appended to a
+stream - you should use the `:middlewares` argument which allows you to override the list of middlewares you would like
+to use.
 
 Let's say you have these registered middlewares:
 
@@ -159,11 +219,12 @@ PgEventstore.configure do |config|
 end
 ```
 
-And you want to skip `FooMiddleware` and `BazMiddleware`. You simply have to provide an array of corresponding middleware keys you would like to use:
+And you want to skip `FooMiddleware` and `BazMiddleware`. You simply have to provide an array of corresponding
+middleware keys you would like to use:
 
 ```ruby
 event = PgEventstore::Event.new
-stream = PgEventstore::Stream.new(context: 'MyAwesomeContext', stream_name: 'SomeStream', stream_id: 'f37b82f2-4152-424d-ab6b-0cc6f0a53aae')
+stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
 PgEventstore.client.append_to_stream(stream, event, middlewares: %i[bar])
 ```
 

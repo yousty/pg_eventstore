@@ -1,0 +1,7 @@
+module PgEventstore
+  module Commands
+    class StreamRevision < AbstractCommand
+      def call: (Stream stream) -> Integer
+    end
+  end
+end

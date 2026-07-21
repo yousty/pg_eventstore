@@ -3,13 +3,11 @@ module PgEventstore
     include Extensions::OptionsExtension
 
     attr_accessor id: Integer
-
     attr_accessor context: String
-
     attr_accessor stream_name: String?
-
     attr_accessor event_type: String?
-
     attr_accessor table_name: String
+    attr_accessor parent_context_partition_id: Integer?
+    attr_accessor parent_stream_name_partition_id: Integer?
   end
 end

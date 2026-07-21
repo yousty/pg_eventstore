@@ -1,19 +1,15 @@
 module PgEventstore
   class LinksResolver
-    # _@param_ `connection`
-    def initialize: (Connection connection) -> void
+    @query_strategy: QueryStrategy
 
-    # _@param_ `raw_events`
+    attr_accessor connection: Connection
+
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
     def resolve: (::Array[::Hash[String, untyped]] raw_events) -> ::Array[::Hash[String, untyped]]
 
-    # _@param_ `link_events` — partition id to link events association
-    #
-    # _@return_ — original events
     def load_original_events: (::Hash[Integer, ::Array[::Hash[String, untyped]]] link_events) -> ::Array[::Hash[String, untyped]]
 
     def partition_queries: () -> PartitionQueries
-
-    # Returns the value of attribute connection.
-    attr_accessor connection: Connection
   end
 end

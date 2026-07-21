@@ -1,25 +1,20 @@
 module PgEventstore
   module Commands
-    class SystemStreamReadPaginated < PgEventstore::AbstractCommand
-      # _@param_ `stream`
-      #
-      # _@param_ `options`
-      %a{rbs:test:skip} def call: (PgEventstore::Stream stream, ?options: ::Hash[untyped, untyped]) -> ::Enumerator[Array[PgEventstore::Event], void]
+    class SystemStreamReadPaginated < AbstractCommand
+      # Skip this type check because rbs duplicates calls to Enumerator#next
+      %a{rbs:test:skip} def call: (Stream stream, deserializer: EventDeserializer,
+          ?options: ::Hash[untyped, untyped]) -> ::Enumerator[Array[Event], void]
 
-      # _@param_ `events`
-      #
-      # _@param_ `max_count`
-      def end_reached?: (::Array[PgEventstore::Event] events, Integer max_count) -> bool
+      private
 
-      # _@param_ `events`
-      #
-      # _@param_ `direction`
-      def calc_next_position: (::Array[PgEventstore::Event] events, (String | Symbol)? direction) -> Integer
+      def end_reached?: (::Array[Event] events, Integer max_count) -> bool
+
+      def calc_next_position: (::Array[Event] events, (String | Symbol)? direction) -> Integer
 
       # _@param_ `direction`
       def forwards?: ((String | Symbol)? direction) -> bool
 
-      def read_cmd: () -> PgEventstore::Commands::Read
+      def read_cmd: () -> Commands::Read
     end
   end
 end

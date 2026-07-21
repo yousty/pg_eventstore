@@ -33,11 +33,11 @@ RSpec.describe 'CLI integration' do
     end
 
     it 'processes events' do
+      o = Object.new
       expect {
         subject
-        # Let subscriptions to process event
-        sleep 3
       }.to change {
+        dv(o).deferred_wait(timeout: 5) { !CLIHelper.processed_events.empty? }
         CLIHelper.processed_events
       }.to(
         array_including(
@@ -46,11 +46,11 @@ RSpec.describe 'CLI integration' do
       )
     end
     it 'persists pid into a file' do
+      o = Object.new
       expect {
         subject
-        # Let subscriptions to process event
-        sleep 3
       }.to change {
+        dv(o).deferred_wait(timeout: 5) { !PgEventstore::Utils.read_pid('/tmp/pg-es_subscriptions.pid').nil? }
         PgEventstore::Utils.read_pid('/tmp/pg-es_subscriptions.pid')&.to_i
       }.to(subscriptions_pid)
     end
@@ -86,11 +86,11 @@ RSpec.describe 'CLI integration' do
     end
 
     it 'persists pid into the given file' do
+      o = Object.new
       expect {
         subject
-        # Let subscriptions process to start
-        sleep 3
       }.to change {
+        dv(o).deferred_wait(timeout: 5) { !PgEventstore::Utils.read_pid(pid_file_path).nil? }
         PgEventstore::Utils.read_pid(pid_file_path)&.to_i
       }.to(subscriptions_pid)
     end
@@ -139,11 +139,11 @@ RSpec.describe 'CLI integration' do
     end
 
     it 'processes events' do
+      o = Object.new
       expect {
         subject
-        # Let subscriptions to unlock and start
-        sleep 3
       }.to change {
+        dv(o).deferred_wait(timeout: 5) { !CLIHelper.processed_events.empty? }
         CLIHelper.processed_events
       }.to(
         array_including(
@@ -152,11 +152,11 @@ RSpec.describe 'CLI integration' do
       )
     end
     it 're-locks existing subscription' do
+      o = Object.new
       expect {
         subject
-        # Let subscriptions to unlock and start
-        sleep 3
       }.to change {
+        dv(o).deferred_wait(timeout: 5) { existing_locked_subscription.reload.locked_by != subscriptions_set.id }
         existing_locked_subscription.reload.locked_by
       }.from(subscriptions_set.id).to(instance_of(Integer))
     end

@@ -1,0 +1,37 @@
+module PgEventstore
+  class EventsGlobalIndexQueries
+    @query_strategy: QueryStrategy
+
+    attr_reader connection: Connection
+
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
+    def fetch_indexes_for_subscriptions: (Hash[Integer, Hash[Symbol, untyped]] grouped_opts) ->
+      Hash[Integer, Array[EventGlobalIndex::SubscriptionRepr]]
+
+    def global_positions_from_db: (Array[Event] events) -> Array[Integer]
+
+    def index_events: (Array[Hash[String, untyped]] raw_events, Array[Partition] affected_partitions,
+        Integer stream_index_id) -> Array[EventGlobalIndex::WriteApiRepr]
+
+    def max_global_position: -> Integer?
+
+    def resolve_indexes: (Array[EventGlobalIndex::ReadApiRepr] | Array[EventGlobalIndex::SubscriptionRepr] indexes,
+        ?direction: (String | Symbol)?, resolve_link_tos: bool) -> Array[Hash[String, untyped]]
+
+    private
+
+    def deserialize: (PG::Result pg_result, ?repr: Symbol?) ->
+      (
+        Array[EventGlobalIndex] |
+        Array[EventGlobalIndex::ReadApiRepr] |
+        Array[EventGlobalIndex::SubscriptionRepr] |
+          Array[EventGlobalIndex::WriteApiRepr] |
+          Array[EventGlobalIndex::RevisionCheckRepr]
+      )
+
+    def links_resolver: -> LinksResolver
+
+    def partition_queries: -> PartitionQueries
+  end
+end

@@ -1,39 +1,42 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-`bin/setup_db` # re-create dbs
+PG_EVENTSTORE_URI = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore_benchmark' }
+
+`PG_EVENTSTORE_URI="#{PG_EVENTSTORE_URI}" bundle exec rake pg_eventstore:drop`
+`PG_EVENTSTORE_URI="#{PG_EVENTSTORE_URI}" bundle exec rake pg_eventstore:create`
+`PG_EVENTSTORE_URI="#{PG_EVENTSTORE_URI}" bundle exec rake pg_eventstore:migrate`
 
 require "bundler/setup"
 require_relative 'benchmarks'
 require_relative 'live_monitor'
 require 'rainbow'
 
-# Number of processes/threads for the benchmark
-CONCURRENCY = 5
-# A constant that maps concurrency number to expected performance(events per second)
-CONCURRENCY_TO_PERFORMANCE_MAPPING = { 5 => { threads: 1200, processes: 1500 } }
+# Number of processes for the benchmark
+CONCURRENCY = ENV['CONCURRENCY']&.to_i || 10
 
-def colorize_write_result(result, result_key)
-  current = result[result_key][:avg]
-  scope = result_key.to_s.include?('threads') ? :threads : :processes
-  min = CONCURRENCY_TO_PERFORMANCE_MAPPING[CONCURRENCY][scope]
-  current = (1 / current).to_i
+WRITE_BENCHMARKS = {
+  append_events_to_different_streams: "#{CONCURRENCY} processes, events appended to a separate stream per process",
+  append_events_to_single_stream: "#{CONCURRENCY} processes, events appended to one shared stream",
+  append_events_with_markers_to_different_streams: "#{CONCURRENCY} processes, events with random markers appended " \
+                                                    'to a separate stream per process',
+  append_events_with_markers_to_single_stream: "#{CONCURRENCY} processes, events with random markers appended " \
+                                                'to one shared stream',
+}.freeze
 
-  if current + 50 < min
-    Rainbow(current).red
-  elsif current < min
-    Rainbow(current).yellow
-  else
-    Rainbow(current).green
-  end
+def colorize_write_result(result, result_key, type)
+  current = result[result_key][type]
+  current = (1 / current).to_i * CONCURRENCY
+
+  Rainbow(current).green
 end
 
 def colorize_read_result(time_seconds)
   time_ms = time_seconds * 1_000
   case time_ms
-  when 0...1
+  when 0...50
     Rainbow(time_ms).green
-  when 1..3
+  when 50...100
     Rainbow(time_ms).yellow
   else
     Rainbow(time_ms).red
@@ -41,46 +44,113 @@ def colorize_read_result(time_seconds)
 end
 
 PgEventstore.configure do |config|
-  config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI') { 'postgresql://postgres:postgres@localhost:5532/eventstore' }
-  config.connection_pool_size = CONCURRENCY + 1 # +1 comes from LiveMonitor
+  config.pg_uri = PG_EVENTSTORE_URI
+  config.connection_pool_size = CONCURRENCY
+end
+
+PgEventstore.configure(name: :service) do |config|
+  config.pg_uri = PG_EVENTSTORE_URI
+  config.connection_pool_size = 1
 end
 
 Benchmarks.warm_up
-Stats.redis.with(&:flushdb)
+Stats.repo.reset
 
-monitor = LiveMonitor.new
+monitor = LiveMonitor.new(PgEventstore.connection(:service))
 
-%i[frequent_streams_writes frequent_events_writes].each do |method|
+WRITE_BENCHMARKS.each_key.with_index do |method, index|
+  if index > 0
+    puts 'Taking a break for 5 seconds between runs...'
+    sleep 5
+  end
   monitor.start
-  puts "Taking a break for 5 second between runs..."
-  bms = Benchmarks.new(CONCURRENCY)
-  bms.in_processes(method)
-  puts "Taking a break for 5 second between runs..."
-  sleep 5
-  bms.in_threads(method)
+  Benchmarks.new(CONCURRENCY).in_processes(method)
   monitor.stop
 end
 
 result = Stats.stats
 
-puts "Average events per second (5 processes, streams are created frequently): #{colorize_write_result(result, :frequent_streams_writes_processes)}."
-puts "Average events per second (5 threads, streams are created frequently): #{colorize_write_result(result, :frequent_streams_writes_threads)}."
-puts "Average events per second (5 processes, streams are created rarely): #{colorize_write_result(result, :frequent_events_writes_processes)}."
-puts "Average events per second (5 threads, streams are created rarely): #{colorize_write_result(result, :frequent_events_writes_threads)}."
+WRITE_BENCHMARKS.each do |bench_type, explanation|
+  puts "#{explanation} best: #{colorize_write_result(result, bench_type, :min)}"
+  puts "#{explanation} worst: #{colorize_write_result(result, bench_type, :max)}"
+  puts "#{explanation} p95: #{colorize_write_result(result, bench_type, :p95)}"
+  puts "#{explanation} p99: #{colorize_write_result(result, bench_type, :p99)}"
+  puts "#{explanation} p95 avg: #{colorize_write_result(result, bench_type, :p95_avg)}"
+  puts "#{explanation} p99 avg: #{colorize_write_result(result, bench_type, :p99_avg)}"
+  puts
+end
 
-puts "Read tests."
+random_stream_attrs = PgEventstore.connection.with do |conn|
+  conn.exec(<<~SQL)
+    select stream_id, p.context, p.stream_name from streams_global_index,
+                 lateral (select context, stream_name from partitions where id = streams_global_index.partition_id) p
+                 order by random() limit 2;
+  SQL
+end.map { _1.transform_keys(&:to_sym) }
 
 read_tests = {
-  'Reading from "all" stream' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10 }) },
-  'Reading from "all" stream with filter by existing events' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { event_types: %w[Sit Amet] } }) },
-  'Reading from "all" stream with filter by non existing events' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { event_types: %w[NonExisting NonExisting2] } }) },
-  'Reading from "all" stream with filter by existing events and existing contexts' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { streams: [{ context: 'FooCtx' }, { context: 'BazBarCtx' }], event_types: %w[Sit Amet] } }) },
-  'Reading from "all" stream with filter by non existing events and existing contexts' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { streams: [{ context: 'FooCtx' }, { context: 'BazBarCtx' }], event_types: %w[NonExisting NonExisting2] } }) },
-  'Reading from "all" stream with filter by existing events and non existing contexts' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { streams: [{ context: 'FooCtx1' }, { context: 'BazBarCtx1' }], event_types: %w[Sit Amet] } }) },
-  'Reading from "all" stream with filter by non existing events and non existing contexts' => -> { PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 10, filter: { streams: [{ context: 'NonExistingCtx' }, { context: 'NonExistingCtx2' }], event_types: %w[NonExisting NonExisting2] } })}
+  'Reading from "all" stream' => -> {
+    PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { max_count: 1000 })
+  },
+  'Reading from "all" stream with filter by existing events' => -> {
+    PgEventstore.client.read(
+      PgEventstore::Stream.all_stream,
+      options: {
+        max_count: 10,
+        filter: {
+          streams: [
+            { context: 'FooCtx', stream_name: 'Comment-1' }
+          ],
+          event_types: %w[Sit-1 Amet-0]
+        }
+      }
+    )
+  },
+  'Reading from "all" stream with filter by non existing events' => -> {
+    PgEventstore.client.read(
+      PgEventstore::Stream.all_stream,
+      options: { max_count: 10, filter: { event_types: %w[NonExisting NonExisting2] } }
+    )
+  },
+  'Reading from random existing streams' => -> {
+    PgEventstore.client.read(
+      PgEventstore::Stream.all_stream,
+      options: { max_count: 10, filter: { streams: random_stream_attrs } }
+    )
+  },
+  'Reading from "all" stream with filter by existing events and non existing contexts' => -> {
+    PgEventstore.client.read(
+      PgEventstore::Stream.all_stream,
+      options: {
+        max_count: 10,
+        filter: {
+          streams: [
+            { context: 'FooCtx1' },
+            { context: 'BazBarCtx1' }
+          ],
+          event_types: %w[Sit-0 Amet-1]
+        }
+      }
+    )
+  },
+  'Reading from "all" stream with filter by non existing events and non existing contexts' => -> {
+    PgEventstore.client.read(
+      PgEventstore::Stream.all_stream,
+      options: {
+        max_count: 10,
+        filter: {
+          streams: [
+            { context: 'NonExistingCtx' },
+            { context: 'NonExistingCtx2' }
+          ],
+          event_types: %w[NonExisting NonExisting2]
+        }
+      }
+    )
+  }
 }
 
-puts "Warming up..."
+puts "Read tests. Warming up."
 
 2.times do
   read_tests.values.each(&:call)

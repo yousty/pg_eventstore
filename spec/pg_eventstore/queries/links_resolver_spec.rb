@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::LinksResolver do
-  let(:instance) { described_class.new(PgEventstore.connection) }
+  let(:instance) do
+    described_class.new(PgEventstore.connection, PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection))
+  end
 
   describe '#resolve' do
     subject { instance.resolve(raw_events) }

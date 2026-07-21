@@ -3,6 +3,11 @@
 module PgEventstore
   # @!visibility private
   class MaintenanceQueries
+    # @return [Integer]
+    EVENT_INDEXES_TO_REMOVE_PER_QUERY = 10_000
+    # @return [Integer]
+    EVENT_INDEXES_TO_UPDATE_PER_QUERY = 10_000
+
     # @!attribute connection
     #   @return [PgEventstore::Connection]
     attr_reader :connection
@@ -13,36 +18,155 @@ module PgEventstore
       @connection = connection
     end
 
+    # TODO: refactor me. Reason: fatty
     # @param stream [PgEventstore::Stream]
     # @return [Integer] number of deleted events of the given stream
     def delete_stream(stream)
-      connection.with do |conn|
-        conn.exec_params(<<~SQL, stream.deconstruct)
-          DELETE FROM events WHERE context = $1 AND stream_name = $2 AND stream_id = $3
-        SQL
-      end.cmd_tuples
+      total_removed = 0
+      transaction_queries.transaction(:read_committed) do
+        stream_global_idx = streams_global_index_queries.find_by!(stream)
+        streams_global_index_queries.delete(stream_global_idx.id)
+        global_position = 1
+        loop do
+          deleted_events_global_index = connection.with do |conn|
+            conn.exec_params(<<~SQL, [stream_global_idx.id, global_position, EVENT_INDEXES_TO_REMOVE_PER_QUERY]).to_a
+              delete from events_global_index
+                     where global_position in (
+                         select global_position from events_global_index
+                                  where streams_global_index_id = $1 and global_position >= $2
+                                  order by global_position asc
+                                  limit $3
+                     )
+                     returning event_type_partition_id, global_position
+            SQL
+          end
+          break if deleted_events_global_index.empty?
+
+          global_position = deleted_events_global_index.last['global_position'] + 1
+          total_removed += deleted_events_global_index.size
+          deleted_events_global_index = deleted_events_global_index.group_by { _1['event_type_partition_id'] }
+          partitions = partition_queries.find_by_ids(deleted_events_global_index.keys).to_h { [_1['id'], _1] }
+          queries = deleted_events_global_index.map do |partition_id, idxs|
+            partition = partitions[partition_id]
+            positions = idxs.map { _1['global_position'] }.join(', ')
+            context = PG::Connection.escape(partition['context'])
+            stream_name = PG::Connection.escape(partition['stream_name'])
+            event_type = PG::Connection.escape(partition['event_type'])
+            <<~SQL
+              delete from events
+                     where context = '#{context}' and stream_name = '#{stream_name}' and type = '#{event_type}'
+                           and global_position in (#{positions});
+              delete from event_subscription_positions where global_position in (#{positions});
+              delete from event_subscription_positions_unprocessed where global_position in (#{positions});
+              delete from event_markers_index where global_position in (#{positions});
+            SQL
+          end
+          connection.with do |conn|
+            conn.exec(queries.join("\n"))
+          end
+        end
+      end
+      total_removed
     end
 
+    # TODO: refactor me. Reason: fatty
     # @param event [PgEventstore::Event]
-    # @return [Integer] number of deleted events
-    def delete_event(event)
-      connection.with do |conn|
-        conn.exec_params(<<~SQL, [event.stream.context, event.stream.stream_name, event.type, event.global_position])
-          DELETE FROM events WHERE context = $1 AND stream_name = $2 AND type = $3 AND global_position = $4
-        SQL
-      end.cmd_tuples
-    end
-
-    # @param stream [PgEventstore::Stream]
-    # @param after_revision [Integer]
     # @return [void]
-    def adjust_stream_revisions(stream, after_revision)
-      connection.with do |conn|
-        conn.exec_params(<<~SQL, [stream.context, stream.stream_name, stream.stream_id, after_revision])
-          UPDATE events SET stream_revision = stream_revision - 1
-            WHERE context = $1 AND stream_name = $2
-              AND stream_id = $3 AND stream_revision > $4
-        SQL
+    def delete_event(event)
+      stream = event.stream
+      transaction_queries.transaction(:read_commited) do
+        stream_global_idx = streams_global_index_queries.find_by!(stream)
+        current_stream_revision = connection.with do |conn|
+          conn.exec_params(
+            'select stream_revision from streams_global_index where id = $1 for update', [stream_global_idx.id]
+          )
+        end.to_a.first['stream_revision']
+        exists =
+          connection.with do |conn|
+            conn.exec_params(<<~SQL, [event.global_position]).first&.[]('one') == 1
+              select 1 as one from events_global_index where global_position = $1
+            SQL
+          end
+        raise RecordNotFound.new('events_global_index', event.global_position) unless exists
+        # We are deleting the only event. Thus, we should delete the whole stream
+        return delete_stream(stream) if current_stream_revision == 0
+
+        deleted_event = connection.with do |conn|
+          conn.exec_params(<<~SQL, [stream_global_idx.id, event.global_position]).to_a.first
+            delete from events_global_index where streams_global_index_id = $1 and global_position = $2
+                   returning global_position, event_type_partition_id, stream_revision
+          SQL
+        end
+
+        affected_partition = partition_queries.find_by_ids([deleted_event['event_type_partition_id']]).first
+        connection.with do |conn|
+          delete_args = [
+            affected_partition['context'],
+            affected_partition['stream_name'],
+            affected_partition['event_type'],
+            deleted_event['global_position'],
+          ]
+          conn.exec_params(<<~SQL, delete_args)
+            with _1 as (delete from events where context = $1 and stream_name = $2 and type = $3 and global_position = $4),
+             _2 as (delete from event_subscription_positions where global_position = $4),
+             _3 as (delete from event_subscription_positions_unprocessed where global_position = $4),
+             _4 as (delete from event_markers_index where global_position = $4)
+             select 1;
+          SQL
+        end
+        first_updated_event = nil
+        stream_revision = deleted_event['stream_revision']
+        loop do
+          updated_events = connection.with do |conn|
+            conn.exec_params(<<~SQL, [stream_global_idx.id, stream_revision, EVENT_INDEXES_TO_UPDATE_PER_QUERY]).to_a
+              update event_markers_index set stream_revision = stream_revision - 1
+                     where global_position in (
+                         select global_position from events_global_index
+                                  where streams_global_index_id = $1 and stream_revision > $2
+                                  order by stream_revision asc
+                                  limit $3
+                     )
+            SQL
+            conn.exec_params(<<~SQL, [stream_global_idx.id, stream_revision, EVENT_INDEXES_TO_UPDATE_PER_QUERY]).to_a
+              update events_global_index set stream_revision = stream_revision - 1
+                     where global_position in (
+                         select global_position from events_global_index
+                                  where streams_global_index_id = $1 and stream_revision > $2
+                                  order by stream_revision asc
+                                  limit $3
+                     )
+                     returning event_type_partition_id, global_position, stream_revision
+            SQL
+          end
+          first_updated_event ||= updated_events.min_by { _1['stream_revision'] }
+          break if updated_events.empty?
+
+          stream_revision += updated_events.size
+          updated_events = updated_events.group_by { _1['event_type_partition_id'] }
+          partitions = partition_queries.find_by_ids(updated_events.keys).to_h { [_1['id'], _1] }
+          queries = updated_events.flat_map do |partition_id, idxs|
+            partition = partitions[partition_id]
+            context = PG::Connection.escape(partition['context'])
+            stream_name = PG::Connection.escape(partition['stream_name'])
+            event_type = PG::Connection.escape(partition['event_type'])
+            idxs.map do |idx|
+              <<~SQL
+                update events set stream_revision = #{idx['stream_revision']}
+                  where context = '#{context}' and stream_name = '#{stream_name}' and type = '#{event_type}' and
+                        global_position = #{idx['global_position']};
+              SQL
+            end
+          end
+          connection.with do |conn|
+            conn.exec(queries.join("\n"))
+          end
+        end
+        stream_idx_attrs_to_update = { stream_revision: current_stream_revision - 1 }
+        # Adjust starting_position in case zero revision event was deleted
+        if deleted_event['stream_revision'] == 0
+          stream_idx_attrs_to_update[:starting_position] = first_updated_event['global_position']
+        end
+        streams_global_index_queries.update(stream_global_idx.id, **stream_idx_attrs_to_update)
       end
     end
 
@@ -50,32 +174,25 @@ module PgEventstore
     # @param after_revision [Integer]
     # @return [Integer]
     def events_to_lock_count(stream, after_revision)
-      connection.with do |conn|
-        conn.exec_params(<<~SQL, [*stream.deconstruct, after_revision])
-          EXPLAIN SELECT * FROM events
-                    WHERE context = $1 AND stream_name = $2 AND stream_id = $3 AND stream_revision > $4
-        SQL
-      end.to_a.first['QUERY PLAN'].match(/rows=(\d+)/)[1].to_i
-    end
-
-    # @param event [PgEventstore::Event]
-    # @return [PgEventstore::Event]
-    def reload_event(event)
-      event_attrs = connection.with do |conn|
-        conn.exec_params(<<~SQL, [event.stream&.context, event.stream&.stream_name, event.type, event.global_position])
-          SELECT * FROM events WHERE context = $1 AND stream_name = $2 AND type = $3 AND global_position = $4 LIMIT 1
-        SQL
-      end.to_a.first
-      return unless event_attrs
-
-      basic_deserializer.deserialize(event_attrs)
+      stream_index = streams_global_index_queries.find_by!(stream)
+      stream_index.stream_revision - after_revision
     end
 
     private
 
-    # @return [PgEventstore::EventDeserializer]
-    def basic_deserializer
-      EventDeserializer.new([], ->(_event_type) { Event })
+    # @return [PgEventstore::StreamsGlobalIndexQueries]
+    def streams_global_index_queries
+      StreamsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
+    end
+
+    # @return [PgEventstore::TransactionQueries]
+    def transaction_queries
+      TransactionQueries.new(connection)
+    end
+
+    # @return [PgEventstore::PartitionQueries]
+    def partition_queries
+      PartitionQueries.new(connection)
     end
   end
 end

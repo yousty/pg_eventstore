@@ -33,6 +33,29 @@ RSpec.describe PgEventstore::EventSerializer do
         }.to('dummy_secret' => DummyMiddleware::ENCR_SECRET, 'foo' => 'bar')
       end
     end
+
+    context 'when event has markers assigned' do
+      before do
+        event.markers = %w[foo bar foo]
+      end
+
+      it 'assigns unique markers into special metadata key' do
+        expect { subject }.to change { event.metadata[PgEventstore::Event::MARKERS_METADATA_KEY] }.to(%w[foo bar])
+      end
+      it 'assigns unique markers to #markers' do
+        expect { subject }.to change { event.markers }.to(%w[foo bar])
+      end
+    end
+
+    context 'when special metadata markers key is present, but #markers is empty' do
+      before do
+        event.metadata[PgEventstore::Event::MARKERS_METADATA_KEY] = %w[foo bar foo]
+      end
+
+      it 'removes that metadata key' do
+        expect { subject }.to change { event.metadata }.to({})
+      end
+    end
   end
 
   describe '#without_middlewares' do

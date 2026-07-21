@@ -1,0 +1,11 @@
+module PgEventstore
+  module Chunks
+    class ReplicaEventsIndexChunk
+      include Chunk[EventGlobalIndex::SubscriptionRepr, EventGlobalIndex::SubscriptionRepr]
+
+      @indexes: Array[EventGlobalIndex::SubscriptionRepr]
+
+      def initialize: (Array[EventGlobalIndex::SubscriptionRepr] indexes) -> void
+    end
+  end
+end

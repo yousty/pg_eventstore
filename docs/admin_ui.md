@@ -10,7 +10,9 @@
 
 ## Authorization
 
-Admin UI is implemented as a rack application. It doesn't have any built-in authentication/authorization mechanism - it is your responsibility to take care of it. Admin UI tries to look for `:admin_web_ui` config with a fallback to `:default` config. Thus, you can setup Admin UI-specific config, e.g. without some middlewares or so. Example:
+Admin UI is implemented as a rack application. It doesn't have any built-in authentication/authorization mechanism - it
+is your responsibility to take care of it. Admin UI tries to look for `:admin_web_ui` config with a fallback to
+`:default` config. Thus, you can setup Admin UI-specific config, e.g. without some middlewares or so. Example:
 
 ```ruby
 PgEventstore.configure(name: :admin_web_ui) do |config|

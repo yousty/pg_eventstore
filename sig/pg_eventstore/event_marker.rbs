@@ -1,0 +1,9 @@
+module PgEventstore
+  class EventMarker
+    include Extensions::OptionsExtension
+    include Extensions::OptionsDefaults
+
+    attr_accessor id: Integer
+    attr_accessor name: String
+  end
+end

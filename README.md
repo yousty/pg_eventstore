@@ -4,11 +4,21 @@ Implements database and API to store and read events in event sourced systems.
 
 ## Requirements
 
-- `pg_eventstore` requires a PostgreSQL v16+ with [pg_cron](https://github.com/citusdata/pg_cron) extension installed.
-- `pg_evenstore` requires a separate detabase. However, it is recommended that you spin it up on a separate PostgreSQL instance in a production environment.
+- `pg_eventstore` requires a PostgreSQL v16+.
+- `pg_evenstore` requires a separate database. However, it is recommended that you spin it up on a separate PostgreSQL instance in a production environment.
 - `pg_eventstore` requires `default_transaction_isolation` server config option to be set to `'read committed'` (default behavior). Having this value set to move strict isolation level may result in unexpected behavior.
 - It is recommended to use a connection pooler (for example [PgBouncer](https://www.pgbouncer.org/)) in `transaction` pool mode to lower the load on a database.
-- `pg_eventstore` requires ruby v3+. The development of this gem is targeted at [current](https://endoflife.date/ruby) ruby versions.
+- `pg_eventstore` requires ruby v3.3+. The development of this gem is targeted at [current](https://endoflife.date/ruby) ruby versions.
+
+### Migrating to v3
+
+If you are migrating from v2 - please don't forget to delete cron jobs and `pg_cron` extension after migration to v3.
+You can remove cron jobs as follows:
+
+```sql
+SELECT cron.unschedule('prune_eventstore_events_horizon');
+SELECT cron.unschedule('delete-job-run-details');
+```
 
 ## Installation
 
@@ -47,25 +57,21 @@ Documentation chapters:
 - [Appending events](docs/appending_events.md)
 - [Linking events](docs/linking_events.md)
 - [Reading events](docs/reading_events.md)
+- [Reading streams](docs/reading_streams.md)
+- [Tracing events](docs/event_tracing.md)
 - [Subscriptions](docs/subscriptions.md)
 - [Maintenance functions](docs/maintenance.md)
 - [Writing middlewares](docs/writing_middleware.md)
 - [How to make multiple commands atomic](docs/multiple_commands.md)
 - [Admin UI](docs/admin_ui.md)
+- [Replication](docs/replication.md)
+
+To help your AI assistant to better recognize the capabilities of this gem - there is a crafted [instructions](docs/AGENTS.fragment.md)
+you can include into your `AGENTS.md`.
 
 ## CLI
 
 The gem is shipped with its own CLI. Use `pg-eventstore --help` to find out its capabilities.
-
-## Maintenance
-
-You may want to backup your eventstore database. It is important to mention that you don't want to dump/restore records of `events_horizon` table. `events_horizon` table is used to supply subscriptions functionality and contains temporary data which is scoped to the PostgreSQL cluster they were created in. **Thus, it is even may be harmful if you restore records from this table into a new PostgreSQL cluster. Simply exclude that table's data when performing backups.** Example:
-
-```bash
-pg_dump --exclude-table-data=events_horizon eventstore -U postgres > eventstore.sql
-```
-
-Also, it is important you create and migrate new database via provided rake commands - they include an important setup of `pg_cron` jobs as well. **Even if you would like to restore your db backup on clean PostgreSQL instance - please initialize pg_eventstore via built-in tools first.**
 
 ## RSpec
 
@@ -117,14 +123,18 @@ end
 After checking out the repo, run:
 - `bundle` to install dependencies
 - `docker compose up` to start dev/test services
+- `bundle exec rake compile` to compile native extension 
 - `bin/setup_db` to create/re-create development and test databases, tables and related objects
 - `bundle exec rbs collection install` to install external rbs definitions
 
-Then, run `bin/rspec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Then, run `bin/rspec` to run the tests(or just `rspec` if you want to temporary skip rbs checks). Optional env variables for testing:
+- `DEBUG=1 bin/rspec`. Enable nicely formatted and highlighted SQL output into stdout.
+
+You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`.
 
-To run admin UI web server - run `puma` in your terminal. By default it will start web server on `http://0.0.0.0:9292`.
+To run admin UI web server - run `puma` in your terminal. By default, it will start web server on `http://0.0.0.0:9292`.
 
 ### Benchmarks
 

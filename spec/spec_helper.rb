@@ -11,6 +11,7 @@ require 'pg_eventstore/cli'
 require 'rack/test'
 require 'timecop'
 require 'nokogiri'
+require 'niceql'
 
 Dir[File.join(File.expand_path('.', __dir__), 'support/**/*.rb')].each { |f| require f }
 
@@ -86,9 +87,16 @@ RSpec.configure do |config|
     example.run
   end
 
+  config.around(rbs_skip: true) do |example|
+    next if ENV['RBS_TEST_TARGET']
+
+    example.run
+  end
+
   config.include EventHelpers
   config.include PartitionsHelper
   config.include Rack::Test::Methods, type: :request
   config.include RequestsHelper, type: :request
   config.include DeferredValueExt
+  config.include MaintenanceHelpers
 end

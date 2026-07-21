@@ -2,6 +2,8 @@ module PgEventstore
   class TransactionQueries
     ISOLATION_LEVELS: ::Hash[Symbol, String]
 
+    MAX_NUMBER_OF_UNIQUE_CONSTRAINTS_ERROR_RETRIES: Integer
+
     # _@param_ `connection`
     def initialize: (PgEventstore::Connection connection) -> void
 

@@ -1,6 +1,7 @@
 module PgEventstore
   class EventsProcessorHandlers
-    def self.consume_events: (EventsProcessorConsumer consumer, Callbacks callbacks, SynchronizedArray raw_events,
+    def self.consume_events: (EventsProcessorConsumer consumer, Callbacks callbacks,
+        Chunks::Repository events_repository,
         MonitorMixin::ConditionVariable raw_events_cond) -> void
 
     def self.after_runner_died: (Callbacks callbacks, StandardError error) -> void

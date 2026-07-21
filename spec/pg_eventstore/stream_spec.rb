@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
 RSpec.describe PgEventstore::Stream do
-  let(:instance) { described_class.new(context: 'SomeContext', stream_name: 'SomeStreamName', stream_id: '123') }
+  let(:instance) do
+    described_class.new(
+      context: 'SomeContext', stream_name: 'SomeStreamName', stream_id: '123', stream_revision: 0, starting_position: 1
+    )
+  end
 
   describe '.all_stream' do
     subject { described_class.all_stream }
@@ -11,16 +15,6 @@ RSpec.describe PgEventstore::Stream do
         expect(subject.instance_variable_get(:@all_stream)).to eq(true)
         expect(subject.instance_variables).to eq([:@all_stream])
       end
-    end
-  end
-
-  describe '.system_stream' do
-    subject { described_class.system_stream(stream_name) }
-
-    let(:stream_name) { '$some-stream' }
-
-    it 'returns system stream' do
-      is_expected.to eq(described_class.new(context: stream_name, stream_name: '', stream_id: ''))
     end
   end
 

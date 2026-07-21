@@ -15,15 +15,16 @@ module PgEventstore
       runners = runners.select(&:running?).select(&:time_to_feed?)
       return if runners.empty?
 
-      safe_pos = subscription_service_queries.safe_global_position
-      runners_query_options = runners.to_h do |runner|
-        [runner.id, runner.next_chunk_query_opts.merge(to_position: safe_pos)]
+      feed_strategies_collection = SubscriptionFeedStrategy::Collection.create(
+        runners,
+        connection,
+        QueryStrategy::Async.new(connection)
+      )
+      query_runner = AsyncRunner.new
+      feed_strategies_collection.each do |strategy|
+        query_runner.async { strategy.feed }
       end
-      grouped_events = subscription_queries.subscriptions_events(runners_query_options)
-
-      runners.each do |runner|
-        runner.feed(grouped_events[runner.id]) if grouped_events[runner.id]
-      end
+      query_runner.run
     end
 
     private
@@ -31,16 +32,6 @@ module PgEventstore
     # @return [PgEventstore::Connection]
     def connection
       PgEventstore.connection(@config_name)
-    end
-
-    # @return [PgEventstore::SubscriptionQueries]
-    def subscription_queries
-      SubscriptionQueries.new(connection)
-    end
-
-    # @return [PgEventstore::SubscriptionServiceQueries]
-    def subscription_service_queries
-      SubscriptionServiceQueries.new(connection)
     end
   end
 end

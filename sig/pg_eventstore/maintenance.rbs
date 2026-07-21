@@ -1,19 +1,23 @@
 module PgEventstore
   class Maintenance
-    @config: PgEventstore::Config
+    @config: Config
 
-    attr_reader config: PgEventstore::Config
+    attr_reader config: Config
 
-    def initialize: (PgEventstore::Config config) -> void
+    def initialize: (Config config) -> void
 
-    def connection: () -> PgEventstore::Connection
+    def connection: () -> Connection
 
-    def delete_event: (PgEventstore::Event event, ?force: bool)-> bool
+    def delete_event: (Event event, ?force: bool)-> bool
 
-    def delete_stream: (PgEventstore::Stream stream)-> bool
+    def delete_stream: (Stream stream)-> bool
 
-    def maintenance_queries: () -> PgEventstore::MaintenanceQueries
+    def maintenance_queries: () -> MaintenanceQueries
 
-    def transaction_queries: () -> PgEventstore::TransactionQueries
+    def transaction_queries: () -> TransactionQueries
+
+    private
+
+    def events_global_index_queries: -> EventsGlobalIndexQueries
   end
 end

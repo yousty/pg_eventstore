@@ -19,57 +19,46 @@ module PgEventstore
         #   count instead because of the potential performance degradation.
         MAX_NUMBER_TO_COUNT = 10_000
 
-        # @param config_name [Symbol]
-        # @param starting_id [String, Integer, nil]
-        # @param per_page [Integer]
-        # @param order [Symbol] :asc or :desc
-        # @param options [Hash] additional options to filter the collection
-        # @param system_stream [String, nil] a name of system stream
-        def initialize(config_name, starting_id:, per_page:, order:, options: {}, system_stream: nil)
-          super(config_name, starting_id:, per_page:, order:, options:)
-          @stream = system_stream ? PgEventstore::Stream.system_stream(system_stream) : PgEventstore::Stream.all_stream
-        end
-
         # @return [Array<PgEventstore::Event>]
         def collection
-          @collection ||= PgEventstore.client(config_name).read(
-            @stream,
-            options: options.merge(from_position: starting_id, max_count: per_page, direction: order)
-          )
+          _collection[0...per_page]
         end
 
         # @return [Integer, nil]
         def next_page_starting_id
           return unless collection.size == per_page
 
-          from_position = event_global_position(collection.first)
-          sql_builder = QueryBuilders::EventsFiltering.events_filtering(
-            @stream,
-            options.merge(from_position:, max_count: 1, direction: order)
-          ).to_sql_builder.unselect.select('global_position').offset(per_page)
-          global_position(sql_builder)
+          event_global_position(_collection[per_page])
         end
 
         # @return [Integer, nil]
         def prev_page_starting_id
-          from_position = event_global_position(collection.first) || starting_id
-          sql_builder = QueryBuilders::EventsFiltering.events_filtering(
-            @stream,
-            options.merge(from_position:, max_count: per_page, direction: order == :asc ? :desc : :asc)
-          ).to_sql_builder.unselect.select('global_position').offset(1)
-          sql, params = sql_builder.to_exec_params
-          sql = "SELECT * FROM (#{sql}) #{Event::PRIMARY_TABLE_NAME} ORDER BY global_position #{order} LIMIT 1"
-          connection.with do |conn|
-            conn.exec_params(sql, params)
-          end.to_a.dig(0, 'global_position')
+          starting_position = event_global_position(_collection.first) || starting_id
+          return unless starting_position
+
+          order = self.order == :asc ? :desc : :asc
+          starting_position = self.order == :asc ? starting_position - 1 : starting_position + 1
+
+          # Not ideal from the perspective of the amount of records we load here, but this is the only way to read from
+          # the db in the correct way. Direct usage of query builders may result in heavy, unoptimized queries.
+          options = self.options.merge(
+            from_position: starting_position, max_count: per_page, direction: order, resolve_link_tos: false
+          )
+          PgEventstore.client(config_name).read(
+            PgEventstore::Stream.all_stream,
+            options:,
+            middlewares: []
+          ).last&.global_position
         end
 
         # @return [Integer]
         def total_count
           @total_count ||=
             begin
-              sql_builder = QueryBuilders::EventsFiltering.events_filtering(@stream, options).to_sql_builder
-              sql_builder.remove_limit.remove_group.remove_order
+              filters_collection = QueryBuilders::Filters::Collection.from_options(options)
+              sql_builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_estimate_count(
+                filters_collection.collection
+              )
               count = estimate_count(sql_builder)
               return count if count > MAX_NUMBER_TO_COUNT
 
@@ -78,6 +67,13 @@ module PgEventstore
         end
 
         private
+
+        def _collection
+          @_collection ||= PgEventstore.client(config_name).read(
+            PgEventstore::Stream.all_stream,
+            options: options.merge(from_position: starting_id, max_count: per_page + 1, direction: order)
+          )
+        end
 
         # @param event [PgEventstore::Event, nil]
         # @return [Integer, nil]

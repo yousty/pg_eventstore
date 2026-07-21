@@ -1,25 +1,44 @@
 module PgEventstore
   module QueryBuilders
-    class PartitionsFiltering < BasicFiltering
+    class PartitionsFiltering
+      include BasicFiltering
+
       TABLE_NAME: String
 
-      def self.extract_event_types_filter: (Hash[untyped, untyped] options) -> Array[String]
+      @has_event_types: Array[bool]
+      @has_stream_names: Array[bool]
+      @sql_builder: SQLBuilder
+      @wants_event_type: bool
+      @wants_stream_name: bool
 
-      def self.extract_streams_filter: (Hash[untyped, untyped] options) -> Array[Hash[untyped, untyped]]
+      def self.assemble_sql_builder: (Filters::Collection filters_collection,
+          ?scope: Symbol) -> SQLBuilder
 
-      def self.correct_stream_filter?: (::Hash[untyped, untyped] stream_attrs) -> bool
+      def self.from_filter_row: (Filters::FilterRow filter_row,
+          ?scope: Symbol) -> SQLBuilder
 
-      def add_event_types: (::Array[String] event_types) -> SQLBuilder
+      def add_filter_row: (Filters::FilterRow filter_row) -> void
 
-      def add_stream_attrs: (?context: String?, ?stream_name: String?) -> SQLBuilder
+      def order_by_context: -> void
 
-      def with_event_types: -> SQLBuilder
+      def order_by_event_type: -> void
 
-      def with_stream_names: -> SQLBuilder
+      def order_by_stream_name: -> void
 
-      def without_event_types: -> SQLBuilder
+      def with_event_types: -> void
 
-      def without_stream_names: -> SQLBuilder
+      def with_stream_names: -> void
+
+      def without_event_types: -> void
+
+      def without_stream_names: -> void
+
+      private
+
+      def self.has_stream_name_filter?: (Filters::Collection filters_collection) -> bool
+
+      def self.set_partitions_scope: (PartitionsFiltering partitions_filtering, bool has_stream_name_filters,
+          bool has_event_type_filters, Symbol scope) -> untyped
     end
   end
 end

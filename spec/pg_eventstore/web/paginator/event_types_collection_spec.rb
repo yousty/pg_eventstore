@@ -15,32 +15,32 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
 
     let!(:events) do
       events = [
-        PgEventstore::Event.new(type: 'foo'),
-        PgEventstore::Event.new(type: 'fok'),
-        PgEventstore::Event.new(type: 'faz'),
-        PgEventstore::Event.new(type: 'bar'),
-        PgEventstore::Event.new(type: 'baz'),
+        PgEventstore::Event.new(type: 'foofoo'),
+        PgEventstore::Event.new(type: 'fokfok'),
+        PgEventstore::Event.new(type: 'FazFaz'),
+        PgEventstore::Event.new(type: 'barbar'),
+        PgEventstore::Event.new(type: 'bazbaz'),
       ]
       PgEventstore.client.append_to_stream(stream, events)
     end
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
 
     it 'returns event types according to the page limit and in the given order' do
-      is_expected.to eq([{ 'event_type' => 'bar' }, { 'event_type' => 'baz' }])
+      is_expected.to eq([{ 'event_type' => 'FazFaz' }, { 'event_type' => 'barbar' }])
     end
 
     context 'when starting_id is given' do
-      let(:starting_id) { 'baz' }
+      let(:starting_id) { 'bazbaz' }
 
       it 'returns event types starting from that id' do
-        is_expected.to eq([{ 'event_type' => 'baz' }, { 'event_type' => 'faz' }])
+        is_expected.to eq([{ 'event_type' => 'bazbaz' }, { 'event_type' => 'fokfok' }])
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
 
         it 'returns event types starting from that id, properly ordered' do
-          is_expected.to eq([{ 'event_type' => 'baz' }, { 'event_type' => 'bar' }])
+          is_expected.to eq([{ 'event_type' => 'bazbaz' }, { 'event_type' => 'barbar' }])
         end
       end
     end
@@ -49,47 +49,57 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
       let(:options) { { query: 'f' } }
 
       it 'returns event types, filtered by that option' do
-        is_expected.to eq([{ 'event_type' => 'faz' }, { 'event_type' => 'fok' }])
+        is_expected.to eq([{ 'event_type' => 'fokfok' }, { 'event_type' => 'foofoo' }])
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
 
         it 'returns event types, filtered by that option, properly ordered' do
-          is_expected.to eq([{ 'event_type' => 'foo' }, { 'event_type' => 'fok' }])
+          is_expected.to eq([{ 'event_type' => 'foofoo' }, { 'event_type' => 'fokfok' }])
         end
       end
 
-      context 'when query is upcased' do
-        let(:options) { { query: 'F' } }
+      context 'when query length is less than 3 symbols' do
+        describe 'beginning of the word' do
+          let(:options) { { query: 'F' } }
 
-        it 'ignores case sensitivity' do
-          is_expected.to eq([{ 'event_type' => 'faz' }, { 'event_type' => 'fok' }])
+          it 'performs case-sensitive search' do
+            is_expected.to eq([{ 'event_type' => 'FazFaz' }])
+          end
+        end
+
+        describe 'search by middle of the word' do
+          let(:options) { { query: 'zF' } }
+
+          it 'ignores it' do
+            is_expected.to eq([])
+          end
         end
       end
 
-      context 'when query matches a substring in the middle of the word' do
-        let(:options) { { query: 'az' } }
+      context 'when query length is gte 3 symbols' do
+        let(:options) { { query: 'azf' } }
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq([{ 'event_type' => 'baz' }, { 'event_type' => 'faz' }])
+        it 'performs case-insensitive search by any part of the word' do
+          is_expected.to eq([{ 'event_type' => 'FazFaz' }])
         end
       end
     end
 
     context 'when starting_id and query option is provided' do
-      let(:starting_id) { 'fok' }
+      let(:starting_id) { 'fokfok' }
       let(:options) { { query: 'f' } }
 
       it 'returns event types, filtered by that query option, starting from the given id' do
-        is_expected.to eq([{ 'event_type' => 'fok' }, { 'event_type' => 'foo' }])
+        is_expected.to eq([{ 'event_type' => 'fokfok' }, { 'event_type' => 'foofoo' }])
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
 
         it 'returns event types, filtered by that query option, starting from the given id, properly ordered' do
-          is_expected.to eq([{ 'event_type' => 'fok' }, { 'event_type' => 'faz' }])
+          is_expected.to eq([{ 'event_type' => 'fokfok' }])
         end
       end
     end
@@ -100,38 +110,41 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
 
     let!(:events) do
       events = [
-        PgEventstore::Event.new(type: 'foo'),
-        PgEventstore::Event.new(type: 'fok'),
-        PgEventstore::Event.new(type: 'faz'),
-        PgEventstore::Event.new(type: 'bar'),
-        PgEventstore::Event.new(type: 'baz'),
+        PgEventstore::Event.new(type: 'foobar'),
+        PgEventstore::Event.new(type: 'foofok'),
+        PgEventstore::Event.new(type: 'foofoo'),
+        PgEventstore::Event.new(type: 'foofaz'),
+        PgEventstore::Event.new(type: 'FazFaz'),
+        PgEventstore::Event.new(type: 'barbar'),
+        PgEventstore::Event.new(type: 'bazbaz'),
+        PgEventstore::Event.new(type: 'zzz'),
       ]
       PgEventstore.client.append_to_stream(stream, events)
     end
     let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
 
     it 'returns starting id of next page' do
-      is_expected.to eq('faz')
+      is_expected.to eq('bazbaz')
     end
 
     context 'when starting_id is given' do
-      let(:starting_id) { 'baz' }
+      let(:starting_id) { 'bazbaz' }
 
       it 'returns starting id of next page, relative to that id' do
-        is_expected.to eq('fok')
+        is_expected.to eq('foofaz')
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
-        let(:starting_id) { 'foo' }
+        let(:starting_id) { 'foofoo' }
 
         it 'returns starting id of next page, relative to that id, in reversed order' do
-          is_expected.to eq('faz')
+          is_expected.to eq('foofaz')
         end
       end
 
       context 'when there is no more pages after the given starting_id' do
-        let(:starting_id) { 'fok' }
+        let(:starting_id) { 'foofoo' }
 
         it { is_expected.to eq(nil) }
       end
@@ -141,19 +154,19 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
       let(:options) { { query: 'f' } }
 
       it 'returns starting id of next page, based on the query filter' do
-        is_expected.to eq('foo')
+        is_expected.to eq('foofok')
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
 
         it 'returns starting id of next page, based on the query filter and the order' do
-          is_expected.to eq('faz')
+          is_expected.to eq('foofaz')
         end
       end
 
       context 'when there is no more pages after the given starting_id' do
-        let(:starting_id) { 'fok' }
+        let(:starting_id) { 'foofok' }
 
         it { is_expected.to eq(nil) }
       end
@@ -161,51 +174,62 @@ RSpec.describe PgEventstore::Web::Paginator::EventTypesCollection do
       context 'when query matches a substring in the middle of the word' do
         let(:options) { { query: 'a' } }
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq('faz')
+        context 'when query length is less than 3 symbols' do
+          it 'does not recognize it' do
+            is_expected.to eq(nil)
+          end
+        end
+
+        context 'when query length is gte 3 symbols' do
+          let(:options) { { query: 'oof' } }
+
+          it 'recognize it' do
+            is_expected.to eq('foofoo')
+          end
         end
       end
     end
 
     context 'when starting_id and query option are provided' do
-      let(:starting_id) { 'faz' }
+      let(:starting_id) { 'foobar' }
       let(:options) { { query: 'f' } }
 
       it 'returns starting id of the next page based on the given starting_id and query option' do
-        is_expected.to eq('foo')
+        is_expected.to eq('foofok')
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
-        let(:starting_id) { 'foo' }
+        let(:starting_id) { 'foofoo' }
 
         it 'returns starting id of the next page based on the given starting_id and query option, in revered order' do
-          is_expected.to eq('faz')
+          is_expected.to eq('foofaz')
         end
       end
 
       context 'when there is no more pages after the given starting_id by the given filter' do
-        let(:starting_id) { 'fok' }
+        let(:starting_id) { 'foofoo' }
 
         it { is_expected.to eq(nil) }
       end
 
       context 'when query matches a substring in the middle of the word' do
-        let(:starting_id) { 'bar' }
-        let(:options) { { query: 'a' } }
+        let(:starting_id) { 'foofaz' }
 
-        let!(:events) do
-          events = [
-            PgEventstore::Event.new(type: 'faz'),
-            PgEventstore::Event.new(type: 'bar'),
-            PgEventstore::Event.new(type: 'baz'),
-            PgEventstore::Event.new(type: 'baf'),
-          ]
-          PgEventstore.client.append_to_stream(stream, events)
+        context 'when query length is less than 3 symbols' do
+          let(:options) { { query: 'a' } }
+
+          it 'does not recognize it' do
+            is_expected.to eq(nil)
+          end
         end
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq('faz')
+        context 'when query length is gte 3 symbols' do
+          let(:options) { { query: 'oof' } }
+
+          it 'recognizes it' do
+            is_expected.to eq('foofoo')
+          end
         end
       end
     end

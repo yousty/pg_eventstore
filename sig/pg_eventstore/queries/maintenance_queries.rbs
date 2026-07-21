@@ -1,21 +1,24 @@
 module PgEventstore
   class MaintenanceQueries
-    attr_reader connection: PgEventstore::Connection
+    EVENT_INDEXES_TO_REMOVE_PER_QUERY: Integer
+    EVENT_INDEXES_TO_UPDATE_PER_QUERY: Integer
 
-    def initialize: (PgEventstore::Connection connection)-> untyped
+    attr_reader connection: Connection
 
-    def adjust_stream_revisions: (PgEventstore::Stream stream, Integer after_revision)-> void
+    def initialize: (Connection connection) -> untyped
 
-    def delete_event: (PgEventstore::Event event)-> Integer
+    def delete_event: (Event event) -> void
 
-    def delete_stream: (PgEventstore::Stream stream)-> Integer
+    def delete_stream: (Stream stream) -> Integer
 
-    def events_to_lock_count: (PgEventstore::Stream stream, Integer after_revision)-> Integer
-
-    def reload_event: (PgEventstore::Event event)-> PgEventstore::Event?
+    def events_to_lock_count: (Stream stream, Integer after_revision) -> Integer
 
     private
 
-    def basic_deserializer: -> PgEventstore::EventDeserializer
+    def partition_queries: -> PartitionQueries
+
+    def streams_global_index_queries: -> StreamsGlobalIndexQueries
+
+    def transaction_queries: -> TransactionQueries
   end
 end

@@ -1,10 +1,14 @@
 module PgEventstore
   module EventsProcessorConsumer
     class Single
+      EVENT_WAIT_TIMEOUT: Float | Integer
+
       include EventsProcessorConsumer
       extend ClassMethods
 
       @handler: _RawEventHandler
+
+      @last_unprocessed_event: Hash[String, untyped]?
 
       def initialize: (_RawEventHandler handler) -> void
     end

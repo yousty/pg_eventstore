@@ -1,0 +1,10 @@
+module PgEventstore
+  class FeatureMarker
+    include Extensions::OptionsExtension
+    include Extensions::OptionsDefaults
+
+    attr_accessor marker: String
+    attr_accessor description: String?
+    attr_accessor purpose: Symbol?
+  end
+end

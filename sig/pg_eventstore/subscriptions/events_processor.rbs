@@ -1,19 +1,26 @@
 module PgEventstore
   class EventsProcessor
     include Extensions::CallbacksExtension
+
     extend Forwardable
+
+    @basic_runner: BasicRunner
+    @consumer: EventsProcessorConsumer
+    @events_repository: Chunks::Repository
+    @repository_cond: MonitorMixin::ConditionVariable
 
     %a{rbs:test:skip} def initialize: (
         graceful_shutdown_timeout: Float | Integer,
         consumer: EventsProcessorConsumer,
+        ?events_repository: Chunks::Repository,
         ?recovery_strategies: Array[RunnerRecoveryStrategy]
       ) -> void
 
-    def feed: (::Array[::Hash[untyped, untyped]] raw_events) -> void
+    def feed: (Chunks::Chunk[EventGlobalIndex, Hash[String, untyped]] chunk) -> void
 
-    def events_left_in_chunk: () -> Integer
+    def events_left_in_repo: () -> Integer
 
-    def clear_chunk: () -> void
+    def clear_events_repository: () -> void
 
     def process_event: (::Hash[untyped, untyped] raw_event) -> void
 

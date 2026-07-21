@@ -1,0 +1,67 @@
+module PgEventstore
+  module Commands
+    module RevisionCheck
+      class ExpectedRevision
+        class StreamRevision
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
+          attr_accessor revision: Symbol | Integer
+        end
+
+        class EventTypeRevision
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
+          attr_accessor expected_revision: Symbol | Integer
+          attr_accessor event_type: String?
+          attr_accessor sequence_number: Integer
+        end
+
+        class EventTypeRevisionWithMarkers
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
+          attr_accessor expected_revision: Symbol | Integer
+          attr_accessor event_type: String?
+          attr_accessor markers: Array[String]
+          attr_accessor sequence_number: Integer
+        end
+
+        class MarkersRevision
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
+          attr_accessor expected_revision: Symbol | Integer
+          attr_accessor markers: Array[String]
+          attr_accessor sequence_number: Integer
+        end
+
+        class EventTypeRevisions
+          include Extensions::OptionsExtension
+          include Extensions::OptionsDefaults
+
+          attr_accessor revisions: Array[EventTypeRevision | EventTypeRevisionWithMarkers | MarkersRevision]
+        end
+
+        def self.build: (
+              # stream revision
+              (Symbol | Integer)? |
+              Hash[
+                String,
+                # <event type>-to-<stream revision of the event>
+                Symbol | Integer |
+                  # <event type>-to-<stream revision of the event with markers>
+                  { expected_revision: Symbol | Integer, ?markers: Array[String] }] |
+              # <any event type>-to-<stream revision of the event with markers>
+              { any: { expected_revision: Symbol | Integer, ?markers: Array[String] } } expected_revision) -> (StreamRevision | EventTypeRevisions)?
+
+        private
+
+        def self.extract_markers: (Hash[untyped, untyped] hash) -> Array[String]
+
+        def self.extract_expected_revision: (Hash[untyped, untyped] hash) -> (Symbol | Integer)
+      end
+    end
+  end
+end

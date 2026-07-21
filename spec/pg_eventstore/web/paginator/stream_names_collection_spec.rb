@@ -18,13 +18,20 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
     let(:stream3) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Faz', stream_id: '1') }
     let(:stream4) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
     let(:stream5) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1') }
+    let(:stream6) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'foo', stream_id: '1') }
+    let(:stream7) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'fok', stream_id: '1') }
+    let(:stream8) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'barfoo', stream_id: '1') }
 
     before do
-      PgEventstore.client.append_to_stream(stream1, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream2, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream3, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream4, PgEventstore::Event.new)
-      PgEventstore.client.append_to_stream(stream5, PgEventstore::Event.new)
+      events = Array.new(2) { PgEventstore::Event.new }
+      PgEventstore.client.append_to_stream(stream1, events)
+      PgEventstore.client.append_to_stream(stream2, events)
+      PgEventstore.client.append_to_stream(stream3, events)
+      PgEventstore.client.append_to_stream(stream4, events)
+      PgEventstore.client.append_to_stream(stream5, events)
+      PgEventstore.client.append_to_stream(stream6, events)
+      PgEventstore.client.append_to_stream(stream7, events)
+      PgEventstore.client.append_to_stream(stream8, events)
     end
 
     it 'returns stream names according to the page limit and in the given order' do
@@ -60,33 +67,43 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
     end
 
     context 'when query option is provided' do
-      let(:options) { super().merge(query: 'F') }
-
-      it 'returns stream names, filtered by that option' do
-        is_expected.to eq([{ 'stream_name' => 'Faz' }, { 'stream_name' => 'Fok' }])
+      before do
+        # A stream from another context. It is used to ensure proper filtering by context under different filter options
+        PgEventstore.client.append_to_stream(
+          PgEventstore::Stream.new(context: '', stream_name: 'foo', stream_id: '1'),
+          PgEventstore::Event.new
+        )
       end
 
-      context 'when order is :desc' do
-        let(:order) { :desc }
-
-        it 'returns stream names, filtered by that option, properly ordered' do
-          is_expected.to eq([{ 'stream_name' => 'Foo' }, { 'stream_name' => 'Fok' }])
-        end
-      end
-
-      context 'when query is downcased' do
+      context 'when query length is less than 3 symbols' do
         let(:options) { super().merge(query: 'f') }
 
-        it 'ignores case sensitivity' do
-          is_expected.to eq([{ 'stream_name' => 'Faz' }, { 'stream_name' => 'Fok' }])
+        it 'returns case-sensitive result that starts from the given filter' do
+          is_expected.to eq([{ 'stream_name' => 'fok' }, { 'stream_name' => 'foo' }])
+        end
+
+        context 'when order is :desc' do
+          let(:order) { :desc }
+
+          it 'returns contexts, filtered by that option, properly ordered' do
+            is_expected.to eq([{ 'stream_name' => 'foo' }, { 'stream_name' => 'fok' }])
+          end
         end
       end
 
-      context 'when query matches a substring in the middle of the word' do
-        let(:options) { super().merge(query: 'az') }
+      context 'when query length is gte 3 symbols' do
+        let(:options) { super().merge(query: 'foo') }
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq([{ 'stream_name' => 'Baz' }, { 'stream_name' => 'Faz' }])
+        it 'returns case-insensitive result, filtered by any part of the word by the given filter' do
+          is_expected.to eq([{ 'stream_name' => 'Foo' }, { 'stream_name' => 'barfoo' }])
+        end
+
+        context 'when order is :desc' do
+          let(:order) { :desc }
+
+          it 'returns contexts, filtered by that option, properly ordered' do
+            is_expected.to eq([{ 'stream_name' => 'foo' }, { 'stream_name' => 'barfoo' }])
+          end
         end
       end
     end
@@ -114,11 +131,12 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
 
     let(:streams) do
       [
-        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1'),
-        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Fok', stream_id: '1'),
-        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Faz', stream_id: '1'),
-        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1'),
-        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'FooFoo', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'FooFok', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'FooFaz', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'BarBar', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'BarBaz', stream_id: '1'),
+        PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'BarBom', stream_id: '1'),
       ]
     end
 
@@ -129,39 +147,39 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
     end
 
     it 'returns starting id of next page' do
-      is_expected.to eq('Faz')
+      is_expected.to eq('BarBom')
     end
 
     context 'when stream from another context exists' do
       before do
         PgEventstore.client.append_to_stream(
-          PgEventstore::Stream.new(context: 'BasCtx', stream_name: 'Bas', stream_id: '1'), PgEventstore::Event.new
+          PgEventstore::Stream.new(context: 'BasCtx', stream_name: 'BarBas', stream_id: '1'), PgEventstore::Event.new
         )
       end
 
       it 'does not take it into account' do
-        is_expected.to eq('Faz')
+        is_expected.to eq('BarBom')
       end
     end
 
     context 'when starting_id is given' do
-      let(:starting_id) { 'Baz' }
+      let(:starting_id) { 'BarBaz' }
 
       it 'returns starting id of next page, relative to that id' do
-        is_expected.to eq('Fok')
+        is_expected.to eq('FooFaz')
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
-        let(:starting_id) { 'Foo' }
+        let(:starting_id) { 'FooFoo' }
 
         it 'returns starting id of next page, relative to that id, in reversed order' do
-          is_expected.to eq('Faz')
+          is_expected.to eq('FooFaz')
         end
       end
 
       context 'when there is no more pages after the given starting_id' do
-        let(:starting_id) { 'Fok' }
+        let(:starting_id) { 'FooFok' }
 
         it { is_expected.to eq(nil) }
       end
@@ -171,70 +189,82 @@ RSpec.describe PgEventstore::Web::Paginator::StreamNamesCollection do
       let(:options) { super().merge(query: 'F') }
 
       it 'returns starting id of next page, based on the query filter' do
-        is_expected.to eq('Foo')
+        is_expected.to eq('FooFoo')
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
 
         it 'returns starting id of next page, based on the query filter and the order' do
-          is_expected.to eq('Faz')
+          is_expected.to eq('FooFaz')
         end
       end
 
       context 'when there is no more pages after the given starting_id' do
-        let(:starting_id) { 'Fok' }
+        let(:starting_id) { 'FooFok' }
 
         it { is_expected.to eq(nil) }
       end
 
       context 'when query matches a substring in the middle of the word' do
-        let(:options) { super().merge(query: 'a') }
+        context 'when query length is less than 3 symbols' do
+          let(:options) { super().merge(query: 'a') }
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq('Faz')
+          it 'does not recognize it' do
+            is_expected.to eq(nil)
+          end
+        end
+
+        context 'when query length is gte 3 symbols' do
+          let(:options) { super().merge(query: 'oof') }
+
+          it 'recognizes it' do
+            is_expected.to eq('FooFoo')
+          end
         end
       end
     end
 
     context 'when starting_id and query option are provided' do
-      let(:starting_id) { 'Faz' }
+      let(:starting_id) { 'FooFaz' }
       let(:options) { super().merge(query: 'F') }
 
       it 'returns starting id of the next page based on the given starting_id and query option' do
-        is_expected.to eq('Foo')
+        is_expected.to eq('FooFoo')
       end
 
       context 'when order is :desc' do
         let(:order) { :desc }
-        let(:starting_id) { 'Foo' }
+        let(:starting_id) { 'FooFoo' }
 
         it 'returns starting id of the next page based on the given starting_id and query option, in revered order' do
-          is_expected.to eq('Faz')
+          is_expected.to eq('FooFaz')
         end
       end
 
       context 'when there is no more pages after the given starting_id by the given filter' do
-        let(:starting_id) { 'Fok' }
+        let(:starting_id) { 'FooFok' }
 
         it { is_expected.to eq(nil) }
       end
 
       context 'when query matches a substring in the middle of the word' do
-        let(:options) { super().merge(query: 'a') }
-        let(:starting_id) { 'Bar' }
+        let(:starting_id) { 'BarBar' }
 
-        let(:streams) do
-          [
-            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baf', stream_id: '1'),
-            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Faz', stream_id: '1'),
-            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1'),
-            PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Baz', stream_id: '1'),
-          ]
+        context 'when query length is less than 3 symbols' do
+          let(:options) { super().merge(query: 'a') }
+
+          it 'does not recognize it' do
+            is_expected.to eq(nil)
+          end
         end
 
-        it 'recognizes results with the given substring' do
-          is_expected.to eq('Faz')
+        context 'when query length is gte 3 symbols' do
+          let(:options) { super().merge(query: 'arb') }
+
+          it 'recognizes it' do
+            is_expected.to eq('BarBom')
+          end
         end
       end
     end

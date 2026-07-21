@@ -1,0 +1,20 @@
+module PgEventstore
+  module Commands
+    module RevisionCheck
+      class StreamRevisionCheck
+        def self.assert_eq!: ((CurrentRevision::StreamRevision | CurrentRevision::EventTypeRevisions)?,
+            (ExpectedRevision::StreamRevision | ExpectedRevision::EventTypeRevisions)?, Stream stream) -> void
+
+        private
+
+        def self.find_index: (
+              Commands::RevisionCheck::ExpectedRevision::EventTypeRevision |
+              Commands::RevisionCheck::ExpectedRevision::EventTypeRevisionWithMarkers |
+              Commands::RevisionCheck::ExpectedRevision::MarkersRevision
+            expected_revision,
+            Hash[Integer, EventGlobalIndex::RevisionCheckRepr] rev_check_indexes
+          ) -> EventGlobalIndex::RevisionCheckRepr
+      end
+    end
+  end
+end

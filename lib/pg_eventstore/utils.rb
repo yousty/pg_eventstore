@@ -132,6 +132,37 @@ module PgEventstore
         yield
         Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
       end
+
+      # @param truthy [boolish]
+      # @param message [String, nil]
+      # @raise ArgumentError
+      def assert!(truthy, message = nil)
+        raise ArgumentError, message unless truthy
+      end
+
+      # @param obj
+      # @raise NotImplementedError
+      def missing_implementation!(obj)
+        raise NotImplementedError, obj.inspect
+      end
+
+      # @param config [PgEventstore::Config]
+      # @param expected_roles [Array<Symbol>]
+      # @return [void]
+      def assert_node_role!(config, expected_roles)
+        return if expected_roles.include?(config.eventstore_role)
+
+        raise "You can't perform this operation on #{config.eventstore_role.inspect} node!"
+      end
+
+      # Takes a collection of partition ids, the number of partitions per call and determines the position in the
+      # partition_ids at which we have max_partitions_to_resolve_per_call unique partitions
+      # @param partition_ids [Array<Integer>]
+      # @param max_partitions_to_resolve_per_call [Integer]
+      # @return [Range]
+      def range_to_slice(partition_ids, max_partitions_to_resolve_per_call)
+        # This is stub, used for indexing
+      end
     end
   end
 end

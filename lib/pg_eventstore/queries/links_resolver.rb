@@ -9,8 +9,10 @@ module PgEventstore
     private :connection
 
     # @param connection [PgEventstore::Connection]
-    def initialize(connection)
+    # @param query_strategy [PgEventstore::QueryStrategy]
+    def initialize(connection, query_strategy)
       @connection = connection
+      @query_strategy = query_strategy
     end
 
     # Takes an array of events, look for link events in there and replaces link events with original events
@@ -46,9 +48,7 @@ module PgEventstore
         top_builder.union(builder)
       end
 
-      connection.with do |conn|
-        conn.exec_params(*sql_builder.to_exec_params)
-      end.to_a
+      @query_strategy.exec_params(*sql_builder.to_exec_params).to_a
     end
 
     # @return [PgEventstore::PartitionQueries]

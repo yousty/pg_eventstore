@@ -110,5 +110,74 @@ RSpec.describe PgEventstore::TransactionQueries do
         end
       end
     end
+
+    describe 'error retries' do
+      context 'when PG::UniqueViolation error raises' do
+        context 'when error is not resolved during retries' do
+          subject do
+            instance.transaction do
+              raise PG::UniqueViolation
+            ensure
+              retries_count.count += 1
+            end
+          end
+
+          let(:retries_count) { Struct.new(:count).new(0) }
+
+          it 'retries it up to MAX_NUMBER_OF_UNIQUE_CONSTRAINTS_ERROR_RETRIES times' do
+            begin
+              subject
+            rescue PG::UniqueViolation
+            end
+            expect(retries_count.count).to eq(described_class::MAX_NUMBER_OF_UNIQUE_CONSTRAINTS_ERROR_RETRIES)
+          end
+          it 'raises error eventually' do
+            expect { subject }.to raise_error(PG::UniqueViolation)
+          end
+        end
+
+        context 'when error gets resolved during retries' do
+          subject do
+            errors_count = 0
+            instance.transaction do
+              errors_count += 1
+              raise PG::TRSerializationFailure if errors_count < 3
+            end
+          end
+
+          it 'does not raise an error' do
+            expect { subject }.not_to raise_error
+          end
+        end
+      end
+
+      context 'when PG::TRSerializationFailure error raises' do
+        subject do
+          errors_count = 0
+          instance.transaction do
+            errors_count += 1
+            raise PG::TRSerializationFailure if errors_count < 10
+          end
+        end
+
+        it 'retries until error is resolved' do
+          expect { subject }.not_to raise_error
+        end
+      end
+
+      context 'when PG::TRDeadlockDetected error raises' do
+        subject do
+          errors_count = 0
+          instance.transaction do
+            errors_count += 1
+            raise PG::TRDeadlockDetected if errors_count < 10
+          end
+        end
+
+        it 'retries until error is resolved' do
+          expect { subject }.not_to raise_error
+        end
+      end
+    end
   end
 end

@@ -9,8 +9,9 @@ module PgEventstore
     private :connection
 
     # @param connection [PgEventstore::Connection]
-    def initialize(connection)
+    def initialize(connection, query_strategy = QueryStrategy::Foreground.new(connection))
       @connection = connection
+      @query_strategy = query_strategy
     end
 
     # @param stream [PgEventstore::Stream]
@@ -28,24 +29,18 @@ module PgEventstore
         INSERT INTO partitions (#{attributes.keys.join(', ')})
           VALUES (#{Utils.positional_vars(attributes.values)}) RETURNING *
       SQL
-      partition = connection.with do |conn|
+      connection.with do |conn|
         conn.exec_params(partition_sql, [*attributes.values])
       end.to_a.first
-      connection.with do |conn|
-        conn.exec(<<~SQL)
-          CREATE TABLE #{attributes[:table_name]} PARTITION OF events
-            FOR VALUES IN('#{conn.escape_string(stream.context)}') PARTITION BY LIST (stream_name)
-        SQL
-      end
-      partition
     end
 
     # @param stream [PgEventstore::Stream]
-    # @param context_partition_name [String]
+    # @param context_partition_id [Integer]
     # @return [Hash] partition attributes
-    def create_stream_name_partition(stream, context_partition_name)
+    def create_stream_name_partition(stream, context_partition_id)
       attributes = {
-        context: stream.context, stream_name: stream.stream_name, table_name: stream_name_partition_name(stream)
+        context: stream.context, stream_name: stream.stream_name, table_name: stream_name_partition_name(stream),
+        parent_context_partition_id: context_partition_id
       }
 
       loop do
@@ -58,26 +53,22 @@ module PgEventstore
         INSERT INTO partitions (#{attributes.keys.join(', ')})
           VALUES (#{Utils.positional_vars(attributes.values)}) RETURNING *
       SQL
-      partition = connection.with do |conn|
+      connection.with do |conn|
         conn.exec_params(partition_sql, [*attributes.values])
       end.to_a.first
-      connection.with do |conn|
-        conn.exec(<<~SQL)
-          CREATE TABLE #{attributes[:table_name]} PARTITION OF #{context_partition_name}
-            FOR VALUES IN('#{conn.escape_string(stream.stream_name)}') PARTITION BY LIST (type)
-        SQL
-      end
-      partition
     end
 
     # @param stream [PgEventstore::Stream]
     # @param event_type [String]
-    # @param stream_name_partition_name [String]
+    # @param context_partition_id [Integer]
+    # @param stream_name_partition_id [Integer]
     # @return [Hash] partition attributes
-    def create_event_type_partition(stream, event_type, stream_name_partition_name)
+    def create_event_type_partition(stream, event_type, context_partition_id,
+                                    stream_name_partition_id)
       attributes = {
         context: stream.context, stream_name: stream.stream_name, event_type:,
-        table_name: event_type_partition_name(stream, event_type)
+        table_name: event_type_partition_name(stream, event_type), parent_context_partition_id: context_partition_id,
+        parent_stream_name_partition_id: stream_name_partition_id
       }
 
       loop do
@@ -90,16 +81,9 @@ module PgEventstore
         INSERT INTO partitions (#{attributes.keys.join(', ')})
           VALUES (#{Utils.positional_vars(attributes.values)}) RETURNING *
       SQL
-      partition = connection.with do |conn|
+      connection.with do |conn|
         conn.exec_params(partition_sql, [*attributes.values])
       end.to_a.first
-      connection.with do |conn|
-        conn.exec(<<~SQL)
-          CREATE TABLE #{attributes[:table_name]} PARTITION OF #{stream_name_partition_name}
-            FOR VALUES IN('#{conn.escape_string(event_type)}')
-        SQL
-      end
-      partition
     end
 
     # @param stream [PgEventstore::Stream]
@@ -117,9 +101,15 @@ module PgEventstore
 
       context_partition = context_partition(stream) || create_context_partition(stream)
       stream_name_partition =
-        stream_name_partition(stream) || create_stream_name_partition(stream, context_partition['table_name'])
+        stream_name_partition(stream) ||
+        create_stream_name_partition(stream, context_partition['id'])
 
-      create_event_type_partition(stream, event_type, stream_name_partition['table_name'])
+      create_event_type_partition(
+        stream,
+        event_type,
+        context_partition['id'],
+        stream_name_partition['id']
+      )
     end
 
     # @param stream [PgEventstore::Stream]
@@ -171,47 +161,15 @@ module PgEventstore
     # @param ids [Array<Integer>]
     # @return [Array<Hash>]
     def find_by_ids(ids)
-      connection.with do |conn|
-        conn.exec_params('select * from partitions where id = ANY($1::bigint[])', [ids])
-      end.to_a
+      @query_strategy.exec_params('select * from partitions where id = ANY($1::bigint[])', [ids]).to_a
     end
 
-    # @param stream_filters [Array<Hash[Symbol, String]>]
-    # @param event_filters [Array<String>]
+    # @param filters_collection [PgEventstore::QueryBuilders::Filters::Collection]
     # @param scope [Symbol] what kind of partition we want to receive. Available options are :event_type, :context,
     #   :stream_name and :auto. In :auto mode the scope will be calculated based on stream_filters and event_filters.
     # @return [Array<PgEventstore::Partition>]
-    def partitions(stream_filters, event_filters, scope: :event_type)
-      stream_filters = stream_filters.select { QueryBuilders::PartitionsFiltering.correct_stream_filter?(_1) }
-      sql_builder =
-        if event_filters.any?
-          # When event type filters are present - they apply constraints to any stream filter. Thus, we can't look up
-          # partitions by stream attributes separately.
-          filter = QueryBuilders::PartitionsFiltering.new
-          stream_filters.each { |attrs| filter.add_stream_attrs(**attrs) }
-          filter.add_event_types(event_filters)
-          set_partitions_scope(filter, stream_filters, event_filters, scope)
-        else
-          # When event type filters are absent - we can look up partitions by context and context/stream_name
-          # separately, thus potentially producing one-to-one mapping of filter-to-partition with :auto scope. For
-          # example, let's say we have stream attributes filter like
-          # [{ context: 'FooCtx', stream_name: 'Bar'}, { context: 'BarCtx' }], then we would be able to look up
-          # partitions by the exact match, returning only two of them according to the provided filters - stream
-          # partition for first filter and context partition for second filter.
-          builders = stream_filters.map do |attrs|
-            filter = QueryBuilders::PartitionsFiltering.new
-            filter.add_stream_attrs(**attrs)
-            set_partitions_scope(filter, [attrs], event_filters, scope)
-          end
-
-          sql_builder = SQLBuilder.union_builders(builders) if builders.any?
-          sql_builder ||
-            begin
-              builder = QueryBuilders::PartitionsFiltering.new
-              set_partitions_scope(builder, stream_filters, event_filters, scope)
-            end
-        end
-
+    def partitions(filters_collection, scope: :event_type)
+      sql_builder = QueryBuilders::PartitionsFiltering.assemble_sql_builder(filters_collection, scope:)
       connection.with do |conn|
         conn.exec_params(*sql_builder.to_exec_params)
       end.map(&method(:deserialize))
@@ -236,44 +194,28 @@ module PgEventstore
       "event_types_#{Digest::MD5.hexdigest("#{stream.context}-#{stream.stream_name}-#{event_type}")[0..5]}"
     end
 
-    private
-
-    # @param partitions_filter [PgEventstore::QueryBuilders::PartitionsFiltering]
-    # @param stream_filters [Array<Hash[Symbol, String]>]
-    # @param event_filters [Array<String>]
-    # @param scope [Symbol]
-    # @return [PgEventstore::SQLBuilder]
-    def set_partitions_scope(partitions_filter, stream_filters, event_filters, scope)
-      case scope
-      when :event_type
-        partitions_filter.with_event_types
-      when :stream_name
-        filter = QueryBuilders::PartitionsFiltering.new
-        filter.without_event_types
-        filter.with_stream_names
-        builder = filter.to_sql_builder
-        builder.where(
-          '(context, stream_name) in ?',
-          partitions_filter.to_sql_builder.unselect.select('context, stream_name').group('context, stream_name')
-        )
-      when :context
-        filter = QueryBuilders::PartitionsFiltering.new
-        filter.without_event_types
-        filter.without_stream_names
-        builder = filter.to_sql_builder
-        builder.where('context in ?', partitions_filter.to_sql_builder.unselect.select('context').group('context'))
-      when :auto
-        if event_filters.any?
-          set_partitions_scope(partitions_filter, stream_filters, event_filters, :event_type)
-        elsif stream_filters.any? { _1[:stream_name] }
-          set_partitions_scope(partitions_filter, stream_filters, event_filters, :stream_name)
-        else
-          set_partitions_scope(partitions_filter, stream_filters, event_filters, :context)
-        end
-      else
-        raise NotImplementedError, "Don't know how to handle #{scope.inspect} scope!"
+    # @param partition [PgEventstore::Partition]
+    # @return [void]
+    def detach_event_type_partition(partition)
+      parent = deserialize(find_by_ids([partition.parent_stream_name_partition_id]).first)
+      connection.with do |conn|
+        conn.exec("alter table #{parent.table_name} detach partition #{partition.table_name}")
       end
     end
+
+    # @param partition [PgEventstore::Partition]
+    # @return [void]
+    def attach_event_type_partition(partition)
+      parent = deserialize(find_by_ids([partition.parent_stream_name_partition_id]).first)
+      connection.with do |conn|
+        event_type = conn.escape_string(partition.event_type)
+        conn.exec(
+          "alter table #{parent.table_name} attach partition #{partition.table_name} for values in ('#{event_type}')"
+        )
+      end
+    end
+
+    private
 
     # @param attrs [Hash]
     # @return [PgEventstore::Partition]

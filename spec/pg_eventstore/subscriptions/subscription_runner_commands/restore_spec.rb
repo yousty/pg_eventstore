@@ -39,9 +39,14 @@ RSpec.describe PgEventstore::SubscriptionRunnerCommands::Restore do
     let(:handler) { proc {} }
     let(:processed_events) { [] }
 
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+    let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(1) { PgEventstore::Event.new }) }
+    let(:indexes) { prepare_subscription_indexes(events) }
+    let(:chunk) { create_subscription_index_chunk(indexes) }
+
     before do
       subscription_runner.start
-      subscription_runner.feed(['global_position' => 1])
+      subscription_runner.feed(chunk)
       dv(processed_events).wait_until(timeout: 0.5) { _1.size == 1 }
     end
 

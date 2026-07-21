@@ -9,8 +9,10 @@ module PgEventstore
     private :connection
 
     # @param connection [PgEventstore::Connection]
-    def initialize(connection)
+    # @param query_strategy [PgEventstore::QueryStrategy]
+    def initialize(connection, query_strategy)
       @connection = connection
+      @query_strategy = query_strategy
     end
 
     # @param attrs [Hash]
@@ -25,9 +27,7 @@ module PgEventstore
     # @return [Hash, nil]
     def find_by(attrs)
       builder = find_by_attrs_builder(attrs).limit(1)
-      pg_result = connection.with do |conn|
-        conn.exec_params(*builder.to_exec_params)
-      end
+      pg_result = @query_strategy.exec_params(*builder.to_exec_params)
       return if pg_result.ntuples == 0
 
       deserialize(pg_result.to_a.first)
@@ -37,9 +37,7 @@ module PgEventstore
     # @return [Array<Hash>]
     def find_all(attrs)
       builder = find_by_attrs_builder(attrs)
-      pg_result = connection.with do |conn|
-        conn.exec_params(*builder.to_exec_params)
-      end
+      pg_result = @query_strategy.exec_params(*builder.to_exec_params)
       return [] if pg_result.ntuples == 0
 
       pg_result.map(&method(:deserialize))
@@ -50,9 +48,7 @@ module PgEventstore
     def set_collection(state = nil)
       builder = SQLBuilder.new.from('subscriptions').select('set').group('set').order('set ASC')
       builder.where('state = ?', state) if state
-      raw_subscriptions = connection.with do |conn|
-        conn.exec_params(*builder.to_exec_params)
-      end
+      raw_subscriptions = @query_strategy.exec_params(*builder.to_exec_params)
       raw_subscriptions.map { |attrs| attrs['set'] }
     end
 
@@ -71,10 +67,65 @@ module PgEventstore
           VALUES (#{Utils.positional_vars(attrs.values)})
           RETURNING *
       SQL
-      pg_result = connection.with do |conn|
-        conn.exec_params(sql, attrs.values)
-      end
+      pg_result = @query_strategy.exec_params(sql, attrs.values)
       deserialize(pg_result.to_a.first)
+    end
+
+    # @param id [Integer] Subscription#id
+    # @param options [Hash]
+    # @option options [Hash] :filter
+    # @param locked_by [Integer] SubscriptionSet#id
+    # @return [void]
+    def create_or_replace_table_function(id, options, locked_by)
+      filter_collection = QueryBuilders::Filters::Collection.from_options(options)
+      builder = QueryBuilders::IndexBasedEventsFiltering.sql_builder_for_subscriptions(filter_collection.collection)
+      function_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
+      transaction_queries.transaction(:read_committed) do
+        connection.with do |conn|
+          attrs = conn.exec_params('select * from subscriptions where id = $1 for update', [id]).to_a.first
+          unless attrs['locked_by'] == locked_by
+            # Subscription is force-locked by someone else. We have to roll back such transaction
+            raise(WrongLockIdError.new(attrs['set'], attrs['name'], attrs['locked_by']))
+          end
+
+          compiled = conn.compile(*builder.to_exec_params)
+          compiled = <<~SQL
+            create or replace function #{function_name}(
+              from_position bigint,
+              to_position bigint,
+              max_count int
+            )
+            returns table (
+              global_position bigint,
+              event_type_partition_id bigint,
+              subscription_position bigint
+            )
+            language plpgsql
+            stable
+            parallel safe
+            as $$
+            declare
+              from_gpos bigint;
+              to_gpos bigint;
+            begin
+              with candidates as (
+                select esp.global_position
+                from event_subscription_positions esp
+                where esp.subscription_position >= from_position
+                  and esp.subscription_position <= to_position
+              )
+              /* + 0 here is to keep PostgreSQL from trying to optimize the query by picking wrong index */
+              select coalesce(min(candidates.global_position + 0), 0), coalesce(max(candidates.global_position + 0), 0)
+              into from_gpos, to_gpos
+              from candidates;
+
+              return query #{compiled};
+            end;
+            $$;
+          SQL
+          conn.exec(compiled)
+        end
+      end
     end
 
     # @param id [Integer]
@@ -91,9 +142,7 @@ module PgEventstore
       sql =
         "UPDATE subscriptions SET #{attrs_sql} WHERE id = $#{attrs.keys.size + 1} RETURNING *"
       updated_attrs = transaction_queries.transaction(:read_committed) do
-        pg_result = connection.with do |conn|
-          conn.exec_params(sql, [*attrs.values, id])
-        end
+        pg_result = @query_strategy.exec_params(sql, [*attrs.values, id])
         raise(RecordNotFound.new('subscriptions', id)) if pg_result.ntuples == 0
 
         updated_attrs = pg_result.to_a.first
@@ -112,31 +161,13 @@ module PgEventstore
     # @param subscriptions_ids [Array<Integer>] Array of Subscription#id
     # @return [Hash<Integer => Time>]
     def ping_all(subscriptions_set_id, subscriptions_ids)
-      pg_result = connection.with do |conn|
-        sql = <<~SQL
-          UPDATE subscriptions SET updated_at = $1 WHERE locked_by = $2 AND id = ANY($3::int[])
-            RETURNING id, updated_at
-        SQL
-        conn.exec_params(sql, [Time.now.utc, subscriptions_set_id, subscriptions_ids])
-      end
+      sql = <<~SQL
+        UPDATE subscriptions SET updated_at = $1 WHERE locked_by = $2 AND id = ANY($3::int[])
+          RETURNING id, updated_at
+      SQL
+      pg_result = @query_strategy.exec_params(sql, [Time.now.utc, subscriptions_set_id, subscriptions_ids])
       pg_result.to_h do |attrs|
         [attrs['id'], attrs['updated_at']]
-      end
-    end
-
-    # @param query_options [Hash{Integer => Hash}] runner_id/query options association
-    # @return [Hash{Integer => Array<Hash>}] runner_id/events association
-    def subscriptions_events(query_options)
-      return {} if query_options.empty?
-
-      final_builder = SQLBuilder.union_builders(query_options.map { |id, opts| query_builder(id, opts) })
-      raw_events = connection.with do |conn|
-        conn.exec_params(*final_builder.to_exec_params)
-      end.to_a
-      raw_events.group_by { _1['runner_id'] }.to_h do |runner_id, runner_raw_events|
-        next [runner_id, runner_raw_events] unless query_options[runner_id][:resolve_link_tos]
-
-        [runner_id, links_resolver.resolve(runner_raw_events)]
       end
     end
 
@@ -155,9 +186,7 @@ module PgEventstore
           raise SubscriptionAlreadyLockedError.new(attrs[:set], attrs[:name], attrs[:locked_by])
         end
 
-        connection.with do |conn|
-          conn.exec_params('UPDATE subscriptions SET locked_by = $1 WHERE id = $2', [lock_id, id])
-        end
+        @query_strategy.exec_params('UPDATE subscriptions SET locked_by = $1 WHERE id = $2', [lock_id, id])
       end
       lock_id
     end
@@ -165,21 +194,16 @@ module PgEventstore
     # @param id [Integer]
     # @return [void]
     def delete(id)
-      connection.with do |conn|
-        conn.exec_params('DELETE FROM subscriptions WHERE id = $1', [id])
+      function_name = QueryBuilders::SubscriptionEventsFiltering.new(id).to_table_name
+      transaction_queries.transaction(:read_committed) do
+        connection.with do |conn|
+          conn.exec_params('delete from subscriptions where id = $1', [id])
+          conn.exec("drop function if exists #{function_name}")
+        end
       end
     end
 
     private
-
-    # @param id [Integer] runner id
-    # @param options [Hash] query options
-    # @return [PgEventstore::SQLBuilder]
-    def query_builder(id, options)
-      builder = PgEventstore::QueryBuilders::EventsFiltering.subscriptions_events_filtering(options).to_sql_builder
-      builder.where('global_position <= ?', options[:to_position]) if options[:to_position]
-      builder.select("#{id} as runner_id")
-    end
 
     # @return [PgEventstore::TransactionQueries]
     def transaction_queries
@@ -188,7 +212,7 @@ module PgEventstore
 
     # @return [PgEventstore::LinksResolver]
     def links_resolver
-      LinksResolver.new(connection)
+      LinksResolver.new(connection, @query_strategy)
     end
 
     # @param hash [Hash]

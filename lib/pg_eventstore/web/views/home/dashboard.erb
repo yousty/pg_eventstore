@@ -1,11 +1,11 @@
 <script type="text/html" id="stream-filter-tmpl">
   <%= erb :'home/partials/stream_filter', { layout: false }, { stream: {} } %>
 </script>
-<script type="text/html" id="system-stream-filter-tmpl">
-  <%= erb :'home/partials/system_stream_filter', { layout: false }, { stream: nil } %>
-</script>
 <script type="text/html" id="event-type-filter-tmpl">
   <%= erb :'home/partials/event_filter', { layout: false }, { event_type: '' } %>
+</script>
+<script type="text/html" id="markers-filter-tmpl">
+  <%= erb :'home/partials/markers_filter', { layout: false }, { markers: [] } %>
 </script>
 
 <div class="right_col" role="main">
@@ -30,11 +30,6 @@
             <form id="filters-form" action="<%= url('/') %>" method="GET" data-parsley-validate class="form-horizontal form-label-left">
               <input type="hidden" name="per_page" value="<%= params[:per_page].to_i %>">
               <input type="hidden" name="resolve_link_tos" value="<%= resolve_link_tos? %>">
-              <div class="system-stream-filter">
-                <% if system_stream %>
-                  <%= erb :'home/partials/system_stream_filter', { layout: false }, { stream: system_stream } %>
-                <% end %>
-              </div>
               <div class="stream-filters">
                 <% streams_filter&.each do |attrs| %>
                   <%= erb :'home/partials/stream_filter', { layout: false }, { stream: attrs } %>
@@ -43,6 +38,11 @@
               <div class="event-filters">
                 <% events_filter&.each do |event_type| %>
                   <%= erb :'home/partials/event_filter', { layout: false }, { event_type: event_type } %>
+                <% end %>
+              </div>
+              <div class="markers-filter">
+                <% if markers_filter.any? %>
+                  <%= erb :'home/partials/markers_filter', { layout: false }, { markers: markers_filter } %>
                 <% end %>
               </div>
               <div class="ln_solid"></div>
@@ -58,6 +58,7 @@
                         <a class="dropdown-item add-stream-filter" href="javascript: void(0)">Add stream filter</a>
                         <a class="dropdown-item add-system-stream-filter" href="javascript: void(0)">Add system stream filter</a>
                         <a class="dropdown-item add-event-filter" href="javascript: void(0)">Add event filter</a>
+                        <a class="dropdown-item add-markers-filter" href="javascript: void(0)">Add markers filter</a>
                       </div>
                     </div>
                   </div>
@@ -143,6 +144,7 @@
                     <a href="<%= sort_url('asc') %>"><i class="fa fa-sort-asc"></i></a>
                   <% end %>
                 </th>
+                <th>Subscription position</th>
                 <th>Stream revision</th>
                 <th>Context</th>
                 <th>Stream name</th>
@@ -154,7 +156,7 @@
               </tr>
               </thead>
               <tbody>
-                <%= erb :'home/partials/events', { layout: false }, { events: @collection.collection } %>
+                <%= erb :'home/partials/events', { layout: false }, { events: @collection.collection, gp_to_sp_map: @gp_to_sp_map } %>
               </tbody>
             </table>
           </div>

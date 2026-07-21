@@ -1,0 +1,17 @@
+module PgEventstore
+  module EventsProcessorConsumer
+    class Replica
+      include EventsProcessorConsumer
+
+      EVENTS_WAIT_TIMEOUT: Float | Integer
+
+      @handler: Proc
+
+      @last_unprocessed_events: Array[EventGlobalIndex::SubscriptionRepr]?
+
+      def self.create_consumer: (Symbol config_name, Symbol replica_config_name) -> Replica
+
+      def initialize: (Proc handler) -> void
+    end
+  end
+end

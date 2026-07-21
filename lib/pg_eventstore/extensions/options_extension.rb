@@ -173,8 +173,8 @@ module PgEventstore
       # value
       # @return [Hash]
       def options_hash
-        self.class.options.each_with_object({}) do |option, res|
-          res[option.name] = public_send(option.name)
+        self.class.options.to_h do |option|
+          [option.name, public_send(option.name)]
         end
       end
       alias attributes_hash options_hash

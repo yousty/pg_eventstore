@@ -1,0 +1,14 @@
+module PgEventstore
+  module Commands
+    module RevisionCheck
+      class EventTypeRevisionsComparison
+        def self.verdict: (
+            Integer current_revision,
+            Symbol | Integer expected_revision,
+            ?expected_markers: Array[String]?,
+            ?event_type: String | Symbol
+          ) -> WrongExpectedTypesRevisionError::Verdict?
+      end
+    end
+  end
+end

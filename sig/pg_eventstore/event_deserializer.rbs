@@ -1,14 +1,9 @@
 module PgEventstore
   class EventDeserializer
-    # _@param_ `middlewares`
-    #
-    # _@param_ `event_class_resolver`
     def initialize: (::Array[Middleware] middlewares, _EventClassResolver event_class_resolver) -> void
 
-    # _@param_ `raw_events`
-    def deserialize_many: (::Array[::Hash[untyped, untyped]] raw_events) -> ::Array[Event]
+    def deserialize_many: (::Array[::Hash[untyped, untyped]] | Enumerator[Hash[untyped, untyped]] raw_events) -> ::Array[Event]
 
-    # _@param_ `attrs`
     def deserialize: (::Hash[untyped, untyped] attrs) -> Event
 
     def without_middlewares: () -> EventDeserializer

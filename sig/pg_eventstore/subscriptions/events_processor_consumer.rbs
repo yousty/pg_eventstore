@@ -6,7 +6,9 @@ module PgEventstore
 
     def self.consumer_class: (bool in_batches) -> Class
 
-    def call: (Callbacks callbacks, SynchronizedArray raw_events,
-        MonitorMixin::ConditionVariable raw_events_cond) -> void
+    def call: (Callbacks callbacks, Chunks::Repository repository,
+        MonitorMixin::ConditionVariable repository_cond) -> void
+
+    def clear_unprocessed_events: -> void
   end
 end

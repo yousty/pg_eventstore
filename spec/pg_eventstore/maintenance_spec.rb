@@ -17,6 +17,30 @@ RSpec.describe PgEventstore::Maintenance do
       expect { subject }.to change { safe_read(stream).map(&:id) }.from(events.map(&:id)).to([])
     end
     it { is_expected.to eq(true) }
+
+    context 'when eventstore role is NodeRole::PRIMARY' do
+      before do
+        PgEventstore.configure do |config|
+          config.eventstore_role = PgEventstore::Config::NodeRole::PRIMARY
+        end
+      end
+
+      it 'raises error' do
+        expect { subject }.to raise_error(RuntimeError, /You can't perform this operation/)
+      end
+    end
+
+    context 'when eventstore role is NodeRole::REPLICA' do
+      before do
+        PgEventstore.configure do |config|
+          config.eventstore_role = PgEventstore::Config::NodeRole::REPLICA
+        end
+      end
+
+      it 'raises error' do
+        expect { subject }.to raise_error(RuntimeError, /You can't perform this operation/)
+      end
+    end
   end
 
   describe '#delete_event' do
@@ -92,6 +116,30 @@ RSpec.describe PgEventstore::Maintenance do
         it_behaves_like 'event gets deleted' do
           let(:rest_events) { [another_event] }
         end
+      end
+    end
+
+    context 'when eventstore role is NodeRole::PRIMARY' do
+      before do
+        PgEventstore.configure do |config|
+          config.eventstore_role = PgEventstore::Config::NodeRole::PRIMARY
+        end
+      end
+
+      it 'raises error' do
+        expect { subject }.to raise_error(RuntimeError, /You can't perform this operation/)
+      end
+    end
+
+    context 'when eventstore role is NodeRole::REPLICA' do
+      before do
+        PgEventstore.configure do |config|
+          config.eventstore_role = PgEventstore::Config::NodeRole::REPLICA
+        end
+      end
+
+      it 'raises error' do
+        expect { subject }.to raise_error(RuntimeError, /You can't perform this operation/)
       end
     end
   end

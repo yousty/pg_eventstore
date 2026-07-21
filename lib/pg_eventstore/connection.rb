@@ -31,17 +31,22 @@ module PgEventstore
     end
 
     # A shorthand from ConnectionPool#with.
-    # @yieldparam connection [PG::Connection] PostgreSQL connection instance
+    # @yieldparam connection [PgEventstore::PgConnection] PostgreSQL connection instance
     # @return [Object] a value of a given block
     def with(&)
       should_retry = true
       @pool.with do |conn|
         yield conn
       rescue PG::ConnectionBad, PG::UnableToSend
+        unless should_retry
+          # Connection is broken. We should throw it away
+          @pool.discard_current_connection
+          raise
+        end
+
         # Recover a connection after fork or when we lost a connection to PostgreSQL. We retry only once and without any
         # delay.
         conn.sync_reset
-        raise unless should_retry
 
         should_retry = false
         retry
@@ -51,6 +56,20 @@ module PgEventstore
     # @return [void]
     def shutdown
       @pool.shutdown(&:close)
+    end
+
+    # Restore connection after shutdown by re-initializing connection pool
+    # @return [void]
+    def establish_connection
+      @pool = nil
+      init_pool
+    end
+
+    # @return [void]
+    def discard_current_connection
+      @pool.discard_current_connection do |conn|
+        conn.close unless conn.finished?
+      end
     end
 
     private

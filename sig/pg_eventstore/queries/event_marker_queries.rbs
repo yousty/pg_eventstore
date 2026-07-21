@@ -1,0 +1,21 @@
+module PgEventstore
+  class EventMarkerQueries
+    @query_strategy: QueryStrategy
+
+    attr_reader connection: Connection
+
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
+    def create_indexes: (
+        Integer stream_idx_id,
+        Array[EventGlobalIndex::WriteApiRepr] write_api_events_index,
+        Hash[Integer, Set[Integer]] revision_to_marker_ids_map
+      ) -> void
+
+    def find_or_create_by: (Array[String] names) -> Array[EventMarker]
+
+    private
+
+    def deserialize: (PG::Result pg_result) -> Array[EventMarker]
+  end
+end

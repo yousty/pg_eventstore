@@ -20,20 +20,34 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @param events_or_event [PgEventstore::Event, Array<PgEventstore::Event>]
     # @param options [Hash]
-    # @option options [Integer] :expected_revision provide your own revision number
+    # @option options [Integer] :expected_revision expected stream revision
     # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
-    # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
+    # @option options [Hash<String, Integer>, Hash<String, Symbol>] :expected_revision
+    #   <even type>-to-<expected stream revision> map. Allows to define expected stream revision at the given event
+    #   type. Useful when implementing Dynamic Consistency Boundaries
+    # @option options [Hash<String, Hash>] :expected_revision <even type>-to-<markers> map. Allows to define expected
+    #   stream revision at the given event type, scoped to the specific marker(s). Useful when implementing
+    #   Dynamic Consistency Boundaries
+    # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def append_to_stream(stream, events_or_event, options: {}, middlewares: nil)
-      result =
-        Commands::Append.new(
-          Queries.new(
-            partitions: partition_queries,
-            events: event_queries(middlewares(middlewares)),
-            transactions: transaction_queries
-          )
-        ).call(stream, *events_or_event, options:)
+      Utils.assert_node_role!(config, Config::NodeRole.writable)
+      middlewares = self.middlewares(middlewares)
+      event_modifier = Commands::EventModifiers::PrepareRegularEvent.new(EventSerializer.new(middlewares))
+      queries = Queries.new(
+        partitions: partition_queries,
+        events: event_queries,
+        transactions: transaction_queries,
+        events_global_index: events_global_index_queries,
+        streams_global_index: streams_global_index_queries,
+        event_subscription_positions: event_subscription_position_queries,
+        event_markers: event_marker_queries,
+        index_filtering: index_filtering_queries
+      )
+      result = Commands::Append.new(queries).call(
+        stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
+      )
       events_or_event.is_a?(Array) ? result : result.first
     end
 
@@ -61,16 +75,22 @@ module PgEventstore
     #   :asc, :desc
     # @option options [Integer] :from_revision a starting revision number. **Use this option when stream name is a
     #   normal stream name**
+    # @option options [Integer] :to_revision ending revision number. **Use this option when stream name is a
+    #   normal stream name**
     # @option options [Integer] :from_position a starting global position number. **Use this option when reading
     #   from "all" stream**
+    # @option options [Integer] :to_position ending global position number. **Use this option when reading from
+    #   "all" stream**
     # @option options [Integer] :max_count max number of events to return in one response. Defaults to config.max_count
     # @option options [Boolean] :resolve_link_tos When using projections to create new events you
     #   can set whether the generated events are pointers to existing events. Setting this option to true tells
     #   PgEventstore to return the original event instead a link event.
-    # @option options [Hash] :filter provide it to filter events. You can filter by: stream and by event type. Filtering
-    #   by stream is only available when reading from "all" stream.
-    #   Examples:
-    #     # Filtering by stream's context. This will return all events which #context is 'User
+    # @option options [Hash] :filter provide it to filter events. You can filter by: stream, event type and event
+    #   markers. Filtering by stream is only available when reading from "all" stream.
+    #   Basically, you can mix almost all combinations of stream attributes, event types and markers. That are some
+    #   limitations, though. Please refer to docs/reading_events.md for details.
+    #   Here are some examples:
+    #     # Filtering by stream's context. This will return all events which #context is 'User'
     #     PgEventstore.client.read(
     #       PgEventstore::Stream.all_stream,
     #       options: { filter: { streams: [{ context: 'User' }] } }
@@ -105,42 +125,92 @@ module PgEventstore
     #
     #     # Filtering by specific event when reading from the specific stream
     #     PgEventstore.client.read(stream, options: { filter: { event_types: ['MyAwesomeEvent'] } })
-    # @param middlewares [Array, nil] provide a list of middleware names to override a config's middlewares
+    #
+    #     # Filtering a specific stream by event markers
+    #     PgEventstore.client.read(stream, options: { filter: { event_types: [{ markers: ['foo'] }] } })
+    #
+    #     # Filtering a specific stream by event type with markers and event types
+    #     PgEventstore.client.read(
+    #       stream, options: { filter: { event_types: [{ type: 'Foo', markers: ['foo'] }, 'Bar'] } }
+    #     )
+    #
+    #     # Filtering all events by markers
+    #     PgEventstore.client.read(
+    #       PgEventstore::Stream.all_stream, options: { filter: { event_types: [{ markers: ['foo'] }] } }
+    #     )
+    # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
     # @return [Array<PgEventstore::Event>]
     # @raise [PgEventstore::StreamNotFoundError]
     def read(stream, options: {}, middlewares: nil)
-      Commands::Read.
-        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
-        call(stream, options: { max_count: config.max_count }.merge(options))
+      queries = Queries.new(
+        index_filtering: index_filtering_queries,
+        streams_global_index: streams_global_index_queries
+      )
+      Commands::Read.new(queries).call(
+        stream,
+        deserializer: event_deserializer(middlewares(middlewares)),
+        options: { max_count: config.max_count }.merge(options)
+      )
     end
 
     # @see {#read} for the detailed docs
     # @param stream [PgEventstore::Stream]
     # @param options [Hash] request options
-    # @param middlewares [Array, nil]
-    # @return [Enumerator] enumerator will yield PgEventstore::Event
+    # @param middlewares [Array<Symbol>, nil]
+    # @return [Enumerator] enumerator will yield Array<PgEventstore::Event>
     def read_paginated(stream, options: {}, middlewares: nil)
       cmd_class = stream.system? ? Commands::SystemStreamReadPaginated : Commands::RegularStreamReadPaginated
-      cmd_class.
-        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
-        call(stream, options: { max_count: config.max_count }.merge(options))
+      queries = Queries.new(
+        index_filtering: index_filtering_queries,
+        streams_global_index: streams_global_index_queries
+      )
+      cmd_class.new(queries).call(
+        stream,
+        deserializer: event_deserializer(middlewares(middlewares)),
+        options: { max_count: config.max_count }.merge(options)
+      )
     end
 
-    # Takes a stream, determines a list of even types in it and returns most recent(or very first - depending on
-    # :direction option) events, one of each type. If :event_types filter is provided - uses it instead of automatic
-    # event types lookup logic. The result size is almost always less than or equal to event types list size, so passing
-    # :max_count option does not make any effect. In case if event of same type appears in different context/stream
-    # name - it will be counted as a different event, thus, may appear several times in the result.
+    # Takes a stream, event types filter and returns most recent(or very first - depending on :direction option) events,
+    # one of each given type. The result size is almost always less than or equal to event types list size, so passing
+    # :max_count option does not take any effect. In case if event of same type appears in different context/stream
+    # name - it will be counted as a different event, thus, may appear several times in the result, scoped to each
+    # context and stream name in the result. Useful when implementing Dynamic Consistency Boundaries.
     # @see {#read} for the detailed docs
     # @param stream [PgEventstore::Stream]
     # @param options [Hash] request options
-    # @param middlewares [Array, nil]
+    # @param middlewares [Array<Symbol>, nil]
     # @return [Array<PgEventstore::Event>]
     def read_grouped(stream, options: {}, middlewares: nil)
-      cmd_class = stream.all_stream? ? Commands::AllStreamReadGrouped : Commands::RegularStreamReadGrouped
-      cmd_class.
-        new(Queries.new(partitions: partition_queries, events: event_queries(middlewares(middlewares)))).
-        call(stream, options:)
+      queries = Queries.new(
+        index_filtering: index_filtering_queries,
+        streams_global_index: streams_global_index_queries
+      )
+      Commands::ReadGrouped.new(queries).call(
+        stream, deserializer: event_deserializer(middlewares(middlewares)), options:
+      )
+    end
+
+    # @param options [Hash] request options
+    # @option options [String] :direction read direction. Allowed values are "Forwards", "Backwards", "asc", "desc",
+    #   :asc, :desc
+    # @option options [Integer] :from_position a starting global position number
+    # @option options [Integer] :max_count max number of streams to return in one response. Defaults to config.max_count
+    # @return [Array<PgEventstore::Stream>]
+    def read_streams(options: {})
+      queries = Queries.new(streams_global_index: streams_global_index_queries)
+      Commands::ReadStreams.new(queries).call(options: { max_count: config.max_count }.merge(options))
+    end
+
+    # @param options [Hash] request options
+    # @option options [String] :direction read direction. Allowed values are "Forwards", "Backwards", "asc", "desc",
+    #   :asc, :desc
+    # @option options [Integer] :from_position a starting global position number
+    # @option options [Integer] :max_count max number of streams to yield. Defaults to config.max_count
+    # @return [Enumerator] yields Array<PgEventstore::Stream>
+    def read_streams_paginated(options: {})
+      queries = Queries.new(streams_global_index: streams_global_index_queries)
+      Commands::ReadStreamsPaginated.new(queries).call(options: { max_count: config.max_count }.merge(options))
     end
 
     # Links event from one stream into another stream. You can later access it by providing :resolve_link_tos option
@@ -150,25 +220,42 @@ module PgEventstore
     # @param options [Hash]
     # @option options [Integer] :expected_revision provide your own revision number
     # @option options [Symbol] :expected_revision provide one of next values: :any, :no_stream or :stream_exists
-    # @param middlewares [Array] provide a list of middleware names to use. Defaults to empty array, meaning no
+    # @param middlewares [Array<Symbol>] provide a list of middleware names to use. Defaults to empty array, meaning no
     #   middlewares will be applied to the "link" event
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
     def link_to(stream, events_or_event, options: {}, middlewares: [])
-      result =
-        Commands::LinkTo.new(
-          Queries.new(
-            partitions: partition_queries,
-            events: event_queries(middlewares(middlewares)),
-            transactions: transaction_queries
-          )
-        ).call(stream, *events_or_event, options:)
+      Utils.assert_node_role!(config, Config::NodeRole.writable)
+      middlewares = self.middlewares(middlewares)
+      event_modifier = Commands::EventModifiers::PrepareLinkEvent.new(
+        partition_queries, EventSerializer.new(middlewares)
+      )
+      queries = Queries.new(
+        partitions: partition_queries,
+        events: event_queries,
+        transactions: transaction_queries,
+        events_global_index: events_global_index_queries,
+        streams_global_index: streams_global_index_queries,
+        event_subscription_positions: event_subscription_position_queries,
+        event_markers: event_marker_queries,
+        index_filtering: index_filtering_queries
+      )
+      result = Commands::LinkTo.new(queries).call(
+        stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
+      )
       events_or_event.is_a?(Array) ? result : result.first
+    end
+
+    # @param stream [PgEventstore::Stream]
+    # @return [Integer]
+    def stream_revision(stream)
+      queries = Queries.new(streams_global_index: streams_global_index_queries)
+      Commands::StreamRevision.new(queries).call(stream)
     end
 
     private
 
-    # @param middlewares [Array, nil]
+    # @param middlewares [Array<Symbol>, nil]
     # @return [Array<PgEventstore::Middleware>]
     def middlewares(middlewares = nil)
       return config.middlewares.values unless middlewares
@@ -191,14 +278,40 @@ module PgEventstore
       TransactionQueries.new(connection)
     end
 
-    # @param middlewares [Array<Object<#serialize, #deserialize>>]
     # @return [PgEventstore::EventQueries]
-    def event_queries(middlewares)
-      EventQueries.new(
-        connection,
-        EventSerializer.new(middlewares),
-        EventDeserializer.new(middlewares, config.event_class_resolver)
-      )
+    def event_queries
+      EventQueries.new(connection)
+    end
+
+    # @param middlewares [Array<Middleware>]
+    # @return [PgEventstore::EventDeserializer]
+    def event_deserializer(middlewares)
+      EventDeserializer.new(middlewares, config.event_class_resolver)
+    end
+
+    # @return [PgEventstore::EventsGlobalIndexQueries]
+    def events_global_index_queries
+      EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
+    end
+
+    # @return [PgEventstore::StreamsGlobalIndexQueries]
+    def streams_global_index_queries
+      StreamsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
+    end
+
+    # @return [PgEventstore::EventSubscriptionPositionQueries]
+    def event_subscription_position_queries
+      EventSubscriptionPositionQueries.new(connection)
+    end
+
+    # @return [PgEventstore::EventMarkerQueries]
+    def event_marker_queries
+      EventMarkerQueries.new(connection, QueryStrategy::Foreground.new(connection))
+    end
+
+    # @return [PgEventstore::IndexFilteringQueries]
+    def index_filtering_queries
+      IndexFilteringQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

@@ -1,7 +1,119 @@
 ## [Unreleased]
 
-- New feature: allow subscription to process events in batches. You can now provide `in_batches: true` to `#subscribe` to yield an array of events. See [docs](docs/subscriptions.md#processing-events-in-batches) for more info
-- Introduce `PgEventstore::BasicConfig` and `PgEventstore::Extensions::ActsAsConfigurable` to allow to easily create configurable objects  
+- New feature: pg_eventstore replication
+- **Breaking change**: drop support of Ruby v3.2. The gem now requires Ruby v3.3+
+- New feature: event tracing. You can now configure pg_eventstore to trace causation dependencies of events.
+  Read more [here](docs/event_tracing.md)
+- **Breaking change**: when event is persisted using `#append_to_stream` - it now gets deserialized via each registered
+  middleware by default. Previously this wasn't the case - the deserialization phase was skipped. Such behavior was
+  creating ambiguity about assumptions when deserialization happens. If you need old behavior - you have to create
+  another middleware class which skips deserialization when publishing events and use it instead. Example:
+Let's say you have this middleware configured
+```ruby
+class MyMiddleware
+  include PgEventstore::Middleware
+
+  def serialize(event)
+    # do something with event before persisting it
+  end
+
+  def deserialize(event)
+    # do something with event after reading it from db
+  end
+end
+
+PgEventstore.configure do |config|
+  config.middleware = { my_middleware: MyMiddleware.new }
+end
+```
+
+Now define another middleware that has empty `#deserialize` method
+
+```ruby
+class MyMiddlewareWithoutDeserialize < MyMiddleware
+  def deserialize(event)
+  end
+end
+
+PgEventstore.configure do |config|
+  config.middleware = {
+    my_middleware: MyMiddleware.new,
+    my_middleware_wo_deserialize: MyMiddlewareWithoutDeserialize.new
+  }
+end
+```
+and use only it when publishing events:
+
+```ruby
+PgEventstore.client.append_to_stream(stream, event, middlewares: [:my_middleware_wo_deserialize])
+```
+
+Alternatively, if you don't rely on `#multiple`, you can create another config specially for write operations:
+
+```ruby
+# this is your default
+PgEventstore.configure do |config|
+  config.middleware = { my_middleware: MyMiddleware.new }
+end
+
+PgEventstore.configure(name: :write) do |config|
+  config.middleware = { my_middleware: MyMiddlewareWithoutDeserialize.new }
+end
+```
+
+and use it for write operations:
+
+```ruby
+PgEventstore.client(:write).append_to_stream(stream, event)
+```
+
+- **Breaking change**: `Event#id` uniqueness is no longer guaranteed. It was dropped because there is not much usage of
+  it internally. The default value was moved from the database(it was `gen_random_uuid()`) to the application level and
+  is `SecureRandom.uuid_v7` now.
+- **Breaking change**: event types, stream attributes, event metadata keys, markers that start from `▒`(`"\u2592"` 
+Unicode character) character are now reserved by pg_eventstore. It is less likely you have any, but if you do - you have
+to adjust your implementation to no longer rely on it.
+- New feature: event markers. You can now mark an event and later use those markers to read events, build a projection
+using subscriptions or validate stream revision scoped to an event type and specific markers when publishing events as 
+a part of Dynamic Consistency Boundaries. Find more in [docs](docs/appending_events.md#event-markers)
+- New config option `config.events_subscription_position_update_interval`. See more
+  in [Configuration](docs/configuration.md) docs
+- **Breaking change**: `:from_position` option of `SubscriptionManager#subscribe`, "Current position" column in admin
+  web UI, "Reset position" form in admin web UI now refers to the event subscription position instead
+  `Event#global_position`. See more information in related
+  docs [Subscription position](docs/subscriptions.md#subscription-position)
+- **Breaking change**: Drop `pg_cron` dependency
+- Remove deprecated `SubscriptionsManager#force_lock!`
+- New feature: explicit support of Dynamic Consistency Boundaries when publishing events. You can now provide "event
+  type"-to-"expected stream revision" hash map into `:expected_revision` option. It allows to validate against stream
+  revision at the specific event type instead validating the whole stream. Example:
+  `PgEventstore.client.append_to_stream(stream, events, options: { expected_revision: { 'Foo' => 10, 'Bar' => 20 } })`
+- **Breaking change**: `WrongExpectedRevisionError#new` now requires `:verdict` keyword argument.
+  `Client#append_to_stream` now also may raise `WrongExpectedTypesRevisionError` error in case `:expected_revision`
+  option is "event type"-to-"expected stream revision" hash map
+- Remove any practical limit of `Event#stream_revision` by changing its type to `bigint`. Stream size can be practically
+  unreachable now
+- Fix issue when incomplete transaction block may be interrupted half way and commited successfully. The issue is
+  related to incorrect transaction termination flow during non-graceful thread shutdown(e.g. via `Thread.exit`)
+- New feature: `Client#stream_revision` allows to quickly get stream's revision. Example:
+  `PgEventstore.client.stream_revision(stream) #=> number, greater than or equal to 0 or -1 if stream does not exist`
+- **Breaking change**: `Client#read_grouped` now requires to provide `event_types` filter option explicitly. Example:
+  `PgEventstore.client.read_grouped(stream, options: { filter: { event_types: ['Foo', 'Bar'] } })`
+- New feature: Subscription event types filter now support prefixes. So, if you have subscriptions like
+  `manager.subscribe('MyAwesomeSubscription', handler: my_handler, options: { filter: { event_types: ['Foo1', 'Foo2', 'Foo3'] } })`,
+  you can replace its filter as follows: `{ event_types: [{ prefix: 'Foo' }] }`. **Read API does not support this
+  feature yet**
+- New feature: Read API now supports `:to_position`(and `:to_revision` when reading from specific stream) option. Use it
+  if you want to limit your result alongside `:max_count` option. Example:
+  `PgEventstore.client.read(PgEventstore::Stream.all_stream, options: { from_position: 100, to_position: 200 })`
+- **Breaking change**: `Middleware#serialize` is now called outside SQL transaction that inserts an event tuple.
+  Previously it was happening right before an `INSERT` statement
+- **Breaking change**: Database structure and the implementation of `#append_to_stream` was changed in a way it is not
+  compatible with v2. Public API stays the same
+- New feature: allow subscription to process events in batches. You can now provide `in_batches: true` to `#subscribe`
+  to yield an array of events. See [docs](docs/subscriptions.md#processing-events-in-batches) for more info
+- Introduce `PgEventstore::BasicConfig` and `PgEventstore::Extensions::ActsAsConfigurable` to allow to easily create
+  configurable objects
 
 ## [2.0.0]
 
@@ -9,12 +121,19 @@
 - **Breaking change**: `pg_eventstore` now requires PostgreSQL v16+
 - Greatly decreased the number of connections, used by `pg_eventstore` subscriptions
 - **Breaking change**: drop support of Ruby v3.0 and v3.1. The gem now requires Ruby v3.2+
-- **Breaking change**: `PgEventstore::Extensions::OptionsExtension::Options` class is no longer a child of `Set` class - it has independent implementation now
+- **Breaking change**: `PgEventstore::Extensions::OptionsExtension::Options` class is no longer a child of `Set` class -
+  it has independent implementation now
 - Add support of Ruby v4.0
-- `Client#multiple` method now accepts `read_only` keyword argument. When it is set to true - transaction is run in read-only mode
-- **Breaking change**: rework links implementation. This change boosts performance, but affects the database structure, so your previous database dumps become incompatible with this change. `PgEventstore::Event#link_id` was replaced by `PgEventstore::Event#link_global_position`
+- `Client#multiple` method now accepts `read_only` keyword argument. When it is set to true - transaction is run in
+  read-only mode
+- **Breaking change**: rework links implementation. This change boosts performance, but affects the database structure,
+  so your previous database dumps become incompatible with this change. `PgEventstore::Event#link_id` was replaced by
+  `PgEventstore::Event#link_global_position`
 
-Changes above require you to run migrations - `bundle exec rake pg_eventstore:migrate`. One of the migrations also migrates existing data using several concurrent workers(threads). You can adjust the number of workers using `CONCURRENCY` environment variable. Default number of concurrent workers is `10`. **Migrations require a downtime - no reads/writes should be performed during the time of the migrations, so plan your maintenance downtime accordingly.**
+Changes above require you to run migrations - `bundle exec rake pg_eventstore:migrate`. One of the migrations also
+migrates existing data using several concurrent workers(threads). You can adjust the number of workers using
+`CONCURRENCY` environment variable. Default number of concurrent workers is `10`. **Migrations require a downtime - no
+reads/writes should be performed during the time of the migrations, so plan your maintenance downtime accordingly.**
 
 ## [1.13.4]
 
@@ -34,7 +153,8 @@ Changes above require you to run migrations - `bundle exec rake pg_eventstore:mi
 
 ## [1.13.0]
 
-- Introduce automatic subscriptions recovery from connection errors. This way if a subscription process loses the connection to the database - it will be trying to reconnect until the connection is restored.
+- Introduce automatic subscriptions recovery from connection errors. This way if a subscription process loses the
+  connection to the database - it will be trying to reconnect until the connection is restored.
 - Resolve ambiguity in usage of `PgEventstore.config` method. It now returns the frozen object.
 
 ## [1.12.0]
@@ -43,12 +163,17 @@ Changes above require you to run migrations - `bundle exec rake pg_eventstore:mi
 
 ## [1.11.0]
 
-- Add a global position that caused an error to the subscription's error JSON info. This will help you understand what event caused your subscription to fail.
+- Add a global position that caused an error to the subscription's error JSON info. This will help you understand what
+  event caused your subscription to fail.
 - Improve long payloads in JSON preview in admin web UI in the way it does not moves content out of the visible area.
-- Admin UI: adjust events filtering and displaying of stream context, stream name, stream id and event type when values of them contain empty strings or non-displayable characters
+- Admin UI: adjust events filtering and displaying of stream context, stream name, stream id and event type when values
+  of them contain empty strings or non-displayable characters
 
 ## [1.10.0]
-- Admin UI: Adjust `SubscriptionSet` "Stop"/"Delete" buttons appearance. Now if `SubscriptionsSet` is not alive anymore(the related process is dead or does not exist anymore) - "Delete" button is shown. If `SubscriptionSet` is alive - "Stop" button is shown
+
+- Admin UI: Adjust `SubscriptionSet` "Stop"/"Delete" buttons appearance. Now if `SubscriptionsSet` is not alive anymore(
+  the related process is dead or does not exist anymore) - "Delete" button is shown. If `SubscriptionSet` is alive - "
+  Stop" button is shown
 - Admin IU: fixed several potential XSS vulnerabilities
 - Admin IU: Add "Copy to clipboard" button near stream id that copies ruby stream definition
 - Admin UI: allow deletion of streams with empty attribute values
@@ -60,23 +185,33 @@ Changes above require you to run migrations - `bundle exec rake pg_eventstore:mi
 - Add "Delete event" and "Delete stream" buttons into admin UI
 
 ## [1.8.0]
-- Introduce default config for admin web UI. Now if you define `:admin_web_ui` config - it will be preferred over default config
+
+- Introduce default config for admin web UI. Now if you define `:admin_web_ui` config - it will be preferred over
+  default config
 - Fix pagination of events in admin UI
 - Improve partial index for `$streams` system stream
 
 ## [1.7.0]
+
 - Implement reading from `"$streams"` system stream
 - Disable Host authorization introduced in sinatra v4.1
 
 ## [1.6.0]
-- Introduce subscriptions CLI. Type `pg-eventstore subscriptions --help` to see available commands. The main purpose of it is to provide the single way to start/stop subscription processes. Check [Subscriptions](docs/subscriptions.md#creating-a-subscription) docs about the new way to start and keep running a subscriptions process.
+
+- Introduce subscriptions CLI. Type `pg-eventstore subscriptions --help` to see available commands. The main purpose of
+  it is to provide the single way to start/stop subscription processes.
+  Check [Subscriptions](docs/subscriptions.md#creating-a-subscription) docs about the new way to start and keep running
+  a subscriptions process.
 
 ## [1.5.0]
+
 - Add ability to toggle link events in the admin UI
 - Mark linked events in the admin UI with "link" icon
 
 ## [1.4.0]
-- Add an ability to configure subscription graceful shutdown timeout globally and per subscription. Default value is 15 seconds. Previously it was hardcoded to 5 seconds. Examples:
+
+- Add an ability to configure subscription graceful shutdown timeout globally and per subscription. Default value is 15
+  seconds. Previously it was hardcoded to 5 seconds. Examples:
 
 ```ruby
 # Set it globally, for all subscriptions
@@ -93,18 +228,24 @@ subscriptions_manager.subscribe(
 ```
 
 ## [1.3.4]
-- Fix `NoMethodError` error in `Client#read_paginated` when stream does not exist or when there are no events matching the given filter
+
+- Fix `NoMethodError` error in `Client#read_paginated` when stream does not exist or when there are no events matching
+  the given filter
 
 ## [1.3.3]
+
 - Adjust default value of `subscription_max_retries` setting
 
 ## [1.3.2]
+
 - Fix UI when switching subscription status
 
 ## [1.3.1]
+
 - Swap "Search" button and "Add filter" button on Dashboard page
 
 ## [1.3.0]
+
 - Add ability to filter subscriptions by state in admin UI
 - Reset error-related subscription's attributes on subscription restore
 - Reset total processed events number when user changes subscription's position
@@ -112,9 +253,12 @@ subscriptions_manager.subscribe(
 - Relax sinatra version requirement to v3+
 
 ## [1.2.0]
+
 - Implement `failed_subscription_notifier` subscription hook.
 
-Now you are able to define a function that is called when subscription fails and no longer can be automatically restarted because it hit max number of retries. You can define the hook globally in the config and per subscription. Examples:
+Now you are able to define a function that is called when subscription fails and no longer can be automatically
+restarted because it hit max number of retries. You can define the hook globally in the config and per subscription.
+Examples:
 
 ```ruby
 PgEventstore.configure do |config|
@@ -138,36 +282,48 @@ subscriptions_manager.subscribe(
 ```
 
 ## [1.1.5]
-- Review the way to handle SubscriptionAlreadyLockedError error. This removes noise when attempting to lock an already locked subscription.
+
+- Review the way to handle SubscriptionAlreadyLockedError error. This removes noise when attempting to lock an already
+  locked subscription.
 
 ## [1.1.4]
+
 - Add rbs signatures
 
 ## [1.1.3]
+
 - Fix issue with assets caching between different gem's versions
 
 ## [1.1.2]
+
 - Improve web app compatibility with rails
 
 ## [1.1.1]
+
 - Allow case insensitive search by context, stream name and event type in admin UI
 
 ## [1.1.0]
+
 - Add "Reset position" button on Subscriptions Admin UI page
 
-**Note** This release includes a migration to support new functional. Please don't forget to run `rake pg_eventstore:migrate` to apply latest db changes.
+**Note** This release includes a migration to support new functional. Please don't forget to run
+`rake pg_eventstore:migrate` to apply latest db changes.
 
 ## [1.0.4]
+
 - Fix bug which caused slow Subscriptions to stop processing new events
 - Optimize Subscriptions update queries
 
 ## [1.0.3]
+
 - Do no update `Subscription#last_chunk_fed_at` if the chunk is empty
 
 ## [1.0.2]
+
 - UI: Fix opening of SubscriptionsSet tab of non-existing SubscriptionsSet
 
 ## [1.0.1]
+
 - Adjust assets urls to correctly act when mounting sinatra app under non-root url
 
 ## [1.0.0]
@@ -205,7 +361,8 @@ subscriptions_manager.subscribe(
 
 ## [0.8.0] - 2024-02-20
 
-- Allow float values for `subscription_pull_interval`. The default value of it was also set to `1.0`(it was `2` previously)
+- Allow float values for `subscription_pull_interval`. The default value of it was also set to `1.0`(it was `2`
+  previously)
 
 ## [0.7.2] - 2024-02-14
 
@@ -217,7 +374,8 @@ subscriptions_manager.subscribe(
 
 ## [0.7.0] - 2024-02-09
 
-- Refactor `pg_eventstore:create` and `pg_eventstore:drop` rake tasks. They now actually create/drop the database. You will have to execute `delete from migrations where number > 6` query before deploying this version.
+- Refactor `pg_eventstore:create` and `pg_eventstore:drop` rake tasks. They now actually create/drop the database. You
+  will have to execute `delete from migrations where number > 6` query before deploying this version.
 - Drop legacy migrations
 
 ## [0.6.0] - 2024-02-08
@@ -262,9 +420,11 @@ subscriptions_manager.subscribe(
 
 ## [0.2.4] - 2023-12-20
 
-Due to performance issues under certain circumstances, searching by event type was giving bad performance. I decided to extract `type` column from `events` table into separated table. **No breaking changes in public API though.**
+Due to performance issues under certain circumstances, searching by event type was giving bad performance. I decided to
+extract `type` column from `events` table into separated table. **No breaking changes in public API though.**
 
-**Warning** The migrations this version has, requires you to shut down applications that use `pg_eventstore` and only then run `rake pg_eventstore:migrate`.
+**Warning** The migrations this version has, requires you to shut down applications that use `pg_eventstore` and only
+then run `rake pg_eventstore:migrate`.
 
 ## [0.2.3] - 2023-12-18
 
@@ -276,7 +436,8 @@ Due to performance issues under certain circumstances, searching by event type w
 
 ## [0.2.1] - 2023-12-14
 
-Under certain circumstances `PG::TRSerializationFailure` exception wasn't retried. Adjust connection's states list to fix that.
+Under certain circumstances `PG::TRSerializationFailure` exception wasn't retried. Adjust connection's states list to
+fix that.
 
 ## [0.2.0] - 2023-12-14
 

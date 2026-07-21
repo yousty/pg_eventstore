@@ -1,36 +1,62 @@
 # frozen_string_literal: true
 
 require 'json'
-require 'connection_pool'
-require 'redis'
-require 'etc'
+require 'fileutils'
 
 class Stats
-  BM_STATS_NAMESPACE = 'pg_evetstore-stats'
+  BM_STATS_NAMESPACE = 'pg_evetstore-bm'
 
-  class << self
-    def redis
-      @redis ||= ConnectionPool.new(size: Etc.nprocessors) { Redis.new(host: 'localhost', port: '6579', db: 1) }
+  class Repo
+    def initialize
+      @dir = File.expand_path("tmp/#{BM_STATS_NAMESPACE}")
+    end
+
+    def reset
+      FileUtils.rm_rf(@dir)
+      FileUtils.mkdir_p(@dir)
+    end
+
+    def add(key, content)
+      Dir.chdir(@dir) do
+        file = File.new("#{key}.txt", "w")
+        file.write(content)
+        file.close
+      end
     end
 
     def stats
-      redis.with do |conn|
-        keys = conn.keys
-        keys.group_by { |k| k.split(':')[1] }.map do |stat_name, stat_keys|
-          stats = stat_keys.each.with_object({ min: 0, max: 0, avg: 0 }) do |key, res|
-            stats = JSON.parse(conn.get(key), symbolize_names: true)
-            res[:min] += stats[:min].to_f / keys.size
-            res[:max] += stats[:max].to_f / keys.size
-            res[:avg] += stats[:total].to_f / stats[:count] / keys.size
-          end
-          [stat_name.to_sym, stats]
-        end.sort_by(&:first).to_h
+      Dir["#{@dir}/*.txt"].each.with_object({}) do |file_name, res|
+        stat = File.basename(file_name).sub('.txt', '').split('-')[0]
+        res[stat.to_sym] ||= []
+        res[stat.to_sym].push(*JSON.parse(File.read(file_name), symbolize_names: true))
+      end
+    end
+  end
+
+  class << self
+    def repo
+      @repo ||= Repo.new
+    end
+
+    def stats
+      repo.stats.to_h do |stat_name, timings|
+        timings = timings.sort
+        p95_timings = timings[..((timings.size * 0.95).round)]
+        p99_timings = timings[..((timings.size * 0.99).round)]
+        stats = {
+          min: timings.min,
+          max: timings.max,
+          p95: p95_timings.max,
+          p99: p99_timings.max,
+          p95_avg: p95_timings.sum / p95_timings.size.to_f,
+          p99_avg: p99_timings.sum / p99_timings.size.to_f,
+        }
+        [stat_name, stats]
       end
     end
   end
 
   def initialize
-    @redis = self.class.redis
     @stats = {}
   end
 
@@ -39,19 +65,14 @@ class Stats
   # @return [void]
   def update(bm_name, time)
     key = bm_key(bm_name)
-    @stats[key] ||= { min: 1_000, max: 0, count: 0, total: 0 }
-    @stats[key][:min] = [@stats[key][:min], time].min
-    @stats[key][:max] = [@stats[key][:max], time].max
-    @stats[key][:count] += 1
-    @stats[key][:total] += time
+    @stats[key] ||= []
+    @stats[key].push(time)
   end
 
   # @return [void]
   def persist_stats
     @stats.each do |key, result|
-      @redis.with do |conn|
-        conn.set(key, result.to_json)
-      end
+      self.class.repo.add(key, result.to_json)
     end
   end
 
@@ -60,6 +81,6 @@ class Stats
   # @param bm_name [String, Symbol]
   # @return [String]
   def bm_key(bm_name)
-    "#{BM_STATS_NAMESPACE}:#{bm_name}:#{Process.pid}-#{Thread.current.__id__}"
+    "#{bm_name}-#{Process.pid}-#{Thread.current.__id__}"
   end
 end

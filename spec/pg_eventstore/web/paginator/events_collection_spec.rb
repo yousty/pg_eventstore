@@ -7,8 +7,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
       starting_id:,
       per_page:,
       order:,
-      options:,
-      system_stream:
+      options:
     )
   end
   let(:config_name) { :default }
@@ -16,7 +15,6 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
   let(:per_page) { 2 }
   let(:order) { :asc }
   let(:options) { {} }
-  let(:system_stream) { nil }
 
   describe '#collection' do
     subject { instance.collection }
@@ -119,37 +117,29 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
         end
       end
     end
-
-    context 'when reading from "$streams" system stream' do
-      let(:system_stream) { '$streams' }
-
-      it 'returns 0-stream revision events according to the page limit and in the given order' do
-        is_expected.to eq([event1, event3])
-      end
-    end
   end
 
   describe '#next_page_starting_id' do
     subject { instance.next_page_starting_id }
 
     let!(:event1) do
-      event = PgEventstore::Event.new(type: 'Foo')
+      event = PgEventstore::Event.new(type: 'Foo', markers: ['bar', 'baz'])
       PgEventstore.client.append_to_stream(stream1, event)
     end
     let!(:event2) do
-      event = PgEventstore::Event.new(type: 'Bar')
+      event = PgEventstore::Event.new(type: 'Bar', markers: ['foo'])
       PgEventstore.client.append_to_stream(stream1, event)
     end
     let!(:event3) do
-      event = PgEventstore::Event.new(type: 'Foo')
+      event = PgEventstore::Event.new(type: 'Foo', markers: ['foo', 'bar'])
       PgEventstore.client.append_to_stream(stream2, event)
     end
     let!(:event4) do
-      event = PgEventstore::Event.new(type: 'Bar')
+      event = PgEventstore::Event.new(type: 'Bar', markers: ['foo', 'baz'])
       PgEventstore.client.append_to_stream(stream3, event)
     end
     let!(:event5) do
-      event = PgEventstore::Event.new(type: 'Baz')
+      event = PgEventstore::Event.new(type: 'Baz', markers: ['bar', 'baz'])
       PgEventstore.client.append_to_stream(stream3, event)
     end
 
@@ -230,10 +220,10 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
       it { is_expected.to eq(nil) }
     end
 
-    context 'when reading from "$streams" system stream' do
-      let(:system_stream) { '$streams' }
+    context 'when filtering by markers' do
+      let(:options) { { filter: { event_types: [{ markers: ['bar', 'baz'] }] } } }
 
-      it 'returns next page id for 0-stream revision events according to the page limit and in the given order' do
+      it 'returns next page id based on the markers filter' do
         is_expected.to eq(event4.global_position)
       end
     end
@@ -317,21 +307,13 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
           is_expected.to eq(event3.global_position)
         end
       end
-
-      context 'when reading from "$streams" system stream' do
-        let(:system_stream) { '$streams' }
-        let(:starting_id) { event4.global_position }
-
-        it 'returns prev page id for 0-stream revision events relative to the starting_id' do
-          is_expected.to eq(event1.global_position)
-        end
-      end
     end
 
     describe 'resolving prev page id from link event' do
       let!(:link) { PgEventstore.client.link_to(stream3, event1) }
       let(:starting_id) { event4.global_position }
       let(:order) { :desc }
+      let(:options) { { resolve_link_tos: true } }
 
       it 'picks #global_position of a link event' do
         aggregate_failures do
@@ -384,40 +366,7 @@ RSpec.describe PgEventstore::Web::Paginator::EventsCollection do
         end
 
         it 'returns estimate count' do
-          is_expected.to be_between(5, 1000)
-        end
-      end
-    end
-
-    describe '"$streams" system stream' do
-      let(:system_stream) { '$streams' }
-
-      context 'when number of records does not exceed the limit' do
-        before do
-          5.times do |t|
-            event = PgEventstore::Event.new(type: 'Foo')
-            stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: t.to_s)
-            PgEventstore.client.append_to_stream(stream, event)
-          end
-        end
-
-        it 'returns events count' do
-          is_expected.to eq(5)
-        end
-      end
-
-      context 'when number of records exceeds the limit' do
-        before do
-          stub_const("#{described_class}::MAX_NUMBER_TO_COUNT", 2)
-          5.times do |t|
-            event = PgEventstore::Event.new(type: 'Foo')
-            stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyStream', stream_id: t.to_s)
-            PgEventstore.client.append_to_stream(stream, event)
-          end
-        end
-
-        it 'returns estimate count' do
-          is_expected.to be_between(5, 1000)
+          is_expected.to be_between(1, 10_000)
         end
       end
     end

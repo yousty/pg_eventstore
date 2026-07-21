@@ -15,17 +15,17 @@ module PgEventstore
     # @param stream [PgEventstore::Stream]
     # @return [Boolean] whether a stream was deleted successfully
     def delete_stream(stream)
-      Commands::DeleteStream.new(
-        Queries.new(transactions: transaction_queries, maintenance: maintenance_queries)
-      ).call(stream)
+      Utils.assert_node_role!(config, Config::NodeRole.maintainable)
+      queries = Queries.new(maintenance: maintenance_queries)
+      Commands::DeleteStream.new(queries).call(stream)
     end
 
     # @param event [PgEventstore::Event] persisted event
     # @return [Boolean] whether an event was deleted successfully
     def delete_event(event, force: false)
-      Commands::DeleteEvent.new(
-        Queries.new(transactions: transaction_queries, maintenance: maintenance_queries)
-      ).call(event, force:)
+      Utils.assert_node_role!(config, Config::NodeRole.maintainable)
+      queries = Queries.new(maintenance: maintenance_queries, events_global_index: events_global_index_queries)
+      Commands::DeleteEvent.new(queries).call(event, force:)
     end
 
     private
@@ -43,6 +43,11 @@ module PgEventstore
     # @return [PgEventstore::Connection]
     def connection
       PgEventstore.connection(config.name)
+    end
+
+    # @return [PgEventstore::EventsGlobalIndexQueries]
+    def events_global_index_queries
+      EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

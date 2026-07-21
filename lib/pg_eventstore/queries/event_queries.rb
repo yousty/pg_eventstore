@@ -6,82 +6,16 @@ module PgEventstore
     # @!attribute connection
     #   @return [PgEventstore::Connection]
     attr_reader :connection
-    # @!attribute serializer
-    #   @return [PgEventstore::EventSerializer]
-    attr_reader :serializer
-    # @!attribute deserializer
-    #   @return [PgEventstore::EventDeserializer]
-    attr_reader :deserializer
-    private :connection, :serializer, :deserializer
+    private :connection
 
     # @param connection [PgEventstore::Connection]
-    # @param serializer [PgEventstore::EventSerializer]
-    # @param deserializer [PgEventstore::EventDeserializer]
-    def initialize(connection, serializer, deserializer)
+    def initialize(connection)
       @connection = connection
-      @serializer = serializer
-      @deserializer = deserializer
-    end
-
-    # @param event [PgEventstore::Event]
-    # @return [Boolean]
-    def event_exists?(event)
-      return false if event.id.nil? || event.stream.nil?
-
-      sql_builder = SQLBuilder.new.select('1 as exists').from(Event::PRIMARY_TABLE_NAME).where('id = ?', event.id)
-      sql_builder.limit(1)
-      sql_builder.where(
-        'context = ? and stream_name = ? and type = ?', event.stream.context, event.stream.stream_name, event.type
-      )
-      connection.with do |conn|
-        conn.exec_params(*sql_builder.to_exec_params)
-      end.to_a.dig(0, 'exists') == 1
-    end
-
-    # Takes an array of potentially persisted events and loads their ids from db. Those ids can be later used to check
-    # whether events are actually existing events.
-    # @param events [Array<PgEventstore::Event>]
-    # @return [Array<Integer>]
-    def global_positions_from_db(events)
-      sql_builder = SQLBuilder.new.from(Event::PRIMARY_TABLE_NAME).select('global_position')
-      partition_attrs = events.map { |event| [event.stream&.context, event.stream&.stream_name, event.type] }.uniq
-      partition_attrs.each do |context, stream_name, event_type|
-        sql_builder.where_or('context = ? and stream_name = ? and type = ?', context, stream_name, event_type)
-      end
-      sql_builder.where('global_position = ANY(?::bigint[])', events.map(&:global_position))
-      raw_events = PgEventstore.connection.with do |conn|
-        conn.exec_params(*sql_builder.to_exec_params)
-      end.to_a
-      raw_events.map { |attrs| attrs['global_position'] }
-    end
-
-    # @param stream [PgEventstore::Stream]
-    # @return [Integer, nil]
-    def stream_revision(stream)
-      sql_builder = SQLBuilder.new.from(Event::PRIMARY_TABLE_NAME).select('stream_revision')
-      sql_builder.where('context = ? and stream_name = ? and stream_id = ?', *stream.to_a)
-      sql_builder.order('stream_revision DESC').limit(1)
-      connection.with do |conn|
-        conn.exec_params(*sql_builder.to_exec_params)
-      end.to_a.dig(0, 'stream_revision')
-    end
-
-    # @see PgEventstore::Client#read for more info
-    # @param stream [PgEventstore::Stream]
-    # @param options [Hash]
-    # @return [Array<PgEventstore::Event>]
-    def stream_events(stream, options)
-      exec_params = QueryBuilders::EventsFiltering.events_filtering(stream, options).to_exec_params
-      raw_events = connection.with do |conn|
-        conn.exec_params(*exec_params)
-      end.to_a
-      raw_events = links_resolver.resolve(raw_events) if options[:resolve_link_tos]
-      deserializer.deserialize_many(raw_events)
     end
 
     # @param stream [PgEventstore::Stream]
     # @param events [Array<PgEventstore::Event>]
-    # @return [Array<PgEventstore::Event>]
+    # @return [Array<Hash>]
     def insert(stream, events)
       sql_rows_for_insert, values = prepared_statements(stream, events)
       columns = %w[id data metadata stream_revision link_global_position link_partition_id type context stream_name stream_id]
@@ -92,30 +26,11 @@ module PgEventstore
           RETURNING *
       SQL
 
-      raw_events = connection.with do |conn|
+      result = connection.with do |conn|
         conn.exec_params(sql, values)
       end
-      raw_events.map do |raw_event|
-        deserializer.without_middlewares.deserialize(raw_event)
-      end
-    end
-
-    # @param stream [PgEventstore::Stream]
-    # @param options_by_event_type [Array<Hash>] a set of options per an event type
-    # @param options [Hash]
-    # @option options [Boolean] :resolve_link_tos
-    # @return [Array<PgEventstore::Event>]
-    def grouped_events(stream, options_by_event_type, **options)
-      builders = options_by_event_type.map do |filter|
-        QueryBuilders::EventsFiltering.events_filtering(stream, filter)
-      end
-      final_builder = SQLBuilder.union_builders(builders.map(&:to_sql_builder))
-
-      raw_events = connection.with do |conn|
-        conn.exec_params(*final_builder.to_exec_params)
-      end.to_a
-      raw_events = links_resolver.resolve(raw_events) if options[:resolve_link_tos]
-      deserializer.deserialize_many(raw_events)
+      # "returning" statement has no guarantees about the order in which rows are returned. Thus, sort them explicitly
+      result.sort_by { _1['stream_revision'] }
     end
 
     private
@@ -127,7 +42,6 @@ module PgEventstore
       positional_counter = 1
       values = []
       sql_rows_for_insert = events.map do |event|
-        event = serializer.serialize(event)
         attributes = event.options_hash.slice(
           :id, :data, :metadata, :stream_revision, :link_global_position, :link_partition_id, :type
         )
@@ -150,7 +64,7 @@ module PgEventstore
 
     # @return [PgEventstore::LinksResolver]
     def links_resolver
-      LinksResolver.new(connection)
+      LinksResolver.new(connection, QueryStrategy::Foreground.new(connection))
     end
   end
 end

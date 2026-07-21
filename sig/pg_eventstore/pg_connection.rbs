@@ -1,8 +1,16 @@
 module PgEventstore
   class PgConnection < PG::Connection
+    PLACEHOLDER_RE: untyped
+
     def exec: (untyped sql) -> untyped
 
     def exec_params: (untyped sql, untyped params) -> untyped
+
+    def compile: (String sql, Array[untyped] params) -> String
+
+    def prepared_value: (untyped value) -> String
+
+    private
 
     def log: (untyped sql, untyped params) -> untyped
 

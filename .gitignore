@@ -13,4 +13,7 @@ log/
 Gemfile.lock
 db/postgresql/
 *.dump
+*.so
 *.tar.gz
+.codex/
+.agents/

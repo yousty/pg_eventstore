@@ -1,0 +1,7 @@
+module PgEventstore
+  module Extensions
+    module OptionsDefaults
+      def ==: (untyped) -> bool
+    end
+  end
+end

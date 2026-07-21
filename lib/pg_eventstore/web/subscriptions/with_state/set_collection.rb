@@ -26,7 +26,7 @@ module PgEventstore
 
           # @return [PgEventstore::SubscriptionQueries]
           def subscription_queries
-            SubscriptionQueries.new(connection)
+            SubscriptionQueries.new(connection, QueryStrategy::Foreground.new(connection))
           end
         end
       end

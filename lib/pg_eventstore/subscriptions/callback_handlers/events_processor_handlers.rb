@@ -8,11 +8,11 @@ module PgEventstore
     class << self
       # @param consumer [PgEventstore::EventsProcessorConsumer]
       # @param callbacks [PgEventstore::Callbacks]
-      # @param raw_events [Array<Hash>]
-      # @param raw_events_cond [MonitorMixin::ConditionVariable]
+      # @param events_repository [PgEventstore::Chunks::Repository]
+      # @param repository_cond [MonitorMixin::ConditionVariable]
       # @return [void]
-      def consume_events(consumer, callbacks, raw_events, raw_events_cond)
-        consumer.call(callbacks, raw_events, raw_events_cond)
+      def consume_events(consumer, callbacks, events_repository, repository_cond)
+        consumer.call(callbacks, events_repository, repository_cond)
       end
 
       # @param callbacks [PgEventstore::Callbacks]

@@ -54,6 +54,7 @@ Example:
 
 ```ruby
 require 'securerandom'
+
 class SomethingHappened < PgEventstore::Event
 end
 
@@ -61,7 +62,7 @@ event1 = SomethingHappened.new
 event2 = SomethingHappened.new
 
 events_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeStream', stream_id: '1')
-projection_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeProjection', stream_id: SecureRandom.uuid)
+projection_stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'MyAwesomeProjection', stream_id: SecureRandom.uuid_v7)
 
 event1, event2 = PgEventstore.client.append_to_stream(events_stream, [event1, event2])
 

@@ -3,9 +3,42 @@
 module PgEventstore
   module QueryBuilders
     # @!visibility private
-    class BasicFiltering
-      def initialize
-        @sql_builder = SQLBuilder.new.select("#{to_table_name}.*").from(to_table_name)
+    module BasicFiltering
+      # @return [Hash<String => String, Symbol => String>]
+      SQL_DIRECTIONS = {
+        'asc' => 'ASC',
+        'desc' => 'DESC',
+        :asc => 'ASC',
+        :desc => 'DESC',
+        'Forwards' => 'ASC',
+        'Backwards' => 'DESC',
+      }.tap do |directions|
+        directions.default = 'ASC'
+      end.freeze
+
+      module ClassMethods
+        # @param order [String, Symbol, nil]
+        # @return [Symbol]
+        def reverse_order(order)
+          SQL_DIRECTIONS[order] == 'ASC' ? :desc : :asc
+        end
+
+        # @param order [String, Symbol, nil]
+        # @return [Boolean]
+        def ascending?(order)
+          SQL_DIRECTIONS[order] == 'ASC'
+        end
+
+        # @param order [String, Symbol, nil]
+        # @return [Boolean]
+        def descending?(order)
+          SQL_DIRECTIONS[order] == 'DESC'
+        end
+      end
+
+      def self.included(base)
+        super
+        base.extend(ClassMethods)
       end
 
       # @return [String]
@@ -15,12 +48,12 @@ module PgEventstore
 
       # @return [PgEventstore::SQLBuilder]
       def to_sql_builder
-        @sql_builder
+        raise NotImplementedError
       end
 
       # @return [Array]
       def to_exec_params
-        @sql_builder.to_exec_params
+        to_sql_builder.to_exec_params
       end
     end
   end

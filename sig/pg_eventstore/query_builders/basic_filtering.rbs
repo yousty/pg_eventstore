@@ -1,9 +1,16 @@
 module PgEventstore
   module QueryBuilders
-    class BasicFiltering
-      @sql_builder: SQLBuilder
+    module BasicFiltering
+      module ClassMethods
 
-      def initialize: -> void
+        def ascending?: ((String | Symbol)? order) -> bool
+
+        def descending?: ((String | Symbol)? order) -> bool
+
+        def reverse_order: ((String | Symbol)? order) -> Symbol
+      end
+
+      SQL_DIRECTIONS: Hash[String | Symbol, String]
 
       def to_exec_params: -> [String, Array[untyped]]
 

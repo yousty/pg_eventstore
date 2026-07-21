@@ -1,5 +1,14 @@
 module PgEventstore
   class Config < BasicConfig
+    module NodeRole
+      PRIMARY: Symbol
+      REPLICA: Symbol
+      STANDALONE: Symbol
+
+      def self.maintainable: -> Array[Symbol]
+
+      def self.writable: -> Array[Symbol]
+    end
 
     def connection_options: () -> ::Hash[untyped, untyped]
 
@@ -45,5 +54,11 @@ module PgEventstore
     attr_accessor subscriptions_set_retries_interval: Integer
 
     attr_accessor subscription_graceful_shutdown_timeout: Integer | Float
+
+    attr_accessor events_subscription_position_update_interval: Integer | Float
+
+    attr_accessor eventstore_role: Symbol
+
+    attr_accessor max_events_to_replicate: Integer
   end
 end

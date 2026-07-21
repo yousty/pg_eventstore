@@ -1,73 +1,41 @@
 module PgEventstore
   class SubscriptionQueries
-    # _@param_ `connection`
-    def initialize: (PgEventstore::Connection connection) -> void
+    @query_strategy: QueryStrategy
 
-    # _@param_ `attrs`
+    attr_accessor connection: Connection
+
+    def initialize: (Connection connection, QueryStrategy query_strategy) -> void
+
+    def create_or_replace_table_function: (Integer id, Hash[untyped, untyped] options, Integer locked_by) -> void
+
     def find_or_create_by: (::Hash[untyped, untyped] attrs) -> ::Hash[Symbol, untyped]
 
-    # _@param_ `attrs`
     def find_by: (::Hash[untyped, untyped] attrs) -> ::Hash[Symbol, untyped]?
 
-    # _@param_ `attrs`
     def find_all: (::Hash[untyped, untyped] attrs) -> ::Array[::Hash[Symbol, untyped]]
 
     def set_collection: (?String? state) -> ::Array[String]
 
-    # _@param_ `id`
     def find!: (Integer id) -> ::Hash[Symbol, untyped]
 
-    # _@param_ `attrs`
     def create: (::Hash[untyped, untyped] attrs) -> ::Hash[Symbol, untyped]
 
-    # _@param_ `id`
-    #
-    # _@param_ `attrs`
-    #
-    # _@param_ `locked_by`
     def update: (Integer id, attrs: ::Hash[Symbol, untyped], locked_by: Integer?) -> ::Hash[Symbol, untyped]
 
-    # _@param_ `subscriptions_set_id` — SubscriptionsSet#id
-    #
-    # _@param_ `subscriptions_ids` — Array of Subscription#id
     def ping_all: (Integer subscriptions_set_id, ::Array[Integer] subscriptions_ids) -> ::Hash[Integer, Time]
 
-    # _@param_ `query_options` — runner_id/query options association
-    #
-    # _@return_ — runner_id/events association
-    def subscriptions_events: (::Hash[Integer, ::Hash[untyped, untyped]] query_options) -> ::Hash[Integer, Array[::Hash[untyped, untyped]]]
-
-    # _@param_ `id` — subscription's id
-    #
-    # _@param_ `lock_id` — id of the subscriptions set which reserves the subscription
-    #
-    # _@param_ `force` — whether to lock the subscription despite on #locked_by value
-    #
-    # _@return_ — lock id
     def lock!: (Integer id, Integer lock_id, ?force: bool) -> Integer
 
-    # _@param_ `id`
     def delete: (Integer id) -> void
 
-    # _@param_ `id` — runner id
-    #
-    # _@param_ `options` — query options
-    def query_builder: (Integer id, ::Hash[untyped, untyped] options) -> SQLBuilder
-
-    # _@param_ `builders`
     def union_builders: (::Array[SQLBuilder] builders) -> SQLBuilder
 
     def transaction_queries: () -> TransactionQueries
 
     def links_resolver: () -> LinksResolver
 
-    # _@param_ `hash`
     def deserialize: (::Hash[String, untyped] hash) -> ::Hash[Symbol, untyped]
 
-    # _@param_ `attrs`
     def find_by_attrs_builder: (::Hash[untyped, untyped] attrs) -> SQLBuilder
-
-    # Returns the value of attribute connection.
-    attr_accessor connection: Connection
   end
 end

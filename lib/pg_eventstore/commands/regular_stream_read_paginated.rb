@@ -5,14 +5,14 @@ module PgEventstore
     # @!visibility private
     class RegularStreamReadPaginated < AbstractCommand
       # @see PgEventstore::Commands::Read for docs
-      def call(stream, options: {})
+      def call(stream, deserializer:, options: {})
         Enumerator.new do |yielder|
           next_revision = nil
           loop do
             options = options.merge(from_revision: next_revision) if next_revision
-            events = read_cmd.call(stream, options:)
+            events = read_cmd.call(stream, deserializer:, options:)
             yielder << events if events.any?
-            if end_reached?(events, options[:max_count] || QueryBuilders::EventsFiltering::DEFAULT_LIMIT)
+            if end_reached?(events, options[:max_count] || QueryBuilders::EventsGlobalIndexFiltering::DEFAULT_LIMIT)
               raise StopIteration
             end
 
@@ -43,7 +43,7 @@ module PgEventstore
       # @param direction [String, Symbol, nil]
       # @return [Boolean]
       def forwards?(direction)
-        QueryBuilders::EventsFiltering::SQL_DIRECTIONS[direction] == QueryBuilders::EventsFiltering::SQL_DIRECTIONS[:asc]
+        QueryBuilders::BasicFiltering::SQL_DIRECTIONS[direction] == QueryBuilders::BasicFiltering::SQL_DIRECTIONS[:asc]
       end
 
       # @return [PgEventstore::Commands::Read]

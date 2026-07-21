@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby-version: ['3.2', '3.3', '3.4', '4.0']
+        ruby-version: ['3.3', '3.4', '4.0']
 
     steps:
       - uses: actions/checkout@v5
@@ -22,12 +22,6 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
-      - name: Build PostgreSQL image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: pg_eventstore/postgres_with_pg_cron
       - name: Run PostgreSQL
         if: ${{ !steps.skip-workflow.outputs.skip }}
         run: docker compose up --detach
@@ -39,5 +33,6 @@ jobs:
         if: ${{ !steps.skip-workflow.outputs.skip }}
         run: |
           sleep 10
+          bundle exec rake compile
           ./bin/setup_db
           TEST_COVERAGE=true ./bin/rspec

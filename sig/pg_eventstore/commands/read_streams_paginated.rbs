@@ -1,0 +1,16 @@
+module PgEventstore
+  module Commands
+    class ReadStreamsPaginated < AbstractCommand
+      # Skip this type check because rbs duplicates calls to Enumerator#next
+      %a{rbs:test:skip} def call: (?options: ::Hash[untyped, untyped]) -> ::Enumerator[Array[Stream], void]
+
+      private
+
+      def calc_next_position: (Array[StreamGlobalIndex] indexes, String? | Symbol? direction) -> Integer
+
+      def end_reached?: (Array[Stream] streams, Integer max_count) -> bool
+
+      def forwards?: (String? | Symbol? direction) -> bool
+    end
+  end
+end

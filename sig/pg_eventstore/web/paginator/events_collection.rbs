@@ -1,14 +1,14 @@
 module PgEventstore
   module Web
     module Paginator
-      class EventsCollection < PgEventstore::Web::Paginator::BaseCollection
+      class EventsCollection < BaseCollection
         SQL_DIRECTIONS: ::Hash[String, Symbol]
         PER_PAGE: ::Hash[String, Integer]
         MAX_NUMBER_TO_COUNT: Integer
 
-        @stream: PgEventstore::Stream
+        @_collection: Array[Event]
 
-        def collection: () -> ::Array[PgEventstore::Event]
+        def collection: () -> ::Array[Event]
 
         def next_page_starting_id: () -> Integer?
 
@@ -16,17 +16,17 @@ module PgEventstore
 
         def total_count: () -> Integer
 
-        # _@param_ `event`
-        def event_global_position: (PgEventstore::Event? event) -> Integer?
+        def event_global_position: (Event? event) -> Integer?
 
-        # _@param_ `sql_builder`
-        def estimate_count: (PgEventstore::SQLBuilder sql_builder) -> Integer
+        def estimate_count: (SQLBuilder sql_builder) -> Integer
 
-        # _@param_ `sql_builder`
-        def regular_count: (PgEventstore::SQLBuilder sql_builder) -> Integer
+        def regular_count: (SQLBuilder sql_builder) -> Integer
 
-        # _@param_ `sql_builder`
-        def global_position: (PgEventstore::SQLBuilder sql_builder) -> Integer?
+        def global_position: (SQLBuilder sql_builder) -> Integer?
+
+        private
+
+        def _collection: -> Array[Event]
       end
     end
   end
