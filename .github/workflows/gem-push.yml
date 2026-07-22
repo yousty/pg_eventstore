@@ -38,6 +38,10 @@ jobs:
     needs: build
     name: Publish to RubyGems
     runs-on: ubuntu-latest
+    # Gated by the "Release" environment (required reviewers) so publishing needs
+    # explicit approval — commit access alone is not enough. The name must match the
+    # GitHub environment AND the rubygems.org trusted-publisher "Environment" field.
+    environment: Release
     # OIDC trusted publishing: id-token to mint the short-lived RubyGems token,
     # contents:read for the checkout. No long-lived API key secret required.
     permissions:
