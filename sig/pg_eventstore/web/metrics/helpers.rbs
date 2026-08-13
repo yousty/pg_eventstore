@@ -1,0 +1,9 @@
+module PgEventstore
+  module Web
+    module Metrics
+      module Helpers
+        def metrics_response: (Array[untyped] collector_classes) -> String
+      end
+    end
+  end
+end

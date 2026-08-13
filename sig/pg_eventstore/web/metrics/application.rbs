@@ -1,0 +1,17 @@
+module PgEventstore
+  module Web
+    module Metrics
+      class Application
+        DEFAULT_METRICS_CONFIG: Symbol
+
+        AUTH_TOKEN_ENV_VAR: String
+
+        def metrics_connection: -> PgEventstore::Connection
+
+        def config_name: -> Symbol
+
+        def authorize!: -> void
+      end
+    end
+  end
+end

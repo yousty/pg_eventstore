@@ -41,3 +41,9 @@ run PgEventstore::Web::Application
 ```
 
 Now you can use any web server to run it.
+
+## Prometheus metrics
+
+The web application also serves subscriptions observability data in the Prometheus text format under `/metrics`
+(plus per-family sub-paths), protected by whatever protects the rest of the UI. For an actual scrape target there is
+a separate rack application with built-in bearer token authentication. See [Metrics](metrics.md).

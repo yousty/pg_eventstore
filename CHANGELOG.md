@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+- New feature: Prometheus metrics endpoints for subscriptions observability (lag, health, throughput). Served under
+  `/metrics` by the Admin UI application, and by the standalone `PgEventstore::Web::Metrics::Application` with
+  built-in bearer token authentication for scrape targets. Read more [here](docs/metrics.md)
+
 ## [3.0.0]
 
 - New feature: pg_eventstore replication

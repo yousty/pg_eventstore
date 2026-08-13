@@ -1,0 +1,19 @@
+module PgEventstore
+  module Web
+    module Metrics
+      class MetricFamily
+        attr_reader name: String
+
+        attr_reader type: String
+
+        attr_reader help: String
+
+        attr_reader samples: Array[Hash[Symbol, untyped]]
+
+        def initialize: (name: String, type: String, help: String) -> void
+
+        def add_sample: (labels: Hash[Symbol, untyped], value: Integer | Float) -> void
+      end
+    end
+  end
+end

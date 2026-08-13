@@ -1,0 +1,17 @@
+module PgEventstore
+  module Web
+    module Metrics
+      module Collectors
+        class SubscriptionsLatency < Base
+          def call: -> Array[PgEventstore::Web::Metrics::MetricFamily]
+
+          private
+
+          def subscription_rows: -> Array[Hash[String, untyped]]
+
+          def store_families: -> Array[PgEventstore::Web::Metrics::MetricFamily]
+        end
+      end
+    end
+  end
+end
