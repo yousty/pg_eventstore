@@ -17,3 +17,6 @@ db/postgresql/
 *.tar.gz
 .codex/
 .agents/
+
+# Internal agent tooling / work tracking
+.development/
