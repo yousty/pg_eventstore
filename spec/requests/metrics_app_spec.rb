@@ -60,7 +60,7 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
   end
 
   describe 'authentication' do
-    subject { get '/' }
+    subject { get '/subscriptions' }
 
     context 'when auth token env variable is not set' do
       it 'serves metrics without authentication' do
@@ -96,12 +96,12 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
     end
   end
 
-  describe 'GET /' do
-    subject { get '/' }
+  describe 'GET /subscriptions' do
+    subject { get '/subscriptions' }
 
     include_context 'with subscriptions and events'
 
-    it 'serves all metric families with the prometheus content type' do
+    it 'serves every family of the domain with the prometheus content type' do
       subject
       aggregate_failures do
         expect(last_response).to be_ok
@@ -110,6 +110,17 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
         expect(last_response.body).to include('pg_eventstore_subscription_heartbeat_age_seconds')
         expect(last_response.body).to include('pg_eventstore_subscription_processed_events_total')
       end
+    end
+  end
+
+  describe 'GET /' do
+    subject { get '/' }
+
+    # No route serves every domain at once. "/metrics" is the Prometheus convention, so a route there would invite
+    # scrape jobs by reflex - and each such scrape would pay for every query, defeating the per-path split.
+    it 'is not served' do
+      subject
+      expect(last_response.status).to eq(404)
     end
   end
 
@@ -265,7 +276,7 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
   end
 
   describe 'config resolution' do
-    subject { get '/' }
+    subject { get '/subscriptions' }
 
     before do
       # Make default config broken by setting available connections to zero to demonstrate the difference between it

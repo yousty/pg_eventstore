@@ -3,10 +3,10 @@
 RSpec.describe PgEventstore::Web::Application, type: :request do
   let(:app) { described_class }
 
-  describe 'GET /metrics' do
-    subject { get '/metrics' }
+  describe 'GET /metrics/subscriptions' do
+    subject { get '/metrics/subscriptions' }
 
-    it 'serves all metric families with the prometheus content type' do
+    it 'serves every family of the domain with the prometheus content type' do
       subject
       aggregate_failures do
         expect(last_response).to be_ok

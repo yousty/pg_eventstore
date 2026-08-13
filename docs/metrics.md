@@ -7,17 +7,24 @@ graph and alert on.
 
 ## Endpoints
 
-Metrics are split per path so that each scrape runs only the query it needs, and cheap families can be polled at a
-different interval than the expensive one:
+Metrics are grouped into domains, and split per path within a domain so that each scrape runs only the query it
+needs and cheap families can be polled at a different interval than the expensive one. Paths below are relative to
+wherever the app is mounted - mounted at `/pg_eventstore/metrics` the first one is
+`/pg_eventstore/metrics/subscriptions/latency`.
 
 | Path | Metrics | Query cost |
 |---|---|---|
 | `/subscriptions/latency` | lag of every alive subscription + store positions | the only one touching the `events` table (one index hop per subscription) |
 | `/subscriptions/health` | state, lock, heartbeat age, restarts, last error age | single read of the `subscriptions` table |
 | `/subscriptions/throughput` | processed events counter, handler capacity | single read of the `subscriptions` table |
-| `/` | all of the above | all of the above |
+| `/subscriptions` | all of the above | all of the above |
 
-The root path is meant for humans and ad-hoc checks; point your scrape jobs at the split paths.
+The domain path (`/subscriptions`) is meant for humans and ad-hoc checks; point your scrape jobs at the split paths.
+
+**There is deliberately no route serving every domain at once.** `/metrics` is the Prometheus convention, so a route
+there would invite pointing scrape jobs at it by reflex - and every such scrape would pay for every query, including
+the expensive ones, which is exactly what the per-path split exists to avoid. Keeping aggregates per domain also
+keeps each response bounded as more domains are added.
 
 Every query is guarded by a `statement_timeout` of 5 seconds - a stuck scrape fails visibly instead of piling up on
 the database.
@@ -34,10 +41,10 @@ subscription that died *without releasing its lock* is deliberately still report
 
 ### Alongside the Admin UI
 
-The Admin UI application serves the same metrics under `/metrics`:
+The Admin UI application serves the same metrics under `/metrics/*`:
 
 ```
-/metrics
+/metrics/subscriptions
 /metrics/subscriptions/latency
 /metrics/subscriptions/health
 /metrics/subscriptions/throughput
@@ -109,8 +116,8 @@ scrape_configs:
       - targets: ['your-app-host:port']
 ```
 
-The split into three jobs is intentional - do not collapse them into a single `/` scrape unless you are fine with
-every scrape paying the latency query.
+The split into three jobs is intentional - do not collapse them into a single `/subscriptions` scrape unless you
+are fine with every scrape paying the latency query.
 
 ## Metrics reference
 

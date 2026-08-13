@@ -2,9 +2,13 @@ module PgEventstore
   module Web
     module Metrics
       module Routes
-        COLLECTORS_BY_PATH: Hash[String, Array[untyped]]
+        COLLECTORS_BY_DOMAIN: Hash[String, Hash[String, Array[untyped]]]
 
         def self.define: (untyped app, ?prefix: String) -> void
+
+        private
+
+        def self.define_domain_routes: (untyped app, String prefix, String domain, Hash[String, Array[untyped]] collectors_by_path) -> void
       end
     end
   end
