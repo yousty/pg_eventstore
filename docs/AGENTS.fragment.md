@@ -664,6 +664,11 @@ Commands can retry, so both methods must be deterministic and retry-safe, and an
 Append, read, and subscription calls use all configured middleware by default; passing `middlewares: [:name]` selects
 only those entries. Links are the exception and default to none.
 
+`#deserialize` also runs on the event(s) returned by `append_to_stream`/`link_to`. A middleware whose `#deserialize` is
+expensive and irrelevant on the write path can opt out of that by implementing `deserialize_on_append?` and returning
+`false`; reads and subscriptions keep calling it. Do not opt out middlewares whose attributes are read from the
+returned event, such as `PgEventstore::Middleware::EventTracing`.
+
 To opt into causation/correlation tracing, register `PgEventstore::Middleware::EventTracing` and pass a persisted event
 as `caused_by:` when creating the next event. The middleware then assigns `causation_id`, propagates or creates
 `correlation_id`, and indexes the identifiers as feature markers.

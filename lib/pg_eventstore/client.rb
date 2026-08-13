@@ -31,10 +31,13 @@ module PgEventstore
     # @param middlewares [Array<Symbol>, nil] provide a list of middleware names to override a config's middlewares
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
+    # @see PgEventstore::Middleware#deserialize_on_append? to opt a middleware out of deserializing the returned
+    #   event(s)
     def append_to_stream(stream, events_or_event, options: {}, middlewares: nil)
       Utils.assert_node_role!(config, Config::NodeRole.writable)
       middlewares = self.middlewares(middlewares)
       event_modifier = Commands::EventModifiers::PrepareRegularEvent.new(EventSerializer.new(middlewares))
+      deserializer = event_deserializer(append_deserialize_middlewares(middlewares))
       queries = Queries.new(
         partitions: partition_queries,
         events: event_queries,
@@ -46,7 +49,7 @@ module PgEventstore
         index_filtering: index_filtering_queries
       )
       result = Commands::Append.new(queries).call(
-        stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
+        stream, *events_or_event, event_modifier:, deserializer:, options:
       )
       events_or_event.is_a?(Array) ? result : result.first
     end
@@ -224,12 +227,15 @@ module PgEventstore
     #   middlewares will be applied to the "link" event
     # @return [PgEventstore::Event, Array<PgEventstore::Event>] persisted event(s)
     # @raise [PgEventstore::WrongExpectedRevisionError]
+    # @see PgEventstore::Middleware#deserialize_on_append? to opt a middleware out of deserializing the returned
+    #   event(s)
     def link_to(stream, events_or_event, options: {}, middlewares: [])
       Utils.assert_node_role!(config, Config::NodeRole.writable)
       middlewares = self.middlewares(middlewares)
       event_modifier = Commands::EventModifiers::PrepareLinkEvent.new(
         partition_queries, EventSerializer.new(middlewares)
       )
+      deserializer = event_deserializer(append_deserialize_middlewares(middlewares))
       queries = Queries.new(
         partitions: partition_queries,
         events: event_queries,
@@ -241,7 +247,7 @@ module PgEventstore
         index_filtering: index_filtering_queries
       )
       result = Commands::LinkTo.new(queries).call(
-        stream, *events_or_event, event_modifier:, deserializer: event_deserializer(middlewares), options:
+        stream, *events_or_event, event_modifier:, deserializer:, options:
       )
       events_or_event.is_a?(Array) ? result : result.first
     end
@@ -261,6 +267,17 @@ module PgEventstore
       return config.middlewares.values unless middlewares
 
       config.middlewares.slice(*middlewares).values
+    end
+
+    # Filters out middlewares which opted out of deserializing the events echoed back by #append_to_stream/#link_to.
+    # Middlewares are not required to include PgEventstore::Middleware, so a middleware which does not implement
+    # #deserialize_on_append? is treated as if it returned +true+.
+    # @param middlewares [Array<PgEventstore::Middleware>]
+    # @return [Array<PgEventstore::Middleware>]
+    def append_deserialize_middlewares(middlewares)
+      middlewares.select do |middleware|
+        !middleware.respond_to?(:deserialize_on_append?) || middleware.deserialize_on_append?
+      end
     end
 
     # @return [PgEventstore::Connection]

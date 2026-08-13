@@ -21,6 +21,29 @@ RSpec.describe PgEventstore::Client do
     end
   end
 
+  let(:read_only_middleware) do
+    Class.new(middleware) do
+      def deserialize_on_append?
+        false
+      end
+    end
+  end
+  let(:plain_object_middleware) do
+    Class.new do
+      def initialize(value)
+        @value = value
+      end
+
+      def serialize(event)
+        event.metadata[@value] = "secret-#{@value}"
+      end
+
+      def deserialize(event)
+        event.metadata[@value] = @value
+      end
+    end
+  end
+
   before do
     PgEventstore.configure do |config|
       config.middlewares = { foo: middleware.new('foo'), bar: middleware.new('bar'), baz: middleware.new('baz') }
@@ -145,6 +168,48 @@ RSpec.describe PgEventstore::Client do
             expect(subject.markers).to eq(['bar'])
             expect(subject.metadata).to include(PgEventstore::Event::MARKERS_METADATA_KEY => ['bar'])
           end
+        end
+      end
+    end
+
+    describe 'deserialization of the appended event' do
+      subject { instance.append_to_stream(stream, event) }
+
+      let(:stream) { PgEventstore::Stream.new(context: 'ctx', stream_name: 'foo', stream_id: 'bar') }
+      let(:event) { PgEventstore::Event.new(type: 'foo') }
+      let(:persisted_metadata) { instance.read(stream, middlewares: []).last.metadata }
+
+      context 'when a middleware opts out of the deserialization on append' do
+        before do
+          PgEventstore.configure do |config|
+            config.middlewares = { foo: middleware.new('foo'), bar: read_only_middleware.new('bar') }
+          end
+        end
+
+        it 'skips #deserialize of that middleware' do
+          expect(subject.metadata).to eq('foo' => 'foo', 'bar' => 'secret-bar')
+        end
+        it 'still applies #serialize of that middleware' do
+          subject
+          expect(persisted_metadata).to eq('foo' => 'secret-foo', 'bar' => 'secret-bar')
+        end
+        it 'still applies #deserialize of that middleware when reading the event' do
+          subject
+          expect(instance.read(stream).last.metadata).to eq('foo' => 'foo', 'bar' => 'bar')
+        end
+      end
+
+      # :rbs_skip - sig/pg_eventstore/config.rbs types middlewares as PgEventstore::Middleware, while a middleware is
+      # only required to respond to #serialize/#deserialize. See docs/writing_middleware.md.
+      context 'when a middleware does not implement #deserialize_on_append?', :rbs_skip do
+        before do
+          PgEventstore.configure do |config|
+            config.middlewares = { foo: plain_object_middleware.new('foo') }
+          end
+        end
+
+        it 'applies #deserialize of that middleware' do
+          expect(subject.metadata).to eq('foo' => 'foo')
         end
       end
     end
@@ -478,6 +543,18 @@ RSpec.describe PgEventstore::Client do
 
         it 'applies provided middlewares' do
           expect(subject.metadata).to eq('bar' => 'bar')
+        end
+
+        context 'when the provided middleware opts out of the deserialization on append' do
+          before do
+            PgEventstore.configure do |config|
+              config.middlewares = { bar: read_only_middleware.new('bar') }
+            end
+          end
+
+          it 'skips #deserialize of that middleware' do
+            expect(subject.metadata).to eq('bar' => 'secret-bar')
+          end
         end
       end
     end

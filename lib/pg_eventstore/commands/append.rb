@@ -59,8 +59,8 @@ module PgEventstore
             end
           end
         end
-        # It is important to return events in the form they were persisted into the database instead passing them
-        # through the configured middlewares
+        # Persisted events are deserialized before they are returned. Middlewares which must not run on the append
+        # path are already filtered out of the given deserializer.
         deserializer.deserialize_many(raw_events)
       end
 

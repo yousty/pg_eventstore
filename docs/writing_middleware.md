@@ -3,7 +3,9 @@
 Middlewares are objects that modify events before they are appended to a stream, or right after they are read from a
 stream. Middleware object must respond to `#serialize` and `#deserialize` methods. The `#serialize` method is called
 each time an event is going to be appended. The `#deserialize` method is called each time an event is read from a
-stream. There are two ways how you can define a middleware:
+stream, as well as on the event(s) returned by `#append_to_stream`/`#link_to` - see
+[Skipping deserialization of appended events](#skipping-deserialization-of-appended-events) if you want to opt out of
+the latter. There are two ways how you can define a middleware:
 
 - by defining your class and including `PgEventstore::Middleware` module in it. This way you can override only one of
   its methods, or both of them. Example:
@@ -132,6 +134,42 @@ stream = PgEventstore::Stream.new(context: 'ctx', stream_name: 'some-stream', st
 PgEventstore.client.read(stream).last
 # => #<DescriptionChangedEvent:0x0 @data={"description"=>"some description"}, ...>
 ```
+
+## Skipping deserialization of appended events
+
+`#append_to_stream` and `#link_to` return the persisted event(s), and those events are passed through the `#deserialize`
+method of each applied middleware. This is what allows middlewares like
+[event tracing](event_tracing.md) to restore their attributes on the returned event. If your `#deserialize`
+implementation is expensive - for example, it performs an HTTP request - and its result is not needed on the write path,
+you can opt the middleware out of it by implementing `#deserialize_on_append?`:
+
+```ruby
+class Encryptor
+  include PgEventstore::Middleware
+
+  # Events, returned by #append_to_stream/#link_to, won't be decrypted
+  def deserialize_on_append?
+    false
+  end
+
+  def serialize(event)
+    event.data.merge!(encrypt(event.data))
+  end
+
+  def deserialize(event)
+    event.data.merge!(decrypt(event.data))
+  end
+end
+```
+
+Remarks:
+
+- it only affects the events which are echoed back by `#append_to_stream` and `#link_to`. `#read`, `#read_paginated`,
+  `#read_grouped` and subscriptions are not affected, and neither is `#serialize`;
+- it is defined per middleware, and not per direction. Middlewares which must run on the appended event - like
+  `PgEventstore::Middleware::EventTracing` - simply keep the default;
+- middlewares which don't implement it - e.g. plain objects which only respond to `#serialize` and `#deserialize` -
+  behave as if it returned `true`. Including `PgEventstore::Middleware` gives you that default for free.
 
 ## Remarks
 

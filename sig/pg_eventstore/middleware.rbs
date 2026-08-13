@@ -5,5 +5,7 @@ module PgEventstore
 
     # _@param_ `event`
     def deserialize: (PgEventstore::Event event) -> void
+
+    def deserialize_on_append?: () -> bool
   end
 end

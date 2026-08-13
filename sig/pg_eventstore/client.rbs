@@ -58,6 +58,8 @@ module PgEventstore
 
     def middlewares: (?::Array[::Symbol]? middlewares) -> ::Array[Middleware]
 
+    def append_deserialize_middlewares: (::Array[Middleware] middlewares) -> ::Array[Middleware]
+
     def connection: () -> Connection
   end
 end

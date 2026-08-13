@@ -1,5 +1,33 @@
 ## [Unreleased]
 
+- New feature: per-middleware opt-out of the deserialization of appended events. A middleware can now implement
+  `#deserialize_on_append?` and return `false` from it to skip its `#deserialize` on the event(s) echoed back by
+  `#append_to_stream`/`#link_to`. Reading events and subscriptions are not affected. This replaces the
+  "define a second middleware class without `#deserialize` and select it per call" workaround which was suggested in
+  the v3.0.0 notes below. Example:
+
+```ruby
+class MyMiddleware
+  include PgEventstore::Middleware
+
+  # Skip the (expensive) #deserialize of the events returned by #append_to_stream/#link_to
+  def deserialize_on_append?
+    false
+  end
+
+  def serialize(event)
+    # do something with event before persisting it
+  end
+
+  def deserialize(event)
+    # do something with event after reading it from db
+  end
+end
+```
+
+  The default is `true`, thus there is no behavior change for existing middlewares. Middlewares which don't include
+  `PgEventstore::Middleware` and don't implement `#deserialize_on_append?` are treated as if it returned `true`.
+
 ## [3.0.0]
 
 - New feature: pg_eventstore replication
