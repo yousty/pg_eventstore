@@ -127,6 +127,13 @@ commit-ordered sequence assigned via the `event_subscription_positions` table - 
 The global position sequence contains gaps and runs ahead, so comparing a checkpoint against it wildly over-reports
 lag. This metric compares against the frontier of assigned subscription positions, which is the correct reference.
 
+Note on filters: subscription filters are accounted for by the store itself. The feeder advances a subscription's
+checkpoint through ranges containing no matching events (via checkpoint chunks), so a caught-up subscription reports
+`0` regardless of how narrow its filter is - unrelated traffic never shows up as its lag. For a *lagging*
+subscription the value counts all events in the not-yet-checked range, matching or not: it is a measure of staleness
+("how far behind the store is this subscription"), not of how many events its handler will actually execute while
+catching up - that number is usually much smaller, since non-matching ranges are skipped in SQL.
+
 `pg_eventstore_subscription_lag_seconds` (gauge)
 
 Age of the oldest event the subscription has not processed yet. `0` when fully caught up. Because

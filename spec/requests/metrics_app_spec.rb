@@ -148,6 +148,49 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
       subject
       expect(last_response.body).not_to include('Orphan')
     end
+
+    context 'with a live subscription whose filter matches none of the appended events' do
+      subject { get '/subscriptions/latency' }
+
+      let(:manager) { PgEventstore.subscriptions_manager(subscription_set: 'FilteredSet') }
+      let(:handler) { proc { |event| } }
+      let(:stream) { PgEventstore::Stream.new(context: 'MetricsCtx', stream_name: 'Foo', stream_id: '2') }
+      let(:events) { Array.new(3) { PgEventstore::Event.new(type: 'SomethingHappened', data: {}) } }
+
+      # @return [Integer, nil]
+      def current_position
+        PgEventstore.connection.with do |conn|
+          conn.exec_params(
+            'select current_position from subscriptions where set = $1 and name = $2', %w[FilteredSet FilteredOut]
+          ).first&.dig('current_position')
+        end
+      end
+
+      before do
+        PgEventstore.configure { |config| config.subscription_pull_interval = 0.2 }
+        manager.subscribe('FilteredOut', handler:, options: { filter: { event_types: ['UnrelatedType'] } })
+        manager.start
+        PgEventstore.client.append_to_stream(stream, events)
+        dv.wait_until(timeout: 5) { current_position.to_i >= frontier_position }
+      end
+
+      after do
+        manager.stop
+      end
+
+      # The subscription never processes a single event - the feeder advances its checkpoint through the
+      # non-matching range via checkpoint chunks. The metric must not present the store's unrelated traffic as
+      # this subscription's lag.
+      it 'reports zero lag once the checkpoint caught up' do
+        subject
+        aggregate_failures do
+          expect(metric_value('pg_eventstore_subscription_lag_events', 'set="FilteredSet",name="FilteredOut"')).
+            to eq('0')
+          expect(metric_value('pg_eventstore_subscription_lag_seconds', 'set="FilteredSet",name="FilteredOut"')).
+            to eq('0.0')
+        end
+      end
+    end
   end
 
   describe 'GET /subscriptions/health' do
