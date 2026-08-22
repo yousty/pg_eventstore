@@ -51,31 +51,6 @@ end.to_a
 #    {"id"=>3, "context"=>"SomeCtx", "stream_name"=>"SomeStream", "event_type"=>"SomethingChanged", "table_name"=>"event_types_aeadd5"}]
 ```
 
-### PostgreSQL settings
-
-The more partitions you have, the more locks are required for operations that affect multiple partitions. It mainly
-concerns the case when you involve many different event types when using `Client#multiple`. It may lead to the next
-error:
-
-```
-ERROR:  out of shared memory (PG::OutOfMemory)
-HINT:  You might need to increase max_pred_locks_per_transaction.
-```
-
-PostgreSQL suggests to increase the `max_pred_locks_per_transaction`(the description of it
-is [here](https://www.postgresql.org/docs/current/runtime-config-locks.html)). The default value is `64`. In case you
-have several thousands of partitions - you may want to set it to `128` or even to `256`.
-
-You may also face similar error which refers to `max_locks_per_transaction` setting:
-
-```
-PG::OutOfMemory: ERROR:  out of shared memory (PG::OutOfMemory)
-HINT:  You might need to increase "max_locks_per_transaction".
-```
-
-The reason of it to appear is the same - too many objects(partition tables, indexes, etc) are involved in a single
-transaction.
-
 ## Appending events and multiple commands
 
 You may want to get familiar with [Appending events](appending_events.md) and [multiple commands](multiple_commands.md)

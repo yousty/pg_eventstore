@@ -12,6 +12,8 @@ Implements database and API to store and read events in event sourced systems.
 
 ### Migrating to v3
 
+v3 introduces several new tables to support the functional. Make sure you have enough disk space on your PostgreSQL host.
+
 If you are migrating from v2 - please don't forget to delete cron jobs and `pg_cron` extension after migration to v3.
 You can remove cron jobs as follows:
 

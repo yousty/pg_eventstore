@@ -154,3 +154,31 @@ split your replica subscriptions from your application subscriptions and adjust 
 Please note, that this is an **upper limit** of events to replicate at a time. Subscriptions have their own measurement
 of how many events a subscription handler processes per second. Thus, the number of events actually processed by a
 subscription at a time may differ.
+
+## PostgreSQL settings
+
+If you are running PostgreSQL from docker - make sure you adjust `shm_size` docker setting from its default (`/dev/shm`
+size; responsible for the shared memory size; default is `64M`) so that parallel PostgreSQL workers have resources.
+
+The more partitions you have, the more locks are required for operations that affect multiple partitions. It mainly
+concerns the case when you involve many different event types when using `Client#multiple`. It may lead to the next
+error:
+
+```
+ERROR:  out of shared memory (PG::OutOfMemory)
+HINT:  You might need to increase max_pred_locks_per_transaction.
+```
+
+PostgreSQL suggests to increase the `max_pred_locks_per_transaction`(the description of it
+is [here](https://www.postgresql.org/docs/current/runtime-config-locks.html)). The default value is `64`. In case you
+have several thousands of partitions - you may want to set it to `128` or even to `256`.
+
+You may also face similar error which refers to `max_locks_per_transaction` setting:
+
+```
+PG::OutOfMemory: ERROR:  out of shared memory (PG::OutOfMemory)
+HINT:  You might need to increase "max_locks_per_transaction".
+```
+
+The reason of it to appear is the same - too many objects(partition tables, indexes, etc) are involved in a single
+transaction.
