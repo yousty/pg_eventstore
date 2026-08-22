@@ -158,7 +158,8 @@ subscription at a time may differ.
 ## PostgreSQL settings
 
 If you are running PostgreSQL from docker - make sure you adjust `shm_size` docker setting from its default (`/dev/shm`
-size; responsible for the shared memory size; default is `64M`) so that parallel PostgreSQL workers have resources.
+size; responsible for the shared memory size; default is `64M`) so that parallel PostgreSQL workers have enough
+resources.
 
 The more partitions you have, the more locks are required for operations that affect multiple partitions. It mainly
 concerns the case when you involve many different event types when using `Client#multiple`. It may lead to the next
