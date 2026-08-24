@@ -34,12 +34,10 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
     let(:orphan_subscription) { SubscriptionsHelper.create(set: 'BarSet', name: 'Orphan') }
     let(:stream) { PgEventstore::Stream.new(context: 'MetricsCtx', stream_name: 'Foo', stream_id: '1') }
     let(:events_number) { 3 }
-    # Memoized in the before hook - before and after the events are appended respectively
-    let(:position_before_events) { frontier_position }
+    # Memoized in the before hook, after the events are appended
     let(:frontier) { frontier_position }
 
     before do
-      position_before_events
       events = Array.new(events_number) { PgEventstore::Event.new(type: 'SomethingHappened', data: {}) }
       PgEventstore.client.append_to_stream(stream, events)
       PgEventstore::EventSubscriptionPositionQueries.new(PgEventstore.connection).assign_subscription_position
@@ -50,9 +48,13 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
         { locked_by: subscriptions_set.id, current_position: frontier, state: 'running',
           total_processed_events: 120, average_event_processing_time: 0.025 }
       )
+      # Checkpoint pinned relative to the frontier rather than to a pre-append reading: assign_subscription_position
+      # also assigns positions to any event another example left unassigned, so the number of positions created here
+      # is not necessarily events_number. The events just appended own the highest positions, so the oldest
+      # unprocessed one is one of them and its age stays small.
       update_subscription(
         lagging_subscription.id,
-        { locked_by: subscriptions_set.id, current_position: position_before_events, state: 'running' }
+        { locked_by: subscriptions_set.id, current_position: frontier - events_number, state: 'running' }
       )
       update_subscription(orphan_subscription.id, { updated_at: Time.now.utc - 7200 })
     end
@@ -77,8 +79,18 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
       end
     end
 
-    it 'reports several requested sets' do
+    # The form Prometheus emits for `params: {set: [FooSet, BarSet]}`. Sinatra's own params would keep only the last
+    # value of a repeated key, hence the query string is parsed directly.
+    it 'reports several sets given as a repeated param' do
       get '/subscriptions/health?set=FooSet&set=BarSet'
+      aggregate_failures do
+        expect(last_response.body).to include('set="FooSet"')
+        expect(last_response.body).to include('set="BarSet"')
+      end
+    end
+
+    it 'reports several sets given as a comma separated list' do
+      get '/subscriptions/health', set: 'FooSet,BarSet'
       aggregate_failures do
         expect(last_response.body).to include('set="FooSet"')
         expect(last_response.body).to include('set="BarSet"')

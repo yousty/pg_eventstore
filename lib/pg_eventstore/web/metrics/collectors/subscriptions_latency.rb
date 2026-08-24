@@ -50,8 +50,9 @@ module PgEventstore
             labels = subscription_labels(row)
             lag_events.add_sample(labels:, value: row['lag_events'])
             position = row['event_global_position']
-            # Caught up - nothing is left to process, so there is no unprocessed event to age.
-            return lag_seconds.add_sample(labels:, value: 0) if position.nil?
+            # Caught up - nothing is left to process, so there is no unprocessed event to age. Deliberately a float:
+            # the metric is seconds everywhere else, and a gauge that renders as "0" here and "12.5" there is a wart.
+            return lag_seconds.add_sample(labels:, value: 0.0) if position.nil?
 
             created_at = created_at_by_position[position]
             # An unprocessed position whose event no longer exists (the event or its stream was deleted). Reporting 0

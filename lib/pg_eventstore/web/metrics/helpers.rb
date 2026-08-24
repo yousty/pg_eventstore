@@ -14,10 +14,15 @@ module PgEventstore
           Formatter.new.call(families)
         end
 
-        # Subscription sets a scrape asks for, given as one or more "set" query params. Empty means every set.
+        # Subscription sets a scrape asks for. Accepts a repeated param ("?set=A&set=B" - what Prometheus emits for
+        # `params: {set: [A, B]}`) or a comma separated list ("?set=A,B"). Empty means every set.
+        #
+        # The query string is parsed directly because Sinatra's `params` keeps only the last value of a repeated key
+        # unless it is written as "set[]", which Prometheus does not do.
         # @return [Array<String>]
         def requested_sets
-          Array(params[:set]).map(&:to_s).reject(&:empty?)
+          query = Rack::Utils.parse_query(request.query_string)
+          Array(query['set'] || query['set[]']).flat_map { _1.to_s.split(',') }.map(&:strip).reject(&:empty?)
         end
       end
     end

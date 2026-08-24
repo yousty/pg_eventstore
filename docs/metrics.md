@@ -105,7 +105,10 @@ subscriptions you care about:
 
 ```
 GET /pg_eventstore/metrics/subscriptions/health?set=MyAppSet&set=MyOtherSet
+GET /pg_eventstore/metrics/subscriptions/health?set=MyAppSet,MyOtherSet
 ```
+
+Both forms work - a repeated param (what Prometheus produces from `params: {set: [...]}`) and a comma separated list.
 
 Without a `set` param every subscription in the database is reported. Since a subscription set is usually named after
 the application that owns it, scoping the scrape by set is the straightforward way to keep one application's
