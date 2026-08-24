@@ -33,7 +33,7 @@ gem 'timecop', '~> 0.9.9', require: false
 
 gem 'nokogiri', '~> 1.16', '>= 1.16.6', require: false
 
-gem 'rbs', '~> 3.5', '>= 3.5.2', require: false
+gem 'rbs', '>= 4.2', require: false
 
 gem 'rubocop', '~> 1.79', '>= 1.79.1', require: false
 

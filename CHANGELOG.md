@@ -1,8 +1,11 @@
 ## [Unreleased]
 
-- New feature: Prometheus metrics endpoints for subscriptions observability (lag, health, throughput). Served under
-  `/metrics` by the Admin UI application, and by the standalone `PgEventstore::Web::Metrics::Application` with
-  built-in bearer token authentication for scrape targets. Read more [here](docs/metrics.md)
+- New feature: Prometheus metrics endpoints for subscriptions observability (lag, health, throughput), served by the
+  standalone `PgEventstore::Web::Metrics::Application` rack application. Read more [here](docs/metrics.md)
+
+## [3.0.1]
+
+- Fix EventTracing bug: Respect user-supplied Event#correlation_id value when caused_by#correlation_id is absent
 
 ## [3.0.0]
 

@@ -31,7 +31,7 @@ module PgEventstore
           event.feature_markers.push(self.class.causation_marker(event.causation_id))
         end
 
-        event.correlation_id = event.caused_by&.correlation_id&.dup || SecureRandom.uuid_v7
+        event.correlation_id = event.caused_by&.correlation_id&.dup || event.correlation_id || SecureRandom.uuid_v7
         event.metadata[CORRELATION_ID_KEY] = event.correlation_id
         event.feature_markers.push(self.class.correlation_marker(event.correlation_id))
       end

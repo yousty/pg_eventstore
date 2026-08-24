@@ -35,19 +35,37 @@ RSpec.describe PgEventstore::Middleware::EventTracing do
         ).first
         expect(subject).to eq(searched_by_correlation_id)
       end
+
+      context 'when custom correlation_id is provided' do
+        let(:correlation_id) { SecureRandom.uuid_v7 }
+
+        before do
+          event.correlation_id = correlation_id
+        end
+
+        it 'keeps custom correlation_id' do
+          aggregate_failures do
+            expect(subject.correlation_id).to eq(correlation_id)
+            expect(subject.metadata[described_class::CORRELATION_ID_KEY]).to eq(correlation_id)
+          end
+        end
+      end
     end
 
 
     context 'when caused_by is provided' do
       let(:caused_by) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+      let(:custom_correlation_id) { SecureRandom.uuid_v7 }
 
       before do
+        event.correlation_id = custom_correlation_id
         event.caused_by = caused_by
       end
 
       it 'assigns correlation_id' do
         aggregate_failures do
           expect(subject.correlation_id).to be_a(String)
+          expect(subject.correlation_id).not_to eq(custom_correlation_id)
           expect(subject.metadata[described_class::CORRELATION_ID_KEY]).to eq(subject.correlation_id)
           expect(subject.correlation_id).to eq(caused_by.correlation_id)
         end
