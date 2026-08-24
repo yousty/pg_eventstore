@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [3.0.1]
+
+- Fix EventTracing bug: Respect user-supplied Event#correlation_id value when caused_by#correlation_id is absent
+
 ## [3.0.0]
 
 - New feature: pg_eventstore replication
