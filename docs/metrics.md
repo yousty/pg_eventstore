@@ -229,6 +229,11 @@ subscription running close to its capacity has no headroom left, and a traffic s
 
 ## Database permissions
 
-For a dedicated read-only role, the endpoints need `SELECT` on `subscriptions`, `events`,
-`event_subscription_positions` and both sequences (`events_global_position_seq`,
-`event_subscription_positions_subscription_position_seq`).
+The endpoints only ever read. If you scrape with a dedicated role, it needs `SELECT` on the pg_eventstore schema -
+granting it per table is not worth the maintenance, since which tables are read is an implementation detail that can
+change between versions:
+
+```sql
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO metrics_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO metrics_reader;
+```
