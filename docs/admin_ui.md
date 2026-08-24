@@ -44,7 +44,5 @@ Now you can use any web server to run it.
 
 ## Prometheus metrics
 
-The web application also serves subscriptions observability data in the Prometheus text format under
-`/metrics/subscriptions` (plus per-family sub-paths), protected by whatever protects the rest of the UI. For an
-actual scrape target there is a separate rack application with built-in bearer token authentication. See
-[Metrics](metrics.md).
+Subscriptions observability data in the Prometheus text format is served by a separate rack application, mounted
+independently of the Admin UI. See [Metrics](metrics.md).

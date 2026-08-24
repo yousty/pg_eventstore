@@ -28,7 +28,7 @@ module PgEventstore
       set :erb, layout: :'layouts/application'
       set :host_authorization, { allow_if: ->(_env) { true } }
 
-      helpers(Paginator::Helpers, Subscriptions::Helpers, Metrics::Helpers) do
+      helpers(Paginator::Helpers, Subscriptions::Helpers) do
         # @return [Array<Hash>, nil]
         # rubocop:disable Style/HashConversion
         def streams_filter
@@ -93,11 +93,6 @@ module PgEventstore
         # @return [PgEventstore::Connection]
         def connection
           PgEventstore.connection(current_config)
-        end
-
-        # @return [PgEventstore::Connection]
-        def metrics_connection
-          connection
         end
 
         # @param collection [PgEventstore::Web::Paginator::BaseCollection]
@@ -439,10 +434,6 @@ module PgEventstore
 
         redirect(redirect_back_url(fallback_url: '/'))
       end
-
-      # Prometheus metrics, served under the same mount as the UI so whatever protects the UI protects them.
-      # For an unauthenticated-by-session scrape target, mount {Metrics::Application} separately instead.
-      Metrics::Routes.define(self, prefix: '/metrics')
     end
   end
 end

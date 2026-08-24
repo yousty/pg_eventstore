@@ -26,7 +26,6 @@ require_relative 'web/metrics/collectors/subscriptions_latency'
 require_relative 'web/metrics/collectors/subscriptions_health'
 require_relative 'web/metrics/collectors/subscriptions_throughput'
 require_relative 'web/metrics/helpers'
-require_relative 'web/metrics/routes'
 require_relative 'web/metrics/application'
 require_relative 'web/application'
 

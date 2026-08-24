@@ -14,8 +14,7 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
   def frontier_position
     PgEventstore.connection.with do |conn|
       conn.exec(<<~SQL).first['position']
-        select case when is_called then last_value else 0 end as position
-        from event_subscription_positions_subscription_position_seq
+        select coalesce(max(subscription_position), 0) as position from event_subscription_positions
       SQL
     end
   end
@@ -59,40 +58,44 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
     end
   end
 
-  describe 'authentication' do
-    subject { get '/subscriptions' }
+  describe 'set scoping' do
+    include_context 'with subscriptions and events'
 
-    context 'when auth token env variable is not set' do
-      it 'serves metrics without authentication' do
-        subject
-        expect(last_response).to be_ok
+    it 'reports every set when no set param is given' do
+      get '/subscriptions/health'
+      aggregate_failures do
+        expect(last_response.body).to include('set="FooSet"')
+        expect(last_response.body).to include('set="BarSet"')
       end
     end
 
-    context 'when auth token env variable is set' do
-      around do |example|
-        ENV[described_class::AUTH_TOKEN_ENV_VAR] = 'super-secret'
-        example.run
-      ensure
-        ENV.delete(described_class::AUTH_TOKEN_ENV_VAR)
+    it 'reports only the requested set' do
+      get '/subscriptions/health', set: 'FooSet'
+      aggregate_failures do
+        expect(last_response.body).to include('set="FooSet"')
+        expect(last_response.body).not_to include('set="BarSet"')
       end
+    end
 
-      it 'responds with 401 without the token' do
-        subject
-        expect(last_response.status).to eq(401)
+    it 'reports several requested sets' do
+      get '/subscriptions/health?set=FooSet&set=BarSet'
+      aggregate_failures do
+        expect(last_response.body).to include('set="FooSet"')
+        expect(last_response.body).to include('set="BarSet"')
       end
+    end
 
-      it 'responds with 401 for a wrong token' do
-        header 'Authorization', 'Bearer wrong'
-        subject
-        expect(last_response.status).to eq(401)
-      end
-
-      it 'serves metrics for the correct token' do
-        header 'Authorization', 'Bearer super-secret'
-        subject
+    it 'reports nothing for a set which does not exist' do
+      get '/subscriptions/health', set: 'NoSuchSet'
+      aggregate_failures do
         expect(last_response).to be_ok
+        expect(last_response.body).not_to include('set="FooSet"')
       end
+    end
+
+    it 'ignores an empty set param' do
+      get '/subscriptions/health', set: ''
+      expect(last_response.body).to include('set="FooSet"')
     end
   end
 
@@ -155,9 +158,12 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
       end
     end
 
-    it 'does not report subscriptions which are not locked and were not updated recently' do
+    # Rows of the subscriptions table are never removed, so an unscoped scrape reports handlers that no longer run.
+    # Filtering them out by recency was dropped: subscriptions.updated_at has no index and can not get one without
+    # losing HOT updates, so the condition forced a sequential scan. Scoping is done by set instead.
+    it 'reports subscriptions which are neither locked nor recently updated' do
       subject
-      expect(last_response.body).not_to include('Orphan')
+      expect(last_response.body).to include('Orphan')
     end
 
     context 'with a live subscription whose filter matches none of the appended events' do
@@ -276,38 +282,36 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
   end
 
   describe 'config resolution' do
-    subject { get '/subscriptions' }
-
     before do
-      # Make default config broken by setting available connections to zero to demonstrate the difference between it
-      # and the metrics config
+      # Make the default config broken by leaving it no connections, so it is unmistakable which config was used.
       PgEventstore.configure do |config|
         config.connection_pool_size = 0
         config.connection_pool_timeout = 1
       end
-    end
-
-    context 'when metrics config is defined' do
-      before do
-        PgEventstore.configure(name: described_class::DEFAULT_METRICS_CONFIG) do |config|
-          config.pg_uri = PgEventstore.config.pg_uri
-          config.connection_pool_size = 2
-        end
-      end
-
-      it 'uses it' do
-        subject
-        expect(last_response).to be_ok
+      PgEventstore.configure(name: :working) do |config|
+        config.pg_uri = PgEventstore.config.pg_uri
+        config.connection_pool_size = 2
       end
     end
 
-    context 'when metrics config is not defined' do
-      it 'uses default config' do
-        subject
-        aggregate_failures do
-          expect(last_response.status).to eq(500)
-          expect(last_response.body).to include('ConnectionPool::TimeoutError')
-        end
+    it 'queries the config named by the config param' do
+      get '/subscriptions', config: 'working'
+      expect(last_response).to be_ok
+    end
+
+    it 'falls back to the default config when the requested one does not exist' do
+      get '/subscriptions', config: 'no-such-config'
+      aggregate_failures do
+        expect(last_response.status).to eq(500)
+        expect(last_response.body).to include('ConnectionPool::TimeoutError')
+      end
+    end
+
+    it 'uses the default config when no config param is given' do
+      get '/subscriptions'
+      aggregate_failures do
+        expect(last_response.status).to eq(500)
+        expect(last_response.body).to include('ConnectionPool::TimeoutError')
       end
     end
   end

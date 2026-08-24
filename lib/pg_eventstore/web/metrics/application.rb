@@ -3,19 +3,19 @@
 module PgEventstore
   module Web
     module Metrics
-      # Standalone rack application serving Prometheus metrics. Unlike the admin UI - which is expected to sit
-      # behind a human-oriented authentication - this app is meant to be scraped by Prometheus, so it supports
-      # static bearer token authentication out of the box: set the PG_EVENTSTORE_METRICS_TOKEN environment
-      # variable and every request must carry an "Authorization: Bearer <token>" header. When the variable is not
-      # set, the app is open - protecting it is then your responsibility.
+      # Standalone rack application serving subscription metrics in the Prometheus text exposition format.
       #
-      # Uses the :metrics config when defined, with a fallback to the default config.
+      # It ships without any authentication - how the endpoint is protected is up to the application mounting it,
+      # the same way it is for the Admin UI (see docs/admin_ui.md#authorization).
+      #
+      # Which pg_eventstore database is queried is chosen per request with the "config" query param, so one mounted
+      # app can serve metrics of every configured store:
+      #
+      #   GET /subscriptions/latency?config=db1
+      #
+      # An unknown or absent config falls back to the default one. Add "set" params to report only some subscription
+      # sets - repeat the param for several: "?set=SetA&set=SetB".
       class Application < Sinatra::Base
-        # @return [Symbol]
-        DEFAULT_METRICS_CONFIG = :metrics
-        # @return [String]
-        AUTH_TOKEN_ENV_VAR = 'PG_EVENTSTORE_METRICS_TOKEN'
-
         set :environment, -> { (ENV['RACK_ENV'] || ENV['RAILS_ENV'] || ENV['APP_ENV'])&.to_sym || :development }
         set :logging, false
         set :sessions, false
@@ -29,27 +29,31 @@ module PgEventstore
 
           # @return [Symbol]
           def config_name
-            return DEFAULT_METRICS_CONFIG if PgEventstore.available_configs.include?(DEFAULT_METRICS_CONFIG)
+            requested = params[:config]&.to_s&.to_sym
+            return requested if requested && PgEventstore.available_configs.include?(requested)
 
             PgEventstore::DEFAULT_CONFIG
           end
-
-          # @return [void]
-          def authorize!
-            token = ENV[AUTH_TOKEN_ENV_VAR].to_s
-            return if token.empty?
-
-            provided = request.env['HTTP_AUTHORIZATION'].to_s.delete_prefix('Bearer ')
-            halt 401, { 'content-type' => 'text/plain' }, 'Unauthorized' unless
-              Rack::Utils.secure_compare(token, provided)
-          end
         end
 
-        before do
-          authorize!
+        get('/subscriptions') do
+          metrics_response(
+            [Collectors::SubscriptionsLatency, Collectors::SubscriptionsHealth, Collectors::SubscriptionsThroughput]
+          )
         end
 
-        Routes.define(self)
+        # The only route querying event positions - one index range scan per subscription.
+        get('/subscriptions/latency') do
+          metrics_response([Collectors::SubscriptionsLatency])
+        end
+
+        get('/subscriptions/health') do
+          metrics_response([Collectors::SubscriptionsHealth])
+        end
+
+        get('/subscriptions/throughput') do
+          metrics_response([Collectors::SubscriptionsThroughput])
+        end
       end
     end
   end

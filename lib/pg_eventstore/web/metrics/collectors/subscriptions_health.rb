@@ -4,7 +4,7 @@ module PgEventstore
   module Web
     module Metrics
       module Collectors
-        # Liveness and error state of each alive subscription.
+        # Liveness and error state of each reported subscription.
         #
         # The state column alone can not be trusted: a subscription killed without a graceful shutdown keeps
         # state "running" and its lock forever. heartbeat_age_seconds is the discriminator - a subscription is
@@ -55,7 +55,7 @@ module PgEventstore
 
           # @return [Array<Hash>]
           def subscription_rows
-            rows(<<~SQL)
+            rows(<<~SQL, sets_params)
               select s.set, s.name, s.state,
                      (s.locked_by is not null)::int as locked,
                      extract(epoch from ((now() at time zone 'utc') - s.updated_at))::float8 as heartbeat_age_seconds,
@@ -64,7 +64,7 @@ module PgEventstore
                           then extract(epoch from ((now() at time zone 'utc') - s.last_error_occurred_at))::float8
                      end as last_error_age_seconds
               from subscriptions s
-              where #{liveness_condition}
+              where #{sets_condition}
               order by s.set, s.name
             SQL
           end

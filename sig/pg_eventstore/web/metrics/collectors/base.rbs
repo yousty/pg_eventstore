@@ -5,19 +5,25 @@ module PgEventstore
         class Base
           STATEMENT_TIMEOUT: Integer
 
-          LIVENESS_WINDOW: Integer
-
           @connection: PgEventstore::Connection
 
-          def initialize: (PgEventstore::Connection connection) -> void
+          @sets: Array[String]
+
+          attr_reader connection: PgEventstore::Connection
+
+          attr_reader sets: Array[String]
+
+          def initialize: (PgEventstore::Connection connection, ?sets: Array[String]) -> void
 
           def call: -> Array[PgEventstore::Web::Metrics::MetricFamily]
 
           private
 
-          def rows: (String sql) -> Array[Hash[String, untyped]]
+          def rows: (String sql, ?Array[untyped] params) -> Array[Hash[String, untyped]]
 
-          def liveness_condition: -> String
+          def sets_condition: -> String
+
+          def sets_params: -> Array[String]
 
           def subscription_labels: (Hash[String, untyped] row) -> Hash[Symbol, untyped]
         end

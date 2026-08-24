@@ -4,7 +4,7 @@ module PgEventstore
   module Web
     module Metrics
       module Collectors
-        # Processing volume and speed of each alive subscription.
+        # Processing volume and speed of each reported subscription.
         #
         # Two deliberately different numbers:
         # - processed_events_total is a counter; rate() over it gives the actual current throughput and correctly
@@ -39,14 +39,14 @@ module PgEventstore
 
           # @return [Array<Hash>]
           def subscription_rows
-            rows(<<~SQL)
+            rows(<<~SQL, sets_params)
               select s.set, s.name,
                      s.total_processed_events,
                      case when s.average_event_processing_time > 0
                           then (1.0 / s.average_event_processing_time)::float8
                      end as capacity_eps
               from subscriptions s
-              where #{liveness_condition}
+              where #{sets_condition}
               order by s.set, s.name
             SQL
           end

@@ -14,7 +14,7 @@ wherever the app is mounted - mounted at `/pg_eventstore/metrics` the first one 
 
 | Path | Metrics | Query cost |
 |---|---|---|
-| `/subscriptions/latency` | lag of every alive subscription + store positions | the only one touching the `events` table (one index hop per subscription) |
+| `/subscriptions/latency` | lag of every reported subscription + store positions | the only one looking at event positions (one index range scan per subscription) |
 | `/subscriptions/health` | state, lock, heartbeat age, restarts, last error age | single read of the `subscriptions` table |
 | `/subscriptions/throughput` | processed events counter, handler capacity | single read of the `subscriptions` table |
 | `/subscriptions` | all of the above | all of the above |
@@ -31,29 +31,15 @@ the database.
 
 ### Which subscriptions are reported
 
-The `subscriptions` table is a registry which never garbage-collects: every handler that was ever registered keeps its
-row, including handlers that were later renamed or removed. To keep dashboards meaningful, the endpoints only report
-subscriptions which are either locked by a subscriptions set or were updated within the last 10 minutes. A
-subscription that died *without releasing its lock* is deliberately still reported - detecting it is what
-`pg_eventstore_subscription_heartbeat_age_seconds` is for.
+Every subscription in the queried database, unless you narrow it down with `set` params (see
+[Reporting only some subscription sets](#reporting-only-some-subscription-sets)). Note that the subscriptions registry
+never removes rows, so handlers that were renamed or removed keep theirs and are reported too.
+
+A subscription that died *without releasing its lock* is reported like any other - detecting it is what
+`pg_eventstore_subscription_heartbeat_age_seconds` is for, and it is the most useful thing to alert on: neither the
+state column nor the lock can be trusted to notice a process that went away.
 
 ## Mounting
-
-### Alongside the Admin UI
-
-The Admin UI application serves the same metrics under `/metrics/*`:
-
-```
-/metrics/subscriptions
-/metrics/subscriptions/latency
-/metrics/subscriptions/health
-/metrics/subscriptions/throughput
-```
-
-Whatever authentication protects your Admin UI protects these paths too. This is convenient for eyeballing raw values
-in the browser, but usually inconvenient for Prometheus - scrapers can not pass human-oriented authentication.
-
-### Standalone application
 
 `PgEventstore::Web::Metrics::Application` is a separate rack application designed to be a scrape target. In your
 `config/routes.rb`:
@@ -72,19 +58,58 @@ require 'pg_eventstore/web'
 run PgEventstore::Web::Metrics::Application
 ```
 
-It supports static bearer token authentication out of the box: set the `PG_EVENTSTORE_METRICS_TOKEN` environment
-variable and every request must carry an `Authorization: Bearer <token>` header. When the variable is not set the
-application is open, and protecting it is your responsibility.
+### Authorization
 
-It uses the `:metrics` config when defined, with a fallback to the default config. This lets you point metrics at a
-replica or restrict its pool size:
+The application ships without authentication - how you protect the endpoint is up to you, exactly as it is for the
+[Admin UI](admin_ui.md#authorization). Wrap it in whatever middleware your setup already uses, for example:
 
 ```ruby
-PgEventstore.configure(name: :metrics) do |config|
-  config.pg_uri = ENV['PG_EVENTSTORE_URI']
+metrics_app = Rack::Builder.new do
+  use Rack::Auth::Basic do |_username, password|
+    Rack::Utils.secure_compare(ENV.fetch('PG_EVENTSTORE_METRICS_PASSWORD'), password)
+  end
+  run PgEventstore::Web::Metrics::Application
+end
+
+mount metrics_app, at: '/pg_eventstore/metrics'
+```
+
+### Choosing the database
+
+Which store is queried is decided per request by the `config` query param, so one mounted application can serve the
+metrics of every configured database:
+
+```ruby
+PgEventstore.configure(name: :db1) do |config|
+  config.pg_uri = ENV['DB1_URI']
+  config.connection_pool_size = 1
+end
+
+PgEventstore.configure(name: :db2) do |config|
+  config.pg_uri = ENV['DB2_URI']
   config.connection_pool_size = 1
 end
 ```
+
+```
+GET /pg_eventstore/metrics/subscriptions/latency?config=db1
+```
+
+An unknown or missing `config` falls back to the default configuration.
+
+### Reporting only some subscription sets
+
+Rows of the subscriptions registry are never removed, so a database that has been running for a while also holds
+handlers that were renamed, removed, or never ran against it. Pass one or more `set` params to report only the
+subscriptions you care about:
+
+```
+GET /pg_eventstore/metrics/subscriptions/health?set=MyAppSet&set=MyOtherSet
+```
+
+Without a `set` param every subscription in the database is reported. Since a subscription set is usually named after
+the application that owns it, scoping the scrape by set is the straightforward way to keep one application's
+dashboards to its own subscriptions.
 
 ## Prometheus scrape config
 
@@ -93,28 +118,31 @@ scrape_configs:
   - job_name: 'pg-eventstore-subscriptions-latency'
     metrics_path: /pg_eventstore/metrics/subscriptions/latency
     scrape_interval: 30s
-    authorization:
-      type: Bearer
-      credentials: <token>
+    params:
+      config: ['db1']
+      set: ['MyAppSet']
     static_configs:
       - targets: ['your-app-host:port']
   - job_name: 'pg-eventstore-subscriptions-health'
     metrics_path: /pg_eventstore/metrics/subscriptions/health
     scrape_interval: 30s
-    authorization:
-      type: Bearer
-      credentials: <token>
+    params:
+      config: ['db1']
+      set: ['MyAppSet']
     static_configs:
       - targets: ['your-app-host:port']
   - job_name: 'pg-eventstore-subscriptions-throughput'
     metrics_path: /pg_eventstore/metrics/subscriptions/throughput
     scrape_interval: 60s
-    authorization:
-      type: Bearer
-      credentials: <token>
+    params:
+      config: ['db1']
+      set: ['MyAppSet']
     static_configs:
       - targets: ['your-app-host:port']
 ```
+
+Add whatever credentials your chosen protection needs to these jobs - Prometheus supports `basic_auth`,
+`authorization` and `tls_config` per job.
 
 The split into three jobs is intentional - do not collapse them into a single `/subscriptions` scrape unless you
 are fine with every scrape paying the latency query.
@@ -127,37 +155,32 @@ All per-subscription metrics carry `set` and `name` labels.
 
 `pg_eventstore_subscription_lag_events` (gauge)
 
-Number of events between the subscription's checkpoint and the subscription positions frontier.
+How many events the subscription still has to catch up on before it reaches the edge of the `"all"` stream and starts
+processing newly appended events.
 
-Note on units: `Subscription#current_position` is a checkpoint in *subscription position* units - the dense,
-commit-ordered sequence assigned via the `event_subscription_positions` table - not in `events.global_position` units.
-The global position sequence contains gaps and runs ahead, so comparing a checkpoint against it wildly over-reports
-lag. This metric compares against the frontier of assigned subscription positions, which is the correct reference.
-
-Note on filters: subscription filters are accounted for by the store itself. The feeder advances a subscription's
-checkpoint through ranges containing no matching events (via checkpoint chunks), so a caught-up subscription reports
-`0` regardless of how narrow its filter is - unrelated traffic never shows up as its lag. For a *lagging*
-subscription the value counts all events in the not-yet-checked range, matching or not: it is a measure of staleness
-("how far behind the store is this subscription"), not of how many events its handler will actually execute while
-catching up - that number is usually much smaller, since non-matching ranges are skipped in SQL.
+Note on filters: a subscription's filter is accounted for by the store, so a caught-up subscription reports `0` no
+matter how narrow its filter is - traffic it does not care about never shows up as its lag. For a *lagging*
+subscription the value counts everything in the range it has not reached yet, matching its filter or not. Read it as
+staleness ("how far behind is this subscription"), not as the number of events its handler is about to run: that
+number is usually much smaller, because non-matching ranges are skipped without invoking the handler.
 
 `pg_eventstore_subscription_lag_seconds` (gauge)
 
-Age of the oldest event the subscription has not processed yet. `0` when fully caught up. Because
-`event_subscription_positions` rows are pruned over time, for a subscription that is very far behind this reports the
-age of the oldest *retained* unprocessed event - a lower bound. When `lag_seconds` and `lag_events` disagree, trust
-`lag_events`.
+Age of the oldest event the subscription has not processed yet. `0` when fully caught up.
+
+The metric is absent for a subscription whose oldest unprocessed event no longer exists, which happens when that
+event or its stream was deleted. Reporting `0` there would read as "caught up", so nothing is reported instead and
+`lag_events` remains the source of truth for the backlog.
 
 `pg_eventstore_store_frontier_position` (gauge)
 
-Latest assigned subscription position. The frontier only advances while at least one subscriptions process runs its
-events position worker; when every subscriptions process is down, lag freezes - that situation is caught by the
-heartbeat metric below, not by the lag metrics.
+Latest position assigned to an event, which is what subscription checkpoints are measured against. It only advances
+while at least one subscriptions process is running; when they are all down, lag stops growing - that situation shows
+up in the heartbeat metric below, not in the lag metrics.
 
 `pg_eventstore_store_head_global_position` (gauge)
 
-Latest value of the events global position sequence. Contains gaps; do not compare subscription checkpoints against
-it.
+Global position of the newest event in the store. Contains gaps; do not compare subscription checkpoints against it.
 
 ### Health
 

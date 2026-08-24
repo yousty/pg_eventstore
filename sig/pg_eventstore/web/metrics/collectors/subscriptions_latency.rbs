@@ -7,7 +7,19 @@ module PgEventstore
 
           private
 
+          def add_samples: (
+            Hash[String, untyped] row,
+            Hash[Integer, Time] created_at_by_position,
+            Time now,
+            PgEventstore::Web::Metrics::MetricFamily lag_events,
+            PgEventstore::Web::Metrics::MetricFamily lag_seconds
+          ) -> void
+
           def subscription_rows: -> Array[Hash[String, untyped]]
+
+          def resolve_created_at: (Array[Hash[String, untyped]] subscription_rows) -> Hash[Integer, Time]
+
+          def events_global_index_queries: -> PgEventstore::EventsGlobalIndexQueries
 
           def store_families: -> Array[PgEventstore::Web::Metrics::MetricFamily]
         end
