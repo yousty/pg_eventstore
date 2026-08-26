@@ -325,13 +325,14 @@ RSpec.describe PgEventstore::Chunks::SubscriptionEventsIndexChunk do
     let(:instance) do
       described_class.new(
         indexes,
-        PgEventstore.connection,
+        connection,
         PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection),
         false
       )
     end
     let(:indexes) { [] }
     let(:max_partitions_to_resolve) { 10 }
+    let(:connection) { PgEventstore.connection }
 
     before do
       stub_const("#{described_class}::MAX_PARTITIONS_TO_RESOLVE_PER_CALL", max_partitions_to_resolve)
@@ -388,6 +389,54 @@ RSpec.describe PgEventstore::Chunks::SubscriptionEventsIndexChunk do
       end
       it 'marks instance as resolved' do
         expect { subject }.to change { instance.send(:resolved?) }.to(true)
+      end
+    end
+
+    context 'when error happens' do
+      let(:connection) do
+        PgEventstore.connection(:broken_connection)
+      end
+      let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Bar', stream_id: '1') }
+      let(:events) do
+        PgEventstore.client.append_to_stream(
+          stream,
+          Array.new(max_partitions_to_resolve) { [PgEventstore::Event.new(type: "Foo-#{_1}")] * 2 }.flatten
+        )
+      end
+      let(:indexes) { prepare_subscription_indexes(events) }
+
+      before do
+        PgEventstore.configure(name: :broken_connection) do |config|
+          config.pg_uri = 'postgres://localhost/non-existing-db'
+        end
+      end
+
+      it 'does not resolve indexes' do
+        expect {
+          begin
+            subject
+          rescue PG::ConnectionBad
+          end
+        }.not_to change { instance.instance_variable_get(:@resolved) }.from(false)
+      end
+      it 'does not reduce unresolved indexes' do
+        expect {
+          begin
+            subject
+          rescue PG::ConnectionBad
+          end
+        }.not_to change { instance.instance_variable_get(:@indexes).size }.from(indexes.size)
+      end
+      it 'does not change resolved events list' do
+        expect {
+          begin
+            subject
+          rescue PG::ConnectionBad
+          end
+        }.not_to change { instance.instance_variable_get(:@raw_events).size }.from(0)
+      end
+      it 'raises the error' do
+        expect { subject }.to raise_error(PG::ConnectionBad)
       end
     end
   end
