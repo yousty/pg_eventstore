@@ -30,7 +30,7 @@ module PgEventstore
 
         # @return [String]
         def first_page_link
-          path = build_path(params.slice(*(params.keys - ['starting_id'])))
+          path = url(build_path(params.slice(*(params.keys - ['starting_id']))))
           <<~HTML
             <li class="page-item">
               <a class="page-link" href="#{path}" tabindex="-1">First</a>
@@ -41,17 +41,19 @@ module PgEventstore
         # @param per_page [String] string representation of items per page. E.g. "10", "20", etc.
         # @return [String]
         def per_page_url(per_page)
-          build_path(params.merge(per_page:))
+          url(build_path(params.merge(per_page:)))
         end
 
         # @param order [String] "asc"/"desc"
         # @return [String]
         def sort_url(order)
-          build_path(params.merge(order:))
+          url(build_path(params.merge(order:)))
         end
 
+        # @param should_resolve [Boolean]
+        # @return [String]
         def resolve_link_tos_url(should_resolve)
-          build_path(params.merge(resolve_link_tos: should_resolve))
+          url(build_path(params.merge(resolve_link_tos: should_resolve)))
         end
 
         # @param number [Integer] total number of events by the current filter
@@ -82,27 +84,29 @@ module PgEventstore
 
         # @param stream [PgEventstore::Stream]
         # @return [String]
-        def stream_path(stream)
-          build_path(
-            {
-              filter: {
-                streams: [
-                  {
-                    context: escape_empty_string(stream.context),
-                    stream_name: escape_empty_string(stream.stream_name),
-                    stream_id: escape_empty_string(stream.stream_id),
-                  },
-                ],
+        def stream_url(stream)
+          url(
+            build_path(
+              {
+                filter: {
+                  streams: [
+                    {
+                      context: escape_empty_string(stream.context),
+                      stream_name: escape_empty_string(stream.stream_name),
+                      stream_id: escape_empty_string(stream.stream_id),
+                    },
+                  ],
+                },
               },
-            },
-            base_url: '/'
+              base_path: '/'
+            )
           )
         end
 
         # @param marker [String]
         # @return [String]
-        def event_marker_path(marker)
-          build_path({ filter: { markers: [escape_empty_string(marker)] } }, base_url: '/')
+        def event_marker_url(marker)
+          url(build_path({ filter: { markers: [escape_empty_string(marker)] } }, base_path: '/'))
         end
 
         # @param str [String]
@@ -120,16 +124,16 @@ module PgEventstore
         def build_starting_id_link(starting_id)
           return 'javascript: void(0);' unless starting_id
 
-          build_path(params.merge(starting_id:))
+          url(build_path(params.merge(starting_id:)))
         end
 
         # @param params [Hash, Array]
         # @return [String]
-        def build_path(params, base_url: request.path)
+        def build_path(params, base_path: request.path_info)
           encoded_params = Rack::Utils.build_nested_query(params)
-          return base_url if encoded_params.empty?
+          return base_path if encoded_params.empty?
 
-          "#{base_url}?#{encoded_params}"
+          "#{base_path}?#{encoded_params}"
         end
       end
     end

@@ -4,7 +4,7 @@ module PgEventstore
       module Helpers
         def empty_characters_fallback: (String str)-> String
 
-        def event_marker_path: (String marker) -> String
+        def event_marker_url: (String marker) -> String
 
         def previous_page_link: (BaseCollection collection) -> String
 
@@ -14,17 +14,19 @@ module PgEventstore
 
         def per_page_url: (String per_page) -> String
 
+        def resolve_link_tos_url: (bool should_resolve) -> String
+
         def sort_url: (String order) -> String
 
         def total_count: (Integer number) -> String
 
         def number_with_delimiter: (Integer number, ?delimiter: String) -> String
 
-        def stream_path: (Stream stream) -> String
+        def stream_url: (Stream stream) -> String
 
         def build_starting_id_link: ((String | Integer)? starting_id) -> String
 
-        def build_path: ((::Hash[untyped, untyped] | ::Array[untyped]) params, ?base_url: String) -> String
+        def build_path: ((::Hash[untyped, untyped] | ::Array[untyped]) params, ?base_path: String) -> String
       end
     end
   end
