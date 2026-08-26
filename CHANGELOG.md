@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+- Report a dead subscription even when the error that killed it is not recoverable by any strategy.
+  `failed_subscription_notifier` was invoked from inside `RestoreSubscriptionRunner`, so it only ever
+  saw handler errors (`WrappedException`) whose restarts had been exhausted. An error no strategy
+  recognised marked the runner dead without reaching the notifier and without writing
+  `Subscription#last_error`, so the death was invisible both in the database and in the host
+  application's error tracker
+
 - Fix admin UI links to take into account mount path instead building a path from `'/'`
 
 ## [3.0.1]
