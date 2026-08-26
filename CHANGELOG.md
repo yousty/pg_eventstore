@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fix admin UI links to take into account mount path instead building a path from `'/'`
+
 ## [3.0.1]
 
 - Fix EventTracing bug: Respect user-supplied Event#correlation_id value when caused_by#correlation_id is absent
