@@ -1,12 +1,7 @@
 ## [Unreleased]
 
-- Report a dead subscription even when the error that killed it is not recoverable by any strategy.
-  `failed_subscription_notifier` was invoked from inside `RestoreSubscriptionRunner`, so it only ever
-  saw handler errors (`WrappedException`) whose restarts had been exhausted. An error no strategy
-  recognised marked the runner dead without reaching the notifier and without writing
-  `Subscription#last_error`, so the death was invisible both in the database and in the host
-  application's error tracker
-
+- Properly report internal errors via `failed_subscription_notifier` config option
+- Fix inaccuracy that could lead to mistakenly handle connection error as subscription handler error
 - Fix admin UI links to take into account mount path instead building a path from `'/'`
 
 ## [3.0.1]
@@ -23,8 +18,10 @@
   middleware by default. Previously this wasn't the case - the deserialization phase was skipped. Such behavior was
   creating ambiguity about assumptions when deserialization happens. If you need old behavior - you have to create
   another middleware class which skips deserialization when publishing events and use it instead. Example:
-Let's say you have this middleware configured
+  Let's say you have this middleware configured
+
 ```ruby
+
 class MyMiddleware
   include PgEventstore::Middleware
 
@@ -45,9 +42,9 @@ end
 Now define another middleware that has empty `#deserialize` method
 
 ```ruby
+
 class MyMiddlewareWithoutDeserialize < MyMiddleware
-  def deserialize(event)
-  end
+  def deserialize(event) end
 end
 
 PgEventstore.configure do |config|
@@ -57,6 +54,7 @@ PgEventstore.configure do |config|
   }
 end
 ```
+
 and use only it when publishing events:
 
 ```ruby
@@ -85,12 +83,13 @@ PgEventstore.client(:write).append_to_stream(stream, event)
 - **Breaking change**: `Event#id` uniqueness is no longer guaranteed. It was dropped because there is not much usage of
   it internally. The default value was moved from the database(it was `gen_random_uuid()`) to the application level and
   is `SecureRandom.uuid_v7` now.
-- **Breaking change**: event types, stream attributes, event metadata keys, markers that start from `▒`(`"\u2592"` 
-Unicode character) character are now reserved by pg_eventstore. It is less likely you have any, but if you do - you have
-to adjust your implementation to no longer rely on it.
+- **Breaking change**: event types, stream attributes, event metadata keys, markers that start from `▒`(`"\u2592"`
+  Unicode character) character are now reserved by pg_eventstore. It is less likely you have any, but if you do - you
+  have
+  to adjust your implementation to no longer rely on it.
 - New feature: event markers. You can now mark an event and later use those markers to read events, build a projection
-using subscriptions or validate stream revision scoped to an event type and specific markers when publishing events as 
-a part of Dynamic Consistency Boundaries. Find more in [docs](docs/appending_events.md#event-markers)
+  using subscriptions or validate stream revision scoped to an event type and specific markers when publishing events as
+  a part of Dynamic Consistency Boundaries. Find more in [docs](docs/appending_events.md#event-markers)
 - New config option `config.events_subscription_position_update_interval`. See more
   in [Configuration](docs/configuration.md) docs
 - **Breaking change**: `:from_position` option of `SubscriptionManager#subscribe`, "Current position" column in admin
