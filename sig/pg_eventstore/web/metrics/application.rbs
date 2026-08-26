@@ -2,7 +2,7 @@ module PgEventstore
   module Web
     module Metrics
       class Application
-        def metrics_connection: -> PgEventstore::Connection
+        def metrics_connection: -> Connection
 
         def config_name: -> Symbol
       end

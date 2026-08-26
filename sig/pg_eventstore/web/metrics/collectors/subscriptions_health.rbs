@@ -3,7 +3,7 @@ module PgEventstore
     module Metrics
       module Collectors
         class SubscriptionsHealth < Base
-          def call: -> Array[PgEventstore::Web::Metrics::MetricFamily]
+          def call: -> Array[MetricFamily]
 
           private
 

@@ -31,11 +31,12 @@ module PgEventstore
               type: 'gauge',
               help: 'Age in seconds of the oldest event the subscription has not processed yet. 0 when caught up.'
             )
-            rows = subscription_rows
+            frontier_position, head_global_position = *positions
+            rows = subscription_rows(frontier_position)
             created_at_by_position = resolve_created_at(rows)
             now = Time.now.utc
             rows.each { add_samples(_1, created_at_by_position, now, lag_events, lag_seconds) }
-            [lag_events, lag_seconds, *store_families]
+            [lag_events, lag_seconds, *store_families(frontier_position, head_global_position)]
           end
 
           private
@@ -66,29 +67,30 @@ module PgEventstore
           # One index range scan per subscription over idx_event_subscription_positions_sposition_n_gposition. The
           # cost does not grow with the size of the backlog: the oldest unprocessed position is taken with
           # "order by subscription_position limit 1" rather than by aggregating over the whole backlog.
+          # @param frontier_position [Integer]
           # @return [Array<Hash>]
-          def subscription_rows
-            rows(<<~SQL, sets_params)
-              with frontier as (
-                select coalesce(max(subscription_position), 0) as position from event_subscription_positions
-              )
-              select s.set, s.name,
-                     greatest(frontier.position - coalesce(s.current_position, 0), 0) as lag_events,
-                     next_event.global_position as event_global_position,
-                     next_event.event_type_partition_id as event_type_partition_id
-              from subscriptions s
-              cross join frontier
-              left join lateral (
-                select egi.global_position, egi.event_type_partition_id
-                from event_subscription_positions esp
-                join events_global_index egi on egi.global_position = esp.global_position
-                where esp.subscription_position > coalesce(s.current_position, 0)
-                order by esp.subscription_position
-                limit 1
-              ) next_event on true
-              where #{sets_condition}
-              order by s.set, s.name
+          def subscription_rows(frontier_position)
+            builder = subscriptions_sql_builder
+            builder.select(<<~SQL)
+              s.set,
+              s.name,
+              greatest(#{frontier_position} - coalesce(s.current_position, 0), 0) as lag_events,
+              next_event.global_position as event_global_position,
+              next_event.event_type_partition_id as event_type_partition_id
             SQL
+            builder.join(<<~SQL)
+              left join lateral (
+                  select egi.global_position, egi.event_type_partition_id
+                  from event_subscription_positions esp
+                  join events_global_index egi on egi.global_position = esp.global_position
+                  where esp.subscription_position > coalesce(s.current_position, 0)
+                  order by esp.subscription_position
+                  limit 1
+                ) next_event on true
+            SQL
+            with_safe_conn do |conn|
+              conn.exec_params(*builder.to_exec_params)
+            end
           end
 
           # Resolves the creation time of every subscription's oldest unprocessed event.
@@ -120,28 +122,37 @@ module PgEventstore
             EventsGlobalIndexQueries.new(connection, QueryStrategy::Foreground.new(connection))
           end
 
+          # @param frontier_position [Integer]
+          # @param head_global_position [Integer]
           # @return [Array<PgEventstore::Web::Metrics::MetricFamily>]
-          def store_families
-            row = rows(<<~SQL).first
-              select
-                (select coalesce(max(subscription_position), 0) from event_subscription_positions)
-                  as frontier_position,
-                (select coalesce(max(global_position), 0) from events_global_index) as head_global_position
-            SQL
+          def store_families(frontier_position, head_global_position)
             frontier = MetricFamily.new(
               name: 'pg_eventstore_store_frontier_position',
               type: 'gauge',
               help: 'Latest assigned subscription position. Subscription checkpoints are measured against this.'
             )
-            frontier.add_sample(labels: {}, value: row['frontier_position'])
+            frontier.add_sample(labels: {}, value: frontier_position)
             head = MetricFamily.new(
               name: 'pg_eventstore_store_head_global_position',
               type: 'gauge',
               help: 'Global position of the newest event in the store. Contains gaps; do not compare subscription ' \
                     'checkpoints against it.'
             )
-            head.add_sample(labels: {}, value: row['head_global_position'])
+            head.add_sample(labels: {}, value: head_global_position)
             [frontier, head]
+          end
+
+          # @return [Array[Integer]]
+          def positions
+            res = with_safe_conn do |conn|
+              conn.exec(<<~SQL)
+                select
+                  (select coalesce(max(subscription_position), 0) from event_subscription_positions)
+                    as frontier_position,
+                  (select coalesce(max(global_position), 0) from events_global_index) as head_global_position
+              SQL
+            end
+            res.first.values_at('frontier_position', 'head_global_position')
           end
         end
       end

@@ -3,7 +3,7 @@ module PgEventstore
     module Metrics
       module Collectors
         class SubscriptionsLatency < Base
-          def call: -> Array[PgEventstore::Web::Metrics::MetricFamily]
+          def call: -> Array[MetricFamily]
 
           private
 
@@ -11,17 +11,19 @@ module PgEventstore
             Hash[String, untyped] row,
             Hash[Integer, Time] created_at_by_position,
             Time now,
-            PgEventstore::Web::Metrics::MetricFamily lag_events,
-            PgEventstore::Web::Metrics::MetricFamily lag_seconds
+            MetricFamily lag_events,
+            MetricFamily lag_seconds
           ) -> void
 
-          def subscription_rows: -> Array[Hash[String, untyped]]
+          def positions: -> [Integer, Integer]
+
+          def subscription_rows: (Integer frontier_position) -> Array[Hash[String, untyped]]
 
           def resolve_created_at: (Array[Hash[String, untyped]] subscription_rows) -> Hash[Integer, Time]
 
-          def events_global_index_queries: -> PgEventstore::EventsGlobalIndexQueries
+          def events_global_index_queries: -> EventsGlobalIndexQueries
 
-          def store_families: -> Array[PgEventstore::Web::Metrics::MetricFamily]
+          def store_families: (Integer frontier_position, Integer head_global_position) -> Array[MetricFamily]
         end
       end
     end

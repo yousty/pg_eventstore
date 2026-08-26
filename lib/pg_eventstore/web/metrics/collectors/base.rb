@@ -34,39 +34,33 @@ module PgEventstore
 
           private
 
-          # @param sql [String]
-          # @param params [Array<Object>]
+          # @return [PgEventstore::SQLBuilder]
+          def subscriptions_sql_builder
+            sql_builder = SQLBuilder.new.from('subscriptions', table_alias: 's')
+            sql_builder.order('s.set, s.name')
+            sql_builder.where('s.set = any(?::varchar[])', sets) if sets.any?
+            sql_builder
+          end
+
           # @return [Array<Hash>]
-          def rows(sql, params = [])
-            connection.with do |conn|
-              conn.transaction do
+          def with_safe_conn
+            transaction_queries.transaction(:read_committed, read_only: true) do
+              connection.with do |conn|
                 conn.exec("set local statement_timeout to #{STATEMENT_TIMEOUT}")
-                conn.exec_params(sql, params).to_a
+                yield conn
               end
-            end
-          end
-
-          # Scopes a query to the requested subscription sets.
-          #
-          # Rows of the subscriptions table are never removed, so a long-lived database accumulates handlers that
-          # were renamed, removed, or never ran against it. Scoping by set keeps a scrape - and the dashboards built
-          # on it - to the subscriptions of a single application, and is backed by idx_subscriptions_set_and_name.
-          # @return [String] SQL condition
-          def sets_condition
-            return 'true' if sets.empty?
-
-            "s.set in (#{sets.each_index.map { "$#{_1 + 1}" }.join(', ')})"
-          end
-
-          # @return [Array<String>] bind params matching #sets_condition
-          def sets_params
-            sets
+            end.to_a
           end
 
           # @param row [Hash]
           # @return [Hash<Symbol => String>]
           def subscription_labels(row)
             { set: row['set'], name: row['name'] }
+          end
+
+          # @return [PgEventstore::TransactionQueries]
+          def transaction_queries
+            TransactionQueries.new(connection)
           end
         end
       end

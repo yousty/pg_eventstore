@@ -55,18 +55,21 @@ module PgEventstore
 
           # @return [Array<Hash>]
           def subscription_rows
-            rows(<<~SQL, sets_params)
-              select s.set, s.name, s.state,
-                     (s.locked_by is not null)::int as locked,
-                     extract(epoch from ((now() at time zone 'utc') - s.updated_at))::float8 as heartbeat_age_seconds,
-                     s.restart_count,
-                     case when s.last_error_occurred_at is not null
-                          then extract(epoch from ((now() at time zone 'utc') - s.last_error_occurred_at))::float8
-                     end as last_error_age_seconds
-              from subscriptions s
-              where #{sets_condition}
-              order by s.set, s.name
+            builder = subscriptions_sql_builder
+            builder.select(<<~SQL)
+              s.set,
+              s.name,
+              s.state,
+              (s.locked_by is not null)::int as locked,
+              extract(epoch from ((now() at time zone 'utc') - s.updated_at))::float8 as heartbeat_age_seconds,
+              s.restart_count,
+              case when s.last_error_occurred_at is not null
+                   then extract(epoch from ((now() at time zone 'utc') - s.last_error_occurred_at))::float8
+              end as last_error_age_seconds
             SQL
+            with_safe_conn do |conn|
+              conn.exec_params(*builder.to_exec_params)
+            end
           end
         end
       end

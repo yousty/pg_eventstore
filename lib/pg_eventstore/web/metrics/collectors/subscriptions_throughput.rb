@@ -39,16 +39,18 @@ module PgEventstore
 
           # @return [Array<Hash>]
           def subscription_rows
-            rows(<<~SQL, sets_params)
-              select s.set, s.name,
-                     s.total_processed_events,
-                     case when s.average_event_processing_time > 0
-                          then (1.0 / s.average_event_processing_time)::float8
-                     end as capacity_eps
-              from subscriptions s
-              where #{sets_condition}
-              order by s.set, s.name
+            builder = subscriptions_sql_builder
+            builder.select(<<~SQL)
+              s.set,
+              s.name,
+              s.total_processed_events,
+              case when s.average_event_processing_time > 0
+                   then (1.0 / s.average_event_processing_time)::float8
+              end as capacity_eps
             SQL
+            with_safe_conn do |conn|
+              conn.exec_params(*builder.to_exec_params)
+            end
           end
         end
       end

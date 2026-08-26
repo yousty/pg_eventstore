@@ -4,11 +4,11 @@ module PgEventstore
       class Formatter
         CONTENT_TYPE: String
 
-        def call: (Array[PgEventstore::Web::Metrics::MetricFamily] families) -> String
+        def call: (Array[MetricFamily] families) -> String
 
         private
 
-        def format_family: (PgEventstore::Web::Metrics::MetricFamily family) -> String
+        def format_family: (MetricFamily family) -> String
 
         def format_labels: (Hash[Symbol, untyped] labels) -> String
 
