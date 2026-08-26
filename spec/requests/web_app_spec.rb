@@ -64,9 +64,10 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
   end
 
   describe 'GET /' do
-    subject { get '/', params }
+    subject { get '/', params, headers }
 
     let(:params) { {} }
+    let(:headers) { {} }
 
     describe 'events filtering' do
       let!(:events1) do
@@ -382,12 +383,35 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         expect(rendered_event_ids).to eq([event.id])
       end
     end
+
+    describe 'relative paths' do
+      let(:headers) { { 'SCRIPT_NAME' => mount_path } }
+      let(:params) { { starting_id: PgEventstore.client.read(PgEventstore::Stream.all_stream)[20].global_position } }
+      let(:mount_path) { '/eventstore' }
+
+      before do
+        event = PgEventstore::Event.new(data: { user_id: '1', title: 'Something happened' })
+        stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1')
+        PgEventstore.client.append_to_stream(stream, [event] * 30)
+      end
+
+      it 'generates links properly' do
+        subject
+        hrefs = Nokogiri::HTML(last_response.body).css('a').map { _1['href'] }
+        hrefs = hrefs.select { !_1.nil? && (_1.start_with?('http:') || _1.start_with?('/')) }
+        aggregate_failures do
+          expect(hrefs).to all include("#{mount_path}/")
+          expect(hrefs).to all satisfy { !_1.include?("#{mount_path}#{mount_path}") }
+        end
+      end
+    end
   end
 
   describe 'GET /streams' do
-    subject { get '/streams', params }
+    subject { get '/streams', params, headers }
 
     let(:params) { {} }
+    let(:headers) { {} }
 
     describe 'streams' do
       let!(:streams) do
@@ -455,6 +479,30 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
       it 'does not include unescaped content' do
         subject
         expect(last_response.body).not_to include('<script xss>')
+      end
+    end
+
+    describe 'relative paths' do
+      let(:headers) { { 'SCRIPT_NAME' => mount_path } }
+      let(:params) { { starting_id: PgEventstore.client.read(PgEventstore::Stream.all_stream)[20].global_position } }
+      let(:mount_path) { '/eventstore' }
+
+      before do
+        event = PgEventstore::Event.new(data: { user_id: '1', title: 'Something happened' })
+        30.times do |t|
+          stream = PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: t.to_s)
+          PgEventstore.client.append_to_stream(stream, event)
+        end
+      end
+
+      it 'generates links properly' do
+        subject
+        hrefs = Nokogiri::HTML(last_response.body).css('a').map { _1['href'] }
+        hrefs = hrefs.select { !_1.nil? && (_1.start_with?('http:') || _1.start_with?('/')) }
+        aggregate_failures do
+          expect(hrefs).to all include("#{mount_path}/")
+          expect(hrefs).to all satisfy { !_1.include?("#{mount_path}#{mount_path}") }
+        end
       end
     end
   end
@@ -1000,9 +1048,10 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
   end
 
   describe 'GET /subscriptions' do
-    subject { get '/subscriptions', params }
+    subject { get '/subscriptions', params, headers }
 
     let(:params) { {} }
+    let(:headers) { {} }
 
     let!(:set1) { SubscriptionsSetHelper.create(name: 'FooSet') }
     let!(:set2) { SubscriptionsSetHelper.create_with_connection(name: 'BarSet') }
@@ -1140,6 +1189,21 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
           expect(last_response.body).not_to include('<script xss2>')
           expect(last_response.body).to include('script xss1')
           expect(last_response.body).to include('script xss2')
+        end
+      end
+    end
+
+    describe 'relative paths' do
+      let(:headers) { { 'SCRIPT_NAME' => mount_path } }
+      let(:mount_path) { '/eventstore' }
+
+      it 'generates links properly' do
+        subject
+        hrefs = Nokogiri::HTML(last_response.body).css('a').map { _1['href'] }
+        hrefs = hrefs.select { !_1.nil? && (_1.start_with?('http:') || _1.start_with?('/')) }
+        aggregate_failures do
+          expect(hrefs).to all include("#{mount_path}/")
+          expect(hrefs).to all satisfy { !_1.include?("#{mount_path}#{mount_path}") }
         end
       end
     end

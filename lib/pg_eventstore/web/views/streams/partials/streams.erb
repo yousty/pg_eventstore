@@ -4,7 +4,7 @@
     <td><%= empty_characters_fallback(h stream.context) %></td>
     <td><%= empty_characters_fallback(h stream.stream_name) %></td>
     <td>
-      <a href="<%= stream_path(stream) %>" target="_blank"><%= empty_characters_fallback(h stream.stream_id) %></a>
+      <a href="<%= stream_url(stream) %>" target="_blank"><%= empty_characters_fallback(h stream.stream_id) %></a>
     </td>
     <td><%= stream.stream_revision %></td>
   </tr>

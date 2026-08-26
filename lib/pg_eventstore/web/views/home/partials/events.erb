@@ -12,7 +12,7 @@
     <td><%= empty_characters_fallback(h event.stream.context) %></td>
     <td><%= empty_characters_fallback(h event.stream.stream_name) %></td>
     <td>
-      <a href="<%= stream_path(event.stream) %>"><%= empty_characters_fallback(h event.stream.stream_id) %></a>
+      <a href="<%= stream_url(event.stream) %>"><%= empty_characters_fallback(h event.stream.stream_id) %></a>
       <a role="button" href="#" data-title="Copy stream definition." class="copy-to-clipboard"
          data-clipboard-content="<%= h "PgEventstore::Stream.new(context: #{event.stream.context.inspect}, stream_name: #{event.stream.stream_name.inspect}, stream_id: #{event.stream.stream_id.inspect})" %>">
         <i class="fa fa-clipboard"></i>
@@ -55,7 +55,7 @@
               <% event.feature_markers.each do |feature_marker| %>
                 <li>
                   <%= "#{h feature_marker.description}:" if feature_marker.description %>
-                  <a href="<%= event_marker_path(feature_marker.marker) %>">
+                  <a href="<%= event_marker_url(feature_marker.marker) %>">
                     <%= empty_characters_fallback(h feature_marker.marker) %>
                   </a>
                 </li>
@@ -66,7 +66,7 @@
             Event markers
             <ul>
               <% event.markers.each do |marker| %>
-                <li> <a href="<%= event_marker_path(marker) %>"><%= empty_characters_fallback(h marker) %></a> </li>
+                <li> <a href="<%= event_marker_url(marker) %>"><%= empty_characters_fallback(h marker) %></a> </li>
               <% end %>
             </ul>
           <% end %>
