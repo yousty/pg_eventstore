@@ -3,4 +3,4 @@
 require_relative 'runner_recovery_strategies/restore_connection'
 require_relative 'runner_recovery_strategies/restore_subscription_runner'
 require_relative 'runner_recovery_strategies/restore_subscription_feeder'
-require_relative 'runner_recovery_strategies/report_unrecoverable_error'
+require_relative 'runner_recovery_strategies/report_subscription_unrecoverable_error'

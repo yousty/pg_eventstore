@@ -1,6 +1,6 @@
 module PgEventstore
   module RunnerRecoveryStrategies
-    class ReportUnrecoverableError
+    class ReportSubscriptionUnrecoverableError
       include RunnerRecoveryStrategy
 
       @failed_subscription_notifier: _FailedSubscriptionNotifier?

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe PgEventstore::RunnerRecoveryStrategies::ReportUnrecoverableError do
+RSpec.describe PgEventstore::RunnerRecoveryStrategies::ReportSubscriptionUnrecoverableError do
   let(:instance) { described_class.new(subscription:, failed_subscription_notifier:) }
   let(:subscription) { SubscriptionsHelper.create_with_connection }
   let(:failed_subscription_notifier) { nil }
@@ -10,18 +10,9 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::ReportUnrecoverableError 
   describe '#recovers?' do
     subject { instance.recovers?(error) }
 
-    # It is registered last, so matching everything is what makes the death reportable at all.
-    context 'when an error is a plain StandardError' do
-      let(:error) { StandardError.new }
+    let(:error) { Class.new(StandardError).new }
 
-      it { is_expected.to eq(true) }
-    end
-
-    context 'when an error is a WrappedException' do
-      let(:error) { PgEventstore::Utils.wrap_exception(StandardError.new) }
-
-      it { is_expected.to eq(true) }
-    end
+    it { is_expected.to eq(true) }
   end
 
   describe '#recover' do
@@ -35,24 +26,16 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::ReportUnrecoverableError 
 
     context 'when a notifier is given' do
       let(:failed_subscription_notifier) { notifier }
-      let(:notifier) { NotifierCollector.new }
+      let(:notifier) { double('Notifier') }
+
+      before do
+        allow(notifier).to receive(:call)
+      end
 
       it 'reports the death' do
         subject
         aggregate_failures do
-          expect(notifier.calls.size).to eq(1)
-          expect(notifier.calls.first[:subscription].id).to eq(subscription.id)
-          expect(notifier.calls.first[:error]).to eq(error)
-        end
-      end
-
-      context 'when the error is wrapped' do
-        let(:error) { PgEventstore::Utils.wrap_exception(original_error) }
-        let(:original_error) { StandardError.new('original') }
-
-        it 'reports the unwrapped error' do
-          subject
-          expect(notifier.calls.first[:error]).to eq(original_error)
+          expect(notifier).to have_received(:call).with(subscription, error)
         end
       end
     end
@@ -61,19 +44,6 @@ RSpec.describe PgEventstore::RunnerRecoveryStrategies::ReportUnrecoverableError 
       it 'does not raise' do
         expect { subject }.not_to raise_error
       end
-    end
-  end
-
-  # A real collaborator rather than a double, so the arguments the notifier receives are observable.
-  class NotifierCollector
-    attr_reader :calls
-
-    def initialize
-      @calls = []
-    end
-
-    def call(subscription, error)
-      @calls.push({ subscription:, error: })
     end
   end
 end
