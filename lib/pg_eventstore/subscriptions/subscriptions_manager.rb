@@ -245,8 +245,8 @@ module PgEventstore
           restart_terminator:,
           failed_subscription_notifier:
         ),
-        # Must stay last: it matches every error, so it only sees what the strategies above declined.
-        # Without it those deaths never reach failed_subscription_notifier - see the class docs.
+        # Catch-all recovery strategy that only reports an error. It is only invoked in case previous strategies
+        # rejected to recover an error. Must be stayed last.
         RunnerRecoveryStrategies::ReportSubscriptionUnrecoverableError.new(
           subscription:, failed_subscription_notifier:
         ),

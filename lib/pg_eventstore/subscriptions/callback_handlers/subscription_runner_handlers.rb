@@ -29,7 +29,7 @@ module PgEventstore
       end
 
       # @param subscription [PgEventstore::Subscription]
-      # @param error [PgEventstore::WrappedException]
+      # @param error [StandardError]
       # @return [void]
       def update_subscription_error(subscription, error)
         subscription.update(last_error: Utils.error_info(error), last_error_occurred_at: Time.now.utc)

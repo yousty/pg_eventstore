@@ -600,6 +600,87 @@ RSpec.describe 'Subscriptions integration' do
     end
   end
 
+  describe 'notifying unrecoverable error' do
+    subject do
+      manager.start
+      dv.wait_until(timeout: 1) { subscription.reload.state == 'dead' }
+      sleep 0.5 # sleep to show the subscription does not recover
+    end
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+
+    let!(:subscription) { SubscriptionsHelper.create_with_connection(set: set_name, name: subscription_name) }
+    let(:subscription_name) { 'Subscription 1' }
+
+    let(:handler) { proc { processed_events.push(_1) } }
+    let(:processed_events) { [] }
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
+    let!(:event) do
+      event = PgEventstore::Event.new(data: { foo: :bar }, type: 'Foo')
+      PgEventstore.client.append_to_stream(stream, event)
+    end
+
+    let(:subscription_opts) { { pull_interval: 0.1, retries_interval: 0 } }
+
+    let(:error) { StandardError.new('You rolled 1. Critical failure!') }
+
+    before do
+      error = self.error
+      allow(PgEventstore::EventsProcessorConsumer::Single).to receive(:create_consumer).and_wrap_original do |m, *args|
+        instance = m.call(*args)
+        allow(instance).to receive(:call).and_raise(error)
+        instance
+      end
+      manager.subscribe(
+        subscription_name,
+        handler:, options: { filter: { streams: [{ context: 'FooCtx' }] } },
+        **subscription_opts
+      )
+    end
+
+    after do
+      manager.stop
+    end
+
+    it 'updates Subscription#last_error' do
+      expect { subject }.to change {
+        subscription.reload.last_error
+      }.to(a_hash_including('class' => error.class.name, 'message' => error.message))
+    end
+    it 'updates Subscription#last_error_occurred_at' do
+      expect { subject }.to change {
+        subscription.reload.last_error_occurred_at
+      }.to(be_between(Time.now.utc - 2, Time.now.utc + 2))
+    end
+    it 'does not restart the subscription' do
+      expect { subject }.to change { subscription.reload.state }.to('dead')
+    end
+    it 'does not processes the event' do
+      expect { subject }.not_to change { processed_events.size }
+    end
+
+    context 'when failed_subscription_notifier is defined' do
+      let(:subscription_opts) { super().merge(failed_subscription_notifier:) }
+
+      let(:failed_subscription_notifier) { proc { |sub, error| notifier.call(sub, error) } }
+      let(:notifier) { double('Subscription notifier') }
+
+      before do
+        allow(notifier).to receive(:call)
+      end
+
+      it 'does not restart the subscription' do
+        expect { subject }.to change { subscription.reload.state }.to('dead')
+      end
+      it 'calls failed subscription notifier' do
+        subject
+        expect(notifier).to have_received(:call).with(subscription, error)
+      end
+    end
+  end
+
   describe 'processing concurrent events at the edge position' do
     subject { manager.start }
 
