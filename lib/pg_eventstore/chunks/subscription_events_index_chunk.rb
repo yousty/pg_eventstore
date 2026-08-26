@@ -85,9 +85,7 @@ module PgEventstore
       rescue => exception
         @indexes.unshift(*indexes_to_resolve)
         @resolved = false
-        raise Utils.wrap_exception(
-          exception, global_positions: indexes_to_resolve.map(&:global_position)
-        )
+        raise exception
       end
 
       # @return [PgEventstore::EventsGlobalIndexQueries]

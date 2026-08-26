@@ -1,0 +1,15 @@
+module PgEventstore
+  module RunnerRecoveryStrategies
+    class ReportSubscriptionUnrecoverableError
+      include RunnerRecoveryStrategy
+
+      @failed_subscription_notifier: _FailedSubscriptionNotifier?
+      @subscription: Subscription
+
+      def initialize: (
+          subscription: Subscription,
+          failed_subscription_notifier: _FailedSubscriptionNotifier?
+        )-> untyped
+    end
+  end
+end

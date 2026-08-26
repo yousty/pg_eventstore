@@ -110,6 +110,8 @@ module PgEventstore
       end
       # rubocop:enable Lint/SuppressedException
 
+      # Wraps subscription handler exception to correctly differentiate it from other errors that may happen inside
+      # the implementation. This is needed to correctly handle subscription handler errors vs internal errors.
       # @param exception [StandardError]
       # @param extra [Hash] additional exception info
       # @return [PgEventstore::WrappedException]

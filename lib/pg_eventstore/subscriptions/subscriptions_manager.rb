@@ -245,6 +245,11 @@ module PgEventstore
           restart_terminator:,
           failed_subscription_notifier:
         ),
+        # Catch-all recovery strategy that only reports an error. It is only invoked in case previous strategies
+        # rejected to recover an error. Must be stayed last.
+        RunnerRecoveryStrategies::ReportSubscriptionUnrecoverableError.new(
+          subscription:, failed_subscription_notifier:
+        ),
       ]
     end
 
