@@ -311,8 +311,17 @@ RSpec.describe PgEventstore::Web::Metrics::Application, type: :request do
       expect(last_response).to be_ok
     end
 
-    it 'falls back to the default config when the requested one does not exist' do
+    it 'responds 404 for an unknown config instead of querying the default one' do
       get '/subscriptions', config: 'no-such-config'
+      aggregate_failures do
+        expect(last_response.status).to eq(404)
+        expect(last_response.content_type).to eq('text/plain')
+        expect(last_response.body).to eq('Unknown config "no-such-config"')
+      end
+    end
+
+    it 'treats an empty config param as the default config' do
+      get '/subscriptions', config: ''
       aggregate_failures do
         expect(last_response.status).to eq(500)
         expect(last_response.body).to include('ConnectionPool::TimeoutError')

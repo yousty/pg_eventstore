@@ -13,8 +13,9 @@ module PgEventstore
       #
       #   GET /subscriptions/latency?config=db1
       #
-      # An unknown or absent config falls back to the default one. Add "set" params to report only some subscription
-      # sets - repeat the param for several: "?set=SetA&set=SetB".
+      # An absent config means the default one; an unknown config is answered with 404 rather than silently served from
+      # the default store, so a misconfigured scrape shows up as a failing target instead of as wrong data. Add "set"
+      # params to report only some subscription sets - repeat the param for several: "?set=SetA&set=SetB".
       class Application < Sinatra::Base
         set :environment, -> { (ENV['RACK_ENV'] || ENV['RAILS_ENV'] || ENV['APP_ENV'])&.to_sym || :development }
         set :logging, false
@@ -27,12 +28,15 @@ module PgEventstore
             PgEventstore.connection(config_name)
           end
 
+          # Name of the config to query: the "config" param when given, the default config otherwise. Halts with 404
+          # for a name that is not configured.
           # @return [Symbol]
           def config_name
-            requested = params[:config]&.to_s&.to_sym
-            return requested if requested && PgEventstore.available_configs.include?(requested)
+            requested = params[:config].to_s
+            return PgEventstore::DEFAULT_CONFIG if requested.empty?
+            return requested.to_sym if PgEventstore.available_configs.include?(requested.to_sym)
 
-            PgEventstore::DEFAULT_CONFIG
+            halt 404, { 'content-type' => 'text/plain' }, "Unknown config #{requested.inspect}"
           end
         end
 
