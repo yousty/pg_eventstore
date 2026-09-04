@@ -11,6 +11,8 @@ module PgEventstore
 
       def asset_url: (String path) -> String
 
+      def can_delete?: -> bool
+
       def connection: -> Connection
 
       def current_config: -> Symbol

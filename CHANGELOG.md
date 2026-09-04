@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Hide "Delete stream" and "Delete" event buttons in admin UI for non-maintenance eventstore roles
 - New feature: Prometheus metrics endpoints for subscriptions observability (lag, health, throughput), served by the
   standalone `PgEventstore::Web::Metrics::Application` rack application. Read more [here](docs/metrics.md)
 - Properly report internal errors via `failed_subscription_notifier` config option

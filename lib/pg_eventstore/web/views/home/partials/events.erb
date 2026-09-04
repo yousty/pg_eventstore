@@ -33,9 +33,11 @@
       <a href="javascript: void(0);" class="d-inline-block text-nowrap toggle-event-data">
         JSON <i class="fa fa-eye"></i>
       </a>
-      <a href="javascript: void(0);" class="ml-2 btn btn-danger btn-small delete-event-btn" data-global-position="<%= event.global_position %>" data-url="<%= delete_event_url(event.global_position) %>" data-toggle="modal" data-target="#delete-event-modal">
-        Delete
-      </a>
+      <% if can_delete? %>
+        <a href="javascript: void(0);" class="ml-2 btn btn-danger btn-small delete-event-btn" data-global-position="<%= event.global_position %>" data-url="<%= delete_event_url(event.global_position) %>" data-toggle="modal" data-target="#delete-event-modal">
+          Delete
+        </a>
+      <% end %>
     </td>
   </tr>
   <tr class="event-payload d-none">

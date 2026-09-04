@@ -176,6 +176,13 @@ module PgEventstore
           streams || []
         end
 
+        # Only maintainable roles can delete a stream or an event. This helper only supposes to hide delete buttons -
+        # backend has its own checks.
+        # @return [Boolean]
+        def can_delete?
+          PgEventstore::Config::NodeRole.maintainable.include?(PgEventstore.config(current_config).eventstore_role)
+        end
+
         private
 
         # @param hash [Hash]

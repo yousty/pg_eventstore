@@ -188,16 +188,51 @@ RSpec.describe PgEventstore::Web::Application, type: :request do
         end
       end
 
+      context 'when current config role is not maintenance role' do
+        before do
+          PgEventstore.configure do |config|
+            config.eventstore_role = PgEventstore::Config::NodeRole::PRIMARY
+          end
+        end
+
+        it 'does not display "Delete" event button' do
+          subject
+          expect(last_response.body).not_to include('delete_event')
+        end
+      end
+
+      context 'when current config role is maintenance role' do
+        it 'displays "Delete" event button' do
+          subject
+          expect(last_response.body).to include('delete_event')
+        end
+      end
+
       context 'when specific stream filter is provided' do
         let(:params) { { filter: { streams: [{ context: 'FooCtx', stream_name: 'Foo', stream_id: '1' }] } } }
 
-        it 'displays events of that stream' do
-          subject
-          expect(rendered_event_ids).to eq((events1 + events2).map(&:id).reverse)
+        context 'when current config role is not maintenance role' do
+          before do
+            PgEventstore.configure do |config|
+              config.eventstore_role = PgEventstore::Config::NodeRole::PRIMARY
+            end
+          end
+
+          it 'does not display "Delete stream" button' do
+            subject
+            expect(last_response.body).not_to include('Delete stream')
+          end
         end
-        it 'displays "Delete stream" button' do
-          subject
-          expect(last_response.body).to include('Delete stream')
+
+        context 'when current config role is maintenance role' do
+          it 'displays events of that stream' do
+            subject
+            expect(rendered_event_ids).to eq((events1 + events2).map(&:id).reverse)
+          end
+          it 'displays "Delete stream" button' do
+            subject
+            expect(last_response.body).to include('Delete stream')
+          end
         end
       end
     end
