@@ -95,7 +95,9 @@ end
 GET /pg_eventstore/metrics/subscriptions/latency?config=db1
 ```
 
-An unknown or missing `config` falls back to the default configuration.
+A missing `config` means the default configuration. An unknown `config` is answered with `404` instead of being
+served from the default store, so a typo in the scrape config shows up as a failing target rather than as another
+database's numbers under the wrong labels.
 
 ### Reporting only some subscription sets
 
@@ -110,9 +112,9 @@ GET /pg_eventstore/metrics/subscriptions/health?set=MyAppSet,MyOtherSet
 
 Both forms work - a repeated param (what Prometheus produces from `params: {set: [...]}`) and a comma separated list.
 
-Without a `set` param every subscription in the database is reported. Since a subscription set is usually named after
-the application that owns it, scoping the scrape by set is the straightforward way to keep one application's
-dashboards to its own subscriptions.
+Without a `set` param every subscription in the database is reported. `pg_eventstore` puts no constraints on how
+subscription sets are named, but it is convenient to name a set after the application that owns it - scoping the
+scrape by set is then the straightforward way to keep one application's dashboards to its own subscriptions.
 
 ## Prometheus scrape config
 
@@ -229,14 +231,3 @@ subscription running close to its capacity has no headroom left, and a traffic s
 - Lagging read models: `pg_eventstore_subscription_lag_seconds > 300 for 10m`
 - Dead subscription process: `pg_eventstore_subscription_locked == 1 and pg_eventstore_subscription_heartbeat_age_seconds > 60 for 10m`
 - No headroom: `rate(pg_eventstore_subscription_processed_events_total[5m]) / pg_eventstore_subscription_capacity_events_per_second > 0.8 for 15m`
-
-## Database permissions
-
-The endpoints only ever read. If you scrape with a dedicated role, it needs `SELECT` on the pg_eventstore schema -
-granting it per table is not worth the maintenance, since which tables are read is an implementation detail that can
-change between versions:
-
-```sql
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO metrics_reader;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO metrics_reader;
-```
