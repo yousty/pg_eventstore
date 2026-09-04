@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [3.1.1]
+
 - Prevent arbitrary order in replica queries
 
 ## [3.1.0]
