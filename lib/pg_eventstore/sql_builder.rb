@@ -215,7 +215,7 @@ module PgEventstore
 
     # @return [String]
     def from_sql
-      return @from_value if @from_value.is_a?(String)
+      return "#{@from_value} #{@table_alias if @table_alias != @from_value}" if @from_value.is_a?(String)
 
       sql = merge(@from_value)
       "(#{sql}) #{@table_alias}"

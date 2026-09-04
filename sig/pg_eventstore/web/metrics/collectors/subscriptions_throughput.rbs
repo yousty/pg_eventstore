@@ -1,0 +1,15 @@
+module PgEventstore
+  module Web
+    module Metrics
+      module Collectors
+        class SubscriptionsThroughput < Base
+          def call: -> Array[MetricFamily]
+
+          private
+
+          def subscription_rows: -> Array[Hash[String, untyped]]
+        end
+      end
+    end
+  end
+end

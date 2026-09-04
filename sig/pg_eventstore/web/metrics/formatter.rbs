@@ -1,0 +1,19 @@
+module PgEventstore
+  module Web
+    module Metrics
+      class Formatter
+        CONTENT_TYPE: String
+
+        def call: (Array[MetricFamily] families) -> String
+
+        private
+
+        def format_family: (MetricFamily family) -> String
+
+        def format_labels: (Hash[Symbol, untyped] labels) -> String
+
+        def escape_label_value: (String value) -> String
+      end
+    end
+  end
+end

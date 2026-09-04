@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- New feature: Prometheus metrics endpoints for subscriptions observability (lag, health, throughput), served by the
+  standalone `PgEventstore::Web::Metrics::Application` rack application. Read more [here](docs/metrics.md)
 - Properly report internal errors via `failed_subscription_notifier` config option
 - Fix inaccuracy that could lead to mistakenly handle connection error as subscription handler error
 - Fix admin UI links to take into account mount path instead building a path from `'/'`

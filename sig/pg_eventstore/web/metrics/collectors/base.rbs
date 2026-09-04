@@ -1,0 +1,33 @@
+module PgEventstore
+  module Web
+    module Metrics
+      module Collectors
+        class Base
+          STATEMENT_TIMEOUT: Integer
+
+          @connection: Connection
+
+          @sets: Array[String]
+
+          attr_reader connection: Connection
+
+          attr_reader sets: Array[String]
+
+          def initialize: (Connection connection, ?sets: Array[String]) -> void
+
+          def call: -> Array[Web::Metrics::MetricFamily]
+
+          def subscriptions_sql_builder: -> SQLBuilder
+
+          private
+
+          def subscription_labels: (Hash[String, untyped] row) -> Hash[Symbol, untyped]
+
+          def transaction_queries: -> TransactionQueries
+
+          def with_safe_conn: () { (PgConnection conn) -> PG::Result } -> Array[Hash[String, untyped]]
+        end
+      end
+    end
+  end
+end

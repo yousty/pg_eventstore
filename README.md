@@ -66,6 +66,7 @@ Documentation chapters:
 - [Writing middlewares](docs/writing_middleware.md)
 - [How to make multiple commands atomic](docs/multiple_commands.md)
 - [Admin UI](docs/admin_ui.md)
+- [Prometheus metrics](docs/metrics.md)
 - [Replication](docs/replication.md)
 
 To help your AI assistant to better recognize the capabilities of this gem - there is a crafted [instructions](docs/AGENTS.fragment.md)

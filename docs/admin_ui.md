@@ -41,3 +41,8 @@ run PgEventstore::Web::Application
 ```
 
 Now you can use any web server to run it.
+
+## Prometheus metrics
+
+Subscriptions observability data in the Prometheus text format is served by a separate rack application, mounted
+independently of the Admin UI. See [Metrics](metrics.md).
