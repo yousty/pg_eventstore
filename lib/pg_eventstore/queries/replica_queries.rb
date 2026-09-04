@@ -27,7 +27,10 @@ module PgEventstore
       return [] unless exists
 
       @query_strategy.exec_params(<<~SQL, [indexes.map(&:subscription_position)]).map { _1['subscription_position'] }
-        select subscription_position from event_subscription_positions where subscription_position = any($1::bigint[])
+        select subscription_position
+        from event_subscription_positions
+        where subscription_position = any($1::bigint[])
+        order by subscription_position
       SQL
     end
 
@@ -50,7 +53,7 @@ module PgEventstore
     # @return [Array<PgEventstore::EventGlobalIndex>]
     def load_events_global_index(indexes)
       result = @query_strategy.exec_params(<<~SQL, [indexes.map(&:global_position)])
-        select * from events_global_index where global_position = any($1::bigint[])
+        select * from events_global_index where global_position = any($1::bigint[]) order by global_position
       SQL
       result.map { EventGlobalIndex.new(**_1.transform_keys(&:to_sym)) }
     end
@@ -59,7 +62,7 @@ module PgEventstore
     # @return [Array<PgEventstore::StreamGlobalIndex>]
     def load_streams_global_index(indexes)
       result = @query_strategy.exec_params(<<~SQL, [indexes.map(&:streams_global_index_id)])
-        select * from streams_global_index where id = any($1::bigint[])
+        select * from streams_global_index where id = any($1::bigint[]) order by id
       SQL
       stream_revisions_map = indexes.group_by(&:streams_global_index_id).to_h do |stream_id, events_idx|
         [stream_id, events_idx.max_by(&:stream_revision).stream_revision]
@@ -75,7 +78,7 @@ module PgEventstore
     # @return [Array<PgEventstore::EventMarkerIndex>]
     def load_event_markers_index(indexes)
       result = @query_strategy.exec_params(<<~SQL, [indexes.map(&:global_position)])
-        select * from event_markers_index where global_position = any($1::bigint[])
+        select * from event_markers_index where global_position = any($1::bigint[]) order by global_position
       SQL
       result.map { EventMarkerIndex.new(**_1.transform_keys(&:to_sym)) }
     end
@@ -84,7 +87,7 @@ module PgEventstore
     # @return [Array<PgEventstore::EventMarker>]
     def load_markers(indexes)
       result = @query_strategy.exec_params(<<~SQL, [indexes.map(&:marker_id).uniq])
-        select * from event_markers where id = any($1::bigint[])
+        select * from event_markers where id = any($1::bigint[]) order by id
       SQL
       result.map { EventMarker.new(**_1.transform_keys(&:to_sym)) }
     end

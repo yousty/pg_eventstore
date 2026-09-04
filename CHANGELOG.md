@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Prevent arbitrary order in replica queries
+
 ## [3.1.0]
 
 - Hide "Delete stream" and "Delete" event buttons in admin UI for non-maintenance eventstore roles
