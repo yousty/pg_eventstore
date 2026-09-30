@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Reproduces a subscription skipping events. SubscriptionRunnersFeeder#feed picks the runners to feed using
+# SubscriptionRunner#time_to_feed?, then the feed strategy estimates the number of events to fetch once again in
+# SubscriptionRunner#next_chunk_query_opts. If the handler finishes a slow event in between, the second estimate is 0,
+# the query returns nothing and the subscription gets checkpointed over the events it never received.
+#
+# Usage:
+#   PG_EVENTSTORE_URI=postgresql://postgres:postgres@localhost:5532/eventstore bundle exec bin/reproduce_skipped_events
+#
+# With the bug only the first chunk of events gets processed. With the fix all events get processed. The appended
+# events and the subscription stay in the database.
+
+require 'bundler/setup'
+require 'pg_eventstore'
+require 'securerandom'
+
+EVENTS_NUMBER = 1_000
+EVENT_TYPE = 'ReproduceSkippedEvents::Foo'
+NO_PROGRESS_TIMEOUT = 5 # seconds
+
+PgEventstore.configure do |config|
+  config.pg_uri = ENV.fetch('PG_EVENTSTORE_URI', 'postgresql://postgres:postgres@localhost:5532/eventstore')
+  config.subscription_pull_interval = 0.2
+end
+
+gate = Queue.new
+gate_opened = false
+race_happened = false
+processed_positions = []
+
+handler = proc do |event|
+  gate.pop unless gate_opened
+  processed_positions.push(event.global_position)
+end
+
+delay_between_estimates = Module.new do
+  define_method(:next_chunk_query_opts) do
+    # #time_to_feed? has already been checked for this runner. Let the handler finish the event it holds and record
+    # the timing before the number of events to fetch is estimated once again.
+    if gate.num_waiting > 0
+      gate.push(:go)
+      sleep 1
+      race_happened = true
+    end
+    super()
+  end
+end
+PgEventstore::SubscriptionRunner.prepend(delay_between_estimates)
+
+stream = PgEventstore::Stream.new(context: 'ReproduceSkippedEvents', stream_name: 'Foo', stream_id: SecureRandom.uuid)
+events = PgEventstore.client.append_to_stream(
+  stream, Array.new(EVENTS_NUMBER) { PgEventstore::Event.new(type: EVENT_TYPE) }
+)
+puts "Appended #{events.size} events, global positions #{events.first.global_position}..#{events.last.global_position}"
+
+manager = PgEventstore.subscriptions_manager(subscription_set: "ReproduceSkippedEvents #{Process.pid}")
+manager.subscribe('Skipped events', handler:, options: { filter: { streams: [stream.to_hash] } })
+manager.start
+
+sleep 0.1 until race_happened
+gate_opened = true
+gate.push(:go) while gate.num_waiting > 0
+
+last_progress_at = Time.now
+last_processed = processed_positions.size
+until processed_positions.size == EVENTS_NUMBER || Time.now - last_progress_at > NO_PROGRESS_TIMEOUT
+  sleep 0.5
+  next if processed_positions.size == last_processed
+
+  last_processed = processed_positions.size
+  last_progress_at = Time.now
+end
+manager.stop
+
+subscription = manager.subscriptions.first
+skipped_positions = events.map(&:global_position) - processed_positions
+puts "Processed #{processed_positions.size} of #{EVENTS_NUMBER} events"
+puts "Subscription#current_position: #{subscription.current_position}, " \
+     "Subscription#last_chunk_greatest_position: #{subscription.last_chunk_greatest_position}"
+if skipped_positions.empty?
+  puts 'No events were skipped'
+else
+  puts "Skipped #{skipped_positions.size} events, global positions #{skipped_positions.min}..#{skipped_positions.max}"
+  exit 1
+end
