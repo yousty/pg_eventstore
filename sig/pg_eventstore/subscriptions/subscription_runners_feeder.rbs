@@ -1,5 +1,7 @@
 module PgEventstore
   class SubscriptionRunnersFeeder
+    INDEX_LOOK_UP_DISTANCE: Integer
+
     @config_name: Symbol
 
     def initialize: (Symbol config_name) -> void
@@ -7,6 +9,10 @@ module PgEventstore
     def feed: (::Array[SubscriptionRunner] runners) -> void
 
     private
+
+    def time_to_feed?: (SubscriptionRunner runner) -> bool
+
+    def safe_position: -> Integer
 
     def connection: -> Connection
   end

@@ -2,9 +2,9 @@
 
 RSpec.describe PgEventstore::SubscriptionFeedStrategy::Collection do
   describe '.create' do
-    subject { described_class.create(runners, connection, query_strategy, subscriptions_per_query:) }
+    subject { described_class.create(runners_query_options, connection, query_strategy, subscriptions_per_query:) }
 
-    let(:runners) { [] }
+    let(:runners_query_options) { {} }
     let(:connection) { PgEventstore.connection }
     let(:query_strategy) { PgEventstore::QueryStrategy::Foreground.new(PgEventstore.connection) }
     let(:subscriptions_per_query) { 2 }
@@ -14,7 +14,8 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::Collection do
     end
 
     context 'when runners are present' do
-      let(:runners) { [runner1, runner2, runner3, runner4, runner5] }
+      let(:runners_query_options) { [runner1, runner2, runner3, runner4, runner5].to_h { [_1, query_options] } }
+      let(:query_options) { { from_position: 1, to_position: 2, max_count: 10, resolve_link_tos: false } }
 
       let(:runner1) { PgEventstore::SubscriptionRunner.allocate }
       let(:runner2) { PgEventstore::SubscriptionRunner.allocate }
@@ -25,11 +26,15 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::Collection do
       it 'creates collection of three strategies, with up to subscriptions_per_query runners each' do
         aggregate_failures do
           expect(subject.size).to eq(3)
-          expect(subject[0].instance_variable_get(:@runners)).to eq([runner1, runner2])
+          expect(subject[0].instance_variable_get(:@runners_query_options)).to eq(
+            runner1 => query_options, runner2 => query_options
+          )
           expect(subject[0]).to be_a(PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy)
-          expect(subject[1].instance_variable_get(:@runners)).to eq([runner3])
+          expect(subject[1].instance_variable_get(:@runners_query_options)).to eq(runner3 => query_options)
           expect(subject[1]).to be_a(PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy)
-          expect(subject[2].instance_variable_get(:@runners)).to eq([runner4, runner5])
+          expect(subject[2].instance_variable_get(:@runners_query_options)).to eq(
+            runner4 => query_options, runner5 => query_options
+          )
           expect(subject[2]).to be_a(PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy)
         end
       end

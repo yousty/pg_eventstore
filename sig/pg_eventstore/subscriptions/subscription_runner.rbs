@@ -23,8 +23,6 @@ module PgEventstore
 
     def next_chunk_query_opts: () -> ::Hash[untyped, untyped]
 
-    def time_to_feed?: () -> bool
-
     def next_chunk_global_position: () -> Integer
 
     def estimate_events_number: () -> Integer

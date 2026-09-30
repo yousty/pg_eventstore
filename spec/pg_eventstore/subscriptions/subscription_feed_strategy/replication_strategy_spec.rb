@@ -10,13 +10,15 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
   end
 
   describe '#add' do
-    subject { instance.add(runner1, runner2) }
+    subject { instance.add(runner, query_options) }
 
-    let(:runner1) { PgEventstore::ReplicaSubscriptionRunner.allocate }
-    let(:runner2) { PgEventstore::ReplicaSubscriptionRunner.allocate }
+    let(:runner) { PgEventstore::ReplicaSubscriptionRunner.allocate }
+    let(:query_options) { { from_position: 1, to_position: 2, max_count: 10, resolve_link_tos: false } }
 
-    it 'adds given runners' do
-      expect { subject }.to change { instance.instance_variable_get(:@runners) }.to([runner1, runner2])
+    it 'adds given runner along with its query options' do
+      expect { subject }.to change {
+        instance.instance_variable_get(:@runners_query_options)
+      }.to(runner => query_options)
     end
   end
 
@@ -24,7 +26,8 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
     subject { instance.size }
 
     before do
-      instance.add(PgEventstore::ReplicaSubscriptionRunner.allocate, PgEventstore::ReplicaSubscriptionRunner.allocate)
+      instance.add(PgEventstore::ReplicaSubscriptionRunner.allocate, {})
+      instance.add(PgEventstore::ReplicaSubscriptionRunner.allocate, {})
     end
 
     it 'returns runners size' do
@@ -41,7 +44,7 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
 
     context 'when runners are present' do
       before do
-        instance.add(PgEventstore::ReplicaSubscriptionRunner.allocate)
+        instance.add(PgEventstore::ReplicaSubscriptionRunner.allocate, {})
       end
 
       it { is_expected.to eq(true) }
@@ -55,18 +58,12 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
     end
 
     let(:subscription1) do
-      SubscriptionsHelper.create_with_connection(
-        name: 's1', set: 'Set1', options: { filter: { event_types: ['Foo'] }, from_position: from_position_sub1 }
-      )
+      SubscriptionsHelper.create_with_connection(name: 's1', set: 'Set1', options: { filter: { event_types: ['Foo'] } })
     end
     let(:subscription2) do
-      SubscriptionsHelper.create_with_connection(
-        name: 's2', set: 'Set1', options: { filter: { event_types: ['Bar'] } }
-      )
+      SubscriptionsHelper.create_with_connection(name: 's2', set: 'Set1', options: { filter: { event_types: ['Bar'] } })
     end
     let(:subscriptions_set) { SubscriptionsSetHelper.create_with_connection(name: 'Set1') }
-
-    let(:from_position_sub1) { 0 }
 
     let(:runner1) do
       PgEventstore::ReplicaSubscriptionRunner.new(
@@ -89,6 +86,14 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
       )
     end
 
+    let(:query_options1) do
+      { from_position: from_position_sub1, to_position:, max_count: max_count_sub1, resolve_link_tos: false }
+    end
+    let(:query_options2) { { from_position: 1, to_position:, max_count: 10, resolve_link_tos: false } }
+    let(:from_position_sub1) { 1 }
+    let(:max_count_sub1) { 10 }
+    let(:to_position) { 0 }
+
     let(:processed_events1) { [] }
     let(:processed_events2) { [] }
 
@@ -98,14 +103,15 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
     before do
       # Stub timeout to allow faster attempts to pick events to process
       stub_const('PgEventstore::EventsProcessorConsumer::Replica::EVENT_WAIT_TIMEOUT', 0.1)
-      subscription1.lock!(subscriptions_set.id)
-      subscription2.lock!(subscriptions_set.id)
-      instance.add(runner1, runner2)
-      runner1.start
-      runner2.start
       # Set events global_position sequence value to easily test :to_position. 123 will be the global_position of the
       # first created event
       reset_events_subscription_position(123)
+      subscription1.lock!(subscriptions_set.id)
+      subscription2.lock!(subscriptions_set.id)
+      instance.add(runner1, query_options1)
+      instance.add(runner2, query_options2)
+      runner1.start
+      runner2.start
     end
 
     after do
@@ -135,6 +141,7 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
         Array.new(2) { PgEventstore.client.append_to_stream(stream, event) }
       end
       let!(:indexes) { prepare_subscription_indexes(events) }
+      let(:to_position) { indexes.last.subscription_position }
 
       describe 'default behavior' do
         it 'processes events' do
@@ -149,10 +156,8 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
         end
       end
 
-      context "when index look up distance is less than event's position" do
-        before do
-          stub_const("#{described_class}::INDEX_LOOK_UP_DISTANCE", 10)
-        end
+      context "when :to_position is less than event's position" do
+        let(:to_position) { 11 }
 
         it 'does not process the event' do
           expect { subject }.not_to change { dv(processed_events1).deferred_wait(timeout: 0.1) { _1.size == 1 } }
@@ -187,14 +192,8 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
         end
       end
 
-      context 'when subscription limits max number of events to fetch' do
-        before do
-          allow(runner1).to receive(:next_chunk_query_opts).and_wrap_original do |orig_meth|
-            orig_meth.call.tap do |attrs|
-              attrs[:max_count] = 1
-            end
-          end
-        end
+      context 'when :max_count limits the number of events to fetch' do
+        let(:max_count_sub1) { 1 }
 
         it 'processes only one event' do
           expect { subject }.to change {
