@@ -80,8 +80,8 @@ module PgEventstore
         end
         raw_events = raw_events.sort_by(&:subscription_position)
         # Remove indexes only after their events are resolved, so #size keeps counting them while the query runs
-        @raw_events.push(*raw_events)
         @indexes.slice!(range)
+        @raw_events.push(*raw_events)
         @resolved = @indexes.empty?
       end
 
