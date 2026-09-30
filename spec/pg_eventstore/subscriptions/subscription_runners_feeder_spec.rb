@@ -18,14 +18,16 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
 
       let(:runner) do
         PgEventstore::SubscriptionRunner.new(
-          stats: PgEventstore::SubscriptionHandlerPerformance.new,
+          stats:,
           events_processor: PgEventstore::EventsProcessor.new(
-            consumer: PgEventstore::EventsProcessorConsumer::Single.new(proc {}),
+            consumer: PgEventstore::EventsProcessorConsumer::Single.new(handler),
             graceful_shutdown_timeout: 0
           ),
-          subscription: subscription
+          subscription:
         )
       end
+      let(:stats) { PgEventstore::SubscriptionHandlerPerformance.new }
+      let(:handler) { proc {} }
       let(:subscription) { SubscriptionsHelper.create_with_connection(name: 'Foo', set: 'FooSet') }
       let(:subscriptions_set) { SubscriptionsSetHelper.create_with_connection(name: 'FooSet') }
 
@@ -50,14 +52,47 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
           end
         end
 
-        context 'when runner is busy' do
+        context 'when runner was fed recently' do
           before do
-            allow(runner).to receive(:time_to_feed?).and_return(false)
+            subscription.update(last_chunk_fed_at: Time.now.utc)
           end
 
           it 'does not process it' do
             subject
             expect(runner).not_to have_received(:feed)
+          end
+        end
+
+        context 'when runner has enough events in the queue' do
+          let(:handler) { proc { sleep 0.1 } }
+          let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+          let(:events) { PgEventstore.client.append_to_stream(stream, Array.new(100) { PgEventstore::Event.new }) }
+          let(:indexes) { prepare_subscription_indexes(events) }
+
+          before do
+            stats.track_exec_time(1) { sleep 0.2 }
+            runner.feed(create_subscription_index_chunk(indexes))
+            subscription.update(last_chunk_fed_at: PgEventstore::Subscription::DEFAULT_TIMESTAMP)
+            dv.wait_until(timeout: 1) { subscription.reload.total_processed_events > 0 }
+          end
+
+          it 'does not process it' do
+            subject
+            expect(runner).to have_received(:feed).once
+          end
+        end
+
+        context 'when events exist' do
+          let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
+          let(:event) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
+
+          before do
+            prepare_subscription_indexes([event])
+          end
+
+          it 'processes it' do
+            subject
+            expect(runner).to have_received(:feed).with(kind_of(PgEventstore::Chunks::SubscriptionEventsIndexChunk))
           end
         end
       end

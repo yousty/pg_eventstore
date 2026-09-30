@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module PgEventstore
-  # This class pulls events from db and feeds given SubscriptionRunners
+  # This class decides which SubscriptionRunners to feed, pulls events from db and feeds them
   # @!visibility private
   class SubscriptionRunnersFeeder
     # @param config_name [Symbol]
@@ -12,11 +12,15 @@ module PgEventstore
     # @param runners [Array<PgEventstore::SubscriptionRunner>]
     # @return [void]
     def feed(runners)
-      runners = runners.select(&:running?).select(&:time_to_feed?)
-      return if runners.empty?
+      runners_query_options = runners.select { |runner| runner.running? && time_to_feed?(runner) }.to_h do |runner|
+        [runner, runner.next_chunk_query_opts]
+      end
+      # A runner which has enough events in its queue estimates the number of events to fetch to 0
+      runners_query_options = runners_query_options.select { |_, query_options| query_options[:max_count] > 0 }
+      return if runners_query_options.empty?
 
       feed_strategies_collection = SubscriptionFeedStrategy::Collection.create(
-        runners,
+        runners_query_options,
         connection,
         QueryStrategy::Async.new(connection)
       )
@@ -28,6 +32,13 @@ module PgEventstore
     end
 
     private
+
+    # @param runner [PgEventstore::SubscriptionRunner]
+    # @return [Boolean]
+    def time_to_feed?(runner)
+      subscription = runner.subscription
+      subscription.last_chunk_fed_at + subscription.chunk_query_interval <= Time.now.utc
+    end
 
     # @return [PgEventstore::Connection]
     def connection
