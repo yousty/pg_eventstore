@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [3.1.2]
+
 - Fix subscriptions skipping events when the estimated number of events to fetch drops to 0 during the pull
 
 ## [3.1.1]
