@@ -37,10 +37,12 @@ module PgEventstore
 
       # @return [void]
       def feed
+        # One query instead of one per runner. A slightly stale value is at least as safe as a fresh one.
+        max_to_position = safe_position
         runners_query_options = @runners.to_h do |runner|
           next_chunk_query_opts = runner.next_chunk_query_opts
           next_chunk_query_opts[:to_position] =
-            [next_chunk_query_opts[:from_position] + INDEX_LOOK_UP_DISTANCE, safe_position].min
+            [next_chunk_query_opts[:from_position] + INDEX_LOOK_UP_DISTANCE, max_to_position].min
           [runner.id, next_chunk_query_opts]
         end
         # By now the runner may estimate 0 events to fetch - its queue is processed in another thread. A query with
