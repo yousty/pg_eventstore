@@ -50,11 +50,6 @@ module PgEventstore
       }
     end
 
-    # @return [Boolean]
-    def time_to_feed?
-      estimate_events_number > 0 && @subscription.last_chunk_fed_at + @subscription.chunk_query_interval <= Time.now.utc
-    end
-
     private
 
     # @return [Integer]

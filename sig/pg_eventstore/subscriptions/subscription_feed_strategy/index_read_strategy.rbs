@@ -7,7 +7,7 @@ module PgEventstore
 
       @connection: Connection
       @query_strategy: QueryStrategy
-      @runners: Array[SubscriptionRunner]
+      @runners_query_options: Hash[SubscriptionRunner, Hash[Symbol, untyped]]
 
       def initialize: (Connection connection, QueryStrategy query_strategy) -> void
 

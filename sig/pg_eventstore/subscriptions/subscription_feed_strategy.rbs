@@ -1,6 +1,6 @@
 module PgEventstore
   module SubscriptionFeedStrategy[unchecked Runner]
-    def add: (*Runner runners) -> Array[Runner]
+    def add: (Runner runner, Hash[Symbol, untyped] query_options) -> void
 
     def any?: -> bool
 

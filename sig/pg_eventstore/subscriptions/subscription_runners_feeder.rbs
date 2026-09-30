@@ -8,6 +8,8 @@ module PgEventstore
 
     private
 
+    def time_to_feed?: (SubscriptionRunner runner) -> bool
+
     def connection: -> Connection
   end
 end

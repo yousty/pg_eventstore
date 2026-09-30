@@ -3,9 +3,10 @@
 module PgEventstore
   # @!visibility private
   module SubscriptionFeedStrategy
-    # @param runners [PgEventstore::SubscriptionRunner, Array<PgEventstore::SubscriptionRunner>]
-    # @return [Array<PgEventstore::SubscriptionRunner>]
-    def add(*runners)
+    # @param runner [PgEventstore::SubscriptionRunner]
+    # @param query_options [Hash]
+    # @return [void]
+    def add(runner, query_options)
       raise NotImplementedError
     end
 

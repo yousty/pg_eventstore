@@ -279,6 +279,31 @@ RSpec.describe PgEventstore::Chunks::SubscriptionEventsIndexChunk do
 
         it { is_expected.to eq(0) }
       end
+
+      context 'when indexes are being resolved' do
+        let(:db) { PG.connect(ConfigHelper.test_db_uri) }
+        let(:take) { Thread.new { instance.take(1) } }
+
+        before do
+          instance
+          # Resolving indexes starts with reading partitions. Hold that query to check the size in the meantime.
+          db.exec('begin; lock table partitions in access exclusive mode')
+          take
+          dv.wait_until(timeout: 3) do
+            db.exec(<<~SQL).first['count'].to_i == 1
+              select count(*) from pg_stat_activity where wait_event_type = 'Lock' and query ilike '%from partitions%'
+            SQL
+          end
+        end
+
+        after do
+          db.exec('rollback')
+          take.join
+          db.close
+        end
+
+        it { is_expected.to eq(2) }
+      end
     end
   end
 

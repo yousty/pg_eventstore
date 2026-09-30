@@ -18,45 +18,45 @@ module PgEventstore
       def initialize(connection, query_strategy)
         @connection = connection
         @query_strategy = query_strategy
-        @runners = []
+        @runners_query_options = {}
       end
 
-      # @param runners [Array<PgEventstore::SubscriptionRunner>]
-      # @return [Array<PgEventstore::SubscriptionRunner>]
-      def add(*runners)
-        @runners.push(*runners)
+      # @param runner [PgEventstore::SubscriptionRunner]
+      # @param query_options [Hash]
+      # @return [void]
+      def add(runner, query_options)
+        @runners_query_options[runner] = query_options
       end
 
       # @return [Integer]
       def size
-        @runners.size
+        @runners_query_options.size
       end
 
       # @return [Boolean]
       def any?
-        @runners.any?
+        @runners_query_options.any?
       end
 
       # @return [void]
       def feed
-        runners_query_options = @runners.to_h do |runner|
-          next_chunk_query_opts = runner.next_chunk_query_opts
-          next_chunk_query_opts[:to_position] =
-            [next_chunk_query_opts[:from_position] + INDEX_LOOK_UP_DISTANCE, safe_position].min
-          [runner.id, next_chunk_query_opts]
+        @runners_query_options.each_value do |query_options|
+          query_options[:to_position] = [query_options[:from_position] + INDEX_LOOK_UP_DISTANCE, safe_position].min
         end
-        grouped_indexes = events_global_index_queries.fetch_indexes_for_subscriptions(runners_query_options)
-        @runners.each do |runner|
+        grouped_indexes = events_global_index_queries.fetch_indexes_for_subscriptions(
+          @runners_query_options.transform_keys(&:id)
+        )
+        @runners_query_options.each do |runner, query_options|
           if grouped_indexes[runner.id]
             chunk = Chunks::SubscriptionEventsIndexChunk.new(
               grouped_indexes[runner.id],
               @connection,
               QueryStrategy::Foreground.new(@connection),
-              runners_query_options[runner.id][:resolve_link_tos]
+              query_options[:resolve_link_tos]
             )
             runner.feed(chunk)
           else
-            runner.feed(Chunks::SubscriptionCheckpointChunk.new(runners_query_options[runner.id][:to_position]))
+            runner.feed(Chunks::SubscriptionCheckpointChunk.new(query_options[:to_position]))
           end
         end
       end

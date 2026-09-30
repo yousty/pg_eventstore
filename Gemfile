@@ -7,6 +7,10 @@ gemspec
 
 gem 'rake', '~> 13.0', require: false
 
+# pg 1.6.3 still passes quirks_mode to JSON.parse and JSON.generate, which json 3.0 no longer accepts. Drop the pin
+# once pg is fixed.
+gem 'json', '< 3', require: false
+
 gem 'rake-compiler', '~> 1.2', require: false
 
 gem 'rspec', '~> 3.0', require: false

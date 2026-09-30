@@ -773,6 +773,92 @@ RSpec.describe 'Subscriptions integration' do
     end
   end
 
+  describe 'estimating the number of events to fetch while the handler is processing a slow event' do
+    subject do
+      manager.start
+      held_events.pop(timeout: 5)
+      PgEventstore.client.append_to_stream(stream, more_events)
+      events_number = PgEventstore.client.read(stream).size
+      dv.wait_until(timeout: 3) do
+        db.exec('select count(*) from event_subscription_positions').first['count'].to_i == events_number
+      end
+      # The feeder reads max(subscription_position) between the two estimates. Hold it there while the handler
+      # finishes the event it holds - the second estimate is then made with a different average and a full queue.
+      db.exec('begin; lock table event_subscription_positions in access exclusive mode')
+      dv.wait_until(timeout: 5) do
+        db.exec(<<~SQL).first['count'].to_i == 1
+          select count(*) from pg_stat_activity
+          where wait_event_type = 'Lock' and query ilike '%max(subscription_position)%'
+        SQL
+      end
+      gate.push(:go)
+      dv.wait_until(timeout: 3) do
+        db.exec_params('select total_processed_events from subscriptions where name = $1', ['Subscription 2']).
+          first['total_processed_events'].to_i == 11
+      end
+      db.exec('rollback')
+      dv.wait_until(timeout: 3) do
+        db.exec("select count(*) from pg_stat_activity where wait_event_type = 'Lock'").first['count'].to_i == 0
+      end
+      sleep 0.3 # Let the feeder finish the cycle it was held in
+      events_number.times { gate.push(:go) }
+      dv(processed_events).wait_until(timeout: 5) { _1.size == events_number }
+    end
+
+    let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
+    let(:set_name) { 'Microservice 1 Subscriptions' }
+    let!(:db) { PG.connect(ConfigHelper.test_db_uri) }
+
+    let(:gate) { Queue.new }
+    let(:held_events) { Queue.new }
+    let(:processed_events) { [] }
+    let(:handler) do
+      gate = self.gate
+      held_events = self.held_events
+      processed_events = self.processed_events
+      proc do |event|
+        if processed_events.size >= 10
+          held_events.push(event)
+          gate.pop
+        end
+        processed_events.push(event)
+      end
+    end
+
+    let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: 'bar') }
+    let!(:events) do
+      PgEventstore.client.append_to_stream(stream, Array.new(20) { PgEventstore::Event.new(type: 'Foo') })
+    end
+    let(:more_events) { Array.new(10) { PgEventstore::Event.new(type: 'Foo') } }
+
+    before do
+      PgEventstore.configure do |c|
+        c.subscription_pull_interval = 0.2
+      end
+      # Both subscriptions get the same events, so they are fed in the same cycles. The first one goes first, so the
+      # feeder queries max(subscription_position) for it before estimating the number of events to fetch for the
+      # second one.
+      manager.subscribe(
+        'Subscription 1', handler: proc {}, options: { filter: { event_types: ['Foo'] } }, pull_interval: 2
+      )
+      manager.subscribe(
+        'Subscription 2', handler:, options: { filter: { event_types: ['Foo'] } }, pull_interval: 2
+      )
+    end
+
+    after do
+      db.exec('rollback') unless db.transaction_status == PG::PQTRANS_IDLE
+      100.times { gate.push(:go) }
+      manager.stop
+      db.close
+    end
+
+    it 'processes all events' do
+      subject
+      expect(processed_events.map(&:global_position)).to eq(PgEventstore.client.read(stream).map(&:global_position))
+    end
+  end
+
   describe 'stoping and starting subscription again' do
     let(:manager) { PgEventstore.subscriptions_manager(subscription_set: set_name) }
     let(:set_name) { 'Microservice 1 Subscriptions' }
