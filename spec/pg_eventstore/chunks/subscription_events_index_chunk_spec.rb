@@ -390,6 +390,26 @@ RSpec.describe PgEventstore::Chunks::SubscriptionEventsIndexChunk do
       it 'marks instance as resolved' do
         expect { subject }.to change { instance.send(:resolved?) }.to(true)
       end
+
+      context 'when #size is checked while indexes are being resolved' do
+        let(:sizes_during_resolve) { [] }
+
+        before do
+          allow(PgEventstore::EventsGlobalIndexQueries).to receive(:new).and_wrap_original do |orig_meth, *args|
+            orig_meth.call(*args).tap do |queries|
+              allow(queries).to receive(:resolve_indexes).and_wrap_original do |orig_resolve, *resolve_args, **opts|
+                sizes_during_resolve.push(instance.size)
+                orig_resolve.call(*resolve_args, **opts)
+              end
+            end
+          end
+        end
+
+        it 'still counts them' do
+          subject
+          expect(sizes_during_resolve).to eq([events.size])
+        end
+      end
     end
 
     context 'when error happens' do
