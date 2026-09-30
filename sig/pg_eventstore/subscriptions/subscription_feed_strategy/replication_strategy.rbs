@@ -3,6 +3,8 @@ module PgEventstore
     class ReplicationStrategy
       include SubscriptionFeedStrategy[ReplicaSubscriptionRunner]
 
+      INDEX_LOOK_UP_DISTANCE: Integer
+
       @connection: Connection
       @query_strategy: QueryStrategy
       @runners_query_options: Hash[ReplicaSubscriptionRunner, Hash[Symbol, untyped]]
@@ -11,7 +13,11 @@ module PgEventstore
 
       private
 
+      def event_subscription_position_queries: -> EventSubscriptionPositionQueries
+
       def events_global_index_queries: -> EventsGlobalIndexQueries
+
+      def safe_position: -> Integer
     end
   end
 end

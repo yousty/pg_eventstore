@@ -6,6 +6,11 @@ module PgEventstore
     class ReplicationStrategy
       include SubscriptionFeedStrategy
 
+      # Allow subscriptions to scan through up to this amount of events per a single query. This allows to make query
+      # plan more predictable.
+      # @return [Integer]
+      INDEX_LOOK_UP_DISTANCE = 100_000
+
       # @param connection [PgEventstore::Connection]
       # @param query_strategy [PgEventstore::QueryStrategy]
       def initialize(connection, query_strategy)
@@ -33,6 +38,9 @@ module PgEventstore
 
       # @return [void]
       def feed
+        @runners_query_options.each_value do |query_options|
+          query_options[:to_position] = [query_options[:from_position] + INDEX_LOOK_UP_DISTANCE, safe_position].min
+        end
         grouped_indexes = events_global_index_queries.fetch_indexes_for_subscriptions(
           @runners_query_options.transform_keys(&:id)
         )
@@ -48,9 +56,19 @@ module PgEventstore
 
       private
 
+      # @return [Integer]
+      def safe_position
+        event_subscription_position_queries.max_subscription_position || 0
+      end
+
       # @return [PgEventstore::EventsGlobalIndexQueries]
       def events_global_index_queries
         EventsGlobalIndexQueries.new(@connection, @query_strategy)
+      end
+
+      # @return [PgEventstore::EventSubscriptionPositionQueries]
+      def event_subscription_position_queries
+        EventSubscriptionPositionQueries.new(@connection)
       end
     end
   end

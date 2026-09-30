@@ -13,7 +13,7 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
     subject { instance.add(runner, query_options) }
 
     let(:runner) { PgEventstore::SubscriptionRunner.allocate }
-    let(:query_options) { { from_position: 1, to_position: 2, max_count: 10, resolve_link_tos: false } }
+    let(:query_options) { { from_position: 1, max_count: 10, resolve_link_tos: false } }
 
     it 'adds given runner along with its query options' do
       expect { subject }.to change {
@@ -86,13 +86,10 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
       )
     end
 
-    let(:query_options1) do
-      { from_position: from_position_sub1, to_position:, max_count: max_count_sub1, resolve_link_tos: false }
-    end
-    let(:query_options2) { { from_position: 1, to_position:, max_count: 10, resolve_link_tos: false } }
+    let(:query_options1) { { from_position: from_position_sub1, max_count: max_count_sub1, resolve_link_tos: false } }
+    let(:query_options2) { { from_position: 1, max_count: 10, resolve_link_tos: false } }
     let(:from_position_sub1) { 1 }
     let(:max_count_sub1) { 10 }
-    let(:to_position) { 0 }
 
     let(:processed_events1) { [] }
     let(:processed_events2) { [] }
@@ -141,7 +138,6 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
         PgEventstore.client.append_to_stream(stream, event)
       end
       let!(:index) { prepare_subscription_indexes([event]).first }
-      let(:to_position) { index.subscription_position }
 
       describe 'default behavior' do
         it 'processes the event' do
@@ -156,8 +152,10 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::IndexReadStrategy do
         end
       end
 
-      context "when :to_position is less than event's position" do
-        let(:to_position) { 11 }
+      context "when index look up distance is less than event's position" do
+        before do
+          stub_const("#{described_class}::INDEX_LOOK_UP_DISTANCE", 10)
+        end
 
         it 'does not process the event' do
           expect { subject }.not_to change { dv(processed_events1).deferred_wait(timeout: 0.1) { _1.size == 1 } }

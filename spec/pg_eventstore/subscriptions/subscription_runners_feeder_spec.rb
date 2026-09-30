@@ -85,28 +85,14 @@ RSpec.describe PgEventstore::SubscriptionRunnersFeeder do
         context 'when events exist' do
           let(:stream) { PgEventstore::Stream.new(context: 'FooCtx', stream_name: 'Foo', stream_id: '1') }
           let(:event) { PgEventstore.client.append_to_stream(stream, PgEventstore::Event.new) }
-          let(:index) { prepare_subscription_indexes([event]).first }
 
           before do
-            # Set events global_position sequence value to easily test :to_position. 123 will be the global_position
-            # of the first created event
-            reset_events_subscription_position(123)
-            index
+            prepare_subscription_indexes([event])
           end
 
           it 'processes it' do
             subject
             expect(runner).to have_received(:feed).with(kind_of(PgEventstore::Chunks::SubscriptionEventsIndexChunk))
-          end
-
-          context "when index look up distance is less than event's position" do
-            before do
-              stub_const("#{described_class}::INDEX_LOOK_UP_DISTANCE", 10)
-            end
-
-            it 'checkpoints subscription at the look up distance' do
-              expect { subject }.to change { subscription.reload.last_chunk_greatest_position }.to(11)
-            end
           end
         end
       end

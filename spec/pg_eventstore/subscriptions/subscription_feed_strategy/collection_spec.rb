@@ -15,7 +15,7 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::Collection do
 
     context 'when runners are present' do
       let(:runners_query_options) { [runner1, runner2, runner3, runner4, runner5].to_h { [_1, query_options] } }
-      let(:query_options) { { from_position: 1, to_position: 2, max_count: 10, resolve_link_tos: false } }
+      let(:query_options) { { from_position: 1, max_count: 10, resolve_link_tos: false } }
 
       let(:runner1) { PgEventstore::SubscriptionRunner.allocate }
       let(:runner2) { PgEventstore::SubscriptionRunner.allocate }
