@@ -126,6 +126,29 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
           subscription2.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
         }.to([0, 0])
       end
+
+      context 'when no subscription estimates events to fetch' do
+        before do
+          [runner1, runner2].each do |runner|
+            allow(runner).to receive(:next_chunk_query_opts).and_wrap_original do |orig_meth|
+              orig_meth.call.tap do |attrs|
+                attrs[:max_count] = 0
+              end
+            end
+          end
+        end
+
+        it 'does not checkpoint first subscription' do
+          expect { subject }.not_to change {
+            subscription1.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
+          }
+        end
+        it 'does not checkpoint second subscription' do
+          expect { subject }.not_to change {
+            subscription2.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
+          }
+        end
+      end
     end
 
     context 'when indexes exist for first subscription' do
@@ -200,6 +223,40 @@ RSpec.describe PgEventstore::SubscriptionFeedStrategy::ReplicationStrategy do
           expect { subject }.to change {
             dv(processed_events1).deferred_wait(timeout: 0.5) { _1.size == 2 }
           }.to([events.first.global_position])
+        end
+      end
+
+      context 'when subscription estimates zero events to fetch' do
+        before do
+          allow(runner1).to receive(:next_chunk_query_opts).and_wrap_original do |orig_meth|
+            orig_meth.call.tap do |attrs|
+              attrs[:max_count] = 0
+            end
+          end
+        end
+
+        it 'does not process the events' do
+          expect { subject }.not_to change { dv(processed_events1).deferred_wait(timeout: 0.1) { _1.size == 2 } }
+        end
+        it 'does not checkpoint first subscription' do
+          expect { subject }.not_to change {
+            subscription1.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
+          }
+        end
+        it 'does not update first subscription#last_chunk_fed_at' do
+          expect { subject }.not_to change { subscription1.reload.last_chunk_fed_at }
+        end
+        it 'checkpoints second subscription' do
+          expect { subject }.to change {
+            subscription2.reload.options_hash.values_at(:current_position, :last_chunk_greatest_position)
+          }.to([indexes.last.subscription_position, indexes.last.subscription_position])
+        end
+        it 'processes the events on the next feed' do
+          subject
+          allow(runner1).to receive(:next_chunk_query_opts).and_call_original
+          expect { instance.feed }.to change {
+            dv(processed_events1).deferred_wait(timeout: 0.5) { _1.size == 2 }
+          }.to(events.map(&:global_position))
         end
       end
     end

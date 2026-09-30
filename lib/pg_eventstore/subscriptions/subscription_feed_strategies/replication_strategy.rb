@@ -43,8 +43,16 @@ module PgEventstore
             [next_chunk_query_opts[:from_position] + INDEX_LOOK_UP_DISTANCE, safe_position].min
           [runner.id, next_chunk_query_opts]
         end
+        # By now the runner may estimate 0 events to fetch - its queue is processed in another thread. A query with
+        # zero limit returns nothing, and we can't tell that from the absence of matching events in the range.
+        # Checkpointing such runner would skip its events, so leave it until the next feed instead.
+        runners_query_options = runners_query_options.select { |_, query_options| query_options[:max_count] > 0 }
+        return if runners_query_options.empty?
+
         grouped_indexes = events_global_index_queries.fetch_indexes_for_subscriptions(runners_query_options)
         @runners.each do |runner|
+          next unless runners_query_options.key?(runner.id)
+
           if grouped_indexes[runner.id]
             chunk = Chunks::ReplicaEventsIndexChunk.new(grouped_indexes[runner.id])
             runner.feed(chunk)
