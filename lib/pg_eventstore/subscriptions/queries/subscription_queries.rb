@@ -88,7 +88,7 @@ module PgEventstore
             raise(WrongLockIdError.new(attrs['set'], attrs['name'], attrs['locked_by']))
           end
 
-          compiled = conn.compile(*builder.to_exec_params)
+          compiled = conn.embed_params(*builder.to_exec_params)
           compiled = <<~SQL
             create or replace function #{function_name}(
               from_position bigint,

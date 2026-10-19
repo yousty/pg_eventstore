@@ -38,6 +38,6 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'connection_pool', '>= 2.5.4', '< 4'
-  spec.add_dependency 'pg', '~> 1'
+  spec.add_dependency 'pg', '>= 1.7'
   spec.add_dependency 'sinatra', '>= 3', '< 5'
 end

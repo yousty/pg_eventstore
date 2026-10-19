@@ -45,7 +45,7 @@ module PgEventstore
     def pg_transaction(level, read_only, pg_connection, &)
       retries_count = 0
       begin
-        _transaction(pg_connection) do
+        pg_connection.transaction do
           if read_only
             pg_connection.exec("SET TRANSACTION ISOLATION LEVEL #{level} READ ONLY")
           else
@@ -68,40 +68,6 @@ module PgEventstore
         end
       end
       retry
-    end
-
-    # TODO: next pg gem release (presumably v1.6.4) should already include the fix of PG::Connection#transaction.
-    #       Changes are already in master branch
-    #       https://github.com/ged/ruby-pg/commit/c3d2aabd0a19d20bb1f2b2fa2e5b30f03b043aff
-    #       Once it is released - change pg gem requirement in gemspec to '>= 1.6.4' and remove this implementation.
-    # @param conn [PG::Connection]
-    # rubocop:disable Lint/RescueException
-    def _transaction(conn)
-      rollback = false
-      conn.exec('BEGIN')
-      yield
-    rescue PG::RollbackTransaction
-      rollback = true
-      perform_rollback(conn)
-    rescue Exception
-      rollback = true
-      perform_rollback(conn)
-      raise
-    ensure
-      unless rollback
-        if Thread.current.status == 'aborting'
-          perform_rollback(conn)
-        else
-          conn.exec('COMMIT')
-        end
-      end
-    end
-    # rubocop:enable Lint/RescueException
-
-    def perform_rollback(conn)
-      conn.cancel if conn.transaction_status == PG::PQTRANS_ACTIVE
-      conn.block
-      conn.exec('ROLLBACK')
     end
 
     # @return [PgEventstore::PartitionQueries]
