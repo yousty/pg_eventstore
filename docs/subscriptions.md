@@ -241,6 +241,67 @@ subscriptions_manager.subscribe(
 In this case the subscription's position will be advanced to the position of the last event of the chunk. Please note
 that in case of failure the whole chunk will be yielded again during subscription retries phase.
 
+### How to speed up events processing using in_batches: true
+
+Let's review a performance improvement to your subscription handler on the example of user read model builder handler.
+Common situation in your app may look like this:
+
+```ruby
+handler = proc do |event|
+  case event.type
+  when 'UserEmailChanged'
+    user.update_columns(email: event.data['email'])
+  when 'UserNameChanged'
+    user.update_columns(name: event.data['name'])
+  # and so on
+  end
+end
+subscriptions_manager.subscribe(
+  'UserReadModelBuilder',
+  handler:,
+  options: { filter: { event_types: [{ prefix: 'User' }] } }
+)
+```
+
+In the example above we process event by event and update user columns depending on event type. But processing event by
+event may take some time. Instead, you can utilize `in_batches: true` subscriptions feature which yields up to 1000
+events. You can accumulate changes in memory and then apply accumulated changes at once. Let's adjust our subscription:
+
+```ruby
+handler = proc do |events|
+  attributes = []
+  events.each do |event|
+    case event.type
+    when 'UserEmailChanged'
+      attributes.push({ id: event.stream.id, email: event.data['email'] })
+    when 'UserNameChanged'
+      attributes.push({ id: event.stream.id, name: event.data['name'] })
+    # and so on
+    end
+  end
+  sql_parts = attributes.group_by { _1[:id] }.map do |id, attrs|
+    # pre-compute required sql queries
+    prepare_sql(id, attrs)
+  end
+  ActiveRecord::Base.transaction do
+    # execute prepared sql queries at once
+    execute(sql_parts)
+  end
+end
+subscriptions_manager.subscribe(
+  'UserReadModelBuilder',
+  handler:,
+  options: { filter: { event_types: [{ prefix: 'User' }] } },
+  in_batches: true
+)
+```
+
+This could be a great speed up of your subscriptions.
+
+Yes, there is much more to care about. For example, events in a batch may belong to different entities, you may take
+care to handle potential create/delete operations, and the handler itself has to idempotent. But despite those
+complications you may experience times greater speed comparing to a single event handler.
+
 ## Middlewares
 
 If you would like to skip some of your registered middlewares from processing events after they are being pulled by the
