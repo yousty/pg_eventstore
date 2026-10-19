@@ -273,9 +273,9 @@ handler = proc do |events|
   events.each do |event|
     case event.type
     when 'UserEmailChanged'
-      attributes.push({ id: event.stream.id, email: event.data['email'] })
+      attributes.push({ id: event.stream.stream_id, email: event.data['email'] })
     when 'UserNameChanged'
-      attributes.push({ id: event.stream.id, name: event.data['name'] })
+      attributes.push({ id: event.stream.stream_id, name: event.data['name'] })
     # and so on
     end
   end
